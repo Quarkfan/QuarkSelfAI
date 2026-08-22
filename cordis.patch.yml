@@ -9,3 +9,8 @@
         requiredEventKeys:
           - im.message.receive_v1
           - card.action.trigger
+    - id: blacklake-reference-router
+      name: '@quarkfan/quark-self-ai/blacklake'
+      disabled: !!js '!process.env.BLACKLAKE_WORKSPACE_ROOT'
+      config:
+        workspaceRoot: !!js process.env.BLACKLAKE_WORKSPACE_ROOT

@@ -30,4 +30,5 @@ const { stdout: dump } = await exec('corepack', [
 })
 assert.match(dump, /# == @quarkfan\/quark-self-ai/)
 assert.match(dump, /id: feishu-lark-cli[\s\S]*name: '@quarkfan\/quark-self-ai'/)
+assert.match(dump, /id: blacklake-reference-router[\s\S]*name: '@quarkfan\/quark-self-ai\/blacklake'/)
 process.stdout.write(`DSH compatibility verified version=${baseline.version} commit=${baseline.sourceCommit} profile=feishu-assistant\n`)

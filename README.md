@@ -29,6 +29,7 @@ npm install
 npm run check
 npm run compat:lark
 npm run compat:dsh
+npm run compat:blacklake
 npm run takeover:preflight
 npm start
 ```
@@ -39,6 +40,9 @@ npm start
 `compat:dsh` 对 `compat/dsh-baseline.json` 校验正式 DSH checkout 的版本和 commit，再导入构建产物并读取
 隔离的 `feishu-assistant` profile 配置；它不会启动 profile 或飞书消费者。首次运行前按下方 DSH profile
 步骤把本地包链接进 `var/dsh-validation`。
+
+`compat:blacklake` 从 BlackLakeWork 三源真源读取当前路由、知识索引和 skill 清单，验证路径、新鲜度哈希、
+skill 存在性及多步操作链门禁；不会查询生产系统或执行外部写入。
 
 `takeover:preflight` 在现阶段返回非零是正确行为。未经常东旭明确批准，不得设置
 `TAKEOVER_CONFIRMED=true`，也不得启动兼容消费者。架构保护边界见

@@ -13,7 +13,7 @@
     { "id": "approval-cards", "name": "Card 2.0 审批、输入与正式回复确认", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 Card 2.0 及回调去重测试已纳入；durable DSH-native workflow 尚未替换" },
     { "id": "executor-routing", "name": "Claude Code 主执行、Codex 兜底与单执行器约束", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 Claude-primary/Codex-fallback 测试已纳入；尚未完成生产链路演练" },
     { "id": "visible-codex-sessions", "name": "可见 Codex 任务创建、续接与唯一标题", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 app-server client 及创建/续接/标题测试已纳入；尚未做桌面端受控演练" },
-    { "id": "blacklake-routing", "name": "BlackLake skill/参考项目路由与调研决策", "requiredForTakeover": true, "status": "partial", "evidence": "兼容能力上下文和 research decision 已纳入；尚未接入 DSH-native 路由" },
+    { "id": "blacklake-routing", "name": "BlackLake skill/参考项目路由与调研决策", "requiredForTakeover": true, "status": "partial", "evidence": "兼容链路已动态读取三源上下文；DSH-native blacklakeReferences service 已提供真源哈希、skill 存在性与 operation-chain 门禁，并通过真实工作区校验；尚未完成 DSH-native action 端到端演练" },
     { "id": "xiaowei-channel", "name": "智造湖小维授权、异步等待和结果回灌", "requiredForTakeover": true, "status": "partial", "evidence": "兼容慢速通道及授权测试已纳入；尚未现网演练" },
     { "id": "dida-monitors", "name": "超期提醒、完成清理与工作日跟进", "requiredForTakeover": true, "status": "partial", "evidence": "三个兼容 monitor 及去重测试已纳入；尚未以复制状态回放" },
     { "id": "session-janitor", "name": "会话归档、七日删除与失败退避", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 SessionJanitor 及 force-delete 边界测试已纳入；尚未做受控演练" },

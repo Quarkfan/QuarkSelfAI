@@ -13,6 +13,11 @@ DSH Loader 从包根的 named `apply(ctx, config)` 装配 `LarkCliService`。包
 Loader 将 namespace 折叠后丢失插件元数据。该入口只注册 capability，不自动调用 `start()`；现网消费者
 是否启动仍由独立运行时门禁决定。
 
+BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件行，避免污染通用助手内核。仅当
+`BLACKLAKE_WORKSPACE_ROOT` 存在时启用。`blacklakeReferences` 每次从知识库、虚拟员工和 common harness
+三源真源读取当前入口、索引和 skill frontmatter，返回内容哈希并验证建议 skill 真实存在；QuarkSelfAI
+不复制三源业务规则。多步链路候选必须同时包含 `virtual-employee-operation-chain`。
+
 ## 本地优先运行边界
 
 个人助手的默认形态是用户机器上的单实例守护进程：SQLite 保存状态，Web 控制台只绑定回环地址，

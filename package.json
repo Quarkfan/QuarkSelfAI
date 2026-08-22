@@ -13,6 +13,16 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./blacklake": {
+      "types": "./dist/blacklake/plugin.d.ts",
+      "import": "./dist/blacklake/plugin.js"
+    }
+  },
   "files": [
     "dist/index.js",
     "dist/index.d.ts",
@@ -32,6 +42,7 @@
     "dist/execution",
     "dist/migration",
     "dist/deploy",
+    "dist/blacklake",
     "migrations",
     "config",
     "web",
@@ -53,6 +64,7 @@
     "test": "node --import tsx --test test/*.test.ts && npm test --workspace @quarkfan/bridge-compat",
     "compat:lark": "node --import tsx scripts/check-lark-compat.ts",
     "compat:dsh": "npm run build && node --import tsx scripts/check-dsh-compat.ts",
+    "compat:blacklake": "npm run build && node --import tsx scripts/check-blacklake-references.ts",
     "audit:legacy-state": "node --import tsx scripts/audit-legacy-state.ts",
     "audit:legacy-handoff": "node --import tsx scripts/audit-legacy-handoff.ts",
     "snapshot:legacy-state": "node --import tsx scripts/snapshot-legacy-state.ts",
