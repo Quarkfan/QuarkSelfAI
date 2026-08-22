@@ -75,6 +75,7 @@
     "compat:blacklake": "npm run build && node --import tsx scripts/check-blacklake-references.ts",
     "audit:legacy-state": "node --import tsx scripts/audit-legacy-state.ts",
     "audit:legacy-handoff": "node --import tsx scripts/audit-legacy-handoff.ts",
+    "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
     "snapshot:legacy-state": "node --import tsx scripts/snapshot-legacy-state.ts",
     "replay:legacy-dida": "node scripts/replay-legacy-dida.mjs",
     "takeover:preflight": "node --import tsx scripts/takeover-preflight.ts",

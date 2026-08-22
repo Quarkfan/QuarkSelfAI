@@ -18,8 +18,8 @@
     { "id": "dida-monitors", "name": "超期提醒、完成清理与工作日跟进", "requiredForTakeover": true, "status": "partial", "evidence": "三个兼容 monitor 及去重测试已纳入；尚未以复制状态回放" },
     { "id": "session-janitor", "name": "会话归档、七日删除与失败退避", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 SessionJanitor 及 force-delete 边界测试已纳入；尚未做受控演练" },
     { "id": "retry-and-alerting", "name": "持久重试、断线恢复、故障与恢复通知", "requiredForTakeover": true, "status": "partial", "evidence": "兼容持久 state/retry/recovery 测试已纳入；DSH action ledger 已实现租约恢复、指数退避、最大尝试和确定性失败终止；尚缺现网断线与通知恢复演练" },
-    { "id": "shadow-collaboration", "name": "日历/滴答反馈与协作影子评估", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 ShadowCollaborationMonitor 测试已纳入；尚未运行无外部写影子窗口" },
-    { "id": "daemon-deployment", "name": "macOS 与 Linux/容器守护部署", "requiredForTakeover": true, "status": "partial", "evidence": "launchd 模板渲染/plutil、systemd、Compose、compat 异常退出传播和 503 health 均已验证；Docker daemon 500 阻塞镜像实构建，生产演练未完成" },
+    { "id": "shadow-collaboration", "name": "日历/滴答反馈与协作影子评估", "requiredForTakeover": true, "status": "partial", "evidence": "无写影子窗口 2026-08-20 至 2026-08-27 正在运行；当前审计 41 decisions/23 matters/14 task snapshots/2 feedback，结构有效且无重复 messageId；窗口结束前不能判定通过" },
+    { "id": "daemon-deployment", "name": "macOS 与 Linux/容器守护部署", "requiredForTakeover": true, "status": "partial", "evidence": "launchd 模板渲染/plutil、systemd、Compose、compat 异常退出传播和 503 health 均已验证；control-only 守护进程已完成两个真实进程代际的 SQLite 状态保持与 SIGTERM 清洁退出 E2E；Docker daemon 无响应仍阻塞镜像实构建，生产演练未完成" },
     { "id": "local-first-execution", "name": "本地优先执行与工作区文件边界", "requiredForTakeover": true, "status": "complete", "evidence": "默认 local + SQLite + loopback；workspace policy 校验真实路径、目录穿越和符号链接逃逸；compat 启动前校验配置与 workspaceRoot；remote 模式禁止本地 compat" }
   ]
 }

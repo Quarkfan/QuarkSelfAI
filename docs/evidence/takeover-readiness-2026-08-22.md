@@ -8,8 +8,8 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 
 ## 已验证
 
-- `npm run check`：主包 46 项（沙箱内 45 通过、回环 E2E 1 跳过），兼容包 99 项全部通过；回环 E2E
-  已在允许监听的本地环境单独通过。
+- `npm run check`：主包 49 项（沙箱内 47 通过、回环 E2E 2 跳过），兼容包 99 项全部通过；Web 控制台
+  和守护重启两个回环 E2E 已在允许监听的本地环境分别通过。
 - `npm run compat:dsh`：DSH `0.1.1-rc.2`、commit `b150a55` 与 baseline 一致，构建产物为 named
   namespace plugin；隔离 `feishu-assistant` profile 的配置包含 Lark、BlackLake、Claude/Codex 读写隔离
   Provider 和 executor router，并已完成真实 profile 启动、SIGTERM 清洁退出烟测。
@@ -27,7 +27,10 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 - 最新只读审计基于旧状态 SHA-256 `9f83e7cb4116496d8233134792941c91a19f8a2769af6a27044dc05cce1944ad`，
   修改时间 `2026-08-22T11:36:27.943Z`；queue 和 pending focus 均为 0，handoff 仍安全。
 - 无写影子窗口正在运行（`2026-08-20T11:52:20.935Z` 至 `2026-08-27T11:52:20.935Z`）：当前 41 个
-  决策、23 个 matter、14 个滴答快照、2 个反馈；窗口未结束，不能提前视为通过。
+  决策、23 个 matter、14 个滴答快照、2 个反馈；机器审计结构有效、无重复 messageId、不输出业务正文；
+  窗口未结束，不能提前视为通过。
+- control-only 守护进程已在同一 SQLite 文件上完成启动、健康读取、SIGTERM、再次启动、健康读取、再次
+  SIGTERM 的真实进程级演练；两个代际都只看到同一条种子事件，没有丢失或重复。
 
 ## 未通过的硬门禁
 
