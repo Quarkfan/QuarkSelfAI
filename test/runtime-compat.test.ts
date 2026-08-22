@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { CompatReadinessObserver, type RuntimeSnapshot } from '../src/runtime/compat.js'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { CompatReadinessObserver, CompatRuntime, type RuntimeSnapshot } from '../src/runtime/compat.js'
 
 test('waits for both compatibility consumers and handles markers split across chunks', () => {
   const observer = new CompatReadinessObserver()
@@ -21,4 +24,20 @@ test('waits for both compatibility consumers and handles markers split across ch
     messageReady: true,
     cardReady: true,
   })
+})
+
+test('surfaces an unexpected ready child exit so the outer daemon can restart it', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-compat-runtime-'))
+  const fixture = join(directory, 'fixture.mjs')
+  await writeFile(fixture, [
+    "process.stderr.write('[event] ready event_key=im.message.receive_v1\\n')",
+    "process.stderr.write('[event] ready event_key=card.action.trigger\\n')",
+    'setTimeout(() => process.exit(7), 100)',
+  ].join('\n'))
+  const runtime = new CompatRuntime('/unused/config.json', { entry: fixture, cwd: directory })
+  await runtime.start()
+  await runtime.waitUntilReady(2_000)
+  const failure = await runtime.waitForFailure()
+  assert.match(failure.message, /code=7/)
+  assert.equal(runtime.snapshot().state, 'failed')
 })

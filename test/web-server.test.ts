@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import type { RuntimeConfig } from '../src/config/runtime.js'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 import { createConsoleServer } from '../src/web/server.js'
+import type { RuntimeSnapshot } from '../src/runtime/compat.js'
 
 const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
 
@@ -23,7 +24,8 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     lark: { executable: 'lark-cli', identity: 'bot' },
     runtime: { mode: 'control-only' },
   }
-  const server = createConsoleServer(store, config)
+  let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
+  const server = createConsoleServer(store, config, { snapshot: () => worker })
   server.listen(0, '127.0.0.1')
   try {
     await once(server, 'listening')
@@ -76,6 +78,9 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     )
     assert.equal(activationResponse.status, 200)
     assert.equal((await store.policies(10))[0]?.status, 'enabled')
+    worker = { mode: 'compat', state: 'failed', messageReady: false, cardReady: false, lastError: 'fixture failure' }
+    const unhealthy = await fetch(`http://127.0.0.1:${port}/api/health`)
+    assert.equal(unhealthy.status, 503)
   } finally {
     server.close()
     await once(server, 'close')

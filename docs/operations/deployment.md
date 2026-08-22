@@ -31,6 +31,20 @@ docker compose -f compose.yaml -f compose.postgres.yaml up -d --build
 
 非容器 Linux 可参考 `deploy/systemd/quark-self-ai.service`。服务用户只需代码读取权、数据目录写入权和必要 CLI 凭证；不要用 root 运行。
 
+## macOS LaunchAgent
+
+`deploy/launchd/com.quarkfan.quark-self-ai.plist.template` 是不含秘密的模板。使用
+`npm run render:launchd -- --output ... --project-root ... --node ... --environment-file ... --stdout ... --stderr ...`
+渲染时必须指定绝对的项目目录、Node、`0600` 环境文件和日志路径；输出
+使用 `wx` 创建，存在同名文件时拒绝覆盖。环境文件由 Node 22 的 `--env-file` 读取，令牌不会写进 plist。
+
+在旧 `com.blacklake.codex-lark-bridge` 仍运行时，只允许渲染和执行 `plutil -lint`，禁止 bootstrap 新
+LaunchAgent。正式切换必须先获得常东旭批准，再按单消费者步骤优雅停止旧服务、复制最终状态、启动新
+服务；失败时先停止新服务，再恢复旧服务。
+
+兼容子进程在 ready 后异常退出会让 QuarkSelfAI 父进程以失败状态退出，因此 launchd、systemd 和容器
+的 restart policy 能统一执行退避重启。`/api/health` 在 compat worker 非 ready 时返回 503。
+
 ## 发布顺序
 
 1. 数据库备份并应用迁移。

@@ -19,6 +19,6 @@
     { "id": "session-janitor", "name": "会话归档、七日删除与失败退避", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 SessionJanitor 及 force-delete 边界测试已纳入；尚未做受控演练" },
     { "id": "retry-and-alerting", "name": "持久重试、断线恢复、故障与恢复通知", "requiredForTakeover": true, "status": "partial", "evidence": "兼容持久 state/retry/recovery 测试已纳入；新 action ledger 尚未接管" },
     { "id": "shadow-collaboration", "name": "日历/滴答反馈与协作影子评估", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 ShadowCollaborationMonitor 测试已纳入；尚未运行无外部写影子窗口" },
-    { "id": "daemon-deployment", "name": "macOS 与 Linux/容器守护部署", "requiredForTakeover": true, "status": "partial", "evidence": "容器和运行手册已建立，生产演练未完成" }
+    { "id": "daemon-deployment", "name": "macOS 与 Linux/容器守护部署", "requiredForTakeover": true, "status": "partial", "evidence": "launchd 模板渲染/plutil、systemd、Compose、compat 异常退出传播和 503 health 均已验证；Docker daemon 500 阻塞镜像实构建，生产演练未完成" }
   ]
 }

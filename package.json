@@ -30,9 +30,11 @@
     "dist/policy",
     "dist/runtime",
     "dist/migration",
+    "dist/deploy",
     "migrations",
     "config",
     "web",
+    "deploy",
     "packages/bridge-compat",
     "cordis.patch.yml"
   ],
@@ -54,6 +56,7 @@
     "snapshot:legacy-state": "node --import tsx scripts/snapshot-legacy-state.ts",
     "replay:legacy-dida": "node scripts/replay-legacy-dida.mjs",
     "takeover:preflight": "node --import tsx scripts/takeover-preflight.ts",
+    "render:launchd": "node --import tsx scripts/render-launchd.ts",
     "dev": "node --import tsx src/app.ts",
     "start": "node dist/app.js"
   },

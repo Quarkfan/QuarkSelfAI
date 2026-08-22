@@ -45,6 +45,8 @@ export class ControlOnlyRuntime implements RuntimeStatusProvider {
 export class CompatRuntime implements RuntimeStatusProvider {
   private child: ChildProcessWithoutNullStreams | undefined
   private readonly readiness = new CompatReadinessObserver()
+  private readonly failurePromise: Promise<Error>
+  private resolveFailure!: (error: Error) => void
   private current: RuntimeSnapshot = {
     mode: 'compat',
     state: 'stopped',
@@ -52,7 +54,12 @@ export class CompatRuntime implements RuntimeStatusProvider {
     cardReady: false,
   }
 
-  constructor(private readonly configPath: string) {}
+  constructor(
+    private readonly configPath: string,
+    private readonly processOptions: { readonly entry?: string; readonly cwd?: string; readonly executable?: string } = {},
+  ) {
+    this.failurePromise = new Promise((resolve) => { this.resolveFailure = resolve })
+  }
 
   snapshot(): RuntimeSnapshot {
     return { ...this.current }
@@ -67,8 +74,8 @@ export class CompatRuntime implements RuntimeStatusProvider {
       cardReady: false,
       startedAt: new Date().toISOString(),
     }
-    const child = spawn(process.execPath, [compatEntry], {
-      cwd: compatRoot,
+    const child = spawn(this.processOptions.executable ?? process.execPath, [this.processOptions.entry ?? compatEntry], {
+      cwd: this.processOptions.cwd ?? compatRoot,
       env: {
         ...process.env,
         CODEX_LARK_CONFIG: this.configPath,
@@ -87,6 +94,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
     child.stderr.on('data', (chunk: Buffer) => observe(chunk, process.stderr))
     child.once('error', (error) => {
       this.current = { ...this.current, state: 'failed', lastError: error.message }
+      this.resolveFailure(error)
     })
     child.once('exit', (code, signal) => {
       const expected = this.child === undefined
@@ -99,6 +107,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
             state: 'failed',
             lastError: `compat runtime exited code=${String(code)} signal=${String(signal)}`,
           }
+      if (!expected) this.resolveFailure(new Error(this.current.lastError ?? 'compat runtime exited unexpectedly'))
     })
     await once(child, 'spawn')
     this.current = { ...this.current, ...(child.pid ? { pid: child.pid } : {}) }
@@ -113,6 +122,10 @@ export class CompatRuntime implements RuntimeStatusProvider {
     }
     this.current = { ...this.current, state: 'degraded', lastError: 'compat runtime readiness timed out' }
     throw new Error('compat runtime did not make both Feishu consumers ready')
+  }
+
+  async waitForFailure(): Promise<Error> {
+    return await this.failurePromise
   }
 
   async stop(): Promise<void> {

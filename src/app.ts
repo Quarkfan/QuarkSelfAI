@@ -20,6 +20,13 @@ if (runtime instanceof CompatRuntime) {
     await runtime.start()
     await runtime.waitUntilReady()
     process.stdout.write('QuarkSelfAI compatibility runtime ready\n')
+    void runtime.waitForFailure().then(async (error) => {
+      process.stderr.write(`QuarkSelfAI compatibility runtime failed: ${error.message}\n`)
+      await stop('compat-runtime-failure').catch((stopError) => {
+        process.stderr.write(`QuarkSelfAI shutdown after compatibility failure also failed: ${String(stopError)}\n`)
+      })
+      process.exitCode = 1
+    })
   } catch (error) {
     await runtime.stop().catch(() => undefined)
     server.close()

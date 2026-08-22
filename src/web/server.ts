@@ -193,7 +193,14 @@ export function createConsoleServer(
         if (request.method === 'GET' && url.pathname === '/api/health') {
           await store.health()
           const parity = await loadFeatureParity()
-          json(response, 200, { ok: true, storage: store.kind, takeoverReady: parity.takeoverReady })
+          const worker = runtimeStatus.snapshot()
+          const workerHealthy = worker.mode === 'control-only' || worker.state === 'ready'
+          json(response, workerHealthy ? 200 : 503, {
+            ok: workerHealthy,
+            storage: store.kind,
+            takeoverReady: parity.takeoverReady,
+            worker,
+          })
           return
         }
         if (!authorized(request, config)) {
