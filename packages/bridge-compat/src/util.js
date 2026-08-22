@@ -78,13 +78,23 @@ export function run(command, args, options = {}) {
     });
     child.on("error", reject);
     let timeout;
+    let timeoutTriggered = false;
     if (options.timeoutMs) {
-      timeout = setTimeout(() => child.kill("SIGTERM"), options.timeoutMs);
+      timeout = setTimeout(() => {
+        timeoutTriggered = true;
+        child.kill("SIGTERM");
+      }, options.timeoutMs);
       timeout.unref();
     }
     child.on("close", (code, signal) => {
       if (timeout) clearTimeout(timeout);
-      resolve({ code, signal, stdout, stderr, timedOut: signal === "SIGTERM" && Boolean(options.timeoutMs) });
+      resolve({
+        code,
+        signal,
+        stdout,
+        stderr,
+        timedOut: timeoutTriggered && (signal === "SIGTERM" || code === 143 || code === null),
+      });
     });
     if (options.input !== undefined) {
       child.stdin.end(options.input);

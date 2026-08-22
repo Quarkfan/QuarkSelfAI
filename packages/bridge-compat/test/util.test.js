@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatUserTime, parseCliJson } from "../src/util.js";
+import { formatUserTime, parseCliJson, run } from "../src/util.js";
 
 test("formats stored UTC timestamps for the user's notification timezone", () => {
   assert.equal(formatUserTime("2026-08-20T12:56:29.109Z", "Asia/Shanghai"), "2026-08-20 20:56:29");
@@ -22,4 +22,13 @@ test("disables CLI update and skills notifiers for daemon subprocesses", () => {
   const client = new LarkClient({ larkCli: "lark-cli" });
   assert.equal(client.environment.LARKSUITE_CLI_NO_UPDATE_NOTIFIER, "1");
   assert.equal(client.environment.LARKSUITE_CLI_NO_SKILLS_NOTIFIER, "1");
+});
+
+test("recognizes a deadline when a child translates SIGTERM into exit 143", async () => {
+  const result = await run(process.execPath, [
+    "-e",
+    "process.on('SIGTERM', () => process.exit(143)); setInterval(() => {}, 1000);",
+  ], { timeoutMs: 200 });
+  assert.equal(result.code, 143);
+  assert.equal(result.timedOut, true);
 });

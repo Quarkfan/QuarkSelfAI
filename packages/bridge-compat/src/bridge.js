@@ -8,7 +8,7 @@ function formatSession(session, index) {
 }
 
 function isRetryableSessionError(error) {
-  return /(timed? out|timeout|temporar|reconnect|connection|network|transport|websocket|dns|no such host|econn|socket|rate.?limit|429|502|503|504)/i
+  return /(timed? out|timeout|temporar|reconnect|connection|network|transport|websocket|dns|no such host|econn|socket|rate.?limit|429|502|503|504|exit\s+143|sigterm|terminated)/i
     .test(String(error?.message || error));
 }
 

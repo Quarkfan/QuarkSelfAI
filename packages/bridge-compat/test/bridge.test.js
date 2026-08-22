@@ -87,6 +87,19 @@ test("retains a private message when direct Codex execution is temporarily unava
   assert.match(harness.replies[0].text, /Codex 总控/);
 });
 
+test("retains exit 143 executor failures for retry", async () => {
+  const harness = createHarness([]);
+  harness.bridge.runner.execute = async () => {
+    throw new Error("Claude Code 执行失败（exit 143）：");
+  };
+  harness.bridge.logger = { error() {} };
+  await harness.bridge.handle(event("m-exit-143", "继续处理"));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.state.state.queue.length, 1);
+  assert.equal(harness.state.state.queue[0].failureReason, "retryable_transient");
+  assert.equal(harness.state.state.queue[0].attempts, 1);
+});
+
 test("session-targeting language is preserved for the Codex controller to resolve", async () => {
   const matches = [
     { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", title: "对象任务 A", updatedAt: "2026-08-13" },
