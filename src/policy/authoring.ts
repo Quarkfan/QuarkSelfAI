@@ -67,4 +67,9 @@ export class PolicyAuthoringService {
     if (!ownerConfirmed) throw new Error('explicit owner confirmation is required to activate a policy')
     await this.store.activatePolicy(id, revision, new Date().toISOString())
   }
+
+  async rollback(id: string, revision: number, ownerConfirmed: boolean): Promise<void> {
+    if (!ownerConfirmed) throw new Error('explicit owner confirmation is required to roll back a policy')
+    await this.store.activatePolicy(id, revision, new Date().toISOString())
+  }
 }

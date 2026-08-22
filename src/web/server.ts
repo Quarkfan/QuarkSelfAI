@@ -193,6 +193,17 @@ export function createConsoleServer(
           json(response, 200, { ok: true })
           return
         }
+        const rollback = /^\/internal\/policies\/([^/]+)\/revisions\/(\d+)\/rollback$/.exec(url.pathname)
+        if (request.method === 'POST' && rollback) {
+          const input = await body(request)
+          if (input.ownerConfirmed !== true) {
+            json(response, 400, { ok: false, error: 'ownerConfirmed=true is required' })
+            return
+          }
+          await policyAuthoring.rollback(decodeURIComponent(rollback[1] ?? ''), Number(rollback[2]), true)
+          json(response, 200, { ok: true })
+          return
+        }
         json(response, 404, { ok: false, error: 'not found' })
         return
       }

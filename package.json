@@ -79,6 +79,8 @@
     "audit:legacy-state": "node --import tsx scripts/audit-legacy-state.ts",
     "audit:legacy-handoff": "node --import tsx scripts/audit-legacy-handoff.ts",
     "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
+    "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",
+    "rehearse:executor-fallback": "node --import tsx scripts/rehearse-executor-fallback.ts",
     "snapshot:legacy-state": "node --import tsx scripts/snapshot-legacy-state.ts",
     "prepare:compat-handoff": "node --import tsx scripts/prepare-compat-handoff.ts",
     "replay:legacy-dida": "node scripts/replay-legacy-dida.mjs",

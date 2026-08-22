@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { matchesPolicy, policyRequiresApproval, simulatePolicy, validatePolicy } from '../src/policy/engine.js'
 import { policyProposalId } from '../src/policy/authoring.js'
+import { PolicyAuthoringService } from '../src/policy/authoring.js'
 import type { PolicyDocument, PolicySample } from '../src/policy/types.js'
+import type { AssistantStore } from '../src/storage/types.js'
 
 const policy: PolicyDocument = {
   version: 1,
@@ -82,4 +84,15 @@ test('uses a stable proposal id regardless of document property order', () => {
     version: 1 as const,
   }
   assert.equal(policyProposalId('  降低干扰  ', policy), policyProposalId('降低干扰', reordered))
+})
+
+test('requires explicit owner confirmation for both activation and rollback', async () => {
+  const activated: number[] = []
+  const store = { async activatePolicy(_id: string, revision: number) { activated.push(revision) } } as AssistantStore
+  const authoring = new PolicyAuthoringService(store, { async compile() { throw new Error('not used') } })
+  await assert.rejects(authoring.activate('policy', 2, false), /explicit owner confirmation/)
+  await authoring.activate('policy', 2, true)
+  await assert.rejects(authoring.rollback('policy', 1, false), /explicit owner confirmation/)
+  await authoring.rollback('policy', 1, true)
+  assert.deepEqual(activated, [2, 1])
 })
