@@ -80,3 +80,85 @@ test('SQLite is a zero-configuration durable default with event idempotency', as
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test('SQLite durable action claims survive expiry and reject stale workers', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-action-ledger-'))
+  const database = join(directory, 'assistant.sqlite3')
+  const store = await createSqliteStore(database, migrations)
+  try {
+    await store.migrate()
+    const input = {
+      actionId: 'action-read',
+      matterId: 'matter-read',
+      matterTitle: 'Read local fixture',
+      matterSummary: 'Read-only local action',
+      intent: 'inspect a local fixture',
+      source: { channel: 'feishu' as const, messageId: 'om-read' },
+      request: {
+        title: 'Read local fixture',
+        prompt: 'read the fixture',
+        workspace: directory,
+        mode: 'read-only' as const,
+      },
+    }
+    assert.deepEqual(await store.enqueueAction(input), { inserted: true })
+    assert.deepEqual(await store.enqueueAction({
+      ...input,
+      request: {
+        mode: 'read-only' as const,
+        workspace: directory,
+        prompt: 'read the fixture',
+        title: 'Read local fixture',
+      },
+    }), { inserted: false })
+    const first = await store.claimNextAction('worker-one', directory, '2099-01-01T00:00:00.000Z', '2099-01-01T01:00:00.000Z')
+    assert.equal(first?.attempt, 1)
+    assert.equal(first?.approvalGranted, false)
+    assert.equal(await store.claimNextAction('worker-two', directory, '2099-01-01T00:30:00.000Z', '2099-01-01T01:30:00.000Z'), undefined)
+    const recovered = await store.claimNextAction('worker-two', directory, '2099-01-01T02:00:00.000Z', '2099-01-01T03:00:00.000Z')
+    assert.equal(recovered?.attempt, 2)
+    await assert.rejects(store.settleAction('action-read', 'worker-one', {
+      actionId: 'action-read', executor: 'claude-code', status: 'completed', summary: 'stale',
+    }), /does not own/)
+    await store.settleAction('action-read', 'worker-two', {
+      actionId: 'action-read', executor: 'claude-code', status: 'completed', summary: 'done',
+    })
+    assert.equal((await store.recentActions(10))[0]?.state, 'completed')
+  } finally {
+    await store.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('SQLite does not claim a write action until its exact approval is durable', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-action-approval-'))
+  const database = join(directory, 'assistant.sqlite3')
+  const store = await createSqliteStore(database, migrations)
+  try {
+    await store.migrate()
+    await assert.rejects(store.enqueueAction({
+      actionId: 'action-unsafe', matterId: 'matter-unsafe', matterTitle: 'Unsafe', matterSummary: '', intent: 'write',
+      source: { channel: 'feishu' },
+      request: { title: 'Unsafe', prompt: 'write', workspace: directory, mode: 'workspace-write' },
+    }), /requires an approval/)
+    await store.enqueueAction({
+      actionId: 'action-write',
+      matterId: 'matter-write',
+      matterTitle: 'Approved local write',
+      matterSummary: 'Waiting for owner',
+      intent: 'write an approved local fixture',
+      source: { channel: 'feishu', messageId: 'om-write' },
+      request: { title: 'Approved local write', prompt: 'write the fixture', workspace: directory, mode: 'workspace-write' },
+      approval: { id: 'approval-write', prompt: 'Allow this exact fixture write?' },
+    })
+    assert.equal(await store.claimNextAction('worker', directory, '2099-01-01T00:00:00.000Z', '2099-01-01T01:00:00.000Z'), undefined)
+    await store.decideApproval('approval-write', 'approved', { actor: 'owner', revision: 1 }, '2099-01-01T00:01:00.000Z')
+    await store.decideApproval('approval-write', 'approved', { actor: 'owner', revision: 1 }, '2099-01-01T00:01:00.000Z')
+    const claimed = await store.claimNextAction('worker', directory, '2099-01-01T00:02:00.000Z', '2099-01-01T01:02:00.000Z')
+    assert.equal(claimed?.approvalGranted, true)
+    assert.equal(claimed?.request.mode, 'workspace-write')
+  } finally {
+    await store.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})

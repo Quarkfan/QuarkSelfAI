@@ -1,4 +1,4 @@
-import type { NormalizedChannelEvent } from '../domain/contracts.js'
+import type { ExecutorRequest, ExecutorResult, NormalizedChannelEvent, SourceRef } from '../domain/contracts.js'
 import type { PolicyDocument, PolicySimulation } from '../policy/types.js'
 import type { PolicySample } from '../policy/types.js'
 
@@ -70,6 +70,37 @@ export interface PolicyDraftInput {
   readonly simulation: PolicySimulation
 }
 
+export interface DurableActionInput {
+  readonly actionId: string
+  readonly matterId: string
+  readonly matterTitle: string
+  readonly matterSummary: string
+  readonly intent: string
+  readonly source: SourceRef
+  readonly request: Omit<ExecutorRequest, 'actionId'>
+  readonly requestedExecutor?: ExecutorResult['executor']
+  readonly approval?: {
+    readonly id: string
+    readonly prompt: string
+  }
+}
+
+export interface ClaimedAction {
+  readonly actionId: string
+  readonly request: ExecutorRequest
+  readonly requestedExecutor?: ExecutorResult['executor']
+  readonly approvalGranted: boolean
+  readonly attempt: number
+}
+
+export interface ActionClaimRelease {
+  readonly actionId: string
+  readonly workerId: string
+  readonly disposition: 'retry' | 'failed'
+  readonly error: string
+  readonly availableAt?: string
+}
+
 export interface AssistantStore {
   readonly kind: StorageKind
   migrate(): Promise<void>
@@ -86,4 +117,9 @@ export interface AssistantStore {
   savePolicyDraft(input: PolicyDraftInput): Promise<number>
   activatePolicy(id: string, revision: number, approvedAt: string): Promise<void>
   policies(limit: number): Promise<readonly PolicySummary[]>
+  enqueueAction(input: DurableActionInput): Promise<{ readonly inserted: boolean }>
+  decideApproval(approvalId: string, decision: 'approved' | 'rejected', metadata: Readonly<Record<string, unknown>>, decidedAt: string): Promise<void>
+  claimNextAction(workerId: string, workspace: string, now: string, leaseExpiresAt: string): Promise<ClaimedAction | undefined>
+  settleAction(actionId: string, workerId: string, result: ExecutorResult): Promise<void>
+  releaseActionClaim(input: ActionClaimRelease): Promise<void>
 }

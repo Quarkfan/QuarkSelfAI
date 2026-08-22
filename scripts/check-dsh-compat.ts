@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
-import { access, readFile } from 'node:fs/promises'
+import { access, readFile, rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { promisify } from 'node:util'
+import { DatabaseSync } from 'node:sqlite'
 
 const exec = promisify(execFile)
 const projectRoot = process.cwd()
@@ -22,6 +23,8 @@ await access(resolve(checkout, 'packages/goal/goal/lib/typert.host.js'))
 const plugin = await import(resolve(projectRoot, 'dist/index.js'))
 assert.equal('default' in plugin, false, 'DSH namespace plugin must not expose a default export')
 assert.equal(typeof plugin.apply, 'function', 'DSH namespace plugin must expose apply(ctx, config)')
+const ledgerPlugin = await import(resolve(projectRoot, 'dist/execution/ledger-plugin.js'))
+assert.equal(typeof ledgerPlugin.apply, 'function', 'DSH action ledger plugin must expose apply(ctx, config)')
 
 const { stdout: dump } = await exec('corepack', [
   'pnpm', 'dsh', '--profile', 'feishu-assistant', '--dump-config',
@@ -38,7 +41,10 @@ assert.match(dump, /id: quark-executor-claude-code-write[\s\S]*permissionMode: a
 assert.match(dump, /id: quark-executor-codex-read[\s\S]*permissionMode: never/)
 assert.match(dump, /id: quark-executor-codex-write[\s\S]*permissionMode: approve-for-me/)
 assert.match(dump, /id: quark-executor-router[\s\S]*name: '@quarkfan\/quark-self-ai\/executor-router'/)
+assert.match(dump, /id: quark-action-ledger[\s\S]*name: '@quarkfan\/quark-self-ai\/action-ledger'/)
 
+const ledgerPath = resolve(validationHome, 'compat-action-ledger.sqlite3')
+await rm(ledgerPath, { force: true })
 const activation = spawn(process.execPath, [
   '--import', 'tsx/esm', 'apps/cli/src/bin.ts', '--profile', 'feishu-assistant', '--help',
 ], {
@@ -47,6 +53,7 @@ const activation = spawn(process.execPath, [
     ...process.env,
     DSH_HOME: validationHome,
     ASSISTANT_WORKSPACE_ROOTS: JSON.stringify([projectRoot]),
+    QUARK_SQLITE_PATH: ledgerPath,
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })
@@ -72,4 +79,11 @@ if (startup.kind === 'exit') {
   assert.equal(stopped.code, 0, `DSH profile did not shut down cleanly:\n${activationOutput}`)
 }
 assert.doesNotMatch(activationOutput, /Cannot find module|ERR_MODULE_NOT_FOUND|failed to (?:load|apply)|uncaught|fatal/i)
+const ledger = new DatabaseSync(ledgerPath, { readOnly: true })
+try {
+  const row = ledger.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'action_execution'").get()
+  assert.ok(row, 'DSH profile did not initialize the durable action ledger')
+} finally {
+  ledger.close()
+}
 process.stdout.write(`DSH compatibility verified version=${baseline.version} commit=${baseline.sourceCommit} profile=feishu-assistant\n`)

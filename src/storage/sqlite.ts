@@ -4,9 +4,12 @@ import { DatabaseSync } from 'node:sqlite'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { eventToPolicySample } from '../policy/samples.js'
 import type {
+  ActionClaimRelease,
   ActionSummary,
   ApprovalSummary,
   AssistantStore,
+  ClaimedAction,
+  DurableActionInput,
   EventSummary,
   MatterSummary,
   OverviewCounts,
@@ -14,6 +17,7 @@ import type {
   PolicySummary,
   StoredEvent,
 } from './types.js'
+import type { ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
 
 interface SqliteEventRow {
   id: string
@@ -28,6 +32,15 @@ interface SqlitePolicyEventRow {
   id: string
   source: string
   payload: string
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(',')}}`
+  }
+  return JSON.stringify(value)
 }
 
 export class SqliteAssistantStore implements AssistantStore {
@@ -265,6 +278,229 @@ export class SqliteAssistantStore implements AssistantStore {
       simulation: JSON.parse(String(row.simulation)) as PolicySummary['simulation'],
       updatedAt: String(row.updated_at),
     }))
+  }
+
+  async enqueueAction(input: DurableActionInput): Promise<{ readonly inserted: boolean }> {
+    if (input.request.mode !== 'read-only' && !input.approval) {
+      throw new Error(`${input.request.mode} action requires an approval request`)
+    }
+    const request = canonicalJson({ actionId: input.actionId, ...input.request })
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      this.database.prepare(
+        `INSERT INTO matter (id, status, title, latest_summary)
+         VALUES (?, 'open', ?, ?)
+         ON CONFLICT (id) DO NOTHING`,
+      ).run(input.matterId, input.matterTitle, input.matterSummary)
+      const action = this.database.prepare(
+        `INSERT INTO action_record
+          (id, matter_id, state, intent, source, approval_id)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (id) DO NOTHING`,
+      ).run(
+        input.actionId,
+        input.matterId,
+        input.approval ? 'awaiting-approval' : 'planned',
+        input.intent,
+        JSON.stringify(input.source),
+        input.approval?.id ?? null,
+      )
+      if (action.changes === 0) {
+        const existing = this.database.prepare(
+          `SELECT e.request, a.matter_id, a.intent
+           FROM action_execution e JOIN action_record a ON a.id = e.action_id
+           WHERE e.action_id = ?`,
+        ).get(input.actionId) as { request: string; matter_id: string; intent: string } | undefined
+        if (!existing || existing.request !== request || existing.matter_id !== input.matterId || existing.intent !== input.intent) {
+          throw new Error(`action ${input.actionId} already exists with different durable content`)
+        }
+        this.database.exec('COMMIT')
+        return { inserted: false }
+      }
+      if (input.approval) {
+        this.database.prepare(
+          `INSERT INTO approval_request (id, action_id, status, prompt)
+           VALUES (?, ?, 'pending', ?)`,
+        ).run(input.approval.id, input.actionId, input.approval.prompt)
+      }
+      this.database.prepare(
+        `INSERT INTO action_execution (action_id, request, requested_executor, status)
+         VALUES (?, ?, ?, 'pending')`,
+      ).run(input.actionId, request, input.requestedExecutor ?? null)
+      this.database.prepare(
+        `INSERT INTO action_transition (action_id, from_state, to_state, reason, idempotency_key)
+         VALUES (?, NULL, ?, 'durable action enqueued', ?)`,
+      ).run(input.actionId, input.approval ? 'awaiting-approval' : 'planned', `${input.actionId}:enqueue`)
+      this.database.exec('COMMIT')
+      return { inserted: true }
+    } catch (error) {
+      this.database.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  async decideApproval(approvalId: string, decision: 'approved' | 'rejected', metadata: Readonly<Record<string, unknown>>, decidedAt: string): Promise<void> {
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const approval = this.database.prepare(
+        'SELECT action_id, status FROM approval_request WHERE id = ?',
+      ).get(approvalId) as { action_id: string; status: string } | undefined
+      if (!approval) throw new Error(`approval ${approvalId} does not exist`)
+      if (approval.status !== 'pending') {
+        if (approval.status === decision) {
+          this.database.exec('COMMIT')
+          return
+        }
+        throw new Error(`approval ${approvalId} is already ${approval.status}`)
+      }
+      this.database.prepare(
+        `UPDATE approval_request SET status = ?, decision = ?, decided_at = ? WHERE id = ?`,
+      ).run(decision, JSON.stringify(metadata), decidedAt, approvalId)
+      const actionState = decision === 'approved' ? 'planned' : 'failed'
+      this.database.prepare(
+        `UPDATE action_record SET state = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+      ).run(actionState, approval.action_id)
+      if (decision === 'rejected') {
+        this.database.prepare(
+          `UPDATE action_execution SET status = 'failed', last_error = 'owner rejected approval',
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE action_id = ?`,
+        ).run(approval.action_id)
+      }
+      this.database.prepare(
+        `INSERT INTO action_transition (action_id, from_state, to_state, reason, metadata, idempotency_key)
+         VALUES (?, 'awaiting-approval', ?, ?, ?, ?)`,
+      ).run(
+        approval.action_id,
+        actionState,
+        `owner ${decision} action`,
+        JSON.stringify(metadata),
+        `${approval.action_id}:approval:${approvalId}:${decision}`,
+      )
+      this.database.exec('COMMIT')
+    } catch (error) {
+      this.database.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  async claimNextAction(workerId: string, workspace: string, now: string, leaseExpiresAt: string): Promise<ClaimedAction | undefined> {
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const row = this.database.prepare(
+        `SELECT e.action_id, e.request, e.requested_executor, e.attempt,
+                CASE WHEN json_extract(e.request, '$.mode') = 'read-only' THEN 0 ELSE 1 END AS approval_granted,
+                a.state
+         FROM action_execution e
+         JOIN action_record a ON a.id = e.action_id
+         WHERE json_extract(e.request, '$.workspace') = ?
+           AND e.available_at <= ?
+           AND (e.status = 'pending' OR (e.status = 'executing' AND e.lease_expires_at <= ?))
+           AND (json_extract(e.request, '$.mode') = 'read-only' OR EXISTS (
+             SELECT 1 FROM approval_request p
+             WHERE p.id = a.approval_id AND p.action_id = a.id AND p.status = 'approved'
+           ))
+         ORDER BY e.available_at, e.created_at
+         LIMIT 1`,
+      ).get(workspace, now, now) as {
+        action_id: string
+        request: string
+        requested_executor: ExecutorResult['executor'] | null
+        attempt: number
+        approval_granted: number
+        state: string
+      } | undefined
+      if (!row) {
+        this.database.exec('COMMIT')
+        return undefined
+      }
+      const attempt = row.attempt + 1
+      const claimed = this.database.prepare(
+        `UPDATE action_execution
+         SET status = 'executing', lease_owner = ?, lease_expires_at = ?, attempt = ?,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE action_id = ? AND (status = 'pending' OR (status = 'executing' AND lease_expires_at <= ?))`,
+      ).run(workerId, leaseExpiresAt, attempt, row.action_id, now)
+      if (claimed.changes !== 1) throw new Error(`action ${row.action_id} lost its claim race`)
+      this.database.prepare(
+        `UPDATE action_record SET state = 'executing', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+      ).run(row.action_id)
+      this.database.prepare(
+        `INSERT INTO action_transition (action_id, from_state, to_state, reason, metadata, idempotency_key)
+         VALUES (?, ?, 'executing', 'worker claimed durable action', ?, ?)`,
+      ).run(row.action_id, row.state, JSON.stringify({ workerId, attempt, leaseExpiresAt }), `${row.action_id}:claim:${attempt}`)
+      this.database.exec('COMMIT')
+      return {
+        actionId: row.action_id,
+        request: JSON.parse(row.request) as ExecutorRequest,
+        ...(row.requested_executor ? { requestedExecutor: row.requested_executor } : {}),
+        approvalGranted: row.approval_granted === 1,
+        attempt,
+      }
+    } catch (error) {
+      this.database.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  async settleAction(actionId: string, workerId: string, result: ExecutorResult): Promise<void> {
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const execution = this.database.prepare(
+        `SELECT attempt FROM action_execution WHERE action_id = ? AND status = 'executing' AND lease_owner = ?`,
+      ).get(actionId, workerId) as { attempt: number } | undefined
+      if (!execution) throw new Error(`worker ${workerId} does not own action ${actionId}`)
+      const actionState = result.status === 'completed' ? 'completed' : result.status === 'needs-input' ? 'waiting-external' : 'failed'
+      this.database.prepare(
+        `UPDATE action_execution SET status = ?, result = ?, last_error = ?, lease_owner = NULL,
+           lease_expires_at = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE action_id = ?`,
+      ).run(result.status, JSON.stringify(result), result.status === 'failed' ? result.summary : null, actionId)
+      this.database.prepare(
+        `UPDATE action_record SET state = ?, executor = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+      ).run(actionState, result.executor, actionId)
+      this.database.prepare(
+        `INSERT INTO action_transition (action_id, from_state, to_state, reason, metadata, idempotency_key)
+         VALUES (?, 'executing', ?, 'executor settled durable action', ?, ?)`,
+      ).run(actionId, actionState, JSON.stringify({ workerId, result }), `${actionId}:settle:${execution.attempt}`)
+      this.database.exec('COMMIT')
+    } catch (error) {
+      this.database.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  async releaseActionClaim(input: ActionClaimRelease): Promise<void> {
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const execution = this.database.prepare(
+        `SELECT attempt FROM action_execution WHERE action_id = ? AND status = 'executing' AND lease_owner = ?`,
+      ).get(input.actionId, input.workerId) as { attempt: number } | undefined
+      if (!execution) throw new Error(`worker ${input.workerId} does not own action ${input.actionId}`)
+      const status = input.disposition === 'retry' ? 'pending' : 'failed'
+      const actionState = input.disposition === 'retry' ? 'planned' : 'failed'
+      this.database.prepare(
+        `UPDATE action_execution SET status = ?, lease_owner = NULL, lease_expires_at = NULL,
+           available_at = ?, last_error = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE action_id = ?`,
+      ).run(status, input.availableAt ?? new Date().toISOString(), input.error, input.actionId)
+      this.database.prepare(
+        `UPDATE action_record SET state = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+      ).run(actionState, input.actionId)
+      this.database.prepare(
+        `INSERT INTO action_transition (action_id, from_state, to_state, reason, metadata, idempotency_key)
+         VALUES (?, 'executing', ?, ?, ?, ?)`,
+      ).run(
+        input.actionId,
+        actionState,
+        input.error,
+        JSON.stringify({ workerId: input.workerId, disposition: input.disposition, availableAt: input.availableAt }),
+        `${input.actionId}:release:${execution.attempt}:${input.disposition}`,
+      )
+      this.database.exec('COMMIT')
+    } catch (error) {
+      this.database.exec('ROLLBACK')
+      throw error
+    }
   }
 }
 

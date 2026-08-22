@@ -25,6 +25,10 @@
     "./executor-router": {
       "types": "./dist/execution/plugin.d.ts",
       "import": "./dist/execution/plugin.js"
+    },
+    "./action-ledger": {
+      "types": "./dist/execution/ledger-plugin.d.ts",
+      "import": "./dist/execution/ledger-plugin.js"
     }
   },
   "files": [

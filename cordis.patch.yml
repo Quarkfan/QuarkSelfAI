@@ -43,3 +43,13 @@
         codexReadProvider: quark-codex-read
         codexWriteProvider: quark-codex-write
         nativeProvider: spawn
+    - id: quark-action-ledger
+      name: '@quarkfan/quark-self-ai/action-ledger'
+      config:
+        storageKind: !!js process.env.ASSISTANT_STORAGE === 'postgres' ? 'postgres' : 'sqlite'
+        sqlitePath: !!js process.env.QUARK_SQLITE_PATH || (process.env.DSH_HOME + '/quarkselfai.sqlite3')
+        databaseUrl: !!js process.env.DATABASE_URL
+        workerId: !!js process.env.QUARK_WORKER_ID || ('local-' + process.pid)
+        leaseMs: 7200000
+        retryDelayMs: 120000
+        maxAttempts: 5

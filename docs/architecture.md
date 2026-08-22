@@ -26,6 +26,11 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 必须等于父 DSH session 的 cwd 且落在白名单内；workspace/external write 必须带 durable owner approval。
 该内存互斥只是进程内最后一道防线，正式执行仍必须先由 action ledger 原子 claim。
 
+`quarkActionLedger` 是 DSH 原生持久执行服务。SQLite 和 PostgreSQL 使用同一契约保存完整执行请求、精确
+approval 绑定、租约 owner/期限、attempt、结果和下次可执行时间。写任务没有 durable approval 时无法入队，
+未批准时无法 claim；崩溃后只有租约过期的新 worker 能接管，旧 worker 不能提交结果。基础设施错误按指数
+退避重试，确定性边界错误直接失败，防止用第二个模型重复执行同一业务动作。
+
 ## 本地优先运行边界
 
 个人助手的默认形态是用户机器上的单实例守护进程：SQLite 保存状态，Web 控制台只绑定回环地址，

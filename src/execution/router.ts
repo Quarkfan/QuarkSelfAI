@@ -61,7 +61,7 @@ function diagnostic(error: unknown): string {
   return (error instanceof Error ? error.message : String(error)).slice(0, 4_096)
 }
 
-function infrastructureFailure(error: unknown): boolean {
+export function isInfrastructureFailure(error: unknown): boolean {
   return INFRASTRUCTURE_FAILURE.test(diagnostic(error))
 }
 
@@ -116,13 +116,13 @@ export class SequentialExecutorRouter {
           }
           const reason = result.diagnostic ?? result.stopReason
           attempts.push({ executor, provider, status: 'failed', failureStage: 'run', failureReason: reason })
-          if (executor !== 'claude-code' || !infrastructureFailure(reason)) {
+          if (executor !== 'claude-code' || !isInfrastructureFailure(reason)) {
             return this.failed(request.actionId, executor, attempts, result)
           }
         } catch (error) {
           const reason = diagnostic(error)
           attempts.push({ executor, provider, status: 'failed', failureStage: run ? 'run' : 'start', failureReason: reason })
-          if (executor !== 'claude-code' || !infrastructureFailure(reason)) {
+          if (executor !== 'claude-code' || !isInfrastructureFailure(reason)) {
             return this.failed(request.actionId, executor, attempts)
           }
         } finally {
