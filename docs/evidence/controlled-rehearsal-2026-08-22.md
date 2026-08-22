@@ -39,6 +39,31 @@
 - 未读取业务文件、未调用外部工具、未产生外部写入。后续按“自建任务归档一周后删除”的统一生命周期清理，
   不使用需要交互终端的删除命令。
 
+## 已完成：执行器兜底
+
+- 第一次命令承载出现两个相同的隔离 Codex 进程，违反“不得双执行”的通过条件；未将该次结果计为成功。
+- 已终止两组演练进程并确认无残留；旧 bridge 未被触碰，业务外部写入为 0。
+- 演练入口已增加跨进程排他锁和陈旧 PID 回收。嵌套 `codex exec` 在桌面任务宿主内会超时或被
+  `SIGTERM(143)` 中断，因此不再将嵌套 CLI 作为桌面端兜底实现。
+- 修复后路由演练：action `quark-executor-rehearsal-20260822-v1` 请求 Claude；不存在的 Claude executable
+  在 `start/ENOENT` 失败并完成释放后，Codex handoff 才开始，`serialNoOverlap=true`。
+- 真实 Codex：独立 projectless task `01a029e8-853e-72f1-a15f-a6614b63fa5e`，唯一标题
+  `QuarkSelfAI-受控演练-20260822-Codex兜底`，模型 `gpt-5.6-sol`、推理 `medium`，返回固定回执
+  `QUARK_EXECUTOR_FALLBACK_OK`，随后归档。
+- 发现附带缺陷：已归档 task 恢复后两次续接均形成空 turn，因此真实 fallback 改为新建唯一标题 task；
+  该行为不得被误记为模型成功，也不得在同一 action 上无限重试。
+- 最终业务外部写入为 0；旧 bridge 未停止、重启或修改。
+
+## 已完成：故障与恢复通知
+
+- 命令：`npm run rehearse:notification-recovery`；使用临时目录、真实 `StateStore` 和隔离 connector。
+- 第一代进程中，消息搜索发生固定合成 connection timeout，同时 connector 模拟飞书不可用；故障已持久化，
+  初始通知未被误记为送达。
+- 第二代进程从同一状态恢复，搜索恢复健康后只发送 1 条“曾发生异常，现已恢复”合并补发，包含北京时间；
+  再执行一轮健康 poll 后通知数仍为 1。
+- 演练修复了原有缺口：故障期间飞书自身不可用时，恢复后不再只发“已恢复”，而会明确说明故障通知曾未送达。
+- 最终 health 为 healthy，外部写入为 0；未断开或重启现网消费者。
+
 ## 获批后执行范围
 
 1. **自然语言策略**：使用只匹配固定合成短语的无害规则完成草案、样本模拟、精确 revision 批准、激活

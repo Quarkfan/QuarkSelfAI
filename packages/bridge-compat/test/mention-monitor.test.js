@@ -166,6 +166,41 @@ test("backs off transient Feishu rate limits without sending a generic failure a
   assert.ok(new Date(state.state.mentionNextPollAt) > new Date());
 });
 
+test("persists an undelivered failure until the combined recovery notification succeeds", async () => {
+  const state = stateHarness();
+  let searchFails = true;
+  let sendFails = true;
+  const messages = [];
+  const monitor = new MentionMonitor({
+    config: {
+      mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, allowedOpenId: "ou_me",
+      notificationTimeZone: "Asia/Shanghai", specialAttentionUsers: [],
+    },
+    state,
+    lark: {
+      async searchMentions() { if (searchFails) throw new Error("connection timeout"); return []; },
+      async searchSpecialAttentionMessages() { return []; },
+      async searchDirectMessages() { return []; },
+      async searchFlaggedConversationMessages() { return []; },
+      async send(message) { if (sendFails) throw new Error("connection unavailable"); messages.push(message); },
+    },
+    taskCreator: {}, logger: { error() {} },
+  });
+
+  await monitor.poll();
+  assert.ok(state.state.mentionHealthFailure);
+  assert.equal(state.state.mentionHealthFailure.notifiedAt, null);
+  searchFails = false;
+  await monitor.poll();
+  assert.ok(state.state.mentionHealthFailure);
+  sendFails = false;
+  await monitor.poll();
+  await monitor.poll();
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /曾发生异常，现已恢复/);
+  assert.equal(state.state.mentionHealthFailure, null);
+});
+
 test("runs independent focus-message searches sequentially", async () => {
   const state = stateHarness();
   let active = 0;

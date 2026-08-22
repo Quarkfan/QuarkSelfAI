@@ -8,7 +8,7 @@
 
 | 原始能力要求 | 对应能力 | 当前证据 | 状态/剩余门禁 |
 | --- | --- | --- | --- |
-| 守护进程监听飞书，不依赖循环 sleep；崩溃后恢复 | lark-event-adapter, retry-and-alerting, daemon-deployment | event capability discovery；受监管 compat/DSH 子进程；launchd/systemd/Compose；租约与退避测试 | gated：正式断线/恢复维护演练 |
+| 守护进程监听飞书，不依赖循环 sleep；崩溃后恢复 | lark-event-adapter, retry-and-alerting, daemon-deployment | event capability discovery；受监管 compat/DSH 子进程；launchd；租约/退避；跨进程隔离故障恢复演练 | complete（服务器部署仍为可选项） |
 | 本人机器人私聊直接理解自然语言并执行，不要求命令枚举 | direct-owner-control | 契约测试；现网 8 条本人消息已处理、持久 controller/current session、队列 0 | complete |
 | 创建、续接指定 Codex 会话；左侧可见；标题唯一；默认 gpt-5.6-sol medium | visible-codex-sessions | app-server 契约；桌面端 projectless 合成任务创建、列表可见、同 task 续接和归档 | complete |
 | 任务完成后归档；自建会话归档七日后强制删除；失败退避 | session-janitor | 生命周期测试；现网 2/2 自动研究会话均 archived+deleted 且累计失败为 0 | complete |
@@ -25,13 +25,13 @@
 | 自然语言增加降噪策略，编译、样本模拟、确认后启用和回滚 | natural-language-policy | 受限 DSL、覆盖率/紧急保护、稳定 proposal；现网 Card 2.0 批准；隔离 SQLite 激活与回滚演练 | complete |
 | BlackLake 问题先按参考项目和 skills 路由，再决定 start/confirm/skip | blacklake-routing | 三源动态哈希、skill/operation-chain 门禁；合成用例 route→ledger→approval→claim | complete |
 | 智造湖小维作为慢速排查工具，调用前必须本人批准，结果回灌且不重复建任务 | xiaowei-channel | 授权/持久等待测试；现网 3 个请求完成且均关联回复 | complete |
-| Claude Code 优先、Codex 兜底、同一 action 只能一个执行者 | executor-routing | 官方 providers、基础设施错误分类、串行 dispose、action lease/互斥测试；双方真实合成握手 | gated：完整 fallback 演练；第三方 Claude 成本通道未配置 |
+| Claude Code 优先、Codex 兜底、同一 action 只能一个执行者 | executor-routing | 官方 providers、基础设施错误分类、串行 dispose、action lease；Claude start/ENOENT 后串行 handoff；真实 Codex task 固定回执 | complete；第三方 Claude 成本通道仍是可选未配置项 |
 | Claude Code 与 Codex 共享 skills、Agent 约定、参考项目，不产生信息差 | blacklake-routing, executor-routing | 根 AGENTS/CLAUDE 同步约束、三源 router、DSH profile provider 配置 | implemented；持续运行同步校验 |
 | 飞书 CLI 快速升级适配，不让业务规则依赖 CLI 参数 | lark-event-adapter | version/schema/capability discovery、未知字段保留、升级 banner 测试和升级手册 | complete |
 | SQLite 与 PostgreSQL 可配置，默认 SQLite | durable-store | 统一存储契约、两套 migration、SQLite/PG 实现 | complete |
 | 本地 Web 控制台可见，未来兼容服务器部署 | web-console, daemon-deployment, server-deployment | 本地 dashboard/LaunchAgent/真实重启已验证；systemd/Compose/runtime lock 已建 | 本地 complete；服务器 partial，发布前补 Docker 实镜像 |
 | 个人电脑本地运行并访问授权文件是主形态 | local-first-execution | ADR 0003；默认 local/SQLite/loopback；workspace realpath 与 symlink 防护 | complete |
-| 所有故障、恢复和需要协助的事项可通过飞书通知，时间显示为北京时间 | retry-and-alerting | 持久故障/恢复去重、本地时区格式、错误摘要脱敏测试 | gated：正式断线恢复演练 |
+| 所有故障、恢复和需要协助的事项可通过飞书通知，时间显示为北京时间 | retry-and-alerting | 持久故障/恢复去重、本地时区格式、错误摘要脱敏；飞书自身不可用后跨重启合并补发演练 | complete |
 | 测试任务不得污染真实待办，低价值消息如“ok”不得建任务 | focus-intake, dida-projection | synthetic artifact、whole-message acknowledgement、priority-zero admission 测试 | observing：影子样本继续核验 |
 
 ## 当前不能绕过的接管条件

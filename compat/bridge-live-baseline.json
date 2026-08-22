@@ -1,6 +1,6 @@
 {
   "liveHash": "b9f33c0c3e4f912c0c9d2b345043d133e5af957c8124698bbb05baddf02e91b7",
-  "compatHash": "34060e95ce2c2fc93a1550995b4d5efd5c01f3340183f0395e4f6f9ab36d9cda",
+  "compatHash": "0e9f54e2f2465e08dd308c8219f069a7bfbcc430bc5a27635b8d9ed5bce48b70",
   "liveFileCount": 27,
   "compatFileCount": 28,
   "differences": [
@@ -9,7 +9,8 @@
     "src/codex-bridge-mcp.js",
     "src/codex-runner.js",
     "src/index.js",
-    "src/lark-card.js"
+    "src/lark-card.js",
+    "src/mention-monitor.js"
   ],
   "liveOnly": [],
   "compatOnly": [

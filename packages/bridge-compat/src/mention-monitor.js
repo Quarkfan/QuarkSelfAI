@@ -159,13 +159,18 @@ export class MentionMonitor {
         );
       }
       if (this.state.state.mentionHealthFailure) {
-        const failedAt = this.state.state.mentionHealthFailure.at;
-        this.state.state.mentionHealthFailure = null;
-        await this.state.save();
-        await this.safeSend(
-          `飞书重点消息监控已恢复。故障始于：${formatUserTime(failedAt, this.config.notificationTimeZone)}（北京时间）`,
+        const failure = this.state.state.mentionHealthFailure;
+        const failedAt = failure.at;
+        const recoveredNotified = await this.safeSendStatus(
+          failure.notifiedAt
+            ? `飞书重点消息监控已恢复。故障始于：${formatUserTime(failedAt, this.config.notificationTimeZone)}（北京时间）`
+            : `飞书重点消息监控曾发生异常，现已恢复。故障始于：${formatUserTime(failedAt, this.config.notificationTimeZone)}（北京时间）。故障期间通知因飞书连接不可用未能送达，现已补发。`,
           `mention-recovered:${failedAt}`,
         );
+        if (recoveredNotified) {
+          this.state.state.mentionHealthFailure = null;
+          await this.state.save();
+        }
       }
     } catch (error) {
       this.logger.error("mention poll failed", error);
@@ -174,10 +179,16 @@ export class MentionMonitor {
         return;
       }
       if (!this.state.state.mentionHealthFailure) {
-        this.state.state.mentionHealthFailure = { at: new Date().toISOString(), error: error.message };
+        this.state.state.mentionHealthFailure = { at: new Date().toISOString(), error: error.message, notifiedAt: null };
         await this.state.save();
       }
-      await this.safeSend(`飞书重点消息监控异常，后台会持续重试；如果飞书连接本身不可用，会在恢复后补发通知。\n\n${userFacingError(error)}`, `mention-failed:${this.state.state.mentionHealthFailure.at}`);
+      if (!this.state.state.mentionHealthFailure.notifiedAt) {
+        const sent = await this.safeSendStatus(`飞书重点消息监控异常，后台会持续重试；如果飞书连接本身不可用，会在恢复后补发通知。\n\n${userFacingError(error)}`, `mention-failed:${this.state.state.mentionHealthFailure.at}`);
+        if (sent) {
+          this.state.state.mentionHealthFailure.notifiedAt = new Date().toISOString();
+          await this.state.save();
+        }
+      }
     } finally {
       this.polling = false;
     }
@@ -523,6 +534,11 @@ export class MentionMonitor {
   async safeSend(markdown, suffix) {
     try { return await this.lark.send(markdown, suffix); }
     catch (error) { this.logger.error("lark notification failed", error); return null; }
+  }
+
+  async safeSendStatus(markdown, suffix) {
+    try { await this.lark.send(markdown, suffix); return true; }
+    catch (error) { this.logger.error("lark notification failed", error); return false; }
   }
 
   async safeSendInteractive(markdown, actions, options, suffix) {

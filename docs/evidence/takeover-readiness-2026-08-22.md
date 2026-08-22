@@ -8,15 +8,15 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 
 ## 已验证
 
-- `npm run check`：主包 56 项（沙箱内 54 通过、回环 E2E 2 跳过），兼容包 99 项全部通过；Web 控制台
+- `npm run check`：主包 62 项（沙箱内 60 通过、回环 E2E 2 跳过），兼容包 100 项全部通过；Web 控制台
   和守护重启两个回环 E2E 已在允许监听的本地环境分别通过。
 - `npm run compat:dsh`：DSH `0.1.1-rc.2`、commit `b150a55` 与 baseline 一致，构建产物为 named
   namespace plugin；隔离 `feishu-assistant` profile 的配置包含 Lark、BlackLake、Claude/Codex 读写隔离
   Provider 和 executor router，并已完成真实 profile 启动、SIGTERM 清洁退出烟测。
 - `npm run compat:live-bridge`：现网 bridge 的 27 个业务/协议文件在兼容 Provider 中均存在，没有 live-only
-  文件；6 个差异文件已逐一限定为 Quark 控制面/自然语言策略的加法改动，另有 1 个 additive control-plane
+  文件；7 个差异文件已逐一限定为 Quark 控制面/自然语言策略/恢复通知的加法改动，另有 1 个 additive control-plane
   client。live/compat 内容哈希分别为 `b9f33c0c3e4f912c0c9d2b345043d133e5af957c8124698bbb05baddf02e91b7`
-  和 `34060e95ce2c2fc93a1550995b4d5efd5c01f3340183f0395e4f6f9ab36d9cda`；后续任一侧漂移都会 fail-closed。
+  和 `0e9f54e2f2465e08dd308c8219f069a7bfbcc430bc5a27635b8d9ed5bce48b70`；后续任一侧漂移都会 fail-closed。
 - Claude Code `2.1.177` 已登录；损坏的 Codex CLI 已在线重装为 `0.149.0` 并确认登录。实际模型读取本地文件
   会把内容发送到模型服务，必须使用明确获准的脱敏样本，不能把普通仓库文件当烟测材料。
 - 两个真实模型通道已用固定合成文本握手：Claude 返回 `QUARK_CLAUDE_OK`；Codex `gpt-5.6-sol/medium`
@@ -33,8 +33,9 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
   ID，无无效 operational timestamp。
 - 可恢复工作：3 个待确认调研；它们属于迁移项，不是清空要求。
 - 一条业务 dueDate 格式告警会原样保留，在 DSH-native 导入时规范化，不阻塞 checkpoint。
-- 最新只读审计基于旧状态 SHA-256 `3409ff988aa1d0aae80304cde4cba250188f8e5f12a634b38abb5c5544ace3bb`，
-  修改时间 `2026-08-22T11:51:27.972Z`；queue 和 pending focus 均为 0，handoff 仍安全。
+- 最新只读审计基于旧状态 SHA-256 `f52a5f8e753b6f3eb14b33ed8f5bcbb58d71e3cfe0757c28c011cd506e3a1d74`，
+  修改时间 `2026-08-22T14:44:28.780Z`；queue 和 pending focus 均为 0，handoff 仍安全；现网卡片回调为
+  11 个且无重复，本次受控演练批准已被持久化处理。
 - 无写影子窗口正在运行（`2026-08-20T11:52:20.935Z` 至 `2026-08-27T11:52:20.935Z`）：当前 41 个
   决策、23 个 matter、14 个滴答快照、2 个反馈、23 次任务创建或更新；机器审计已核对事项引用、任务
   准入、创建/更新 ID、行动责任、下一步、通知层级映射、任务快照和反馈结构，均有效且无重复 messageId。
@@ -73,10 +74,17 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
   直接收益同时明确的情况。SQLite/PostgreSQL claim 逻辑已修正为“只要 action 显式带 approval 就必须先
   approved”，不再让 read-only 绕过确认。固定合成用例已证明批准前不可 claim、批准后由 Claude-primary
   action 可 claim，且没有启动真实调研或访问业务文件。
+- 常东旭已通过现网 Card 2.0 输入框和按钮批准四项固定合成受控演练。自然语言策略在隔离 SQLite 用 20 条
+  样本完成幂等 revision、激活和回滚；桌面端以 `gpt-5.6-sol/medium` 完成唯一标题 task 的左侧可见和续接；
+  Claude `start/ENOENT` 完全释放后，独立真实 Codex fallback task 返回 `QUARK_EXECUTOR_FALLBACK_OK`；
+  隔离飞书 connector 完成故障跨重启持久化、恢复合并补发、北京时间和去重验证。四项均无业务外部写入。
+- 演练同时识别并保留两项真实限制：桌面任务中嵌套 `codex exec` 会超时或被 SIGTERM，不能作为桌面端
+  fallback；已归档 task 恢复后可能生成空 turn，因此失败续接不能误报成功，真实 fallback 应创建唯一标题
+  task 并受 action 幂等与生命周期约束。
 
 ## 未通过的硬门禁
 
-当前滴答 schema 生效时间窗（自 `2026-08-22T08:25:00Z`）只发现 5 个 monitor 结果，没有 task
+当前滴答 schema 生效时间窗（自 `2026-08-22T08:25:00Z`）发现 13 个 monitor 结果，没有 task
 projection。`--min-task-projections 20 --strict` 因 `0/20` 样本不足退出 1；失败不是 schema violation，
 也没有重复 task fingerprint 或外部写入。不得用人工制造测试待办补足数量。
 
@@ -84,8 +92,8 @@ projection。`--min-task-projections 20 --strict` 因 `0/20` 样本不足退出 
 
 1. 收集至少 20 个真实、脱敏且无外部写的当前 schema 决策样本，全部通过任务准入、合并、NOTE 防护、
    批准识别、BlackLake skill 路由及通知去重校验。
-2. 使用明确批准的脱敏文件样本演练真实 Claude-primary/Codex-fallback、本地文件读取、持久重试、重启恢复、
-   action ledger 单执行者和卡片长等待恢复。
+2. 等待无写影子窗口于 `2026-08-27T11:52:20.935Z` 完成，再运行严格审计并评估当前 6 条 `could_batch`
+   差异；窗口未完成前不得提前判定协作质量通过。
 3. 在明确批准的维护窗口执行单消费者切换；切换前冻结 checkpoint，失败时停止新消费者后恢复旧服务。
 4. Dockerfile 已锁入自包含 DSH CLI 与两个 executor Provider，并通过发布包/entrypoint 的进程级隔离演练；
    但 Docker 实镜像构建仍受本机 Docker daemon HTTP 500 阻塞。该项不影响本地 LaunchAgent 主路径，服务器

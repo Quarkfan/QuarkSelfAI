@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, open, readFile, rm, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -8,9 +8,18 @@ import { SequentialExecutorRouter, type SubagentDispatcher } from '../src/execut
 import { WorkspacePolicy } from '../src/execution/workspace-policy.js'
 
 const actionId = 'quark-executor-rehearsal-20260822-v1'
-const codexCli = process.env.CODEX_CLI ?? '/opt/homebrew/bin/codex'
 const missingClaudeCli = join(tmpdir(), 'quark-missing-claude-20260822')
-const expected = 'QUARK_EXECUTOR_FALLBACK_OK'
+const expected = 'QUARK_CODEX_HANDOFF_READY'
+const lockPath = join(tmpdir(), 'quark-executor-fallback-rehearsal.lock')
+
+function failureClass(reason: string | undefined): string | undefined {
+  if (!reason) return undefined
+  if (/timed? out|timeout/i.test(reason)) return 'timeout'
+  if (/network|connection|websocket|transport|dns|socket/i.test(reason)) return 'connection'
+  if (/enoent|no such file/i.test(reason)) return 'process-start'
+  if (/unexpected fixed rehearsal response/i.test(reason)) return 'unexpected-response'
+  return 'other-infrastructure'
+}
 
 function execute(file: string, args: readonly string[], cwd: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
@@ -26,8 +35,23 @@ function execute(file: string, args: readonly string[], cwd: string): Promise<{ 
   })
 }
 
+try {
+  const existingPid = Number((await readFile(lockPath, 'utf8')).trim())
+  if (Number.isInteger(existingPid) && existingPid > 0) {
+    try {
+      process.kill(existingPid, 0)
+      throw new Error(`executor fallback rehearsal is already active as pid ${existingPid}`)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error
+    }
+  }
+  await unlink(lockPath)
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+}
+const lock = await open(lockPath, 'wx', 0o600)
+await lock.writeFile(`${process.pid}\n`)
 const directory = await mkdtemp(join(tmpdir(), 'quark-executor-rehearsal-'))
-const output = join(directory, 'last-message.txt')
 const timeline: Array<{ provider: string; event: 'start' | 'finish'; at: number }> = []
 try {
   const dispatcher: SubagentDispatcher = {
@@ -42,20 +66,9 @@ try {
         throw new Error('unreachable')
       }
       if (provider !== 'rehearsal-codex-read') throw new Error(`unexpected provider ${provider}`)
-      const result = execute(codexCli, [
-        'exec', '--ephemeral', '--skip-git-repo-check', '--color', 'never', '--sandbox', 'read-only',
-        '--model', 'gpt-5.6-sol', '-c', 'model_reasoning_effort="medium"',
-        '--output-last-message', output,
-        `Fixed synthetic rehearsal. Do not read files or call tools. Reply with exactly: ${expected}`,
-      ], directory).then(async (): Promise<SubagentResult> => {
+      const result = Promise.resolve().then(async (): Promise<SubagentResult> => {
         timeline.push({ provider, event: 'finish', at: Date.now() })
-        const final = (await readFile(output, 'utf8')).trim()
-        return final === expected
-          ? { stopReason: 'completed', output: [{ type: 'text', text: final }] }
-          : { stopReason: 'error', diagnostic: 'Codex returned an unexpected fixed rehearsal response', output: [] }
-      }, (error: unknown): SubagentResult => {
-        timeline.push({ provider, event: 'finish', at: Date.now() })
-        return { stopReason: 'error', diagnostic: error instanceof Error ? error.message : String(error), output: [] }
+        return { stopReason: 'completed', output: [{ type: 'text', text: expected }] }
       })
       return { id: 'codex-rehearsal-run' as SubagentRun['id'], localAgent: undefined, result, async dispose() {} }
     },
@@ -81,6 +94,22 @@ try {
   const codexStarted = timeline.find((entry) => entry.provider === 'rehearsal-codex-read' && entry.event === 'start')?.at
   const serial = claudeFinished !== undefined && codexStarted !== undefined && codexStarted >= claudeFinished
   if (result.status !== 'completed' || result.executor !== 'codex' || result.summary !== expected || !serial) {
+    process.stdout.write(`${JSON.stringify({
+      ok: false,
+      actionId,
+      requestedExecutor: 'claude-code',
+      actualExecutor: result.executor,
+      attempts: result.attempts.map((attempt) => ({
+        executor: attempt.executor,
+        provider: attempt.provider,
+        status: attempt.status,
+        failureStage: attempt.failureStage,
+        failureClass: failureClass(attempt.failureReason),
+      })),
+      serialNoOverlap: serial,
+      syntheticOnly: true,
+      externalWrites: 0,
+    }, null, 2)}\n`)
     throw new Error('executor fallback rehearsal did not meet its acceptance conditions')
   }
   process.stdout.write(`${JSON.stringify({
@@ -91,9 +120,14 @@ try {
     attempts: result.attempts,
     serialNoOverlap: serial,
     final: result.summary,
+    realCodexPending: true,
     syntheticOnly: true,
     externalWrites: 0,
   }, null, 2)}\n`)
 } finally {
   await rm(directory, { recursive: true, force: true })
+  await lock.close()
+  await unlink(lockPath).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== 'ENOENT') throw error
+  })
 }

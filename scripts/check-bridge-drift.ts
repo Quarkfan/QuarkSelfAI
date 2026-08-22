@@ -17,6 +17,7 @@ const allowedDifferences = new Set([
   'src/codex-runner.js',
   'src/index.js',
   'src/lark-card.js',
+  'src/mention-monitor.js',
 ])
 const allowedCompatOnly = new Set(['src/quark-control-plane-client.js'])
 
