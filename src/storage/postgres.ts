@@ -387,13 +387,16 @@ export class PgAssistantStore implements AssistantStore {
         state: string
       }>(
         `SELECT e.action_id AS "actionId", e.request, e.requested_executor AS "requestedExecutor", e.attempt,
-                (e.request ->> 'mode') <> 'read-only' AS "approvalGranted", a.state
+                (a.approval_id IS NOT NULL AND EXISTS (
+                  SELECT 1 FROM approval_request granted
+                  WHERE granted.id = a.approval_id AND granted.action_id = a.id AND granted.status = 'approved'
+                )) AS "approvalGranted", a.state
          FROM action_execution e
          JOIN action_record a ON a.id = e.action_id
          WHERE e.request ->> 'workspace' = $1
            AND e.available_at <= $2::timestamptz
            AND (e.status = 'pending' OR (e.status = 'executing' AND e.lease_expires_at <= $2::timestamptz))
-           AND (e.request ->> 'mode' = 'read-only' OR EXISTS (
+           AND (a.approval_id IS NULL OR EXISTS (
              SELECT 1 FROM approval_request p
              WHERE p.id = a.approval_id AND p.action_id = a.id AND p.status = 'approved'
            ))

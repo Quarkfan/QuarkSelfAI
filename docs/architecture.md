@@ -18,6 +18,10 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 三源真源读取当前入口、索引和 skill frontmatter，返回内容哈希并验证建议 skill 真实存在；QuarkSelfAI
 不复制三源业务规则。多步链路候选必须同时包含 `virtual-employee-operation-chain`。
 
+`blacklakeReferences.planResearch` 把路由结论接入 durable action ledger。`skip` 不创建 action；`confirm`
+创建带精确 approval 的只读 action，批准前同样不可 claim；`start` 仅允许生产、安全或客户阻塞风险，且
+目标清晰、确有本地证据缺口、预期有直接收益。参考读取与 executor 执行因此共享同一审批和审计边界。
+
 `quarkExecutors` 是 DSH subagent seam 上的顺序路由层。Claude Code 与 Codex 分别注册只读和写入 Provider：
 只读实例使用 `dontAsk`/`never`，只有携带 durable owner approval 的写请求才进入 `acceptEdits`/`approve-for-me`。
 默认先调用隔离命名的官方 Claude Code Provider；
@@ -28,7 +32,8 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 
 `quarkActionLedger` 是 DSH 原生持久执行服务。SQLite 和 PostgreSQL 使用同一契约保存完整执行请求、精确
 approval 绑定、租约 owner/期限、attempt、结果和下次可执行时间。写任务没有 durable approval 时无法入队，
-未批准时无法 claim；崩溃后只有租约过期的新 worker 能接管，旧 worker 不能提交结果。基础设施错误按指数
+未批准时无法 claim；显式附带 approval 的只读调研也遵循同一门禁，不能因 `read-only` 提前执行。崩溃后
+只有租约过期的新 worker 能接管，旧 worker 不能提交结果。基础设施错误按指数
 退避重试，确定性边界错误直接失败，防止用第二个模型重复执行同一业务动作。
 
 ## 本地优先运行边界

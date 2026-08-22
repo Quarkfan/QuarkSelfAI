@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import test from 'node:test'
 import { Context } from '@deepseek-ai/cordis'
 import { BLACKLAKE_REFERENCE_SOURCES, BlacklakeReferenceService } from '../src/blacklake/references.js'
+import { createSqliteStore } from '../src/storage/sqlite.js'
+import { fileURLToPath } from 'node:url'
+
+const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
 
 async function fixture(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'quark-blacklake-references-'))
@@ -47,4 +51,85 @@ test('loads current three-source references and validates routed skills without 
     reason: 'fixture',
   }), /unknown BlackLake skills/)
   await ctx.fiber.dispose()
+})
+
+test('routes a confirmed BlackLake investigation into the durable ledger without executing before approval', async () => {
+  const root = await fixture()
+  const store = await createSqliteStore(join(root, 'assistant.sqlite3'), migrations)
+  const ctx = new Context()
+  ctx.reflect.provide('quarkActionLedger', { enqueue: store.enqueueAction.bind(store) })
+  const fiber = ctx.plugin(BlacklakeReferenceService, { workspaceRoot: root })
+  try {
+    await store.migrate()
+    await fiber
+    const result = await ctx.blacklakeReferences.planResearch({
+      actionId: 'blacklake-confirm-action', matterId: 'blacklake-confirm-matter',
+      title: 'Synthetic BlackLake investigation', summary: 'Synthetic evidence only',
+      source: { channel: 'feishu', messageId: 'om-synthetic-blacklake' }, workspace: root,
+      candidate: {
+        blacklakeRelated: true,
+        recommendedSkills: ['blacklake-reference-router', 'virtual-employee-operation-chain'],
+        operationChain: true,
+        reason: 'the synthetic request spans evidence routing and repository inspection',
+      },
+      researchDecision: 'confirm',
+      decisionReason: 'the scope is useful but should not start without owner approval',
+      expectedBenefit: 'prove that current sources can resolve a synthetic evidence gap',
+      evidenceGap: 'no local source has been inspected for this synthetic case',
+      researchPrompt: 'Inspect only the fixed synthetic fixture and return QUARK_BLACKLAKE_OK.',
+      risk: 'ordinary', goalClear: true, evidenceNeedsLocalInspection: true, expectedDirectValue: true,
+      approvalId: 'blacklake-confirm-approval',
+      approvalPrompt: 'Start this exact synthetic read-only BlackLake investigation?',
+    })
+    assert.deepEqual(result, {
+      decision: 'confirm', enqueued: true, awaitingApproval: true, actionId: 'blacklake-confirm-action',
+    })
+    assert.equal(await store.claimNextAction('worker', root, '2099-01-01T00:00:00.000Z', '2099-01-01T01:00:00.000Z'), undefined)
+    await store.decideApproval('blacklake-confirm-approval', 'approved', { actor: 'owner' }, '2099-01-01T00:01:00.000Z')
+    const claimed = await store.claimNextAction('worker', root, '2099-01-01T00:02:00.000Z', '2099-01-01T01:02:00.000Z')
+    assert.equal(claimed?.actionId, 'blacklake-confirm-action')
+    assert.equal(claimed?.approvalGranted, true)
+    assert.equal(claimed?.requestedExecutor, 'claude-code')
+  } finally {
+    await ctx.fiber.dispose()
+    await store.close()
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('keeps low-value BlackLake research skipped and rejects unsafe direct starts', async () => {
+  const root = await fixture()
+  const enqueued: unknown[] = []
+  const ctx = new Context()
+  ctx.reflect.provide('quarkActionLedger', { async enqueue(input: unknown) { enqueued.push(input); return { inserted: true } } })
+  const fiber = ctx.plugin(BlacklakeReferenceService, { workspaceRoot: root })
+  try {
+    await fiber
+    const base = {
+      actionId: 'blacklake-synthetic-action', matterId: 'blacklake-synthetic-matter',
+      title: 'Synthetic BlackLake work', summary: 'Synthetic only',
+      source: { channel: 'feishu' as const }, workspace: root,
+      candidate: {
+        blacklakeRelated: true,
+        recommendedSkills: ['blacklake-reference-router'],
+        operationChain: false,
+        reason: 'synthetic BlackLake routing check',
+      },
+      decisionReason: 'research would not change the next action',
+      expectedBenefit: 'none for this fixture', evidenceGap: 'none requiring local inspection',
+      risk: 'ordinary' as const, goalClear: false, evidenceNeedsLocalInspection: false, expectedDirectValue: false,
+    }
+    assert.deepEqual(await ctx.blacklakeReferences.planResearch({ ...base, researchDecision: 'skip' }), {
+      decision: 'skip', enqueued: false, awaitingApproval: false,
+    })
+    await assert.rejects(ctx.blacklakeReferences.planResearch({
+      ...base,
+      researchDecision: 'start',
+      researchPrompt: 'Do not execute this unsafe direct start.',
+    }), /may start directly only/)
+    assert.equal(enqueued.length, 0)
+  } finally {
+    await ctx.fiber.dispose()
+    await rm(root, { recursive: true, force: true })
+  }
 })

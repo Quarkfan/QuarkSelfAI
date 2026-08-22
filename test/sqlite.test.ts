@@ -162,3 +162,26 @@ test('SQLite does not claim a write action until its exact approval is durable',
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test('SQLite also honors an explicit approval gate on read-only research', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-read-approval-'))
+  const store = await createSqliteStore(join(directory, 'assistant.sqlite3'), migrations)
+  try {
+    await store.migrate()
+    await store.enqueueAction({
+      actionId: 'action-confirmed-research', matterId: 'matter-confirmed-research',
+      matterTitle: 'Confirmed research', matterSummary: 'Wait for the owner', intent: 'research',
+      source: { channel: 'feishu', messageId: 'om-confirmed-research' },
+      request: { title: 'Confirmed research', prompt: 'inspect synthetic evidence', workspace: directory, mode: 'read-only' },
+      approval: { id: 'approval-confirmed-research', prompt: 'Start this exact read-only research?' },
+    })
+    assert.equal(await store.claimNextAction('worker', directory, '2099-01-01T00:00:00.000Z', '2099-01-01T01:00:00.000Z'), undefined)
+    await store.decideApproval('approval-confirmed-research', 'approved', { actor: 'owner' }, '2099-01-01T00:01:00.000Z')
+    const claimed = await store.claimNextAction('worker', directory, '2099-01-01T00:02:00.000Z', '2099-01-01T01:02:00.000Z')
+    assert.equal(claimed?.request.mode, 'read-only')
+    assert.equal(claimed?.approvalGranted, true)
+  } finally {
+    await store.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})

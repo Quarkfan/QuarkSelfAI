@@ -68,6 +68,11 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 - 根据 ADR 0003，本地 macOS 守护是接管硬门禁，Linux/容器是可选服务器形态。`daemon-deployment` 已按
   本地真实进程和 LaunchAgent 证据标记完成；Docker 实镜像构建独立为非接管必需的 `server-deployment`，
   仍保持 partial，不能用于宣称服务器发布就绪。
+- BlackLake DSH-native planning 已接入 action ledger：三源新鲜度与 skill/operation-chain 通过后，`skip`
+  不入账，`confirm` 生成带精确批准的只读 action，`start` 仅接受生产/安全/客户阻塞且目标、证据缺口和
+  直接收益同时明确的情况。SQLite/PostgreSQL claim 逻辑已修正为“只要 action 显式带 approval 就必须先
+  approved”，不再让 read-only 绕过确认。固定合成用例已证明批准前不可 claim、批准后由 Claude-primary
+  action 可 claim，且没有启动真实调研或访问业务文件。
 
 ## 未通过的硬门禁
 

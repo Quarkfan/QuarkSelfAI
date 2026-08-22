@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { BlacklakeReferenceService, type BlacklakeReferenceConfig } from './references.js'
 
 export const name = 'quark-blacklake-references'
+export const inject = ['quarkActionLedger']
 
 export function apply(ctx: Context, config: BlacklakeReferenceConfig): void {
   ctx.plugin(BlacklakeReferenceService, config)

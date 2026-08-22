@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
+import type { SourceRef } from '../domain/contracts.js'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
+import type { DurableActionInput } from '../storage/types.js'
 
 const REQUIRED_SOURCES = [
   'docs/guides/reference-projects/blacklake-reference-router.md',
@@ -63,6 +65,37 @@ export interface BlacklakeRouteCandidate {
   readonly recommendedSkills: readonly string[]
   readonly operationChain: boolean
   readonly reason: string
+}
+
+export type BlacklakeResearchDecision = 'start' | 'confirm' | 'skip'
+
+export interface BlacklakeResearchPlanInput {
+  readonly actionId: string
+  readonly matterId: string
+  readonly title: string
+  readonly summary: string
+  readonly source: SourceRef
+  readonly workspace: string
+  readonly candidate: BlacklakeRouteCandidate
+  readonly researchDecision: BlacklakeResearchDecision
+  readonly decisionReason: string
+  readonly expectedBenefit: string
+  readonly evidenceGap: string
+  readonly researchPrompt?: string
+  readonly requestedExecutor?: 'claude-code' | 'codex' | 'dsh-native'
+  readonly risk: 'production' | 'security' | 'customer-blocking' | 'ordinary'
+  readonly goalClear: boolean
+  readonly evidenceNeedsLocalInspection: boolean
+  readonly expectedDirectValue: boolean
+  readonly approvalId?: string
+  readonly approvalPrompt?: string
+}
+
+export interface BlacklakeResearchPlanResult {
+  readonly decision: BlacklakeResearchDecision
+  readonly enqueued: boolean
+  readonly awaitingApproval: boolean
+  readonly actionId?: string
 }
 
 declare module '@deepseek-ai/cordis' {
@@ -127,6 +160,55 @@ export class BlacklakeReferenceService extends Service {
     if (unknown.length) throw new Error(`unknown BlackLake skills: ${unknown.join(', ')}`)
     if (candidate.operationChain && !candidate.recommendedSkills.includes('virtual-employee-operation-chain')) {
       throw new Error('multi-step BlackLake work must include virtual-employee-operation-chain')
+    }
+  }
+
+  async planResearch(input: BlacklakeResearchPlanInput): Promise<BlacklakeResearchPlanResult> {
+    await this.validate(input.candidate)
+    if (!input.decisionReason.trim() || !input.expectedBenefit.trim() || !input.evidenceGap.trim()) {
+      throw new Error('BlackLake research decision must state reason, expected benefit and evidence gap')
+    }
+    if (input.researchDecision === 'skip') {
+      if (input.researchPrompt?.trim() || input.approvalId || input.approvalPrompt) {
+        throw new Error('skipped BlackLake research cannot carry a prompt or approval')
+      }
+      return { decision: 'skip', enqueued: false, awaitingApproval: false }
+    }
+    if (!input.candidate.blacklakeRelated) throw new Error('non-BlackLake work cannot enqueue BlackLake research')
+    if (!input.researchPrompt?.trim()) throw new Error('BlackLake start/confirm research requires a concrete prompt')
+    if (input.researchDecision === 'start') {
+      const highRisk = input.risk === 'production' || input.risk === 'security' || input.risk === 'customer-blocking'
+      if (!highRisk || !input.goalClear || !input.evidenceNeedsLocalInspection || !input.expectedDirectValue) {
+        throw new Error('BlackLake research may start directly only for clear high-risk work with a local evidence gap and direct value')
+      }
+      if (input.approvalId || input.approvalPrompt) throw new Error('direct-start BlackLake research cannot carry a pending approval')
+    } else if (!input.approvalId?.trim() || !input.approvalPrompt?.trim()) {
+      throw new Error('confirmed BlackLake research requires an exact durable approval')
+    }
+    const action: DurableActionInput = {
+      actionId: input.actionId,
+      matterId: input.matterId,
+      matterTitle: input.title,
+      matterSummary: input.summary,
+      intent: `blacklake-research:${input.researchDecision}`,
+      source: input.source,
+      request: {
+        title: input.title,
+        prompt: input.researchPrompt,
+        workspace: input.workspace,
+        mode: 'read-only',
+      },
+      requestedExecutor: input.requestedExecutor ?? 'claude-code',
+      ...(input.researchDecision === 'confirm'
+        ? { approval: { id: input.approvalId as string, prompt: input.approvalPrompt as string } }
+        : {}),
+    }
+    const result = await this.ctx.quarkActionLedger.enqueue(action)
+    return {
+      decision: input.researchDecision,
+      enqueued: result.inserted,
+      awaitingApproval: input.researchDecision === 'confirm',
+      actionId: input.actionId,
     }
   }
 }

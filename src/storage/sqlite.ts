@@ -388,14 +388,17 @@ export class SqliteAssistantStore implements AssistantStore {
     try {
       const row = this.database.prepare(
         `SELECT e.action_id, e.request, e.requested_executor, e.attempt,
-                CASE WHEN json_extract(e.request, '$.mode') = 'read-only' THEN 0 ELSE 1 END AS approval_granted,
+                CASE WHEN a.approval_id IS NOT NULL AND EXISTS (
+                  SELECT 1 FROM approval_request granted
+                  WHERE granted.id = a.approval_id AND granted.action_id = a.id AND granted.status = 'approved'
+                ) THEN 1 ELSE 0 END AS approval_granted,
                 a.state
          FROM action_execution e
          JOIN action_record a ON a.id = e.action_id
          WHERE json_extract(e.request, '$.workspace') = ?
            AND e.available_at <= ?
            AND (e.status = 'pending' OR (e.status = 'executing' AND e.lease_expires_at <= ?))
-           AND (json_extract(e.request, '$.mode') = 'read-only' OR EXISTS (
+           AND (a.approval_id IS NULL OR EXISTS (
              SELECT 1 FROM approval_request p
              WHERE p.id = a.approval_id AND p.action_id = a.id AND p.status = 'approved'
            ))
