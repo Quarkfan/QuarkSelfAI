@@ -1,6 +1,7 @@
 const $ = (s) => document.querySelector(s)
 const $$ = (s) => [...document.querySelectorAll(s)]
 let dashboard
+let dshUrl
 
 const esc = (v) => String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;')
 const fmt = (v) => { if (!v) return '—'; const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : new Intl.DateTimeFormat('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).format(d) }
@@ -67,9 +68,38 @@ function render(data) {
   $('#capability-summary').textContent = `${parity.completed}/${parity.features.length} 已完成`
   $('#capability-table').innerHTML = parity.features.map((f) => `<tr><td><b>${esc(f.name)}</b></td><td>${esc(f.evidence)}</td><td>${status(f.status, f.status)}</td></tr>`).join('')
   if (runtime.conversationUrl) {
-    $('#open-dsh').href = runtime.conversationUrl
-    $('#dsh-frame').src ||= runtime.conversationUrl
-    $('#dsh-frame').addEventListener('load', () => $('#conversation-empty').classList.add('hidden'), { once:true })
+    dshUrl = runtime.conversationUrl
+    $('#open-dsh').href = dshUrl
+    if (!$('#dsh-frame').hasAttribute('src')) void connectDsh()
+  }
+}
+
+async function connectDsh(force = false) {
+  if (!dshUrl) return
+  const empty = $('#conversation-empty')
+  const state = $('#dsh-status')
+  empty.classList.remove('hidden')
+  state.className = 'dsh-connection pending'
+  state.innerHTML = '<i></i>连接中'
+  $('#conversation-state-title').textContent = '正在连接 DSH 工作台'
+  $('#conversation-state-detail').textContent = '正在检查内核 Web Surface 与嵌入权限。'
+  try {
+    const response = await fetch('/api/dsh-health', { cache:'no-store' })
+    const payload = await response.json()
+    if (!response.ok || payload.ok !== true) throw new Error(payload.error ?? `DSH 返回 ${payload.status}`)
+    if (payload.embeddable !== true) throw new Error('DSH 当前响应禁止页面嵌入')
+    const frame = $('#dsh-frame')
+    frame.addEventListener('load', () => {
+      empty.classList.add('hidden')
+      state.className = 'dsh-connection ready'
+      state.innerHTML = '<i></i>已连接'
+    }, { once:true })
+    if (force || !frame.hasAttribute('src')) frame.src = force ? `${dshUrl}?quark_reload=${Date.now()}` : dshUrl
+  } catch (error) {
+    state.className = 'dsh-connection failed'
+    state.innerHTML = '<i></i>连接失败'
+    $('#conversation-state-title').textContent = 'DSH 暂时不可用'
+    $('#conversation-state-detail').textContent = error instanceof Error ? error.message : String(error)
   }
 }
 
@@ -88,6 +118,10 @@ $('#navigation').addEventListener('click',(e)=>{const b=e.target.closest('[data-
 document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})
 document.addEventListener('submit',async(e)=>{if(e.target.id!=='monitor-form')return;e.preventDefault();const form=e.target;const interval=form.elements.interval.disabled?undefined:Number(form.elements.interval.value)*1000;const response=await fetch(`/api/monitors/${encodeURIComponent(form.dataset.id)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({enabled:form.elements.enabled.checked,...interval?{intervalMs:interval}:{}})});const payload=await response.json();if(!response.ok){form.querySelector('.form-error')?.remove();form.insertAdjacentHTML('beforeend',`<p class="form-error">${esc(payload.error??'保存失败')}</p>`);return}$('#detail-dialog').close();$('#health-text').textContent='正在应用配置';setTimeout(refresh,2500)})
 $('#refresh').addEventListener('click',refresh)
+$('#reload-dsh').addEventListener('click',()=>void connectDsh(true))
+$('#retry-dsh').addEventListener('click',()=>void connectDsh(true))
+$('#fullscreen-dsh').addEventListener('click',async()=>{const shell=$('#conversation-shell');if(document.fullscreenElement)await document.exitFullscreen();else await shell.requestFullscreen()})
+document.addEventListener('fullscreenchange',()=>{$('#fullscreen-dsh').textContent=document.fullscreenElement?'退出全屏':'全屏'})
 $('#logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST'});location.reload()})
 $('#login-form').addEventListener('submit',async(e)=>{e.preventDefault();$('#login-error').textContent='';const response=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:$('#login-token').value})});if(!response.ok){$('#login-error').textContent='令牌不正确，请重新输入。';return}$('#login-dialog').close();$('#login-token').value='';await refresh()})
 setInterval(()=>{$('#clock').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000)

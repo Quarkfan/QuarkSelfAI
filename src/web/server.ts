@@ -124,7 +124,9 @@ async function staticFile(pathname: string, response: ServerResponse): Promise<v
     const data = await readFile(filename)
     response.writeHead(200, {
       'content-type': contentTypes[extname(filename)] ?? 'application/octet-stream',
-      'cache-control': relative === 'index.html' ? 'no-store' : 'public, max-age=300',
+      'cache-control': relative === 'index.html' || ['.js', '.css'].includes(extname(filename))
+        ? 'no-cache'
+        : 'public, max-age=300',
     })
     response.end(data)
   } catch {
@@ -244,6 +246,24 @@ export function createConsoleServer(
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
           json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, config) })
+          return
+        }
+        if (request.method === 'GET' && url.pathname === '/api/dsh-health') {
+          if (!config.web.dshUrl) {
+            json(response, 503, { ok: false, error: 'DSH web surface is disabled' })
+            return
+          }
+          try {
+            const upstream = await fetch(config.web.dshUrl, { signal: AbortSignal.timeout(3_000) })
+            json(response, upstream.ok ? 200 : 503, {
+              ok: upstream.ok,
+              status: upstream.status,
+              embeddable: !upstream.headers.has('x-frame-options')
+                && !/frame-ancestors/i.test(upstream.headers.get('content-security-policy') ?? ''),
+            })
+          } catch (error) {
+            json(response, 503, { ok: false, error: error instanceof Error ? error.message : String(error) })
+          }
           return
         }
         const monitor = /^\/api\/monitors\/([^/]+)$/.exec(url.pathname)

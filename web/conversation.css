@@ -1,0 +1,13 @@
+.conversation-shell > header { gap: 16px; }
+.conversation-heading, .conversation-actions { display: flex; align-items: center; gap: 10px; }
+.dsh-emblem { display: grid; place-items: center; width: 38px; height: 28px; border: 1px solid #3d4753; border-radius: 6px; color: var(--accent); font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; background: #101419; }
+.dsh-connection { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; color: var(--muted); font-size: 10px; }
+.dsh-connection i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.dsh-connection.ready i { background: var(--accent); box-shadow: 0 0 0 4px rgba(216,255,62,.08); }
+.dsh-connection.pending i { background: var(--amber); animation: dsh-pulse 1.2s ease-in-out infinite; }
+.dsh-connection.failed { color: var(--red); }
+.dsh-connection.failed i { background: var(--red); }
+.conversation-empty .button { margin: 14px auto 0; }
+.conversation-shell:fullscreen { width: 100vw; height: 100vh; border-radius: 0; border: 0; background: var(--bg); }
+.conversation-shell:fullscreen iframe { height: calc(100vh - 70px); }
+@keyframes dsh-pulse { 50% { opacity: .3; transform: scale(.75); } }
