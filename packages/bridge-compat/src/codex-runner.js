@@ -24,6 +24,8 @@ const CONTROLLER_CONTEXT = `
 - codex_bridge_send_to_session：把要求交给指定任务并等待结果，然后将结果汇总给常东旭。
 - codex_bridge_create_session：创建左侧栏可见的新任务并执行首条要求。
 - codex_bridge_get_status：查看桥接器排队和运行状态。
+- quark_policy_propose：当常东旭用自然语言要求新增或调整长期策略时，生成受限 PolicyDocument 并提交本地验证、样本模拟和草案保存。不得把规则只留在聊天回复中。
+- quark_policy_activate：仅在常东旭针对具体 policy ID/revision 明确批准后激活；原始策略要求不等于激活批准。
 会话工具是执行能力，不是输出格式。不要为了普通工作额外创建任务。不得通过这些工具绕过外部回复、发布、删除、数据库写入等确认门禁。
 `;
 

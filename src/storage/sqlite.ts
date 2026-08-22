@@ -2,6 +2,7 @@ import { mkdir, readFile, readdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
+import { eventToPolicySample } from '../policy/samples.js'
 import type {
   ActionSummary,
   ApprovalSummary,
@@ -21,6 +22,12 @@ interface SqliteEventRow {
   source: string
   occurred_at: string | null
   received_at: string
+}
+
+interface SqlitePolicyEventRow {
+  id: string
+  source: string
+  payload: string
 }
 
 export class SqliteAssistantStore implements AssistantStore {
@@ -121,6 +128,19 @@ export class SqliteAssistantStore implements AssistantStore {
     }))
   }
 
+  async recentPolicySamples(limit: number) {
+    const rows = this.database.prepare(
+      `SELECT id, source, payload FROM assistant_event
+       WHERE event_key = 'im.message.receive_v1'
+       ORDER BY received_at DESC LIMIT ?`,
+    ).all(limit) as unknown as SqlitePolicyEventRow[]
+    return rows.map((row) => eventToPolicySample({
+      id: row.id,
+      source: JSON.parse(row.source) as Record<string, unknown>,
+      payload: JSON.parse(row.payload) as Record<string, unknown>,
+    }))
+  }
+
   async recentMatters(limit: number): Promise<readonly MatterSummary[]> {
     const rows = this.database.prepare(
       `SELECT id, status, title, latest_summary, updated_at
@@ -174,13 +194,24 @@ export class SqliteAssistantStore implements AssistantStore {
          ON CONFLICT (id) DO UPDATE SET name = excluded.name,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
       ).run(input.id, input.name)
+      const compiled = JSON.stringify(input.document)
+      const simulation = JSON.stringify(input.simulation)
+      const existing = this.database.prepare(
+        `SELECT revision FROM policy_revision
+         WHERE policy_id = ? AND source_text = ? AND compiled = ? AND simulation = ?
+         ORDER BY revision DESC LIMIT 1`,
+      ).get(input.id, input.sourceText, compiled, simulation) as { revision: number } | undefined
+      if (existing) {
+        this.database.exec('COMMIT')
+        return existing.revision
+      }
       const row = this.database.prepare(
         'SELECT coalesce(max(revision), 0) + 1 AS revision FROM policy_revision WHERE policy_id = ?',
       ).get(input.id) as { revision: number }
       this.database.prepare(
         `INSERT INTO policy_revision (policy_id, revision, source_text, compiled, simulation)
          VALUES (?, ?, ?, ?, ?)`,
-      ).run(input.id, row.revision, input.sourceText, JSON.stringify(input.document), JSON.stringify(input.simulation))
+      ).run(input.id, row.revision, input.sourceText, compiled, simulation)
       this.database.exec('COMMIT')
       return row.revision
     } catch (error) {

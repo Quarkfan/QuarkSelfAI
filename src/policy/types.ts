@@ -55,6 +55,7 @@ export interface PolicySimulation {
   readonly batchCount: number
   readonly realtimeCount: number
   readonly urgentSuppressedCount: number
+  readonly coverageSufficient: boolean
   readonly safeToActivate: boolean
   readonly matchedSampleIds: readonly string[]
 }

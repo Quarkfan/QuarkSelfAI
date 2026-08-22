@@ -15,6 +15,7 @@ QuarkSelfAI 是基于 DeepSeek Harness（DSH）的通用飞书工作助手。它
 - 默认 SQLite、可配置 PostgreSQL 的统一存储接口。
 - 可见的本地 Web 控制台，以及 Docker Compose/systemd 服务器部署基线。
 - 自然语言策略的受限 DSL、历史样本模拟、版本存储和安全激活门禁。
+- 本人私聊总控到策略草案、交互卡片确认和精确 revision 激活的控制链路。
 - 默认关闭的现网兼容 Provider，以及能力、配置和人工批准三重接管门禁。
 
 DSH 的兼容基线固定在 `compat/dsh-baseline.json`，不把整个 Harness 安装闭包塞进插件的

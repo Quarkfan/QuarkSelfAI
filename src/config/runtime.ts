@@ -12,6 +12,9 @@ export interface RuntimeConfig {
     readonly consoleToken?: string
     readonly secureCookie: boolean
   }
+  readonly controlPlane: {
+    readonly token?: string
+  }
   readonly lark: {
     readonly executable: string
     readonly identity: AssistantIdentity
@@ -65,11 +68,15 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
     throw new Error(`ASSISTANT_RUNTIME must be control-only or compat, received ${runtimeMode}`)
   }
   const compatConfigPath = env.COMPAT_CONFIG_PATH?.trim()
+  const controlPlaneToken = env.CONTROL_PLANE_TOKEN?.trim() || undefined
   if (runtimeMode === 'compat' && !compatConfigPath) {
     throw new Error('COMPAT_CONFIG_PATH is required when ASSISTANT_RUNTIME=compat')
   }
   if (runtimeMode === 'compat' && env.TAKEOVER_CONFIRMED !== 'true') {
     throw new Error('TAKEOVER_CONFIRMED=true is required to start the production compatibility runtime')
+  }
+  if (runtimeMode === 'compat' && !controlPlaneToken) {
+    throw new Error('CONTROL_PLANE_TOKEN is required when ASSISTANT_RUNTIME=compat')
   }
   return {
     storage,
@@ -78,6 +85,9 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
       port: port(env.WEB_PORT),
       ...(consoleToken ? { consoleToken } : {}),
       secureCookie: boolean(env.CONSOLE_SECURE_COOKIE),
+    },
+    controlPlane: {
+      ...(controlPlaneToken ? { token: controlPlaneToken } : {}),
     },
     lark: {
       executable: env.LARK_CLI_EXECUTABLE ?? 'lark-cli',

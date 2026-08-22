@@ -46,11 +46,31 @@ test('SQLite is a zero-configuration durable default with event idempotency', as
         batchCount: 6,
         realtimeCount: 0,
         urgentSuppressedCount: 0,
+        coverageSufficient: true,
         safeToActivate: true,
         matchedSampleIds: ['sample-1'],
       },
     })
     assert.equal(revision, 1)
+    const duplicateRevision = await store.savePolicyDraft({
+      id: 'policy-1',
+      name: '普通消息进入汇总',
+      sourceText: '没有明确提到我的群消息放到汇总里',
+      document: {
+        version: 1,
+        name: '普通消息进入汇总',
+        description: '降低普通群消息干扰',
+        priority: 100,
+        when: { fact: 'message.mentionsOwner', op: 'eq', value: false },
+        effect: { attention: 'batch' },
+      },
+      simulation: {
+        sampleCount: 10, matchedCount: 6, silentCount: 0, batchCount: 6,
+        realtimeCount: 0, urgentSuppressedCount: 0, coverageSufficient: true,
+        safeToActivate: true, matchedSampleIds: ['sample-1'],
+      },
+    })
+    assert.equal(duplicateRevision, 1)
     await store.activatePolicy('policy-1', revision, '2026-08-22T10:00:00.000Z')
     const storedPolicy = (await store.policies(10))[0]
     assert.equal(storedPolicy?.status, 'enabled')

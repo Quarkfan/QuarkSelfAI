@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { matchesPolicy, policyRequiresApproval, simulatePolicy, validatePolicy } from '../src/policy/engine.js'
+import { policyProposalId } from '../src/policy/authoring.js'
 import type { PolicyDocument, PolicySample } from '../src/policy/types.js'
 
 const policy: PolicyDocument = {
@@ -34,10 +35,11 @@ test('evaluates a deterministic compiled policy', () => {
     batchCount: 1,
     realtimeCount: 0,
     urgentSuppressedCount: 0,
-    safeToActivate: true,
+    coverageSufficient: false,
+    safeToActivate: false,
     matchedSampleIds: ['normal'],
   })
-  assert.equal(policyRequiresApproval(policy), false)
+  assert.equal(policyRequiresApproval(policy), true)
 })
 
 test('blocks activation when a silence rule would suppress urgent samples', () => {
@@ -48,8 +50,19 @@ test('blocks activation when a silence rule would suppress urgent samples', () =
   }
   const simulation = simulatePolicy(unsafe, samples)
   assert.equal(simulation.urgentSuppressedCount, 1)
+  assert.equal(simulation.coverageSufficient, false)
   assert.equal(simulation.safeToActivate, false)
   assert.equal(policyRequiresApproval(unsafe), true)
+})
+
+test('allows a noise-reduction draft only when local sample coverage is sufficient', () => {
+  const covered = Array.from({ length: 20 }, (_, index): PolicySample => ({
+    id: `sample-${index}`,
+    facts: { channel: { chatType: 'group', external: false }, message: { mentionsOwner: false }, urgency: 'normal' },
+  }))
+  const simulation = simulatePolicy(policy, covered)
+  assert.equal(simulation.coverageSufficient, true)
+  assert.equal(simulation.safeToActivate, true)
 })
 
 test('rejects unsupported facts instead of executing arbitrary expressions', () => {
@@ -57,4 +70,16 @@ test('rejects unsupported facts instead of executing arbitrary expressions', () 
     ...policy,
     when: { fact: 'process.env.SECRET' as never, op: 'exists' },
   }), /unsupported policy fact/)
+})
+
+test('uses a stable proposal id regardless of document property order', () => {
+  const reordered = {
+    effect: policy.effect,
+    when: policy.when,
+    priority: policy.priority,
+    description: policy.description,
+    name: policy.name,
+    version: 1 as const,
+  }
+  assert.equal(policyProposalId('  降低干扰  ', policy), policyProposalId('降低干扰', reordered))
 })

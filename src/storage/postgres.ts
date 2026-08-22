@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import type { PoolClient, PoolConfig, QueryResult, QueryResultRow } from 'pg'
 import pg from 'pg'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
+import { eventToPolicySample, type PolicyEventSampleInput } from '../policy/samples.js'
 import type {
   ActionSummary,
   ApprovalSummary,
@@ -165,6 +166,16 @@ export class PgAssistantStore implements AssistantStore {
     return result.rows
   }
 
+  async recentPolicySamples(limit: number) {
+    const result = await this.database.query<PolicyEventSampleInput>(
+      `SELECT id, source, payload FROM assistant_event
+       WHERE event_key = 'im.message.receive_v1'
+       ORDER BY received_at DESC LIMIT $1`,
+      [limit],
+    )
+    return result.rows.map(eventToPolicySample)
+  }
+
   async recentMatters(limit: number): Promise<readonly MatterSummary[]> {
     const result = await this.database.query<MatterSummary>(
       `SELECT id, status, title, latest_summary AS "latestSummary", updated_at AS "updatedAt"
@@ -202,12 +213,21 @@ export class PgAssistantStore implements AssistantStore {
          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = now()`,
         [input.id, input.name],
       )
+      const compiled = JSON.stringify(input.document)
+      const simulation = JSON.stringify(input.simulation)
+      const existing = await executor.query<{ revision: number }>(
+        `SELECT revision FROM policy_revision
+         WHERE policy_id = $1 AND source_text = $2 AND compiled = $3::jsonb AND simulation = $4::jsonb
+         ORDER BY revision DESC LIMIT 1`,
+        [input.id, input.sourceText, compiled, simulation],
+      )
+      if (existing.rows[0]?.revision !== undefined) return existing.rows[0].revision
       const result = await executor.query<{ revision: number }>(
         `INSERT INTO policy_revision (policy_id, revision, source_text, compiled, simulation)
          SELECT $1, coalesce(max(revision), 0) + 1, $2, $3::jsonb, $4::jsonb
          FROM policy_revision WHERE policy_id = $1
          RETURNING revision`,
-        [input.id, input.sourceText, JSON.stringify(input.document), JSON.stringify(input.simulation)],
+        [input.id, input.sourceText, compiled, simulation],
       )
       const revision = result.rows[0]?.revision
       if (revision === undefined) throw new Error(`policy ${input.id} revision was not persisted`)

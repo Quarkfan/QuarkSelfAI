@@ -22,6 +22,19 @@ function valueAt(input: Readonly<Record<string, unknown>>, path: string): unknow
   return current
 }
 
+function conditionFacts(condition: PolicyCondition, result = new Set<string>()): ReadonlySet<string> {
+  if ('fact' in condition) {
+    result.add(condition.fact)
+    return result
+  }
+  if ('all' in condition || 'any' in condition) {
+    const children = 'all' in condition ? condition.all : condition.any
+    children.forEach((child) => conditionFacts(child, result))
+    return result
+  }
+  return conditionFacts(condition.not, result)
+}
+
 function fact(condition: FactCondition, input: Readonly<Record<string, unknown>>): boolean {
   const actual = valueAt(input, condition.fact)
   switch (condition.op) {
@@ -91,8 +104,11 @@ export function simulatePolicy(document: PolicyDocument, samples: readonly Polic
   const attention = document.effect.attention
   const urgentSuppressedCount = matched.filter((sample) => {
     const urgency = valueAt(sample.facts, 'urgency')
-    return urgency === 'urgent' && (attention === 'silent' || document.effect.task === 'ignore')
+    return urgency === 'urgent' && (attention === 'silent' || attention === 'batch' || document.effect.task === 'ignore')
   }).length
+  const requiredFacts = [...conditionFacts(document.when)]
+  const factsCovered = requiredFacts.every((requiredFact) => samples.some((sample) => valueAt(sample.facts, requiredFact) !== undefined))
+  const coverageSufficient = !policyRequiresApproval(document) || (samples.length >= 20 && factsCovered)
   return {
     sampleCount: samples.length,
     matchedCount: matched.length,
@@ -100,13 +116,15 @@ export function simulatePolicy(document: PolicyDocument, samples: readonly Polic
     batchCount: attention === 'batch' ? matched.length : 0,
     realtimeCount: attention === 'realtime' ? matched.length : 0,
     urgentSuppressedCount,
-    safeToActivate: urgentSuppressedCount === 0,
+    coverageSufficient,
+    safeToActivate: urgentSuppressedCount === 0 && coverageSufficient,
     matchedSampleIds: matched.slice(0, 20).map((sample) => sample.id),
   }
 }
 
 export function policyRequiresApproval(document: PolicyDocument): boolean {
   return document.effect.attention === 'silent'
+    || document.effect.attention === 'batch'
     || document.effect.task === 'ignore'
     || document.effect.reply !== undefined
 }

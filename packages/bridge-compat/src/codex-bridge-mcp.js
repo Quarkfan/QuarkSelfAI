@@ -6,6 +6,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { CodexRunner } from "./codex-runner.js";
 import { SessionStore } from "./session-store.js";
+import { QuarkControlPlaneClient } from "./quark-control-plane-client.js";
+import { LarkClient } from "./lark-client.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = process.env.CODEX_LARK_CONFIG || path.join(projectRoot, "config.json");
@@ -54,6 +56,8 @@ function toolError(error, suggestion) {
 const sessions = new SessionStore(config.codexHome);
 const runner = new CodexRunner(config, { error: (...args) => console.error(...args) });
 const server = new McpServer({ name: "codex-bridge-mcp-server", version: "1.0.0" });
+const controlPlane = new QuarkControlPlaneClient();
+const lark = new LarkClient(config, { error: (...args) => console.error(...args) });
 
 async function listAllSessions() {
   const codexSessions = await sessions.list();
@@ -175,6 +179,61 @@ server.registerTool("codex_bridge_create_session", {
     return toolResult({ session_id: result.sessionId, title: result.title, provider: result.provider || "codex", final: result.final });
   } catch (error) {
     return toolError(error, "检查 Codex 连接；若错误包含已创建的任务 ID，请续接该任务而不是重复创建。\n");
+  }
+});
+
+server.registerTool("quark_policy_propose", {
+  title: "Propose a natural-language assistant policy",
+  description: "Compile the owner's natural-language preference into the restricted QuarkSelfAI policy DSL, then submit it for deterministic local validation and simulation. Use this when the owner asks to add or change a persistent message/task/reply strategy. This creates only a draft and never activates it.",
+  inputSchema: {
+    source_text: z.string().trim().min(1).max(4000).describe("The owner's exact natural-language policy request."),
+    document: z.record(z.string(), z.unknown()).describe("A PolicyDocument v1 using only the facts, operators and effects documented by QuarkSelfAI."),
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+}, async ({ source_text: sourceText, document }) => {
+  try {
+    const proposal = await controlPlane.proposePolicy(sourceText, document);
+    const simulation = proposal.simulation;
+    await lark.sendInteractive(
+      `**${proposal.document.name}**\n\n${proposal.document.description}\n\n` +
+      `样本：${simulation.sampleCount} · 命中：${simulation.matchedCount} · 紧急误抑制：${simulation.urgentSuppressedCount}\n\n` +
+      `${simulation.safeToActivate ? "本地安全检查通过。" : "本地样本或安全覆盖不足，当前不能激活；可在输入框补充范围。"}`,
+      simulation.safeToActivate ? [
+        { text: "确认启用", value: { type: "policy_decision", decision: "approve", policyId: proposal.id, revision: proposal.revision, name: proposal.document.name } },
+        { text: "暂不启用", value: { type: "policy_decision", decision: "decline", policyId: proposal.id, revision: proposal.revision, name: proposal.document.name } },
+      ] : [
+        { text: "保留草案", value: { type: "policy_decision", decision: "decline", policyId: proposal.id, revision: proposal.revision, name: proposal.document.name } },
+      ],
+      {
+        title: "策略待确认",
+        tone: simulation.safeToActivate ? "yellow" : "red",
+        status: simulation.safeToActivate ? "等待确认" : "需要调整",
+        includeInput: true,
+        label: "补充或修改要求",
+        placeholder: "例如：紧急事项仍然实时提醒",
+      },
+      `policy-proposal:${proposal.id}:${proposal.revision}`,
+    );
+    return toolResult({ ...proposal, approvalCardSent: true });
+  } catch (error) {
+    return toolError(error, "缩小策略范围或补足本地样本；不要绕过本地验证器。\n");
+  }
+});
+
+server.registerTool("quark_policy_activate", {
+  title: "Activate an owner-approved assistant policy",
+  description: "Activate one exact validated policy revision only after the owner explicitly confirms that proposal. Never infer approval from the original policy request or from silence.",
+  inputSchema: {
+    policy_id: z.string().uuid(),
+    revision: z.number().int().positive(),
+    owner_confirmed: z.literal(true),
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async ({ policy_id: policyId, revision, owner_confirmed: ownerConfirmed }) => {
+  try {
+    return toolResult(await controlPlane.activatePolicy(policyId, revision, ownerConfirmed));
+  } catch (error) {
+    return toolError(error, "确认策略 ID、revision 与常东旭本次批准的卡片完全一致。\n");
   }
 });
 

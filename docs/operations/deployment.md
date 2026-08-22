@@ -14,6 +14,7 @@ SQLite 单实例：
 
 ```bash
 export CONSOLE_TOKEN='使用秘密管理系统生成的长随机值'
+export CONTROL_PLANE_TOKEN='使用秘密管理系统生成的另一长随机值'
 docker compose up -d --build
 ```
 
@@ -21,6 +22,7 @@ PostgreSQL：
 
 ```bash
 export CONSOLE_TOKEN='使用秘密管理系统生成的长随机值'
+export CONTROL_PLANE_TOKEN='使用秘密管理系统生成的另一长随机值'
 export POSTGRES_PASSWORD='使用秘密管理系统生成的数据库密码'
 docker compose -f compose.yaml -f compose.postgres.yaml up -d --build
 ```

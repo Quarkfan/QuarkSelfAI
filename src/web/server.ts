@@ -7,6 +7,8 @@ import type { RuntimeConfig } from '../config/runtime.js'
 import { loadFeatureParity } from '../config/feature-parity.js'
 import type { AssistantStore } from '../storage/types.js'
 import { ControlOnlyRuntime, type RuntimeStatusProvider } from '../runtime/compat.js'
+import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js'
+import type { PolicyDocument } from '../policy/types.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
@@ -48,6 +50,14 @@ function authorized(request: IncomingMessage, config: RuntimeConfig): boolean {
   if (!expected) return true
   const current = cookie(request, sessionCookie)
   return current !== undefined && safeEqual(current, tokenHash(expected))
+}
+
+function controlPlaneAuthorized(request: IncomingMessage, config: RuntimeConfig): boolean {
+  const expected = config.controlPlane.token
+  if (!expected) return false
+  const authorization = request.headers.authorization
+  if (!authorization?.startsWith('Bearer ')) return false
+  return safeEqual(authorization.slice('Bearer '.length), expected)
 }
 
 async function body(request: IncomingMessage): Promise<Record<string, unknown>> {
@@ -116,6 +126,11 @@ export function createConsoleServer(
   config: RuntimeConfig,
   runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
 ): Server {
+  const policyAuthoring = new PolicyAuthoringService(store, {
+    async compile() {
+      throw new Error('the HTTP control plane accepts only an already-compiled candidate')
+    },
+  })
   return createServer(async (request, response) => {
     response.setHeader('x-content-type-options', 'nosniff')
     response.setHeader('x-frame-options', 'DENY')
@@ -137,6 +152,41 @@ export function createConsoleServer(
         const secure = config.web.secureCookie ? '; Secure' : ''
         response.setHeader('set-cookie', `${sessionCookie}=${encodeURIComponent(tokenHash(expected))}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200${secure}`)
         json(response, 200, { ok: true })
+        return
+      }
+      if (url.pathname.startsWith('/internal/')) {
+        if (!controlPlaneAuthorized(request, config)) {
+          json(response, 401, { ok: false, error: 'control-plane authentication required' })
+          return
+        }
+        if (request.method === 'POST' && url.pathname === '/internal/policies/proposals') {
+          const input = await body(request)
+          if (typeof input.sourceText !== 'string' || typeof input.document !== 'object' || input.document === null || Array.isArray(input.document)) {
+            json(response, 400, { ok: false, error: 'sourceText and document are required' })
+            return
+          }
+          const samples = await store.recentPolicySamples(200)
+          const proposal = await policyAuthoring.proposeCompiled(
+            input.sourceText,
+            input.document as unknown as PolicyDocument,
+            samples,
+            policyProposalId(input.sourceText, input.document as unknown as PolicyDocument),
+          )
+          json(response, 201, { ok: true, proposal })
+          return
+        }
+        const activation = /^\/internal\/policies\/([^/]+)\/revisions\/(\d+)\/activate$/.exec(url.pathname)
+        if (request.method === 'POST' && activation) {
+          const input = await body(request)
+          if (input.ownerConfirmed !== true) {
+            json(response, 400, { ok: false, error: 'ownerConfirmed=true is required' })
+            return
+          }
+          await policyAuthoring.activate(decodeURIComponent(activation[1] ?? ''), Number(activation[2]), true)
+          json(response, 200, { ok: true })
+          return
+        }
+        json(response, 404, { ok: false, error: 'not found' })
         return
       }
       if (url.pathname.startsWith('/api/')) {

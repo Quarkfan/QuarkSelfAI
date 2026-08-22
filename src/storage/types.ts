@@ -1,5 +1,6 @@
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import type { PolicyDocument, PolicySimulation } from '../policy/types.js'
+import type { PolicySample } from '../policy/types.js'
 
 export type StorageKind = 'sqlite' | 'postgres'
 
@@ -78,6 +79,7 @@ export interface AssistantStore {
   updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void>
   overview(): Promise<OverviewCounts>
   recentEvents(limit: number): Promise<readonly EventSummary[]>
+  recentPolicySamples(limit: number): Promise<readonly PolicySample[]>
   recentMatters(limit: number): Promise<readonly MatterSummary[]>
   recentActions(limit: number): Promise<readonly ActionSummary[]>
   pendingApprovals(limit: number): Promise<readonly ApprovalSummary[]>

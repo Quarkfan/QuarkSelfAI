@@ -21,6 +21,13 @@ test("action card uses callback buttons with one primary action", () => {
   assert.equal(buttons[0].behaviors[0].type, "callback");
 });
 
+test("approval action card can include a free-form response input", () => {
+  const card = buildActionCard("策略待确认", [{ text: "确认", value: { type: "approve" } }], { includeInput: true });
+  const form = card.body.elements.find((element) => element.tag === "form");
+  assert.equal(form.elements[0].name, "prompt");
+  assert.equal(form.elements[1].form_action_type, "submit");
+});
+
 test("action card can expose a pure navigation button", () => {
   const card = buildActionCard("请打开配置", [{ text: "打开", url: "https://example.com/setup" }]);
   const behavior = card.body.elements[1].columns[0].elements[0].behaviors[0];

@@ -16,6 +16,7 @@ import { WorkdayFollowupMonitor } from "./weekly-followup-monitor.js";
 import { XiaoweiResearchChannel } from "./xiaowei-research-channel.js";
 import { ShadowCollaborationMonitor } from "./shadow-collaboration.js";
 import { formatUserTime } from "./util.js";
+import { QuarkControlPlaneClient } from "./quark-control-plane-client.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -110,7 +111,8 @@ const taskCreator = new DidaTaskCreator(config);
 const followupMonitor = new WorkdayFollowupMonitor({ config, state, lark, taskCreator });
 const xiaoweiResearch = new XiaoweiResearchChannel({ config, state, lark, taskCreator });
 const shadowCollaboration = new ShadowCollaborationMonitor({ config, state, lark });
-const bridge = new Bridge({ config, sessions, state, lark, runner, followupManager: followupMonitor });
+const policyManager = new QuarkControlPlaneClient();
+const bridge = new Bridge({ config, sessions, state, lark, runner, followupManager: followupMonitor, policyManager });
 const mentionMonitor = new MentionMonitor({
   config, state, lark, taskCreator, runner, xiaoweiResearch, shadowCollaboration,
 });

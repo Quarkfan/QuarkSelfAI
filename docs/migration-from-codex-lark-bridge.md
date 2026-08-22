@@ -34,3 +34,27 @@ npm run snapshot:legacy-state -- /absolute/legacy/state.json /protected/staging-
 
 快照以内容哈希命名、权限为 `0600`，写入后重新读取校验；同名内容只复用，永不覆盖。源文件只读。
 这只是迁移快照，不会改变现网写入点，也不能直接作为切换授权。
+
+快照或最终冻结状态需执行：
+
+```bash
+npm run audit:legacy-handoff -- /absolute/state.json --strict
+```
+
+排队要求、待确认调研和慢速外部请求属于必须转移的可恢复工作，不要求清空；审计会聚合报告这些数量。
+真正阻塞切换的是不可恢复的队列结构、重复状态 ID 或无效的运行时间戳。业务 `dueDate` 异常只作为
+兼容警告，原值保留，DSH-native 导入时再规范化。
+
+历史滴答 worker 结果可做无写回放：
+
+```bash
+npm run replay:legacy-dida -- /absolute/legacy/var/dida
+npm run replay:legacy-dida -- /absolute/legacy/var/dida --since 2026-08-21T16:00:00Z --min-task-projections 20 --strict
+```
+
+回放只读取 `result.json`，复用当前任务准入、标题、标签、批准、调研和通知验证器；报告只输出聚合数量、
+错误类别和哈希化任务标识，不输出消息、标题或任务正文。门禁收敛后追加 `--strict`，任何不兼容或重复创建
+都应返回非零。
+
+`--min-task-projections` 防止“时间窗口内没有待办样本”造成空跑误通过。切换门禁至少要求当前 schema
+生效后的 20 个真实 task projection 全部通过。

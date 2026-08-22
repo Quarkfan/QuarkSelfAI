@@ -163,6 +163,25 @@ test("delegates follow-up card actions and deduplicates the callback", async () 
   assert.deepEqual(harness.state.state.processedCardEventIds, ["followup-event-1"]);
 });
 
+test("activates an exact policy revision only from the owner's card action", async () => {
+  const harness = createHarness([]);
+  harness.state.state.processedCardEventIds = [];
+  const activations = [];
+  harness.bridge.policyManager = {
+    async activatePolicy(id, revision, confirmed) { activations.push({ id, revision, confirmed }); },
+  };
+  const action = {
+    event_id: "policy-event-1", operator_id: "ou_me", token: "token-policy", message_id: "card-policy",
+    action_value: JSON.stringify({
+      type: "policy_decision", decision: "approve", policyId: "11111111-1111-5111-a111-111111111111", revision: 2, name: "减少普通消息",
+    }),
+  };
+  await harness.bridge.handleCardAction(action);
+  await harness.bridge.handleCardAction(action);
+  assert.deepEqual(activations, [{ id: "11111111-1111-5111-a111-111111111111", revision: 2, confirmed: true }]);
+  assert.deepEqual(harness.state.state.processedCardEventIds, ["policy-event-1"]);
+});
+
 test("retains transient session failures and retries without losing the request", async () => {
   const session = { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", title: "协作会话", updatedAt: "2026-08-14" };
   const harness = createHarness([session]);

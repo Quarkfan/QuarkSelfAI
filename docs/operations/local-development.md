@@ -21,6 +21,9 @@ npm start
 
 默认控制台地址为 `http://127.0.0.1:3210`，数据写入 `var/quarkselfai.sqlite3`。本地 loopback 默认不要求令牌；绑定其他地址时必须设置 `CONSOLE_TOKEN`。
 
+内部策略写接口始终要求 `CONTROL_PLANE_TOKEN`。兼容总控和控制层运行在同一台机器时，二者通过继承的
+环境变量共享该令牌；不得把它写入 `config.json`、飞书消息或命令参数。
+
 `compat:lark` 只读取版本、EventKey 和 schema，不启动事件消费者。开发时不要在现网 bridge 仍运行时执行
 `LarkCliService.start()`，因为 `card.action.trigger` 是单消费者能力。
 

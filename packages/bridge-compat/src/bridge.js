@@ -25,13 +25,14 @@ function executionChannel(job) {
 }
 
 export class Bridge {
-  constructor({ config, sessions, state, lark, runner, followupManager = null, logger = console }) {
+  constructor({ config, sessions, state, lark, runner, followupManager = null, policyManager = null, logger = console }) {
     this.config = config;
     this.sessions = sessions;
     this.state = state;
     this.lark = lark;
     this.runner = runner;
     this.followupManager = followupManager;
+    this.policyManager = policyManager;
     this.logger = logger;
     this.draining = false;
   }
@@ -97,6 +98,16 @@ export class Bridge {
           ? `已确认启动调研：**${item.task.title}**\n\n通道：${channelName}。结果返回后会发给你并写回滴答任务。`
           : `已记录暂不调研：**${item.task.title}**\n\n对应的滴答待办会继续保留。`;
         tone = action.decision === "approve" ? "green" : "grey";
+      }
+    } else if (action.type === "policy_decision") {
+      if (!this.policyManager) throw new Error("策略控制层当前不可用，请稍后重试。");
+      if (action.decision === "approve") {
+        await this.policyManager.activatePolicy(action.policyId, Number(action.revision), true);
+        result = `已激活策略：**${String(action.name || action.policyId)}**\n\n版本：${action.revision}`;
+        tone = "green";
+      } else {
+        result = `已保留但不激活策略草案：**${String(action.name || action.policyId)}**`;
+        tone = "grey";
       }
     } else if (event.action_tag === "select_static" && event.action_name === "session_choice") {
       const sessionId = event.option;

@@ -112,6 +112,7 @@ export function buildActionCard(markdown, actions, options = {}) {
       }],
     })),
   });
+  if (options.includeInput) card.body.elements.push(inputForm(options));
   card.body.elements.push(footer());
   return card;
 }
@@ -134,7 +135,13 @@ export function buildSelectionCard(markdown, choices, options = {}) {
 
 export function buildInputCard(markdown, options = {}) {
   const { card } = baseCard(markdown, { ...options, interactive: true });
-  card.body.elements.push({
+  card.body.elements.push(inputForm(options));
+  card.body.elements.push(footer());
+  return card;
+}
+
+function inputForm(options = {}) {
+  return {
     tag: "form",
     name: options.formName || "prompt_form",
     vertical_spacing: "12px",
@@ -156,7 +163,5 @@ export function buildInputCard(markdown, options = {}) {
       width: "fill",
       form_action_type: "submit",
     }],
-  });
-  card.body.elements.push(footer());
-  return card;
+  };
 }

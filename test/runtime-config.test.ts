@@ -40,6 +40,15 @@ test('resolves a compatibility config only after both startup gates are present'
     ASSISTANT_RUNTIME: 'compat',
     COMPAT_CONFIG_PATH: './bridge.json',
     TAKEOVER_CONFIRMED: 'true',
+    CONTROL_PLANE_TOKEN: 'internal-test-token',
   }, '/srv/quark')
   assert.deepEqual(config.runtime, { mode: 'compat', configPath: '/srv/quark/bridge.json' })
+})
+
+test('requires an authenticated control plane for the compatibility controller', () => {
+  assert.throws(() => loadRuntimeConfig({
+    ASSISTANT_RUNTIME: 'compat',
+    COMPAT_CONFIG_PATH: './bridge.json',
+    TAKEOVER_CONFIRMED: 'true',
+  }), /CONTROL_PLANE_TOKEN is required/)
 })
