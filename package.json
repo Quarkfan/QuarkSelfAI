@@ -29,6 +29,7 @@
     "dist/web",
     "dist/policy",
     "dist/runtime",
+    "dist/execution",
     "dist/migration",
     "dist/deploy",
     "migrations",

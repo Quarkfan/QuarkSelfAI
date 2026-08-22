@@ -8,6 +8,9 @@
 - Claude Code、Codex、DSH native executor providers；
 - 飞书、滴答等投影插件。
 
+本项目默认按个人电脑本地运行设计：LaunchAgent + SQLite + loopback 控制台是主路径。下面的容器、
+PostgreSQL 和 systemd 是未来服务器部署的兼容形态，不代表默认把个人文件上传到服务器。
+
 ## 容器部署
 
 SQLite 单实例：
@@ -28,6 +31,10 @@ docker compose -f compose.yaml -f compose.postgres.yaml up -d --build
 ```
 
 服务器必须通过 HTTPS 反向代理控制台，并设置 `CONSOLE_SECURE_COOKIE=true`。不要直接向公网暴露 3210 端口。飞书 CLI 使用出站长连接，不要求公网 webhook，但需要把 lark-cli 配置/凭证以只读 secret 或受限持久卷提供给运行用户。一个应用身份只能保留一套正式消息消费者。
+
+服务器不应挂载个人主目录。若只运行控制面，设置 `ASSISTANT_EXECUTION_MODE=remote`；需要服务器侧
+executor 时，使用 `local` 表示“在该服务器本地执行”，并只将容器或服务账号确实需要的目录写入
+`ASSISTANT_WORKSPACE_ROOTS`。工作区边界不能用 `/`。
 
 非容器 Linux 可参考 `deploy/systemd/quark-self-ai.service`。服务用户只需代码读取权、数据目录写入权和必要 CLI 凭证；不要用 root 运行。
 

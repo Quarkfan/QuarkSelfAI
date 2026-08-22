@@ -17,6 +17,7 @@ QuarkSelfAI 是基于 DeepSeek Harness（DSH）的通用飞书工作助手。它
 - 自然语言策略的受限 DSL、历史样本模拟、版本存储和安全激活门禁。
 - 本人私聊总控到策略草案、交互卡片确认和精确 revision 激活的控制链路。
 - 默认关闭的现网兼容 Provider，以及能力、配置和人工批准三重接管门禁。
+- 本地优先执行模式，以及能阻止目录穿越和符号链接逃逸的工作区白名单。
 
 DSH 的兼容基线固定在 `compat/dsh-baseline.json`，不把整个 Harness 安装闭包塞进插件的
 开发依赖；profile 验证使用工作区 `github/deepseek-harness` 下的正式 checkout。
@@ -38,7 +39,9 @@ npm start
 `TAKEOVER_CONFIRMED=true`，也不得启动兼容消费者。架构保护边界见
 `docs/adr/0002-compatibility-provider.md`。
 
-控制台默认打开 `http://127.0.0.1:3210`，使用 SQLite `var/quarkselfai.sqlite3`。服务器部署必须配置控制台令牌和 HTTPS；详见部署手册。
+控制台默认打开 `http://127.0.0.1:3210`，使用 SQLite `var/quarkselfai.sqlite3`。执行默认发生在本机，
+且默认只能访问启动目录；正式本地配置应通过 `ASSISTANT_WORKSPACE_ROOTS` 显式列出允许的工作区。
+服务器部署是可选形态，必须配置控制台令牌和 HTTPS；详见部署手册。
 
 ## DSH profile 接入（尚未用于现网）
 

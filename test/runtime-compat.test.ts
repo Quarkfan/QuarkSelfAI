@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CompatReadinessObserver, CompatRuntime, type RuntimeSnapshot } from '../src/runtime/compat.js'
@@ -40,4 +40,17 @@ test('surfaces an unexpected ready child exit so the outer daemon can restart it
   const failure = await runtime.waitForFailure()
   assert.match(failure.message, /code=7/)
   assert.equal(runtime.snapshot().state, 'failed')
+})
+
+test('refuses to start when the compatibility workspace escapes the local allowlist', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-compat-boundary-'))
+  const allowed = join(directory, 'allowed')
+  const outside = join(directory, 'outside')
+  await mkdir(allowed)
+  await mkdir(outside)
+  const config = join(allowed, 'bridge.json')
+  await writeFile(config, JSON.stringify({ workspaceRoot: outside }))
+  const runtime = new CompatRuntime(config, { workspaceRoots: [allowed] })
+  await assert.rejects(runtime.start(), /outside the configured workspace roots/)
+  assert.equal(runtime.snapshot().state, 'stopped')
 })

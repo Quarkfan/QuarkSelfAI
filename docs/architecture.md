@@ -9,6 +9,18 @@
 5. **Executor providers**：Claude Code 优先，Codex 异常兜底，DSH native 可选；同一 action 只能有一个实际执行者。
 6. **Projections**：滴答任务、飞书卡片、Codex 任务侧栏都是领域状态的投影，不是真源。
 
+## 本地优先运行边界
+
+个人助手的默认形态是用户机器上的单实例守护进程：SQLite 保存状态，Web 控制台只绑定回环地址，
+Claude Code、Codex 与 DSH native executor 在本机受控工作区内运行。`ASSISTANT_WORKSPACE_ROOTS` 是执行
+Provider 的统一文件边界；已有路径先解析真实路径，新建路径先解析真实父目录，因此 `..` 和指向白名单
+外部的符号链接都不能绕过检查。控制台只显示执行模式和白名单数量，不暴露本地绝对路径，也不提供通用
+文件读取 API。
+
+服务器和容器只是可选部署形态。`ASSISTANT_EXECUTION_MODE=remote` 明确关闭本地工作区，且不能启动仍需
+本地文件访问的 compatibility provider。未来新增 executor 或文件工具必须依赖同一个 workspace policy，
+不得各自实现更宽松的路径判断。
+
 ## 策略层
 
 用户的自然语言偏好会编译为受限、版本化的策略 DSL。模型只参与候选生成；确定性验证、历史样本模拟、紧急消息保护、审批和运行时匹配都在本地代码完成。策略不能包含任意代码或工具调用。详见 `docs/policies.md`。

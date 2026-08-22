@@ -7,6 +7,7 @@ test('uses SQLite on loopback by default', () => {
   assert.deepEqual(config.storage, { kind: 'sqlite', path: '/srv/quark/var/quarkselfai.sqlite3' })
   assert.equal(config.web.host, '127.0.0.1')
   assert.equal(config.web.port, 3210)
+  assert.deepEqual(config.execution, { mode: 'local', workspaceRoots: ['/srv/quark'] })
 })
 
 test('selects PostgreSQL from configuration', () => {
@@ -51,4 +52,24 @@ test('requires an authenticated control plane for the compatibility controller',
     COMPAT_CONFIG_PATH: './bridge.json',
     TAKEOVER_CONFIRMED: 'true',
   }), /CONTROL_PLANE_TOKEN is required/)
+})
+
+test('accepts an explicit local workspace allowlist', () => {
+  const config = loadRuntimeConfig({
+    ASSISTANT_WORKSPACE_ROOTS: '["/Users/edy/BlackLakeWork","/private/tmp/shared"]',
+  })
+  assert.deepEqual(config.execution, {
+    mode: 'local',
+    workspaceRoots: ['/Users/edy/BlackLakeWork', '/private/tmp/shared'],
+  })
+})
+
+test('remote execution cannot start the local compatibility provider', () => {
+  assert.throws(() => loadRuntimeConfig({
+    ASSISTANT_EXECUTION_MODE: 'remote',
+    ASSISTANT_RUNTIME: 'compat',
+    COMPAT_CONFIG_PATH: '/srv/quark/bridge.json',
+    TAKEOVER_CONFIRMED: 'true',
+    CONTROL_PLANE_TOKEN: 'test-token',
+  }), /requires ASSISTANT_EXECUTION_MODE=local/)
 })

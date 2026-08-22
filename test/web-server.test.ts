@@ -18,6 +18,7 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
   const store = await createSqliteStore(join(directory, 'web.sqlite3'), migrations)
   await store.migrate()
   const config: RuntimeConfig = {
+    execution: { mode: 'local', workspaceRoots: [directory] },
     storage: { kind: 'sqlite', path: join(directory, 'web.sqlite3') },
     web: { host: '127.0.0.1', port: 3210, secureCookie: false },
     controlPlane: { token: 'control-test-token' },

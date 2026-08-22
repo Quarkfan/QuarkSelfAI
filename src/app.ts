@@ -8,7 +8,7 @@ const config = loadRuntimeConfig()
 const store = await createAssistantStore(config)
 await store.health()
 const runtime = config.runtime.mode === 'compat'
-  ? new CompatRuntime(config.runtime.configPath)
+  ? new CompatRuntime(config.runtime.configPath, { workspaceRoots: config.execution.workspaceRoots })
   : new ControlOnlyRuntime()
 const server = createConsoleServer(store, config, runtime)
 

@@ -1,8 +1,11 @@
-import { resolve } from 'node:path'
+import { isAbsolute, resolve } from 'node:path'
 import type { AssistantIdentity } from '../domain/contracts.js'
 import type { StorageKind } from '../storage/types.js'
 
 export interface RuntimeConfig {
+  readonly execution:
+    | { readonly mode: 'local'; readonly workspaceRoots: readonly string[] }
+    | { readonly mode: 'remote'; readonly workspaceRoots: readonly [] }
   readonly storage:
     | { readonly kind: 'sqlite'; readonly path: string }
     | { readonly kind: 'postgres'; readonly databaseUrl: string }
@@ -46,6 +49,20 @@ function isLoopback(host: string): boolean {
   return host === '127.0.0.1' || host === 'localhost' || host === '::1'
 }
 
+function workspaceRoots(value: string | undefined, cwd: string): readonly string[] {
+  if (!value?.trim()) return [resolve(cwd)]
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(value)
+  } catch {
+    throw new Error('ASSISTANT_WORKSPACE_ROOTS must be a JSON array of absolute paths')
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.some((item) => typeof item !== 'string' || !item.trim() || !isAbsolute(item))) {
+    throw new Error('ASSISTANT_WORKSPACE_ROOTS must be a non-empty JSON array of absolute paths')
+  }
+  return [...new Set(parsed.map((item) => resolve(item as string)))]
+}
+
 export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): RuntimeConfig {
   const kind = storageKind(env.ASSISTANT_STORAGE)
   const host = env.WEB_HOST ?? '127.0.0.1'
@@ -78,7 +95,17 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
   if (runtimeMode === 'compat' && !controlPlaneToken) {
     throw new Error('CONTROL_PLANE_TOKEN is required when ASSISTANT_RUNTIME=compat')
   }
+  const executionMode = env.ASSISTANT_EXECUTION_MODE ?? 'local'
+  if (executionMode !== 'local' && executionMode !== 'remote') {
+    throw new Error(`ASSISTANT_EXECUTION_MODE must be local or remote, received ${executionMode}`)
+  }
+  if (executionMode === 'remote' && runtimeMode === 'compat') {
+    throw new Error('ASSISTANT_RUNTIME=compat requires ASSISTANT_EXECUTION_MODE=local')
+  }
   return {
+    execution: executionMode === 'local'
+      ? { mode: 'local', workspaceRoots: workspaceRoots(env.ASSISTANT_WORKSPACE_ROOTS, cwd) }
+      : { mode: 'remote', workspaceRoots: [] },
     storage,
     web: {
       host,

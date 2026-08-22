@@ -1,6 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { once } from 'node:events'
+import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { WorkspacePolicy } from '../execution/workspace-policy.js'
 
 const compatRoot = fileURLToPath(new URL('../../packages/bridge-compat/', import.meta.url))
 const compatEntry = fileURLToPath(new URL('../../packages/bridge-compat/src/index.js', import.meta.url))
@@ -56,7 +58,12 @@ export class CompatRuntime implements RuntimeStatusProvider {
 
   constructor(
     private readonly configPath: string,
-    private readonly processOptions: { readonly entry?: string; readonly cwd?: string; readonly executable?: string } = {},
+    private readonly processOptions: {
+      readonly entry?: string
+      readonly cwd?: string
+      readonly executable?: string
+      readonly workspaceRoots?: readonly string[]
+    } = {},
   ) {
     this.failurePromise = new Promise((resolve) => { this.resolveFailure = resolve })
   }
@@ -67,6 +74,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
 
   async start(): Promise<void> {
     if (this.child) throw new Error('compat runtime is already started')
+    await this.validateWorkspaceBoundary()
     this.current = {
       mode: 'compat',
       state: 'starting',
@@ -141,5 +149,16 @@ export class CompatRuntime implements RuntimeStatusProvider {
       throw new Error(this.current.lastError)
     }
     this.current = { mode: 'compat', state: 'stopped', messageReady: false, cardReady: false }
+  }
+
+  private async validateWorkspaceBoundary(): Promise<void> {
+    const roots = this.processOptions.workspaceRoots
+    if (!roots) return
+    const policy = await WorkspacePolicy.create(roots)
+    const document = JSON.parse(await readFile(this.configPath, 'utf8')) as { workspaceRoot?: unknown }
+    if (typeof document.workspaceRoot !== 'string' || !document.workspaceRoot.trim()) {
+      throw new Error('compatibility config must define workspaceRoot')
+    }
+    await policy.authorizeExisting(document.workspaceRoot)
   }
 }

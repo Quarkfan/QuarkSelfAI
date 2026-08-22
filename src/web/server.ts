@@ -73,7 +73,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider) {
+async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, config: RuntimeConfig) {
   const [overview, events, matters, actions, approvals, policies, parity] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
@@ -90,6 +90,10 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
       mode: parity.takeoverReady ? 'ready-for-cutover' : 'migration',
       worker: runtimeStatus.snapshot(),
+      execution: {
+        mode: config.execution.mode,
+        workspaceRootCount: config.execution.workspaceRoots.length,
+      },
     },
     overview,
     events,
@@ -208,7 +212,7 @@ export function createConsoleServer(
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
-          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus) })
+          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, config) })
           return
         }
         json(response, 404, { ok: false, error: 'not found' })
