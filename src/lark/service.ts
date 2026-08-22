@@ -66,5 +66,3 @@ export class LarkCliService extends Service {
     return report
   }
 }
-
-export default LarkCliService

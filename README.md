@@ -5,7 +5,7 @@ QuarkSelfAI 是基于 DeepSeek Harness（DSH）的通用飞书工作助手。它
 
 当前阶段已经建立：
 
-- DSH/Cordis 树外 Bundle；
+- DSH/Cordis 树外 Bundle 与可由 Loader 装配的 namespace plugin 入口；
 - 与业务逻辑隔离的 `lark-cli` capability provider；
 - 运行时 `event list` / `event schema` 能力发现；
 - 显式 `user` / `bot` 身份、就绪标记和优雅停止约束；

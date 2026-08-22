@@ -1,3 +1,13 @@
+import type { Context } from '@deepseek-ai/cordis'
+import { LarkCliService, type LarkCliConfig } from './lark/service.js'
+
+export const name = 'quark-self-ai'
+
+/** Mount only the stable Lark capability provider. Event consumption remains an explicit caller decision. */
+export function apply(ctx: Context, config: LarkCliConfig = {}): void {
+  ctx.plugin(LarkCliService, config)
+}
+
 export type * from './domain/contracts.js'
 export * from './lark/capabilities.js'
 export * from './lark/normalize.js'
@@ -19,4 +29,3 @@ export * from './runtime/compat.js'
 export * from './migration/state-snapshot.js'
 export * from './migration/legacy-state-audit.js'
 export * from './deploy/launchd.js'
-export { default } from './lark/service.js'
