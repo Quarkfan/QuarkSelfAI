@@ -69,4 +69,5 @@ gitignored 的 `var/dsh-validation`。不要使用该验证 profile 启动现网
 - [PostgreSQL 数据模型](docs/storage/postgresql.md)
 - [旧 bridge 迁移门禁](docs/migration-from-codex-lark-bridge.md)
 - [现网能力差距与接管门禁](docs/feature-parity.md)
+- [2026-08-22 接管准备证据](docs/evidence/takeover-readiness-2026-08-22.md)
 - [自然语言策略机制](docs/policies.md)
