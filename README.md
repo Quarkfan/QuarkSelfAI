@@ -1,6 +1,7 @@
 # QuarkSelfAI
 
-QuarkSelfAI 是基于 DeepSeek Harness（DSH）的通用飞书工作助手。它会逐步替代职责过载的
+QuarkSelfAI 是基于 DeepSeek Harness（DSH）的本地优先个人工作助手，飞书是主要交互通道之一。
+它会逐步替代职责过载的
 `codex-lark-bridge`，但在回放、影子运行和状态迁移通过前，不接管现网消息。
 
 当前阶段已经建立：
@@ -82,6 +83,7 @@ gitignored 的 `var/dsh-validation`。不要使用该验证 profile 启动现网
 ## 文档入口
 
 - [总体架构](docs/architecture.md)
+- [本地优先个人助手决策](docs/adr/0003-local-first-personal-assistant.md)
 - [本地开发](docs/operations/local-development.md)
 - [部署与切换](docs/operations/deployment.md)
 - [lark-cli 升级手册](docs/operations/lark-cli-upgrade.md)

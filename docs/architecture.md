@@ -33,6 +33,9 @@ approval 绑定、租约 owner/期限、attempt、结果和下次可执行时间
 
 ## 本地优先运行边界
 
+本节的约束由 [ADR 0003](adr/0003-local-first-personal-assistant.md) 固化。服务器部署是本地个人助手的
+扩展能力，不是核心运行模型的替代品。
+
 个人助手的默认形态是用户机器上的单实例守护进程：SQLite 保存状态，Web 控制台只绑定回环地址，
 Claude Code、Codex 与 DSH native executor 在本机受控工作区内运行。`ASSISTANT_WORKSPACE_ROOTS` 是执行
 Provider 的统一文件边界；已有路径先解析真实路径，新建路径先解析真实父目录，因此 `..` 和指向白名单
