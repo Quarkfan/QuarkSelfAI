@@ -93,4 +93,5 @@ gitignored 的 `var/dsh-validation`。不要使用该验证 profile 启动现网
 - [现网能力差距与接管门禁](docs/feature-parity.md)
 - [需求追踪矩阵](docs/requirements-traceability.md)
 - [2026-08-22 接管准备证据](docs/evidence/takeover-readiness-2026-08-22.md)
+- [2026-08-22 接管前受控演练](docs/evidence/controlled-rehearsal-2026-08-22.md)
 - [自然语言策略机制](docs/policies.md)
