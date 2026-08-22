@@ -21,6 +21,10 @@
     "./blacklake": {
       "types": "./dist/blacklake/plugin.d.ts",
       "import": "./dist/blacklake/plugin.js"
+    },
+    "./executor-router": {
+      "types": "./dist/execution/plugin.d.ts",
+      "import": "./dist/execution/plugin.js"
     }
   },
   "files": [
@@ -76,6 +80,9 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-subagent": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subagent-claude-code": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subagent-codex": "0.1.1-rc.2",
     "pg": "8.16.3"
   },
   "devDependencies": {
