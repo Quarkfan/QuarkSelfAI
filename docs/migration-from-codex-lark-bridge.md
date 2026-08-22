@@ -25,3 +25,12 @@
 本地可执行 `npm run takeover:preflight` 查看机器可读门禁。它在能力未齐、配置不可读或没有显式
 批准时必须以非零状态退出。`audit:legacy-state` 仅输出文件 fingerprint 和结构统计，不复制、不修改
 旧状态，也不打印业务内容。
+
+需要演练状态复制时使用：
+
+```bash
+npm run snapshot:legacy-state -- /absolute/legacy/state.json /protected/staging-directory
+```
+
+快照以内容哈希命名、权限为 `0600`，写入后重新读取校验；同名内容只复用，永不覆盖。源文件只读。
+这只是迁移快照，不会改变现网写入点，也不能直接作为切换授权。

@@ -29,6 +29,7 @@
     "dist/web",
     "dist/policy",
     "dist/runtime",
+    "dist/migration",
     "migrations",
     "config",
     "web",
@@ -49,6 +50,7 @@
     "test": "node --import tsx --test test/*.test.ts && npm test --workspace @quarkfan/bridge-compat",
     "compat:lark": "node --import tsx scripts/check-lark-compat.ts",
     "audit:legacy-state": "node --import tsx scripts/audit-legacy-state.ts",
+    "snapshot:legacy-state": "node --import tsx scripts/snapshot-legacy-state.ts",
     "takeover:preflight": "node --import tsx scripts/takeover-preflight.ts",
     "dev": "node --import tsx src/app.ts",
     "start": "node dist/app.js"
