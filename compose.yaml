@@ -14,6 +14,9 @@ services:
       CONTROL_PLANE_TOKEN: ${CONTROL_PLANE_TOKEN:?set CONTROL_PLANE_TOKEN}
       CONSOLE_SECURE_COOKIE: ${CONSOLE_SECURE_COOKIE:-false}
       LARK_IDENTITY: bot
+      DSH_HOME: /app/var/dsh
+      DSH_PROFILE: feishu-assistant
+      ASSISTANT_WORKSPACE_ROOTS: '["/app"]'
     ports:
       - "${QUARK_PORT:-3210}:3210"
     volumes:

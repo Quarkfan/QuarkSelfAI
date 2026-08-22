@@ -49,6 +49,17 @@ executor 时，使用 `local` 表示“在该服务器本地执行”，并只�
 非密钥配置可按 Claude Code 的兼容方式注入。未配置时使用本机 Claude 原生认证；这两种状态必须在接管报告
 中区分。
 
+镜像把 DSH CLI、Claude Code Provider 和 Codex Provider 安装在独立的 `/opt/dsh-runtime`，其 pnpm
+11.7.0 锁文件位于 `deploy/dsh-runtime/`；QuarkSelfAI 业务依赖仍由根 `package-lock.json` 管理，避免 npm
+arborist 在一个依赖图内解析整个 DSH Profile。容器首次启动时只在持久卷 `/app/var/dsh` 初始化 profile，
+并以 `link:/app` 挂载当前版本 Bundle；后续启动复用同一 profile 和 session 状态。初始化失败会直接退出，
+不会在没有 DSH 内核的情况下启动兼容消费者。
+
+systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/pnpm-lock.yaml` 执行冻结安装，并在
+`/etc/quark-self-ai.env` 中配置 `DSH_EXECUTABLE=/opt/quark-dsh-runtime/node_modules/.bin/dsh`、
+`DSH_HOME=/var/lib/quark-self-ai/dsh`。首次启动前运行 `npm run setup:dsh`，或用同一个 DSH executable 执行
+`dsh plugin --profile feishu-assistant add link:/opt/quark-self-ai`。不得将 `ASSISTANT_KERNEL=off` 用作绕过。
+
 非容器 Linux 可参考 `deploy/systemd/quark-self-ai.service`。服务用户只需代码读取权、数据目录写入权和必要 CLI 凭证；不要用 root 运行。
 
 ## macOS LaunchAgent

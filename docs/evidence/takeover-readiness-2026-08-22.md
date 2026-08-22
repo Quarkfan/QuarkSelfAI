@@ -43,6 +43,11 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 - 正式本地 DSH profile 已由 `npm run setup:dsh` 在项目 `var/dsh` 初始化并核验固定版本/commit。新守护进程
   在 `control-only` 下实际拉起受监管 DSH 内核，`/api/health` 返回 kernel=`ready`，验证后以 SIGINT 优雅
   停止；现网旧 LaunchAgent 全程保持 running。`ASSISTANT_KERNEL=off` 仅保留给测试/诊断。
+- 发布版 DSH 已在隔离目录用 pnpm 11.7.0 安装：固定 `@deepseek-ai/dsh@0.1.1-rc.2` 的 `dsh --version`
+  通过。服务器 runtime lock 同时固定 Claude Code/Codex Provider 和所有平台可选载荷 integrity。新的容器
+  entrypoint 已在隔离 DSH_HOME 完成首次 profile 初始化、Quark Bundle link、DSH kernel ready、HTTP 200
+  health 和 SIGINT 清洁停止；`action_execution` 表实际存在。`npm run compat:server` 对 lock、Dockerfile、
+  executable entrypoint 和禁止 kernel-off 做机器校验。
 - 已从上述状态生成 rehearsal `f23ade87aaa4dab10ab3`。生成配置显式绑定该只读快照目录与四个 CLI 的
   绝对路径；preflight 证明 stateReadable/handoffSafe/didaCredentialReady/全部 executables 均为 true。
   该 rehearsal 不是最终冻结状态，不能直接用于正式切换。
@@ -62,8 +67,8 @@ projection。`--min-task-projections 20 --strict` 因 `0/20` 样本不足退出 
 2. 使用明确批准的脱敏文件样本演练真实 Claude-primary/Codex-fallback、本地文件读取、持久重试、重启恢复、
    action ledger 单执行者和卡片长等待恢复。
 3. 在明确批准的维护窗口执行单消费者切换；切换前冻结 checkpoint，失败时停止新消费者后恢复旧服务。
-4. Docker 实镜像构建仍受本机 Docker daemon HTTP 500 阻塞；本地 LaunchAgent 主路径不依赖该项，
-   服务器发布前必须补验。另因 npm 在解析 DSH 完整发布包依赖树时持续停在同一 arborist 阶段，当前镜像
-   尚未锁入自包含 DSH CLI；服务器形态仍是硬门禁，本地主路径使用已核验的正式 checkout，不受影响。
+4. Dockerfile 已锁入自包含 DSH CLI 与两个 executor Provider，并通过发布包/entrypoint 的进程级隔离演练；
+   但 Docker 实镜像构建仍受本机 Docker daemon HTTP 500 阻塞。该项不影响本地 LaunchAgent 主路径，服务器
+   正式发布前仍必须在可用 Docker daemon 上补做 Linux 目标平台镜像构建和 healthcheck。
 
 机器可读状态仍以 `config/feature-parity.json` 为准；本文件不能替代 `TAKEOVER_CONFIRMED=true` 的人工门禁。

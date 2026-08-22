@@ -33,6 +33,7 @@ npm run compat:lark
 npm run compat:dsh
 npm run compat:blacklake
 npm run compat:live-bridge
+npm run compat:server
 npm run audit:shadow -- /absolute/path/to/legacy/state.json
 npm run takeover:preflight
 npm start
