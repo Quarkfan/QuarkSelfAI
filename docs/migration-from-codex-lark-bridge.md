@@ -79,5 +79,16 @@ npm run replay:legacy-dida -- /absolute/legacy/var/dida --since 2026-08-21T16:00
 错误类别和哈希化任务标识，不输出消息、标题或任务正文。门禁收敛后追加 `--strict`，任何不兼容或重复创建
 都应返回非零。
 
-`--min-task-projections` 防止“时间窗口内没有待办样本”造成空跑误通过。切换门禁至少要求当前 schema
-生效后的 20 个真实 task projection 全部通过。
+仅按文件时间过滤不足以证明样本确实被现网接受。正式门禁使用严格血缘审计：
+
+```bash
+npm run audit:dida-projections -- \
+  /absolute/legacy/var/dida \
+  /absolute/legacy/var/state.json \
+  --min-task-projections 20 --strict
+```
+
+它要求每个计数样本同时满足：`result.json` 完全匹配当前 JSON Schema；通过当前语义验证器；对应消息已经
+处理；并能与影子 decision 的 messageId、taskAction 和 taskId 对上。旧 schema 只计入
+`legacySchemaSkipped`，不能冒充当前证据。`--min-task-projections` 防止“没有新待办样本”空跑通过；切换
+至少要求 20 个真实 current-schema projection，且不得用测试任务补数。

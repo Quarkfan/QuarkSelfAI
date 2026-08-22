@@ -8,7 +8,7 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 
 ## 已验证
 
-- `npm run check`：主包 62 项（沙箱内 60 通过、回环 E2E 2 跳过），兼容包 100 项全部通过；Web 控制台
+- `npm run check`：主包 63 项（沙箱内 61 通过、回环 E2E 2 跳过），兼容包 100 项全部通过；Web 控制台
   和守护重启两个回环 E2E 已在允许监听的本地环境分别通过。
 - `npm run compat:dsh`：DSH `0.1.1-rc.2`、commit `b150a55` 与 baseline 一致，构建产物为 named
   namespace plugin；隔离 `feishu-assistant` profile 的配置包含 Lark、BlackLake、Claude/Codex 读写隔离
@@ -87,6 +87,15 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 当前滴答 schema 生效时间窗（自 `2026-08-22T08:25:00Z`）发现 13 个 monitor 结果，没有 task
 projection。`--min-task-projections 20 --strict` 因 `0/20` 样本不足退出 1；失败不是 schema violation，
 也没有重复 task fingerprint 或外部写入。不得用人工制造测试待办补足数量。
+
+补充的严格血缘审计不再只依赖时间戳：它把 `result.json` 与已处理 message ID、影子 decision 的 taskAction/
+taskId 关联，再要求完全匹配当前 JSON Schema 和语义校验。41 条影子 decision 均能找到旧结果，但全部缺少
+当前 schema 的完整字段，因此 `exactSchemaAccepted=0`、`legacySchemaSkipped=41`。这排除了统计口径误判，
+也证明不能把旧样本冒充当前证据。审计只输出聚合数字和哈希，不输出业务正文。
+
+Codex 桌面已建立线程心跳 `quarkselfai`（“QuarkSelfAI 接管门禁检查”），每天 10:15 在本机只读重跑
+current-schema 投影与影子审计。未满足时保持门禁且不重复通知；两项都通过后只会回到本任务运行完整预检
+并请求维护窗口批准，不会创建测试任务、修改旧 bridge、启动新消费者或自动切换。
 
 仍需完成：
 
