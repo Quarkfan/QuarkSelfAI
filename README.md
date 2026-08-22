@@ -28,12 +28,17 @@ DSH 的兼容基线固定在 `compat/dsh-baseline.json`，不把整个 Harness �
 npm install
 npm run check
 npm run compat:lark
+npm run compat:dsh
 npm run takeover:preflight
 npm start
 ```
 
 `compat:lark` 只执行读取操作。缺少必须事件时返回非零；新增字段和可选事件只进入报告，
 不会要求业务插件同步升级。
+
+`compat:dsh` 对 `compat/dsh-baseline.json` 校验正式 DSH checkout 的版本和 commit，再导入构建产物并读取
+隔离的 `feishu-assistant` profile 配置；它不会启动 profile 或飞书消费者。首次运行前按下方 DSH profile
+步骤把本地包链接进 `var/dsh-validation`。
 
 `takeover:preflight` 在现阶段返回非零是正确行为。未经常东旭明确批准，不得设置
 `TAKEOVER_CONFIRMED=true`，也不得启动兼容消费者。架构保护边界见
@@ -49,6 +54,9 @@ npm start
 dsh plugin --profile feishu-assistant add .
 dsh --profile feishu-assistant --dump-config
 ```
+
+从源码验证时，DSH checkout 固定放在同级 `github/deepseek-harness`，隔离 profile 的 `DSH_HOME` 指向本项目
+gitignored 的 `var/dsh-validation`。不要使用该验证 profile 启动现网消费者。
 
 正式接管前还需完成 `docs/migration-from-codex-lark-bridge.md` 的门禁。
 

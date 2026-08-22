@@ -15,6 +15,7 @@
 npm install
 npm run check
 npm run compat:lark
+npm run compat:dsh
 npm run build
 npm start
 ```
@@ -43,6 +44,10 @@ ASSISTANT_WORKSPACE_ROOTS=["/Users/your-name/BlackLakeWork","/Users/your-name/Do
 
 `compat:lark` 只读取版本、EventKey 和 schema，不启动事件消费者。开发时不要在现网 bridge 仍运行时执行
 `LarkCliService.start()`，因为 `card.action.trigger` 是单消费者能力。
+
+`compat:dsh` 校验同级 `github/deepseek-harness` 的锁定版本/commit、插件 namespace 形状和隔离 profile 的
+最终配置树。它只运行 `--dump-config`，不会启动 Harness。首次初始化命令见 DSH 官方 `plugin --profile`
+流程；本机验证 profile 固定放在 `var/dsh-validation`，不作为生产配置。
 
 ## 数据库
 
