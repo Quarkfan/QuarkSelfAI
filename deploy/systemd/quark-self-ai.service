@@ -1,0 +1,24 @@
+[Unit]
+Description=QuarkSelfAI Feishu work assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=quarkselfai
+Group=quarkselfai
+WorkingDirectory=/opt/quark-self-ai
+EnvironmentFile=/etc/quark-self-ai.env
+ExecStart=/usr/bin/node /opt/quark-self-ai/dist/app.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/quark-self-ai
+
+[Install]
+WantedBy=multi-user.target

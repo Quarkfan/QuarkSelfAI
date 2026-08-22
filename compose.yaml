@@ -1,0 +1,22 @@
+services:
+  assistant:
+    build:
+      context: .
+      args:
+        LARK_CLI_VERSION: "1.0.88"
+    restart: unless-stopped
+    environment:
+      ASSISTANT_STORAGE: sqlite
+      SQLITE_PATH: /app/var/quarkselfai.sqlite3
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: 3210
+      CONSOLE_TOKEN: ${CONSOLE_TOKEN:?set CONSOLE_TOKEN}
+      CONSOLE_SECURE_COOKIE: ${CONSOLE_SECURE_COOKIE:-false}
+      LARK_IDENTITY: bot
+    ports:
+      - "${QUARK_PORT:-3210}:3210"
+    volumes:
+      - quark_data:/app/var
+
+volumes:
+  quark_data:

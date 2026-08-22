@@ -1,6 +1,20 @@
-# PostgreSQL 数据模型
+# SQLite 与 PostgreSQL 数据模型
 
-PostgreSQL 保存助手自身的业务真源；飞书消息、滴答任务、Codex 任务侧栏和执行器 session 都不是数据库的替代品。
+存储由 `ASSISTANT_STORAGE` 选择，默认是 `sqlite`。飞书消息、滴答任务、Codex 任务侧栏和执行器 session 都不是数据库的替代品。
+
+## 选择后端
+
+```bash
+# 默认；单机、本地和轻量服务器
+ASSISTANT_STORAGE=sqlite
+SQLITE_PATH=var/quarkselfai.sqlite3
+
+# 多进程控制面、正式服务器或需要外部备份/高可用
+ASSISTANT_STORAGE=postgres
+DATABASE_URL=postgresql://user:password@host:5432/quarkselfai
+```
+
+SQLite 使用 WAL、外键和 5 秒 busy timeout，适合一个 QuarkSelfAI 实例。不得把 SQLite 文件放在不保证 POSIX 锁语义的网络文件系统上，也不得同时启动多个写实例。PostgreSQL 是服务器部署的推荐选项，但飞书单消费者约束仍然存在，数据库不能消除重复消费风险。
 
 ## 表职责
 
@@ -12,9 +26,11 @@ PostgreSQL 保存助手自身的业务真源；飞书消息、滴答任务、Cod
 - `projection_binding`：滴答任务、飞书卡片、Codex session 与内部 matter/action 的映射和内容指纹。
 - `consumer_checkpoint`：事件消费者断线恢复所需 checkpoint。
 
-## 初始化
+## 初始化与迁移
 
-生产环境应由部署系统提供 `DATABASE_URL`，不要把密码写入 Git。首次初始化：
+程序启动会自动执行幂等的初始 migration。SQLite migration 位于 `migrations/sqlite/`，PostgreSQL migration 位于 `migrations/`。
+
+生产环境应由部署系统提供 `DATABASE_URL`，不要把密码写入 Git。也可以预先执行 PostgreSQL migration：
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_initial.sql

@@ -15,10 +15,19 @@
     "dist/index.d.ts",
     "dist/index.d.ts.map",
     "dist/index.js.map",
+    "dist/app.js",
+    "dist/app.d.ts",
+    "dist/app.d.ts.map",
+    "dist/app.js.map",
     "dist/domain",
     "dist/lark",
     "dist/storage",
+    "dist/config",
+    "dist/web",
+    "dist/policy",
     "migrations",
+    "config",
+    "web",
     "cordis.patch.yml"
   ],
   "engines": {
@@ -33,7 +42,9 @@
     "build": "tsc -p tsconfig.json",
     "check": "npm run build && npm test",
     "test": "node --import tsx --test test/*.test.ts",
-    "compat:lark": "node --import tsx scripts/check-lark-compat.ts"
+    "compat:lark": "node --import tsx scripts/check-lark-compat.ts",
+    "dev": "node --import tsx src/app.ts",
+    "start": "node dist/app.js"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.1",

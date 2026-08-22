@@ -4,4 +4,6 @@
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
 - 事件必须保留原始 payload，写操作必须经过 durable action/approval 状态。
 - 新系统通过迁移门禁前不得停止或抢占现网 `codex-lark-bridge` 消费者。
+- `config/feature-parity.json` 是接管门禁真源；必要能力未全部 complete 时禁止切换。
+- SQLite 只允许单实例写入；服务器多实例使用 PostgreSQL，但飞书事件消费者仍只能有一个。
 - DSH 与 lark-cli 升级必须运行构建、契约测试、compat 检查和脱敏回放。

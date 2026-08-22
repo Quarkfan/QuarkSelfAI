@@ -1,0 +1,25 @@
+services:
+  assistant:
+    environment:
+      ASSISTANT_STORAGE: postgres
+      DATABASE_URL: postgresql://quarkselfai:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/quarkselfai
+    depends_on:
+      postgres:
+        condition: service_healthy
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: quarkselfai
+      POSTGRES_USER: quarkselfai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - quark_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quarkselfai -d quarkselfai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  quark_pg_data:

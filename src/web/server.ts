@@ -1,0 +1,159 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import { extname, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { RuntimeConfig } from '../config/runtime.js'
+import { loadFeatureParity } from '../config/feature-parity.js'
+import type { AssistantStore } from '../storage/types.js'
+
+const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
+const startedAt = Date.now()
+const sessionCookie = 'quark_console_session'
+
+const contentTypes: Readonly<Record<string, string>> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+}
+
+function json(response: ServerResponse, status: number, value: unknown): void {
+  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+  response.end(JSON.stringify(value))
+}
+
+function tokenHash(token: string): string {
+  return createHash('sha256').update(`quark-self-ai:${token}`).digest('hex')
+}
+
+function safeEqual(left: string, right: string): boolean {
+  const a = Buffer.from(left)
+  const b = Buffer.from(right)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+function cookie(request: IncomingMessage, name: string): string | undefined {
+  for (const item of request.headers.cookie?.split(';') ?? []) {
+    const [key, ...value] = item.trim().split('=')
+    if (key === name) return decodeURIComponent(value.join('='))
+  }
+  return undefined
+}
+
+function authorized(request: IncomingMessage, config: RuntimeConfig): boolean {
+  const expected = config.web.consoleToken
+  if (!expected) return true
+  const current = cookie(request, sessionCookie)
+  return current !== undefined && safeEqual(current, tokenHash(expected))
+}
+
+async function body(request: IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = []
+  let size = 0
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    size += buffer.length
+    if (size > 16_384) throw new Error('request body is too large')
+    chunks.push(buffer)
+  }
+  const text = Buffer.concat(chunks).toString('utf8')
+  return text ? JSON.parse(text) as Record<string, unknown> : {}
+}
+
+async function dashboard(store: AssistantStore) {
+  const [overview, events, matters, actions, approvals, policies, parity] = await Promise.all([
+    store.overview(),
+    store.recentEvents(12),
+    store.recentMatters(12),
+    store.recentActions(12),
+    store.pendingApprovals(12),
+    store.policies(20),
+    loadFeatureParity(),
+  ])
+  return {
+    runtime: {
+      version: '0.1.0',
+      storage: store.kind,
+      uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
+      mode: parity.takeoverReady ? 'ready-for-cutover' : 'migration',
+    },
+    overview,
+    events,
+    matters,
+    actions,
+    approvals,
+    policies,
+    parity,
+    generatedAt: new Date().toISOString(),
+  }
+}
+
+async function staticFile(pathname: string, response: ServerResponse): Promise<void> {
+  const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '')
+  const filename = resolve(webRoot, relative)
+  if (!filename.startsWith(`${resolve(webRoot)}${sep}`)) {
+    response.writeHead(404).end()
+    return
+  }
+  try {
+    const data = await readFile(filename)
+    response.writeHead(200, {
+      'content-type': contentTypes[extname(filename)] ?? 'application/octet-stream',
+      'cache-control': relative === 'index.html' ? 'no-store' : 'public, max-age=300',
+    })
+    response.end(data)
+  } catch {
+    response.writeHead(404).end('Not found')
+  }
+}
+
+export function createConsoleServer(store: AssistantStore, config: RuntimeConfig): Server {
+  return createServer(async (request, response) => {
+    response.setHeader('x-content-type-options', 'nosniff')
+    response.setHeader('x-frame-options', 'DENY')
+    response.setHeader('referrer-policy', 'no-referrer')
+    response.setHeader('content-security-policy', "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:")
+    const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
+    try {
+      if (request.method === 'POST' && url.pathname === '/api/login') {
+        const expected = config.web.consoleToken
+        if (!expected) {
+          json(response, 200, { ok: true })
+          return
+        }
+        const submitted = (await body(request)).token
+        if (typeof submitted !== 'string' || !safeEqual(submitted, expected)) {
+          json(response, 401, { ok: false, error: 'invalid token' })
+          return
+        }
+        const secure = config.web.secureCookie ? '; Secure' : ''
+        response.setHeader('set-cookie', `${sessionCookie}=${encodeURIComponent(tokenHash(expected))}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200${secure}`)
+        json(response, 200, { ok: true })
+        return
+      }
+      if (url.pathname.startsWith('/api/')) {
+        if (request.method === 'GET' && url.pathname === '/api/health') {
+          await store.health()
+          const parity = await loadFeatureParity()
+          json(response, 200, { ok: true, storage: store.kind, takeoverReady: parity.takeoverReady })
+          return
+        }
+        if (!authorized(request, config)) {
+          json(response, 401, { ok: false, error: 'authentication required' })
+          return
+        }
+        if (request.method === 'GET' && url.pathname === '/api/dashboard') {
+          json(response, 200, { ok: true, data: await dashboard(store) })
+          return
+        }
+        json(response, 404, { ok: false, error: 'not found' })
+        return
+      }
+      await staticFile(url.pathname, response)
+    } catch (error) {
+      json(response, 500, { ok: false, error: error instanceof Error ? error.message : String(error) })
+    }
+  })
+}

@@ -2,3 +2,5 @@ node_modules/
 dist/
 .dsh/
 compat/report.local.json
+var/
+.env

@@ -8,6 +8,27 @@
 - Claude Code、Codex、DSH native executor providers；
 - 飞书、滴答等投影插件。
 
+## 容器部署
+
+SQLite 单实例：
+
+```bash
+export CONSOLE_TOKEN='使用秘密管理系统生成的长随机值'
+docker compose up -d --build
+```
+
+PostgreSQL：
+
+```bash
+export CONSOLE_TOKEN='使用秘密管理系统生成的长随机值'
+export POSTGRES_PASSWORD='使用秘密管理系统生成的数据库密码'
+docker compose -f compose.yaml -f compose.postgres.yaml up -d --build
+```
+
+服务器必须通过 HTTPS 反向代理控制台，并设置 `CONSOLE_SECURE_COOKIE=true`。不要直接向公网暴露 3210 端口。飞书 CLI 使用出站长连接，不要求公网 webhook，但需要把 lark-cli 配置/凭证以只读 secret 或受限持久卷提供给运行用户。一个应用身份只能保留一套正式消息消费者。
+
+非容器 Linux 可参考 `deploy/systemd/quark-self-ai.service`。服务用户只需代码读取权、数据目录写入权和必要 CLI 凭证；不要用 root 运行。
+
 ## 发布顺序
 
 1. 数据库备份并应用迁移。
