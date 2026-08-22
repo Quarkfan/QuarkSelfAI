@@ -4,7 +4,7 @@
     { "id": "lark-event-adapter", "name": "飞书事件消费与 schema 发现", "requiredForTakeover": true, "status": "complete", "evidence": "src/lark" },
     { "id": "durable-store", "name": "SQLite/PostgreSQL 持久化与幂等事件", "requiredForTakeover": true, "status": "complete", "evidence": "src/storage" },
     { "id": "web-console", "name": "只读 Web 运维控制台", "requiredForTakeover": false, "status": "complete", "evidence": "src/web + web" },
-    { "id": "compatibility-provider", "name": "现网能力兼容 Provider 与显式接管门禁", "requiredForTakeover": false, "status": "complete", "evidence": "packages/bridge-compat + src/runtime/compat.ts + 95 compatibility tests" },
+    { "id": "compatibility-provider", "name": "现网能力兼容 Provider 与显式接管门禁", "requiredForTakeover": false, "status": "complete", "evidence": "packages/bridge-compat + src/runtime/compat.ts + 99 compatibility tests" },
     { "id": "natural-language-policy", "name": "自然语言策略编译、模拟、确认与回滚", "requiredForTakeover": true, "status": "partial", "evidence": "owner 总控 MCP、确定性验证、真实样本覆盖门禁、幂等草案、Card 2.0 批准和版本激活均有测试；尚缺现网受控卡片演练" },
     { "id": "direct-owner-control", "name": "本人机器人私聊自然语言直办", "requiredForTakeover": true, "status": "partial", "evidence": "兼容实现及契约测试已纳入；尚未完成脱敏回放和生产演练" },
     { "id": "focus-intake", "name": "@我、私聊、特别关注、标记会话聚合", "requiredForTakeover": true, "status": "partial", "evidence": "兼容 MentionMonitor 及测试已纳入；尚未完成现网只读回放" },

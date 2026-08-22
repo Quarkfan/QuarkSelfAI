@@ -38,9 +38,10 @@ npm start
 `compat:lark` 只执行读取操作。缺少必须事件时返回非零；新增字段和可选事件只进入报告，
 不会要求业务插件同步升级。
 
-`compat:dsh` 对 `compat/dsh-baseline.json` 校验正式 DSH checkout 的版本和 commit，再导入构建产物并读取
-隔离的 `feishu-assistant` profile 配置；它不会启动 profile 或飞书消费者。首次运行前按下方 DSH profile
-步骤把本地包链接进 `var/dsh-validation`。
+`compat:dsh` 对 `compat/dsh-baseline.json` 校验正式 DSH checkout 的版本和 commit，再导入构建产物、读取
+隔离的 `feishu-assistant` profile 配置，并短暂启动该 profile 后以 SIGTERM 验证清洁退出。QuarkSelfAI 的
+Lark 插件只注册 capability，不在这个烟测中启动飞书事件消费者。首次运行前按下方 DSH profile 步骤把
+本地包链接进 `var/dsh-validation`；源码 checkout 还需先执行 `corepack pnpm build`。
 
 `compat:blacklake` 从 BlackLakeWork 三源真源读取当前路由、知识索引和 skill 清单，验证路径、新鲜度哈希、
 skill 存在性及多步操作链门禁；不会查询生产系统或执行外部写入。
