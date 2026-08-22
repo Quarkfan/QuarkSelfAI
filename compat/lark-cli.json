@@ -1,0 +1,13 @@
+{
+  "minimumVersion": "1.0.88",
+  "requiredEventKeys": [
+    "im.message.receive_v1",
+    "card.action.trigger"
+  ],
+  "policy": {
+    "schemaSource": "runtime",
+    "unknownFields": "preserve",
+    "missingRequiredCapability": "fail-closed",
+    "newOptionalCapability": "report"
+  }
+}

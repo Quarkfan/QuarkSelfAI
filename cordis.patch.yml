@@ -1,0 +1,11 @@
+# This bundle contributes only the stable lark-cli capability provider.
+# Routing, policy, projections and executor providers are separate plugins.
+- insert:
+    - id: feishu-lark-cli
+      name: '@quarkfan/quark-self-ai'
+      config:
+        executable: lark-cli
+        identity: bot
+        requiredEventKeys:
+          - im.message.receive_v1
+          - card.action.trigger

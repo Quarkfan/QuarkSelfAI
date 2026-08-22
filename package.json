@@ -1,0 +1,48 @@
+{
+  "name": "@quarkfan/quark-self-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plugin-based Feishu work assistant powered by DeepSeek Harness",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Quarkfan/QuarkSelfAI.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/index.d.ts.map",
+    "dist/index.js.map",
+    "dist/domain",
+    "dist/lark",
+    "dist/storage",
+    "migrations",
+    "cordis.patch.yml"
+  ],
+  "engines": {
+    "node": ">=22.19"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "npm run build && npm test",
+    "test": "node --import tsx --test test/*.test.ts",
+    "compat:lark": "node --import tsx scripts/check-lark-compat.ts"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "@types/pg": "8.15.5",
+    "tsx": "4.20.5",
+    "typescript": "5.9.2"
+  }
+}
