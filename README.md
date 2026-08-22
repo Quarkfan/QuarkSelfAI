@@ -32,10 +32,16 @@ npm run check
 npm run compat:lark
 npm run compat:dsh
 npm run compat:blacklake
+npm run compat:live-bridge
 npm run audit:shadow -- /absolute/path/to/legacy/state.json
 npm run takeover:preflight
 npm start
 ```
+
+`npm start` 默认同时监管 DSH `feishu-assistant` profile；只有测试或故障诊断才设置
+`ASSISTANT_KERNEL=off`。启动器优先使用项目内固定版本的 `node_modules/.bin/dsh`，本地开发可回退到同级
+`github/deepseek-harness` 正式 checkout，服务器则必须安装锁定版本。DSH profile 尚未初始化时先执行下方
+profile 接入命令。
 
 `compat:lark` 只执行读取操作。缺少必须事件时返回非零；新增字段和可选事件只进入报告，
 不会要求业务插件同步升级。
@@ -57,12 +63,13 @@ skill 存在性及多步操作链门禁；不会查询生产系统或执行外�
 
 控制台默认打开 `http://127.0.0.1:3210`，使用 SQLite `var/quarkselfai.sqlite3`。执行默认发生在本机，
 且默认只能访问启动目录；正式本地配置应通过 `ASSISTANT_WORKSPACE_ROOTS` 显式列出允许的工作区。
-服务器部署是可选形态，必须配置控制台令牌和 HTTPS；详见部署手册。
+本地文件只由本机 executor 在白名单内读取，不会自动同步到飞书、滴答、远端数据库或服务器。服务器部署是
+可选形态，必须配置控制台令牌和 HTTPS；详见部署手册。
 
 ## DSH profile 接入（尚未用于现网）
 
 ```bash
-dsh plugin --profile feishu-assistant add .
+npm run setup:dsh
 dsh --profile feishu-assistant --dump-config
 ```
 

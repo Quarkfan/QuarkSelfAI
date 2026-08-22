@@ -47,7 +47,9 @@ ASSISTANT_WORKSPACE_ROOTS=["/Users/your-name/BlackLakeWork","/Users/your-name/Do
 
 `compat:dsh` 校验同级 `github/deepseek-harness` 的锁定版本/commit、插件 namespace 形状和隔离 profile 的
 最终配置树。它只运行 `--dump-config`，不会启动 Harness。首次初始化命令见 DSH 官方 `plugin --profile`
-流程；本机验证 profile 固定放在 `var/dsh-validation`，不作为生产配置。
+流程；本机验证 profile 固定放在 `var/dsh-validation`，不作为生产配置。正式本地 profile 使用
+`npm run setup:dsh` 在 `var/dsh` 初始化；脚本会先核验 DSH 版本和 commit，再把本项目以 link 方式加入
+`feishu-assistant`，不会修改同级 DSH checkout。
 
 ## 数据库
 

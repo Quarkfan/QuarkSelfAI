@@ -19,11 +19,19 @@
       config:
         providerName: quark-claude-code-read
         permissionMode: dontAsk
+        # DSH scrubs credential-shaped ambient variables before spawning Claude.
+        # Re-introduce only the two supported Anthropic credential names here;
+        # endpoint/model variables remain ordinary inherited environment values.
+        # --dump-config renders this expression without evaluating the secret.
+        env: !!js >-
+          Object.assign({}, process.env.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY } : {}, process.env.ANTHROPIC_AUTH_TOKEN ? { ANTHROPIC_AUTH_TOKEN: process.env.ANTHROPIC_AUTH_TOKEN } : {})
     - id: quark-executor-claude-code-write
       name: '@deepseek-ai/dsh-subagent-claude-code'
       config:
         providerName: quark-claude-code-write
         permissionMode: acceptEdits
+        env: !!js >-
+          Object.assign({}, process.env.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY } : {}, process.env.ANTHROPIC_AUTH_TOKEN ? { ANTHROPIC_AUTH_TOKEN: process.env.ANTHROPIC_AUTH_TOKEN } : {})
     - id: quark-executor-codex-read
       name: '@deepseek-ai/dsh-subagent-codex'
       config:

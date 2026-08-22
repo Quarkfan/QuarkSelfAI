@@ -22,3 +22,7 @@ DSH 当前处于 developer preview，因此固定基线为 `0.1.1-rc.2`，升级
 - 现网 bridge 在新系统通过切换门禁前继续运行；
 - DSH one-shot approval 不能代替跨小时/跨天的业务审批，仍需 durable action ledger；
 - DSH、lark-cli 的升级必须各自独立验证和回滚。
+- 正式守护进程必须监管并健康检查 DSH profile；`ASSISTANT_KERNEL=off` 只用于测试和故障诊断，不能作为
+  生产接管配置。
+- 本地文件访问由 DSH session cwd 与 QuarkSelfAI workspace allowlist 双重收窄；服务器模式不得继承或
+  挂载个人电脑主目录。

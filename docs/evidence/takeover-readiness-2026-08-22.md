@@ -8,13 +8,22 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 
 ## 已验证
 
-- `npm run check`：主包 52 项（沙箱内 50 通过、回环 E2E 2 跳过），兼容包 99 项全部通过；Web 控制台
+- `npm run check`：主包 56 项（沙箱内 54 通过、回环 E2E 2 跳过），兼容包 99 项全部通过；Web 控制台
   和守护重启两个回环 E2E 已在允许监听的本地环境分别通过。
 - `npm run compat:dsh`：DSH `0.1.1-rc.2`、commit `b150a55` 与 baseline 一致，构建产物为 named
   namespace plugin；隔离 `feishu-assistant` profile 的配置包含 Lark、BlackLake、Claude/Codex 读写隔离
   Provider 和 executor router，并已完成真实 profile 启动、SIGTERM 清洁退出烟测。
+- `npm run compat:live-bridge`：现网 bridge 的 27 个业务/协议文件在兼容 Provider 中均存在，没有 live-only
+  文件；6 个差异文件已逐一限定为 Quark 控制面/自然语言策略的加法改动，另有 1 个 additive control-plane
+  client。live/compat 内容哈希分别为 `b9f33c0c3e4f912c0c9d2b345043d133e5af957c8124698bbb05baddf02e91b7`
+  和 `34060e95ce2c2fc93a1550995b4d5efd5c01f3340183f0395e4f6f9ab36d9cda`；后续任一侧漂移都会 fail-closed。
 - Claude Code `2.1.177` 已登录；损坏的 Codex CLI 已在线重装为 `0.149.0` 并确认登录。实际模型读取本地文件
   会把内容发送到模型服务，必须使用明确获准的脱敏样本，不能把普通仓库文件当烟测材料。
+- 两个真实模型通道已用固定合成文本握手：Claude 返回 `QUARK_CLAUDE_OK`；Codex `gpt-5.6-sol/medium`
+  最终返回 `QUARK_CODEX_OK`。Codex 期间发生 WebSocket 重连、HTTPS fallback 和超时告警，故结论是“可用但
+  当前退化”，不是健康。Claude 当前 `claude auth status` 显示 first-party OAuth，尚无证据证明已走低价
+  第三方模型；系统现已支持从运行环境显式注入 Anthropic key/token 且配置 dump 不暴露值，但不能在未提供
+  第三方通道配置时宣称成本路由目标已达成。
 - 本地默认：SQLite、`127.0.0.1` 控制台、local execution；工作区 policy 拒绝目录穿越和符号链接逃逸，
   compatibility provider 启动前验证 `workspaceRoot`。Claude/Codex 只读任务使用非写入 Provider，只有持久
   owner approval 存在时才路由到写入 Provider。
@@ -31,6 +40,9 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
   窗口未结束，不能提前视为通过。
 - control-only 守护进程已在同一 SQLite 文件上完成启动、健康读取、SIGTERM、再次启动、健康读取、再次
   SIGTERM 的真实进程级演练；两个代际都只看到同一条种子事件，没有丢失或重复。
+- 正式本地 DSH profile 已由 `npm run setup:dsh` 在项目 `var/dsh` 初始化并核验固定版本/commit。新守护进程
+  在 `control-only` 下实际拉起受监管 DSH 内核，`/api/health` 返回 kernel=`ready`，验证后以 SIGINT 优雅
+  停止；现网旧 LaunchAgent 全程保持 running。`ASSISTANT_KERNEL=off` 仅保留给测试/诊断。
 - 已从上述状态生成 rehearsal `f23ade87aaa4dab10ab3`。生成配置显式绑定该只读快照目录与四个 CLI 的
   绝对路径；preflight 证明 stateReadable/handoffSafe/didaCredentialReady/全部 executables 均为 true。
   该 rehearsal 不是最终冻结状态，不能直接用于正式切换。
@@ -51,6 +63,7 @@ projection。`--min-task-projections 20 --strict` 因 `0/20` 样本不足退出 
    action ledger 单执行者和卡片长等待恢复。
 3. 在明确批准的维护窗口执行单消费者切换；切换前冻结 checkpoint，失败时停止新消费者后恢复旧服务。
 4. Docker 实镜像构建仍受本机 Docker daemon HTTP 500 阻塞；本地 LaunchAgent 主路径不依赖该项，
-   服务器发布前必须补验。
+   服务器发布前必须补验。另因 npm 在解析 DSH 完整发布包依赖树时持续停在同一 arborist 阶段，当前镜像
+   尚未锁入自包含 DSH CLI；服务器形态仍是硬门禁，本地主路径使用已核验的正式 checkout，不受影响。
 
 机器可读状态仍以 `config/feature-parity.json` 为准；本文件不能替代 `TAKEOVER_CONFIRMED=true` 的人工门禁。

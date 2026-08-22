@@ -29,6 +29,7 @@ async function startDaemon(database: string, workspace: string, port: number): P
     env: {
       ...process.env,
       ASSISTANT_RUNTIME: 'control-only',
+      ASSISTANT_KERNEL: 'off',
       ASSISTANT_EXECUTION_MODE: 'local',
       ASSISTANT_WORKSPACE_ROOTS: JSON.stringify([workspace]),
       SQLITE_PATH: database,

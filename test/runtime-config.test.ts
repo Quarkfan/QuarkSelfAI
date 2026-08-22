@@ -8,6 +8,29 @@ test('uses SQLite on loopback by default', () => {
   assert.equal(config.web.host, '127.0.0.1')
   assert.equal(config.web.port, 3210)
   assert.deepEqual(config.execution, { mode: 'local', workspaceRoots: ['/srv/quark'] })
+  assert.deepEqual(config.kernel, {
+    mode: 'dsh',
+    command: 'dsh',
+    args: ['--profile', 'feishu-assistant'],
+    cwd: '/srv/quark',
+    home: '/srv/quark/var/dsh',
+    profile: 'feishu-assistant',
+  })
+})
+
+test('allows the DSH kernel to be disabled only as an explicit diagnostic mode', () => {
+  const config = loadRuntimeConfig({ ASSISTANT_KERNEL: 'off' }, '/srv/quark')
+  assert.deepEqual(config.kernel, { mode: 'off' })
+})
+
+test('cannot cut over the compatibility consumer with the DSH kernel disabled', () => {
+  assert.throws(() => loadRuntimeConfig({
+    ASSISTANT_RUNTIME: 'compat',
+    ASSISTANT_KERNEL: 'off',
+    COMPAT_CONFIG_PATH: '/srv/quark/bridge.json',
+    TAKEOVER_CONFIRMED: 'true',
+    CONTROL_PLANE_TOKEN: 'test-token',
+  }, '/srv/quark'), /requires ASSISTANT_KERNEL=dsh/)
 })
 
 test('selects PostgreSQL from configuration', () => {

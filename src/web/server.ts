@@ -9,6 +9,7 @@ import type { AssistantStore } from '../storage/types.js'
 import { ControlOnlyRuntime, type RuntimeStatusProvider } from '../runtime/compat.js'
 import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js'
 import type { PolicyDocument } from '../policy/types.js'
+import { DisabledKernelRuntime, type KernelStatusProvider } from '../runtime/kernel.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
@@ -73,7 +74,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, config: RuntimeConfig) {
+async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, config: RuntimeConfig) {
   const [overview, events, matters, actions, approvals, policies, parity] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
@@ -90,6 +91,7 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
       mode: parity.takeoverReady ? 'ready-for-cutover' : 'migration',
       worker: runtimeStatus.snapshot(),
+      kernel: kernelStatus.snapshot(),
       execution: {
         mode: config.execution.mode,
         workspaceRootCount: config.execution.workspaceRoots.length,
@@ -129,6 +131,7 @@ export function createConsoleServer(
   store: AssistantStore,
   config: RuntimeConfig,
   runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
+  kernelStatus: KernelStatusProvider = new DisabledKernelRuntime(),
 ): Server {
   const policyAuthoring = new PolicyAuthoringService(store, {
     async compile() {
@@ -199,11 +202,14 @@ export function createConsoleServer(
           const parity = await loadFeatureParity()
           const worker = runtimeStatus.snapshot()
           const workerHealthy = worker.mode === 'control-only' || worker.state === 'ready'
-          json(response, workerHealthy ? 200 : 503, {
-            ok: workerHealthy,
+          const kernel = kernelStatus.snapshot()
+          const kernelHealthy = kernel.mode === 'off' || kernel.state === 'ready'
+          json(response, workerHealthy && kernelHealthy ? 200 : 503, {
+            ok: workerHealthy && kernelHealthy,
             storage: store.kind,
             takeoverReady: parity.takeoverReady,
             worker,
+            kernel,
           })
           return
         }
@@ -212,7 +218,7 @@ export function createConsoleServer(
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
-          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, config) })
+          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, config) })
           return
         }
         json(response, 404, { ok: false, error: 'not found' })

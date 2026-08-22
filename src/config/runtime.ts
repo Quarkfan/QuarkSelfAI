@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
 import type { AssistantIdentity } from '../domain/contracts.js'
 import type { StorageKind } from '../storage/types.js'
@@ -25,6 +26,16 @@ export interface RuntimeConfig {
   readonly runtime:
     | { readonly mode: 'control-only' }
     | { readonly mode: 'compat'; readonly configPath: string }
+  readonly kernel:
+    | { readonly mode: 'off' }
+    | {
+        readonly mode: 'dsh'
+        readonly command: string
+        readonly args: readonly string[]
+        readonly cwd: string
+        readonly home: string
+        readonly profile: string
+      }
 }
 
 function storageKind(value: string | undefined): StorageKind {
@@ -102,6 +113,26 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
   if (executionMode === 'remote' && runtimeMode === 'compat') {
     throw new Error('ASSISTANT_RUNTIME=compat requires ASSISTANT_EXECUTION_MODE=local')
   }
+  const kernelMode = env.ASSISTANT_KERNEL ?? 'dsh'
+  if (kernelMode !== 'dsh' && kernelMode !== 'off') {
+    throw new Error(`ASSISTANT_KERNEL must be dsh or off, received ${kernelMode}`)
+  }
+  if (runtimeMode === 'compat' && kernelMode === 'off') {
+    throw new Error('ASSISTANT_RUNTIME=compat requires ASSISTANT_KERNEL=dsh')
+  }
+  const profile = env.DSH_PROFILE?.trim() || 'feishu-assistant'
+  const home = resolve(cwd, env.DSH_HOME?.trim() || 'var/dsh')
+  const installed = resolve(cwd, 'node_modules/.bin/dsh')
+  const checkout = resolve(cwd, env.DSH_CHECKOUT?.trim() || '../deepseek-harness')
+  const checkoutEntry = resolve(checkout, 'apps/cli/lib/bin.js')
+  const explicit = env.DSH_EXECUTABLE?.trim()
+  const dshLaunch = explicit
+    ? { command: explicit, args: ['--profile', profile], cwd }
+    : existsSync(installed)
+      ? { command: installed, args: ['--profile', profile], cwd }
+      : existsSync(checkoutEntry)
+        ? { command: process.execPath, args: [checkoutEntry, '--profile', profile], cwd }
+        : { command: 'dsh', args: ['--profile', profile], cwd }
   return {
     execution: executionMode === 'local'
       ? { mode: 'local', workspaceRoots: workspaceRoots(env.ASSISTANT_WORKSPACE_ROOTS, cwd) }
@@ -123,5 +154,8 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
     runtime: runtimeMode === 'compat'
       ? { mode: runtimeMode, configPath: resolve(cwd, compatConfigPath ?? '') }
       : { mode: 'control-only' },
+    kernel: kernelMode === 'off'
+      ? { mode: 'off' }
+      : { mode: 'dsh', ...dshLaunch, home, profile },
   }
 }

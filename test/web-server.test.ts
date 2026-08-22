@@ -24,6 +24,7 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     controlPlane: { token: 'control-test-token' },
     lark: { executable: 'lark-cli', identity: 'bot' },
     runtime: { mode: 'control-only' },
+    kernel: { mode: 'off' },
   }
   let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
   const server = createConsoleServer(store, config, { snapshot: () => worker })

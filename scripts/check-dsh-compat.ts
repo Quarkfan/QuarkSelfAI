@@ -30,7 +30,11 @@ const { stdout: dump } = await exec('corepack', [
   'pnpm', 'dsh', '--profile', 'feishu-assistant', '--dump-config',
 ], {
   cwd: checkout,
-  env: { ...process.env, DSH_HOME: validationHome },
+  env: {
+    ...process.env,
+    DSH_HOME: validationHome,
+    ANTHROPIC_API_KEY: 'quark-dump-secret-sentinel',
+  },
   maxBuffer: 4 * 1024 * 1024,
 })
 assert.match(dump, /# == @quarkfan\/quark-self-ai/)
@@ -38,6 +42,8 @@ assert.match(dump, /id: feishu-lark-cli[\s\S]*name: '@quarkfan\/quark-self-ai'/)
 assert.match(dump, /id: blacklake-reference-router[\s\S]*name: '@quarkfan\/quark-self-ai\/blacklake'/)
 assert.match(dump, /id: quark-executor-claude-code-read[\s\S]*permissionMode: dontAsk/)
 assert.match(dump, /id: quark-executor-claude-code-write[\s\S]*permissionMode: acceptEdits/)
+assert.match(dump, /process\.env\.ANTHROPIC_API_KEY/)
+assert.doesNotMatch(dump, /quark-dump-secret-sentinel/, 'DSH config dump must not evaluate or expose credentials')
 assert.match(dump, /id: quark-executor-codex-read[\s\S]*permissionMode: never/)
 assert.match(dump, /id: quark-executor-codex-write[\s\S]*permissionMode: approve-for-me/)
 assert.match(dump, /id: quark-executor-router[\s\S]*name: '@quarkfan\/quark-self-ai\/executor-router'/)
