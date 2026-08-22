@@ -45,6 +45,29 @@ npm run audit:legacy-handoff -- /absolute/state.json --strict
 真正阻塞切换的是不可恢复的队列结构、重复状态 ID 或无效的运行时间戳。业务 `dueDate` 异常只作为
 兼容警告，原值保留，DSH-native 导入时再规范化。
 
+不要把旧 `config.json` 直接交给新兼容包。旧配置没有显式 `varDir` 时，新包会落到自己的空状态目录。
+只读 rehearsal 或最终冻结后，使用交接准备器生成内容寻址、`0600`、拒绝覆盖的状态与配置：
+
+```bash
+npm run prepare:compat-handoff -- \
+  /absolute/legacy/config.json \
+  /absolute/legacy/var/state.json \
+  /absolute/quark/var/handoff
+```
+
+生成配置会固定 `varDir`、滴答凭证路径以及 lark/dida/Claude/Codex 的当前绝对可执行路径。准备器不修改
+源文件、不打印 token，并在返回前执行 handoff state、CLI 和滴答凭证权限预检。相同输入复用同一目录，
+任何同名异内容文件都会失败；正式切换必须在冻结旧消费者后重新运行，不能使用早先 rehearsal 的旧快照。
+
+随后以生成的 `configPath` 执行：
+
+```bash
+COMPAT_CONFIG_PATH=/absolute/handoff/config.json npm run takeover:preflight
+```
+
+预检要求显式 `varDir`、可读且 handoff-safe 的 `state.json`、四个本地 CLI 均可执行、滴答授权文件为
+仅 owner 可读写且含 token。它仍不会代替 feature parity 和 `TAKEOVER_CONFIRMED=true` 两道门禁。
+
 历史滴答 worker 结果可做无写回放：
 
 ```bash

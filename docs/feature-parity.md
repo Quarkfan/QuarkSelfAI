@@ -4,7 +4,7 @@
 `partial` 或 `missing` 时，禁止停止旧 bridge 或启动会抢占 `card.action.trigger` 的新消费者。
 
 截至 2026-08-22，新系统已完成 DSH/lark-cli 适配、SQLite/PostgreSQL 持久化、只读控制台，并把
-旧实现及 95 项契约测试收敛为默认关闭的兼容 Provider。它证明代码能力已经可携带，不代表生产接管完成；
+旧实现及 99 项契约测试收敛为默认关闭的兼容 Provider。它证明代码能力已经可携带，不代表生产接管完成；
 以下现网能力仍缺少脱敏回放、运行演练或 DSH-native 替换证据：
 
 - 本人私聊自然语言总控及 Codex 可见任务续接；
