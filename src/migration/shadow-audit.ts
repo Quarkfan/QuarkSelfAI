@@ -1,7 +1,10 @@
 const INTAKE = new Set(['information', 'task', 'followup'])
 const ATTENTION = new Set(['silent', 'today', 'realtime'])
 const TASK_ACTION = new Set(['created', 'updated', 'unchanged', 'ignored'])
-const NOTIFICATION = new Set(['silent', 'daily_digest', 'notify_now', 'notify'])
+const ACTUAL_NOTIFICATION = new Set(['silent', 'notify'])
+const RECOMMENDED_NOTIFICATION = new Set(['silent', 'daily_digest', 'notify_now'])
+const ACTION_OWNER = new Set(['changdongxu', 'shared', 'other', 'unknown'])
+const TASK_PRIORITY = new Set([0, 1, 3, 5])
 
 interface ShadowDecision {
   readonly messageId?: unknown
@@ -13,6 +16,11 @@ interface ShadowDecision {
   readonly actualNotification?: unknown
   readonly recommendedNotification?: unknown
   readonly difference?: unknown
+  readonly taskId?: unknown
+  readonly title?: unknown
+  readonly nextAction?: unknown
+  readonly actionOwner?: unknown
+  readonly actionRequired?: unknown
 }
 
 export interface ShadowAuditReport {
@@ -27,6 +35,7 @@ export interface ShadowAuditReport {
     readonly taskSnapshots: number
     readonly feedback: number
     readonly differences: number
+    readonly taskMutations: number
   }
   readonly distributions: Readonly<Record<string, Readonly<Record<string, number>>>>
   readonly blockers: readonly { readonly code: string; readonly count: number }[]
@@ -50,6 +59,25 @@ function distribution(decisions: readonly ShadowDecision[], field: keyof ShadowD
     result[key] = (result[key] ?? 0) + 1
   }
   return result
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function expectedRecommendation(tier: unknown): string | undefined {
+  if (tier === 'realtime') return 'notify_now'
+  if (tier === 'today') return 'daily_digest'
+  if (tier === 'silent') return 'silent'
+  return undefined
+}
+
+function expectedDifference(actual: unknown, tier: unknown): string | undefined {
+  if (actual !== 'silent' && actual !== 'notify') return undefined
+  if (actual === 'notify' && tier === 'silent') return 'possible_noise'
+  if (actual === 'notify' && tier === 'today') return 'could_batch'
+  if (actual === 'silent' && tier === 'realtime') return 'possible_miss'
+  return 'aligned'
 }
 
 export function auditShadowState(state: Readonly<Record<string, unknown>>, now = new Date()): ShadowAuditReport {
@@ -76,8 +104,56 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
     if (!INTAKE.has(String(decision.intakeDecision))) addBlocker('invalid-intake-decision')
     if (!ATTENTION.has(String(decision.attentionTier))) addBlocker('invalid-attention-tier')
     if (!TASK_ACTION.has(String(decision.taskAction))) addBlocker('invalid-task-action')
-    if (!NOTIFICATION.has(String(decision.actualNotification))) addBlocker('invalid-actual-notification')
-    if (!NOTIFICATION.has(String(decision.recommendedNotification))) addBlocker('invalid-recommended-notification')
+    if (!ACTUAL_NOTIFICATION.has(String(decision.actualNotification))) addBlocker('invalid-actual-notification')
+    if (!RECOMMENDED_NOTIFICATION.has(String(decision.recommendedNotification))) addBlocker('invalid-recommended-notification')
+    if (!ACTION_OWNER.has(String(decision.actionOwner))) addBlocker('invalid-action-owner')
+    if (typeof decision.actionRequired !== 'boolean') addBlocker('invalid-action-required')
+    if (!nonEmptyString(decision.title)) addBlocker('missing-decision-title')
+    if (decision.recommendedNotification !== expectedRecommendation(decision.attentionTier)) {
+      addBlocker('attention-notification-mismatch')
+    }
+    if (decision.difference !== expectedDifference(decision.actualNotification, decision.attentionTier)) {
+      addBlocker('notification-difference-mismatch')
+    }
+    if (decision.taskAction === 'created') {
+      if (!nonEmptyString(decision.taskId)) addBlocker('created-task-missing-id')
+      if (decision.intakeDecision !== 'task') addBlocker('created-task-invalid-intake')
+      if (decision.actionRequired !== true) addBlocker('created-task-no-action')
+      if (decision.actionOwner !== 'changdongxu' && decision.actionOwner !== 'shared') addBlocker('created-task-invalid-owner')
+      if (!nonEmptyString(decision.nextAction)) addBlocker('created-task-missing-next-action')
+    }
+    if ((decision.taskAction === 'updated' || decision.taskAction === 'unchanged') && !nonEmptyString(decision.taskId)) {
+      addBlocker('existing-task-missing-id')
+    }
+    if (decision.taskAction === 'created' && decision.intakeDecision !== 'task') addBlocker('non-task-created')
+  }
+  const matterKeys = new Set<string>()
+  for (const value of matters) {
+    const matter = record(value)
+    const key = matter?.key
+    if (!nonEmptyString(key)) addBlocker('missing-shadow-matter-key')
+    else if (matterKeys.has(key)) addBlocker('duplicate-shadow-matter-key')
+    else matterKeys.add(key)
+  }
+  for (const decision of decisions) {
+    if (nonEmptyString(decision.matterKey) && !matterKeys.has(decision.matterKey)) addBlocker('missing-shadow-matter-reference')
+  }
+  for (const value of Object.values(snapshots)) {
+    const snapshot = record(value)
+    if (!snapshot) {
+      addBlocker('invalid-task-snapshot')
+      continue
+    }
+    if (!nonEmptyString(snapshot.projectId)) addBlocker('task-snapshot-missing-project')
+    if (!nonEmptyString(snapshot.title)) addBlocker('task-snapshot-missing-title')
+    if (snapshot.status !== 0 && snapshot.status !== 2) addBlocker('task-snapshot-invalid-status')
+    if (!TASK_PRIORITY.has(Number(snapshot.priority))) addBlocker('task-snapshot-invalid-priority')
+    if (!Number.isSafeInteger(snapshot.missingCount) || Number(snapshot.missingCount) < 0) addBlocker('task-snapshot-invalid-missing-count')
+  }
+  for (const value of feedback) {
+    const item = record(value)
+    if (!item || !validTimestamp(item.at)) addBlocker('invalid-shadow-feedback-time')
+    if (!nonEmptyString(item?.taskId) || !nonEmptyString(item?.type)) addBlocker('invalid-shadow-feedback-reference')
   }
   const windowComplete = endsAt !== undefined && now.getTime() >= Date.parse(endsAt)
   const warnings: Array<{ code: string; count: number }> = []
@@ -95,7 +171,8 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
       matters: matters.length,
       taskSnapshots: Object.keys(snapshots).length,
       feedback: feedback.length,
-      differences: decisions.filter((decision) => typeof decision.difference === 'string' && decision.difference.length > 0).length,
+      differences: decisions.filter((decision) => typeof decision.difference === 'string' && decision.difference !== 'aligned').length,
+      taskMutations: decisions.filter((decision) => decision.taskAction === 'created' || decision.taskAction === 'updated').length,
     },
     distributions: {
       intakeDecision: distribution(decisions, 'intakeDecision'),

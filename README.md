@@ -56,7 +56,8 @@ Lark 插件只注册 capability，不在这个烟测中启动飞书事件消费�
 `compat:blacklake` 从 BlackLakeWork 三源真源读取当前路由、知识索引和 skill 清单，验证路径、新鲜度哈希、
 skill 存在性及多步操作链门禁；不会查询生产系统或执行外部写入。
 
-`audit:shadow` 只输出窗口、数量、分类分布、重复和格式问题，不输出消息标题或业务正文；加 `--strict`
+`audit:shadow` 只输出窗口、数量、分类分布、事项引用、任务准入、通知层级、快照和反馈的聚合问题码，
+不输出消息标题或业务正文；加 `--strict`
 时，窗口未结束、少于 20 个决策或存在 blocker 都会返回非零。
 
 `takeover:preflight` 在现阶段返回非零是正确行为。未经常东旭明确批准，不得设置
@@ -90,5 +91,6 @@ gitignored 的 `var/dsh-validation`。不要使用该验证 profile 启动现网
 - [PostgreSQL 数据模型](docs/storage/postgresql.md)
 - [旧 bridge 迁移门禁](docs/migration-from-codex-lark-bridge.md)
 - [现网能力差距与接管门禁](docs/feature-parity.md)
+- [需求追踪矩阵](docs/requirements-traceability.md)
 - [2026-08-22 接管准备证据](docs/evidence/takeover-readiness-2026-08-22.md)
 - [自然语言策略机制](docs/policies.md)
