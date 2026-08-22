@@ -61,6 +61,13 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
 - 2026-08-22 使用 `lark-cli im +chat-search --as user` 对典型外部群“油脂客户沟通群”执行实时只读查询，
   标准群属性明确返回 `external=true`；没有读取群消息或执行写入。结合 external/unknown 群全交互阻断测试
   和 41 条上下文样本，`context-and-external-guard` 已满足能力验证要求。
+- 最新严格旧状态审计显示：8 条本人消息已由持久 controller/current session 处理且队列为 0；10 个卡片
+  回调无重复，3 个待确认研究动作可恢复；超期、完成清理和工作日跟进三类 monitor 都有真实运行记录且
+  当前健康故障为空；2/2 自动研究会话均已归档并删除，归档/删除失败累计为 0；3/3 智造湖小维请求已
+  完成且关联回复消息。对应总控、卡片、monitor、会话清理和小维通道不再只依赖单元测试。
+- 根据 ADR 0003，本地 macOS 守护是接管硬门禁，Linux/容器是可选服务器形态。`daemon-deployment` 已按
+  本地真实进程和 LaunchAgent 证据标记完成；Docker 实镜像构建独立为非接管必需的 `server-deployment`，
+  仍保持 partial，不能用于宣称服务器发布就绪。
 
 ## 未通过的硬门禁
 

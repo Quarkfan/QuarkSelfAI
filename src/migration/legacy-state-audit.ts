@@ -4,6 +4,7 @@ export interface LegacyStateAuditReport {
   readonly warnings: readonly { code: string; count: number }[]
   readonly transferableWork: Readonly<Record<string, number>>
   readonly counts: Readonly<Record<string, number>>
+  readonly operationalEvidence: Readonly<Record<string, number | boolean>>
   readonly duplicateIds: Readonly<Record<string, number>>
   readonly invalidTimestampFields: number
   readonly invalidOperationalTimestampFields: number
@@ -38,6 +39,8 @@ export function auditLegacyState(state: Record<string, unknown>): LegacyStateAud
     'followupHealthFailure', 'xiaoweiHealthFailure',
   ]
   const activeFailures = failureFields.filter((field) => activeFailure(state[field]))
+  const researchSessions = records(state.mentionResearchSessions)
+  const xiaoweiRequests = records(state.xiaoweiResearchRequests)
   const malformedQueue = queue.filter((item) => !['id', 'sessionId', 'prompt'].every((key) => typeof item[key] === 'string' && item[key]))
   const duplicateIds = {
     processedOwnerMessages: duplicateCount(Array.isArray(state.processedMessageIds) ? state.processedMessageIds : []),
@@ -90,9 +93,25 @@ export function auditLegacyState(state: Record<string, unknown>): LegacyStateAud
       processedOwnerMessages: Array.isArray(state.processedMessageIds) ? state.processedMessageIds.length : 0,
       processedFocusMessages: Array.isArray(state.mentionProcessedMessageIds) ? state.mentionProcessedMessageIds.length : 0,
       processedCardEvents: Array.isArray(state.processedCardEventIds) ? state.processedCardEventIds.length : 0,
-      trackedResearchSessions: records(state.mentionResearchSessions).length,
+      trackedResearchSessions: researchSessions.length,
       researchDecisionHistory: records(state.researchDecisionHistory).length,
       shadowMatters: records(state.shadowMatters).length,
+    },
+    operationalEvidence: {
+      controllerSessionPresent: typeof state.controllerSessionId === 'string' && state.controllerSessionId.length > 0,
+      currentSessionPresent: typeof state.currentSessionId === 'string' && state.currentSessionId.length > 0,
+      activeHealthFailures: activeFailures.length,
+      overdueFingerprints: typeof state.overdueNotified === 'object' && state.overdueNotified !== null && !Array.isArray(state.overdueNotified)
+        ? Object.keys(state.overdueNotified).length : 0,
+      completedCleanupHasRun: typeof state.didaCompletedCleanupLastAt === 'string' && state.didaCompletedCleanupLastAt.length > 0,
+      workdayFollowupHasRun: typeof state.followupLastCheckedAt === 'string' && state.followupLastCheckedAt.length > 0,
+      archivedResearchSessions: researchSessions.filter((item) => typeof item.archivedAt === 'string' && item.archivedAt.length > 0).length,
+      deletedResearchSessions: researchSessions.filter((item) => typeof item.deletedAt === 'string' && item.deletedAt.length > 0).length,
+      researchSessionFailures: researchSessions.reduce((sum, item) => sum
+        + Number(item.archiveFailureCount ?? 0) + Number(item.deleteFailureCount ?? 0), 0),
+      completedXiaoweiRequests: xiaoweiRequests.filter((item) => item.status === 'completed').length,
+      xiaoweiRepliesCorrelated: xiaoweiRequests.filter((item) => item.status === 'completed'
+        && typeof item.replyMessageId === 'string' && item.replyMessageId.length > 0).length,
     },
     duplicateIds,
     invalidTimestampFields,
