@@ -34,10 +34,11 @@
 | 所有故障、恢复和需要协助的事项可通过飞书通知，时间显示为北京时间 | retry-and-alerting | 持久故障/恢复去重、本地时区格式、错误摘要脱敏；飞书自身不可用后跨重启合并补发演练 | complete |
 | 测试任务不得污染真实待办，低价值消息如“ok”不得建任务 | focus-intake, dida-projection | synthetic artifact、whole-message acknowledgement、priority-zero admission 测试 | observing：影子样本继续核验 |
 
-## 当前不能绕过的接管条件
+## 当前运行期证据债务与不变量
 
-1. 影子窗口必须自然结束且严格审计通过。
-2. 当前滴答 schema 至少 20 个真实 task projection 全部通过；不得人工制造测试待办凑数。
+1. 影子窗口仍须自然结束并严格审计；提前接管不把窗口视为通过。
+2. 当前滴答 schema 仍须收集至少 20 个真实 task projection；不得人工制造测试待办凑数。
 3. 卡片长等待、断线恢复、Claude 到 Codex 串行 fallback 和会话生命周期完成受控演练。
-4. 获取常东旭针对本次切换的明确批准，并在冻结旧 checkpoint 后重新生成 handoff。
-5. 切换时保持单一飞书消息/卡片消费者；任何异常先停止新消费者，再恢复旧 bridge。
+4. 本次已取得常东旭明确批准，并在冻结旧 checkpoint 后生成内容寻址 handoff；accepted-risk 清单精确为
+   `dida-projection,shadow-collaboration`。
+5. 运行时必须保持单一飞书消息/卡片消费者；任何异常先停止新消费者，再恢复旧 bridge。

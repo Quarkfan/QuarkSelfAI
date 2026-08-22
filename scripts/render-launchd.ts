@@ -9,7 +9,7 @@ for (let index = 2; index < process.argv.length; index += 2) {
   const value = process.argv[index + 1]
   if (name?.startsWith('--') && value) argumentsByName.set(name.slice(2), value)
 }
-const required = ['output', 'project-root', 'node', 'environment-file', 'stdout', 'stderr']
+const required = ['output', 'project-root', 'node', 'environment-file', 'path', 'stdout', 'stderr']
 const missing = required.filter((name) => !argumentsByName.get(name))
 if (missing.length > 0) {
   process.stderr.write(`Missing arguments: ${missing.join(', ')}\n`)
@@ -21,6 +21,7 @@ if (missing.length > 0) {
     projectRoot: resolve(argumentsByName.get('project-root') ?? ''),
     nodeExecutable: resolve(argumentsByName.get('node') ?? ''),
     environmentFile: resolve(argumentsByName.get('environment-file') ?? ''),
+    executablePath: argumentsByName.get('path') ?? '',
     stdoutPath: resolve(argumentsByName.get('stdout') ?? ''),
     stderrPath: resolve(argumentsByName.get('stderr') ?? ''),
   })

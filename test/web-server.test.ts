@@ -90,3 +90,45 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test('reports an accepted-risk cutover without falsifying feature parity', async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-web-cutover-'))
+  const store = await createSqliteStore(join(directory, 'web.sqlite3'), migrations)
+  await store.migrate()
+  const config: RuntimeConfig = {
+    execution: { mode: 'local', workspaceRoots: [directory] },
+    storage: { kind: 'sqlite', path: join(directory, 'web.sqlite3') },
+    web: { host: '127.0.0.1', port: 3210, secureCookie: false },
+    controlPlane: { token: 'control-test-token' },
+    lark: { executable: 'lark-cli', identity: 'bot' },
+    runtime: { mode: 'compat', configPath: join(directory, 'compat.json') },
+    kernel: { mode: 'off' },
+  }
+  const worker: RuntimeSnapshot = { mode: 'compat', state: 'ready', messageReady: true, cardReady: true }
+  const server = createConsoleServer(store, config, { snapshot: () => worker })
+  server.listen(0, '127.0.0.1')
+  try {
+    await once(server, 'listening')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EPERM') {
+      context.skip('sandbox does not permit loopback listeners')
+      await store.close()
+      await rm(directory, { recursive: true, force: true })
+      return
+    }
+    throw error
+  }
+  try {
+    const port = (server.address() as AddressInfo).port
+    const response = await fetch(`http://127.0.0.1:${port}/api/health`)
+    const payload = await response.json() as { takeoverReady: boolean; operationalMode: string }
+    assert.equal(response.status, 200)
+    assert.equal(payload.takeoverReady, false)
+    assert.equal(payload.operationalMode, 'accepted-risk-cutover')
+  } finally {
+    server.close()
+    await once(server, 'close')
+    await store.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})

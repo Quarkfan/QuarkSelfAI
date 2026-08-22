@@ -19,6 +19,41 @@ export interface FeatureParityReport {
   readonly completed: number
 }
 
+export interface TakeoverRiskAcceptance {
+  readonly acceptedIncomplete: readonly string[]
+  readonly unacceptedIncomplete: readonly string[]
+  readonly unknownAccepted: readonly string[]
+  readonly explicitOwnerConfirmation: boolean
+  readonly acceptedRiskCutover: boolean
+  readonly ready: boolean
+}
+
+export function evaluateTakeoverRiskAcceptance(
+  report: FeatureParityReport,
+  explicitOwnerConfirmation: boolean,
+  acceptedIncompleteValue: string | undefined,
+): TakeoverRiskAcceptance {
+  const incomplete = report.features
+    .filter((feature) => feature.requiredForTakeover && feature.status !== 'complete')
+    .map((feature) => feature.id)
+    .sort()
+  const accepted = [...new Set((acceptedIncompleteValue ?? '').split(',').map((item) => item.trim()).filter(Boolean))].sort()
+  const known = new Set(incomplete)
+  const acceptedIncomplete = accepted.filter((id) => known.has(id))
+  const unknownAccepted = accepted.filter((id) => !known.has(id))
+  const acceptedSet = new Set(acceptedIncomplete)
+  const unacceptedIncomplete = incomplete.filter((id) => !acceptedSet.has(id))
+  const ready = explicitOwnerConfirmation && unacceptedIncomplete.length === 0 && unknownAccepted.length === 0
+  return {
+    acceptedIncomplete,
+    unacceptedIncomplete,
+    unknownAccepted,
+    explicitOwnerConfirmation,
+    acceptedRiskCutover: ready && incomplete.length > 0,
+    ready,
+  }
+}
+
 const manifestFile = fileURLToPath(new URL('../../config/feature-parity.json', import.meta.url))
 
 export async function loadFeatureParity(): Promise<FeatureParityReport> {

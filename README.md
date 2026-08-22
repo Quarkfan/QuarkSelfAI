@@ -1,8 +1,9 @@
 # QuarkSelfAI
 
 QuarkSelfAI 是基于 DeepSeek Harness（DSH）的本地优先个人工作助手，飞书是主要交互通道之一。
-它会逐步替代职责过载的
-`codex-lark-bridge`，但在回放、影子运行和状态迁移通过前，不接管现网消息。
+它已经在 2026-08-23 以 DSH 内核监管的 compatibility provider 接管本机现网；旧
+`codex-lark-bridge` LaunchAgent 已停止。滴答 current-schema 样本与完整影子窗口仍保持真实 partial，
+本次按 owner 明确接受的已知风险运行，不把证据缺口伪装成 complete。
 
 当前阶段已经建立：
 
@@ -60,31 +61,30 @@ skill 存在性及多步操作链门禁；不会查询生产系统或执行外�
 不输出消息标题或业务正文；加 `--strict`
 时，窗口未结束、少于 20 个决策或存在 blocker 都会返回非零。
 
-`takeover:preflight` 在现阶段返回非零是正确行为。未经常东旭明确批准，不得设置
-`TAKEOVER_CONFIRMED=true`，也不得启动兼容消费者。架构保护边界见
-`docs/adr/0002-compatibility-provider.md`。
+`takeover:preflight` 只有在最终 handoff、CLI/凭证检查、owner 明确批准全部通过时才返回成功。存在未完成
+证据项时还必须按 ADR 0004 精确列出本次接受的 ID；未知或新增 ID 会继续 fail closed。架构保护边界见
+`docs/adr/0002-compatibility-provider.md` 与 `docs/adr/0004-owner-accepted-early-cutover.md`。
 
 控制台默认打开 `http://127.0.0.1:3210`，使用 SQLite `var/quarkselfai.sqlite3`。执行默认发生在本机，
 且默认只能访问启动目录；正式本地配置应通过 `ASSISTANT_WORKSPACE_ROOTS` 显式列出允许的工作区。
 本地文件只由本机 executor 在白名单内读取，不会自动同步到飞书、滴答、远端数据库或服务器。服务器部署是
 可选形态，必须配置控制台令牌和 HTTPS；详见部署手册。
 
-## DSH profile 接入（尚未用于现网）
+## DSH profile 接入
 
 ```bash
 npm run setup:dsh
 dsh --profile feishu-assistant --dump-config
 ```
 
-从源码验证时，DSH checkout 固定放在同级 `github/deepseek-harness`，隔离 profile 的 `DSH_HOME` 指向本项目
-gitignored 的 `var/dsh-validation`。不要使用该验证 profile 启动现网消费者。
-
-正式接管前还需完成 `docs/migration-from-codex-lark-bridge.md` 的门禁。
+从源码验证时，DSH checkout 固定放在同级 `github/deepseek-harness`。隔离验证使用 `var/dsh-validation`；
+本机现网使用 `var/dsh` 下的 `feishu-assistant` profile，由 QuarkSelfAI 父守护统一监管。
 
 ## 文档入口
 
 - [总体架构](docs/architecture.md)
 - [本地优先个人助手决策](docs/adr/0003-local-first-personal-assistant.md)
+- [已知风险提前接管决策](docs/adr/0004-owner-accepted-early-cutover.md)
 - [本地开发](docs/operations/local-development.md)
 - [部署与切换](docs/operations/deployment.md)
 - [lark-cli 升级手册](docs/operations/lark-cli-upgrade.md)
@@ -94,4 +94,5 @@ gitignored 的 `var/dsh-validation`。不要使用该验证 profile 启动现网
 - [需求追踪矩阵](docs/requirements-traceability.md)
 - [2026-08-22 接管准备证据](docs/evidence/takeover-readiness-2026-08-22.md)
 - [2026-08-22 接管前受控演练](docs/evidence/controlled-rehearsal-2026-08-22.md)
+- [2026-08-23 正式切换记录](docs/evidence/cutover-2026-08-23.md)
 - [自然语言策略机制](docs/policies.md)

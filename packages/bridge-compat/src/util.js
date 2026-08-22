@@ -93,6 +93,10 @@ export function run(command, args, options = {}) {
         signal,
         stdout,
         stderr,
+        // Shell launchers may translate SIGTERM into exit 143 instead of
+        // preserving the signal. Track whether our own deadline fired so the
+        // caller can retain and resume the job instead of treating it as a
+        // terminal executor failure.
         timedOut: timeoutTriggered && (signal === "SIGTERM" || code === 143 || code === null),
       });
     });

@@ -65,9 +65,11 @@ systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/p
 ## macOS LaunchAgent
 
 `deploy/launchd/com.quarkfan.quark-self-ai.plist.template` 是不含秘密的模板。使用
-`npm run render:launchd -- --output ... --project-root ... --node ... --environment-file ... --stdout ... --stderr ...`
+`npm run render:launchd -- --output ... --project-root ... --node ... --environment-file ... --path ... --stdout ... --stderr ...`
 渲染时必须指定绝对的项目目录、Node、`0600` 环境文件和日志路径；输出
 使用 `wx` 创建，存在同名文件时拒绝覆盖。环境文件由 Node 22 的 `--env-file` 读取，令牌不会写进 plist。
+`--path` 必须显式包含 Node、lark-cli、dida-cli、Claude Code 和 Codex 启动脚本所需目录；launchd 自带的
+最小 PATH 会覆盖 env-file 中同名变量，因此 PATH 作为非秘密运行依赖写入 plist。
 
 在旧 `com.blacklake.codex-lark-bridge` 仍运行时，只允许渲染和执行 `plutil -lint`，禁止 bootstrap 新
 LaunchAgent。正式切换必须先获得常东旭批准，再按单消费者步骤优雅停止旧服务、复制最终状态、启动新
@@ -82,6 +84,8 @@ LaunchAgent。正式切换必须先获得常东旭批准，再按单消费者步
 2. 部署新代码但保持 event consumer 和外部写插件关闭。
 3. 执行构建、契约、CLI compatibility 和数据库健康检查。
 4. 执行 `npm run takeover:preflight`；未返回 `ready=true` 必须停止，不能用修改 manifest 或跳过测试绕过。
+   若 owner 明确要求在已知证据缺口下提前接管，按 ADR 0004 精确设置
+   `TAKEOVER_ACCEPTED_INCOMPLETE`；未知、遗漏或以后新增的 incomplete 都会继续阻断。
 5. 开启只读影子处理，比较新旧系统决策。
 6. 冻结旧 consumer checkpoint，确认新系统已加载 action ledger。
 7. 获得常东旭对本次切换的明确批准后，才设置 `TAKEOVER_CONFIRMED=true`。

@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { homedir } from 'node:os'
-import { loadFeatureParity } from '../src/config/feature-parity.js'
+import { evaluateTakeoverRiskAcceptance, loadFeatureParity } from '../src/config/feature-parity.js'
 import { inspectCompatibilityConfig, type CompatibilityPreflightReport } from '../src/migration/compat-preflight.js'
 
 const parity = await loadFeatureParity()
@@ -20,14 +20,23 @@ if (configPath) {
     configReadable = false
   }
 }
-const ready = parity.takeoverReady && configReadable && compatibility?.ready === true && process.env.TAKEOVER_CONFIRMED === 'true'
+const acceptance = evaluateTakeoverRiskAcceptance(
+  parity,
+  process.env.TAKEOVER_CONFIRMED === 'true',
+  process.env.TAKEOVER_ACCEPTED_INCOMPLETE,
+)
+const ready = acceptance.ready && configReadable && compatibility?.ready === true
 process.stdout.write(`${JSON.stringify({
   ready,
   architectureMode: 'compatibility-provider',
   featureParityReady: parity.takeoverReady,
+  acceptedRiskCutover: acceptance.acceptedRiskCutover,
   compatibilityConfigReadable: configReadable,
   compatibility,
-  explicitTakeoverConfirmation: process.env.TAKEOVER_CONFIRMED === 'true',
+  explicitTakeoverConfirmation: acceptance.explicitOwnerConfirmation,
+  acceptedIncomplete: acceptance.acceptedIncomplete,
+  unacceptedIncomplete: acceptance.unacceptedIncomplete,
+  unknownAccepted: acceptance.unknownAccepted,
   incomplete,
 }, null, 2)}\n`)
 if (!ready) process.exitCode = 1

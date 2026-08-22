@@ -1,7 +1,8 @@
 # 现网能力迁移与接管门禁
 
-机器可读真源是 `config/feature-parity.json`，Web 控制台直接读取它计算 `takeoverReady`。任何必要能力为
-`partial` 或 `missing` 时，禁止停止旧 bridge 或启动会抢占 `card.action.trigger` 的新消费者。
+机器可读真源是 `config/feature-parity.json`，Web 控制台直接读取它计算 `takeoverReady`。默认情况下，任何
+必要能力为 `partial` 或 `missing` 都会阻断切换；ADR 0004 允许 owner 精确接受当前全部已知证据缺口，
+但不会改变 manifest 的真实状态，也不会自动接受以后新增的 incomplete。
 
 截至 2026-08-22，新系统已完成 DSH/lark-cli 适配、SQLite/PostgreSQL 持久化、只读控制台，并把
 旧实现及 99 项契约测试收敛为默认关闭的兼容 Provider。它证明代码能力已经可携带，不代表生产接管完成；
@@ -14,6 +15,8 @@
 Linux/容器是可选服务器发布形态，不再作为本地个人助手接管的硬门禁；其实镜像构建仍保持 partial，
 服务器发布前必须补验。
 
-因此当前结论是：**不满足接管条件，旧 `codex-lark-bridge` 必须继续运行。**
+2026-08-23 常东旭明确要求立即切换并在运行中继续迭代，同时要求保持架构完整。系统以 accepted-risk
+cutover 接管：旧 LaunchAgent 已停止，QuarkSelfAI/DSH/compat worker 成为唯一消费者；`dida-projection`
+和 `shadow-collaboration` 继续显示 partial，直到真实证据自然补齐。
 
 完成一项迁移时必须同时补实现、测试、回放证据和运行手册，再修改 manifest；禁止只改状态字段。

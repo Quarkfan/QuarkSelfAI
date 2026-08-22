@@ -2,6 +2,7 @@ export interface LaunchdRenderOptions {
   readonly projectRoot: string
   readonly nodeExecutable: string
   readonly environmentFile: string
+  readonly executablePath: string
   readonly stdoutPath: string
   readonly stderrPath: string
 }
@@ -15,12 +16,13 @@ export function renderLaunchdTemplate(template: string, options: LaunchdRenderOp
     __PROJECT_ROOT__: options.projectRoot,
     __NODE_EXECUTABLE__: options.nodeExecutable,
     __ENV_FILE__: options.environmentFile,
+    __EXEC_PATH__: options.executablePath,
     __STDOUT_PATH__: options.stdoutPath,
     __STDERR_PATH__: options.stderrPath,
   }
   let rendered = template
   for (const [placeholder, value] of Object.entries(replacements)) {
-    if (!value.startsWith('/')) throw new Error(`${placeholder} must be an absolute path`)
+    if (!value.startsWith('/')) throw new Error(`${placeholder} must start with an absolute path`)
     rendered = rendered.replaceAll(placeholder, xml(value))
   }
   if (/__[A-Z_]+__/.test(rendered)) throw new Error('launchd template still contains unresolved placeholders')

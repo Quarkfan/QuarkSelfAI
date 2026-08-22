@@ -1,7 +1,8 @@
 # 从 codex-lark-bridge 迁移
 
 架构边界见 `docs/adr/0002-compatibility-provider.md`。当前兼容包只是临时叶子 Provider，DSH/Cordis
-仍是目标内核；迁移准备不得改变旧服务的运行状态。
+仍是目标内核。2026-08-23 已按 ADR 0004 完成单消费者切换：QuarkSelfAI 监管兼容 Provider，旧服务停止；
+后续仍须逐项用 DSH-native 插件替换兼容能力并保留回滚路径。
 
 ## 阶段
 
@@ -25,6 +26,10 @@
 本地可执行 `npm run takeover:preflight` 查看机器可读门禁。它在能力未齐、配置不可读或没有显式
 批准时必须以非零状态退出。`audit:legacy-state` 仅输出文件 fingerprint 和结构统计，不复制、不修改
 旧状态，也不打印业务内容。
+
+常东旭可按 [ADR 0004](adr/0004-owner-accepted-early-cutover.md) 明确接受当前机器清单中的具体证据缺口，
+但必须精确列出全部 incomplete ID。该模式不会修改 feature parity，不能使用通配符，也不能自动接受以后
+新增的风险；状态交接、单消费者和回滚门禁仍不可绕过。
 
 需要演练状态复制时使用：
 
