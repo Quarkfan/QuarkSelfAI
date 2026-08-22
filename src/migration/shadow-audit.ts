@@ -36,6 +36,10 @@ export interface ShadowAuditReport {
     readonly feedback: number
     readonly differences: number
     readonly taskMutations: number
+    readonly sources: number
+    readonly sourcesWithContext: number
+    readonly uniqueChats: number
+    readonly uniqueSenders: number
   }
   readonly distributions: Readonly<Record<string, Readonly<Record<string, number>>>>
   readonly blockers: readonly { readonly code: string; readonly count: number }[]
@@ -56,6 +60,15 @@ function distribution(decisions: readonly ShadowDecision[], field: keyof ShadowD
   for (const decision of decisions) {
     const value = decision[field]
     const key = typeof value === 'string' && value ? value : '[missing]'
+    result[key] = (result[key] ?? 0) + 1
+  }
+  return result
+}
+
+function valueDistribution(values: readonly unknown[]): Readonly<Record<string, number>> {
+  const result: Record<string, number> = {}
+  for (const value of values) {
+    const key = nonEmptyString(value) ? value : '[missing]'
     result[key] = (result[key] ?? 0) + 1
   }
   return result
@@ -128,15 +141,47 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
     if (decision.taskAction === 'created' && decision.intakeDecision !== 'task') addBlocker('non-task-created')
   }
   const matterKeys = new Set<string>()
+  const sourceMessageIds = new Set<string>()
+  const chatIds = new Set<string>()
+  const senderIds = new Set<string>()
+  const intakeReasons: string[] = []
+  let sourceCount = 0
+  let sourcesWithContext = 0
   for (const value of matters) {
     const matter = record(value)
     const key = matter?.key
     if (!nonEmptyString(key)) addBlocker('missing-shadow-matter-key')
     else if (matterKeys.has(key)) addBlocker('duplicate-shadow-matter-key')
     else matterKeys.add(key)
+    if (!Array.isArray(matter?.sources)) {
+      addBlocker('missing-shadow-matter-sources')
+      continue
+    }
+    for (const sourceValue of matter.sources) {
+      sourceCount += 1
+      const source = record(sourceValue)
+      if (!source || !nonEmptyString(source.messageId)) addBlocker('invalid-shadow-source-message')
+      else if (sourceMessageIds.has(source.messageId)) addBlocker('duplicate-shadow-source-message')
+      else sourceMessageIds.add(source.messageId)
+      if (!nonEmptyString(source?.chatId)) addBlocker('invalid-shadow-source-chat')
+      else chatIds.add(source.chatId)
+      if (nonEmptyString(source?.senderId)) senderIds.add(source.senderId)
+      if (!Number.isSafeInteger(source?.contextCount) || Number(source?.contextCount) < 0) {
+        addBlocker('invalid-shadow-source-context-count')
+      } else if (Number(source?.contextCount) > 0) {
+        sourcesWithContext += 1
+      }
+      if (!Array.isArray(source?.intakeReasons) || source.intakeReasons.length === 0
+        || source.intakeReasons.some((reason) => !nonEmptyString(reason))) {
+        addBlocker('invalid-shadow-source-intake-reasons')
+      } else {
+        intakeReasons.push(...source.intakeReasons as string[])
+      }
+    }
   }
   for (const decision of decisions) {
     if (nonEmptyString(decision.matterKey) && !matterKeys.has(decision.matterKey)) addBlocker('missing-shadow-matter-reference')
+    if (nonEmptyString(decision.messageId) && !sourceMessageIds.has(decision.messageId)) addBlocker('missing-shadow-source-reference')
   }
   for (const value of Object.values(snapshots)) {
     const snapshot = record(value)
@@ -173,6 +218,10 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
       feedback: feedback.length,
       differences: decisions.filter((decision) => typeof decision.difference === 'string' && decision.difference !== 'aligned').length,
       taskMutations: decisions.filter((decision) => decision.taskAction === 'created' || decision.taskAction === 'updated').length,
+      sources: sourceCount,
+      sourcesWithContext,
+      uniqueChats: chatIds.size,
+      uniqueSenders: senderIds.size,
     },
     distributions: {
       intakeDecision: distribution(decisions, 'intakeDecision'),
@@ -180,6 +229,7 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
       taskAction: distribution(decisions, 'taskAction'),
       actualNotification: distribution(decisions, 'actualNotification'),
       recommendedNotification: distribution(decisions, 'recommendedNotification'),
+      intakeReason: valueDistribution(intakeReasons),
     },
     blockers: blockerList,
     warnings,

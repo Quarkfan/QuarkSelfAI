@@ -12,9 +12,9 @@
 | 本人机器人私聊直接理解自然语言并执行，不要求命令枚举 | direct-owner-control | bridge 总控原样请求、持久重试和 Claude fallback 契约测试 | gated：脱敏现网回放 |
 | 创建、续接指定 Codex 会话；左侧可见；标题唯一；默认 gpt-5.6-sol medium | visible-codex-sessions | app-server create/resume/title/model 测试；真实 Codex 合成握手 | gated：桌面端受控演练 |
 | 任务完成后归档；自建会话归档七日后强制删除；失败退避 | session-janitor | 完成态归档、已归档对账、`--force` 删除、手工取消归档保护测试 | gated：复制状态演练 |
-| @我、他人私聊、特别关注联系人、飞书标记群/会话统一接入 | focus-intake | MentionMonitor 聚合、messageId 去重、flag chat 同步和私聊契约测试 | observing：影子窗口结束后评估 |
-| 读取附近上下文与最新会话尾部，避免迟到任务和已回复后再建任务 | focus-intake, context-and-external-guard | stale message 双窗口读取、settle window、低信号和旧重试清理测试 | observing：真实样本仍在收集 |
-| 外部群不追问、不回复；无法确认群属性时 fail closed | context-and-external-guard | external/unknown group 全交互阻断测试 | implemented；正式切换仍受总门禁约束 |
+| @我、他人私聊、特别关注联系人、飞书标记群/会话统一接入 | focus-intake | MentionMonitor 契约；现网无写样本覆盖 @我 8、私聊 31、特别关注 3、标记会话 1 | complete |
+| 读取附近上下文与最新会话尾部，避免迟到任务和已回复后再建任务 | focus-intake, context-and-external-guard | stale message 双窗口读取、settle window、低信号清理；现网 41/41 来源有上下文 | complete |
+| 外部群不追问、不回复；无法确认群属性时 fail closed | context-and-external-guard | external/unknown group 阻断测试；实时只读查询“油脂客户沟通群”返回 `external=true` | complete |
 | 必要追问标注 AI 分身；正式回复必须先由本人确认 | context-and-external-guard, approval-cards | 追问/正式回复策略、Card 2.0 回调去重和 durable approval | gated：受控卡片长等待/重启演练 |
 | 交互消息使用卡片、按钮和输入框；普通通知格式化 | approval-cards | Card 2.0 hierarchy、button/input/select/navigation 测试 | gated：本人飞书受控演练 |
 | 自动化待办只建真正任务；禁止 NOTE；标题一眼可见紧急/关键；标签、优先级、截止日合理 | dida-projection | task admission/presentation、NOTE/TEXT 删除补偿、实际 kind 核验测试 | gated：当前 schema 真实结果仍为 0/20 |

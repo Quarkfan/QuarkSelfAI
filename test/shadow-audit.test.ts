@@ -25,7 +25,13 @@ test('audits a completed shadow window without emitting business content', () =>
   const report = auditShadowState({
     shadowMode: { enabled: true, startedAt: '2026-08-20T00:00:00.000Z', endsAt: '2026-08-27T00:00:00.000Z' },
     shadowDecisions: Array.from({ length: 20 }, (_, index) => decision(`om-${index}`)),
-    shadowMatters: Array.from({ length: 20 }, (_, index) => ({ key: `matter-om-${index}` })),
+    shadowMatters: Array.from({ length: 20 }, (_, index) => ({
+      key: `matter-om-${index}`,
+      sources: [{
+        messageId: `om-${index}`, chatId: `chat-${index % 2}`, senderId: `sender-${index % 3}`,
+        contextCount: 2, intakeReasons: ['@owner'],
+      }],
+    })),
     shadowTaskSnapshots: Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`task-om-${index}`, {
       projectId: 'todo', title: 'must not be emitted', status: 0, priority: 3, missingCount: 0,
     }])),
@@ -36,6 +42,9 @@ test('audits a completed shadow window without emitting business content', () =>
   assert.equal(report.counts.decisions, 20)
   assert.equal(report.counts.differences, 0)
   assert.equal(report.counts.taskMutations, 20)
+  assert.equal(report.counts.sourcesWithContext, 20)
+  assert.equal(report.counts.uniqueChats, 2)
+  assert.equal(report.distributions.intakeReason['@owner'], 20)
   assert.equal(JSON.stringify(report).includes('must never be emitted'), false)
 })
 
@@ -43,7 +52,9 @@ test('blocks duplicate decisions and keeps an unfinished window pending', () => 
   const report = auditShadowState({
     shadowMode: { enabled: true, startedAt: '2026-08-20T00:00:00.000Z', endsAt: '2026-08-27T00:00:00.000Z' },
     shadowDecisions: [decision('same'), decision('same')],
-    shadowMatters: [{ key: 'matter-same' }],
+    shadowMatters: [{ key: 'matter-same', sources: [{
+      messageId: 'same', chatId: 'chat', senderId: 'sender', contextCount: 1, intakeReasons: ['direct'],
+    }] }],
   }, new Date('2026-08-22T00:00:00.000Z'))
   assert.equal(report.readyForEvaluation, false)
   assert.deepEqual(report.blockers, [{ code: 'duplicate-message-id', count: 1 }])
@@ -64,7 +75,9 @@ test('blocks semantically inconsistent task and notification projections', () =>
       recommendedNotification: 'notify_now',
       difference: 'could_batch',
     }],
-    shadowMatters: [{ key: 'matter-bad' }],
+    shadowMatters: [{ key: 'matter-bad', sources: [{
+      messageId: 'bad', chatId: 'chat', senderId: 'sender', contextCount: 1, intakeReasons: ['mention'],
+    }] }],
   }, new Date('2026-08-22T00:00:00.000Z'))
   assert.equal(report.valid, false)
   const codes = new Set(report.blockers.map((blocker) => blocker.code))

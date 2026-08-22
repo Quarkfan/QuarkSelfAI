@@ -55,6 +55,12 @@ QuarkSelfAI 已具备本地优先运行、DSH 装配、兼容能力承载、持�
   该 rehearsal 不是最终冻结状态，不能直接用于正式切换。
 - `npm run compat:lark` 已验证 lark-cli `1.0.88`、25 个可用 EventKey、消息与卡片两个必需 EventKey，
   schema fingerprint 为 `b0b84ff4a756e8253aefc8c6c08d5193eed1bacddd77a391960113d4cf00bbbf`。
+- 影子来源聚合覆盖 `@常东旭` 8 条、他人私聊 31 条、特别关注任永强 3 条、飞书标记会话 1 条；41/41
+  来源都带已读取的上下文，覆盖 18 个会话和 16 个发送人。`focus-intake` 因而已有实现、契约测试和现网
+  无写回放三层证据。
+- 2026-08-22 使用 `lark-cli im +chat-search --as user` 对典型外部群“油脂客户沟通群”执行实时只读查询，
+  标准群属性明确返回 `external=true`；没有读取群消息或执行写入。结合 external/unknown 群全交互阻断测试
+  和 41 条上下文样本，`context-and-external-guard` 已满足能力验证要求。
 
 ## 未通过的硬门禁
 
