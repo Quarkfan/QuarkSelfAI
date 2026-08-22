@@ -1,0 +1,7 @@
+.monitor-form { padding: 22px 24px; }
+.monitor-form label { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.monitor-form input[type="number"] { width: 130px; background: #0d1014; border: 1px solid #333b46; border-radius: 7px; padding: 8px; color: var(--text); }
+.monitor-form input[type="checkbox"] { width: 34px; height: 18px; accent-color: var(--accent); }
+.form-note { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.form-error { color: var(--red); font-size: 11px; line-height: 1.5; }
+.monitor-form .button { margin-top: 10px; }

@@ -1,5 +1,27 @@
 # This bundle contributes only the stable lark-cli capability provider.
 # Routing, policy, projections and executor providers are separate plugins.
+- id: llm-pi-ai
+  config:
+    providers:
+      blacklake-deepseek:
+        displayName: BlackLake DeepSeek
+        api: openai-completions
+        apiKeyEnv: QUARK_INFERENCE_API_KEY
+        baseURL: !!js process.env.QUARK_INFERENCE_BASE_URL
+        models:
+          - id: deepseek/openai/deepseek-v4-pro
+            name: DeepSeek V4 Pro
+
+- id: agent-default-model
+  config:
+    provider: blacklake-deepseek
+    model: deepseek/openai/deepseek-v4-pro
+
+- id: webserver
+  config:
+    host: 127.0.0.1
+    port: !!js Number(process.env.DSH_WEB_PORT || 3211)
+
 - insert:
     - id: feishu-lark-cli
       name: '@quarkfan/quark-self-ai'

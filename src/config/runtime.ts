@@ -15,6 +15,7 @@ export interface RuntimeConfig {
     readonly port: number
     readonly consoleToken?: string
     readonly secureCookie: boolean
+    readonly dshUrl?: string
   }
   readonly controlPlane: {
     readonly token?: string
@@ -78,6 +79,7 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
   const kind = storageKind(env.ASSISTANT_STORAGE)
   const host = env.WEB_HOST ?? '127.0.0.1'
   const consoleToken = env.CONSOLE_TOKEN?.trim() || undefined
+  const dshWebPort = port(env.DSH_WEB_PORT ?? '3211')
   if (!isLoopback(host) && !consoleToken) {
     throw new Error('CONSOLE_TOKEN is required when WEB_HOST is not loopback')
   }
@@ -121,18 +123,19 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
     throw new Error('ASSISTANT_RUNTIME=compat requires ASSISTANT_KERNEL=dsh')
   }
   const profile = env.DSH_PROFILE?.trim() || 'feishu-assistant'
+  const dshArgs = ['--profile', profile, '--no-open']
   const home = resolve(cwd, env.DSH_HOME?.trim() || 'var/dsh')
   const installed = resolve(cwd, 'node_modules/.bin/dsh')
   const checkout = resolve(cwd, env.DSH_CHECKOUT?.trim() || '../deepseek-harness')
   const checkoutEntry = resolve(checkout, 'apps/cli/lib/bin.js')
   const explicit = env.DSH_EXECUTABLE?.trim()
   const dshLaunch = explicit
-    ? { command: explicit, args: ['--profile', profile], cwd }
+    ? { command: explicit, args: dshArgs, cwd }
     : existsSync(installed)
-      ? { command: installed, args: ['--profile', profile], cwd }
+      ? { command: installed, args: dshArgs, cwd }
       : existsSync(checkoutEntry)
-        ? { command: process.execPath, args: [checkoutEntry, '--profile', profile], cwd }
-        : { command: 'dsh', args: ['--profile', profile], cwd }
+        ? { command: process.execPath, args: [checkoutEntry, ...dshArgs], cwd }
+        : { command: 'dsh', args: dshArgs, cwd }
   return {
     execution: executionMode === 'local'
       ? { mode: 'local', workspaceRoots: workspaceRoots(env.ASSISTANT_WORKSPACE_ROOTS, cwd) }
@@ -143,6 +146,7 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
       port: port(env.WEB_PORT),
       ...(consoleToken ? { consoleToken } : {}),
       secureCookie: boolean(env.CONSOLE_SECURE_COOKIE),
+      ...(kernelMode === 'dsh' ? { dshUrl: `http://127.0.0.1:${dshWebPort}` } : {}),
     },
     controlPlane: {
       ...(controlPlaneToken ? { token: controlPlaneToken } : {}),

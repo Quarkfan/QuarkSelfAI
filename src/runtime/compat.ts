@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { once } from 'node:events'
-import { readFile } from 'node:fs/promises'
+import { readFile, rename, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
 
@@ -19,6 +20,25 @@ export interface RuntimeSnapshot {
 
 export interface RuntimeStatusProvider {
   snapshot(): RuntimeSnapshot
+  diagnostics?(): Promise<RuntimeDiagnostics>
+  updateMonitor?(id: string, input: { enabled?: boolean; intervalMs?: number }): Promise<void>
+}
+
+export interface MonitorDiagnostic {
+  readonly id: string
+  readonly name: string
+  readonly enabled: boolean
+  readonly intervalMs: number | undefined
+  readonly lastRunAt?: string | null
+  readonly nextRunAt?: string | null
+  readonly failure?: string | null
+  readonly pending?: number
+}
+
+export interface RuntimeDiagnostics {
+  readonly monitors: readonly MonitorDiagnostic[]
+  readonly queues: Readonly<Record<string, number>>
+  readonly retention: Readonly<Record<string, number | boolean>>
 }
 
 export class CompatReadinessObserver {
@@ -70,6 +90,71 @@ export class CompatRuntime implements RuntimeStatusProvider {
 
   snapshot(): RuntimeSnapshot {
     return { ...this.current }
+  }
+
+  async diagnostics(): Promise<RuntimeDiagnostics> {
+    const document = JSON.parse(await readFile(this.configPath, 'utf8')) as Record<string, unknown>
+    const varDir = typeof document.varDir === 'string' ? document.varDir : join(this.processOptions.cwd ?? compatRoot, 'var')
+    const state = JSON.parse(await readFile(join(varDir, 'state.json'), 'utf8')) as Record<string, unknown>
+    const arrayCount = (key: string): number => Array.isArray(state[key]) ? state[key].length : 0
+    const value = (key: string): string | null => typeof state[key] === 'string' ? state[key] : null
+    const failure = (key: string): string | null => {
+      const current = state[key]
+      if (typeof current === 'string') return current
+      if (current && typeof current === 'object') {
+        const record = current as Record<string, unknown>
+        return typeof record.message === 'string' ? record.message : typeof record.lastError === 'string' ? record.lastError : null
+      }
+      return null
+    }
+    const number = (key: string): number | undefined => typeof document[key] === 'number' ? document[key] : undefined
+    return {
+      monitors: [
+        { id: 'focus', name: '飞书重点消息', enabled: document.mentionMonitorEnabled !== false, intervalMs: number('mentionPollIntervalMs'), lastRunAt: value('mentionLastPollAt'), nextRunAt: value('mentionNextPollAt'), failure: failure('mentionHealthFailure'), pending: arrayCount('mentionPending') },
+        { id: 'flags', name: '标记会话同步', enabled: document.monitorFlaggedConversations !== false, intervalMs: number('flaggedConversationSyncIntervalMs'), lastRunAt: value('flaggedConversationLastSyncAt'), failure: failure('flaggedConversationHealthFailure'), pending: arrayCount('flaggedConversationChatIds') },
+        { id: 'cards', name: '交互卡片回调', enabled: true, intervalMs: undefined, failure: failure('cardActionHealthFailure'), pending: arrayCount('mentionResearchConfirmations') + arrayCount('followupOutreachRequests') },
+        { id: 'overdue', name: '滴答超期待办', enabled: document.overdueMonitorEnabled !== false, intervalMs: number('overduePollIntervalMs'), failure: failure('overdueHealthFailure'), pending: state.overdueNotified && typeof state.overdueNotified === 'object' ? Object.keys(state.overdueNotified).length : 0 },
+        { id: 'followup', name: '自动化跟进', enabled: document.followupMonitorEnabled !== false, intervalMs: number('followupPollIntervalMs'), lastRunAt: value('followupLastCheckedAt'), failure: failure('followupHealthFailure'), pending: arrayCount('followupOutreachRequests') },
+        { id: 'xiaowei', name: '智造湖小维', enabled: document.xiaoweiMonitorEnabled !== false, intervalMs: number('xiaoweiPollIntervalMs'), lastRunAt: value('xiaoweiLastPollAt'), failure: failure('xiaoweiHealthFailure'), pending: arrayCount('xiaoweiResearchRequests') },
+        { id: 'task-cleanup', name: '已完成待办清理', enabled: document.didaCompletedCleanupEnabled === true, intervalMs: number('didaCompletedCleanupIntervalMs'), lastRunAt: value('didaCompletedCleanupLastAt'), failure: failure('didaCompletedCleanupHealthFailure') },
+        { id: 'session-cleanup', name: '调研会话清理', enabled: document.sessionCleanupEnabled !== false, intervalMs: number('sessionCleanupIntervalMs'), pending: arrayCount('mentionResearchSessions') },
+      ],
+      queues: {
+        commands: arrayCount('queue'),
+        focus: arrayCount('mentionPending'),
+        research: arrayCount('mentionResearchSessions'),
+        approvals: arrayCount('mentionResearchConfirmations') + arrayCount('followupOutreachRequests'),
+        xiaowei: arrayCount('xiaoweiResearchRequests'),
+      },
+      retention: {
+        didaCompletedCleanupEnabled: document.didaCompletedCleanupEnabled === true,
+        didaCompletedRetentionDays: number('didaCompletedRetentionDays') ?? 30,
+        sessionDeleteAfterDays: number('sessionDeleteAfterDays') ?? 7,
+      },
+    }
+  }
+
+  async updateMonitor(id: string, input: { enabled?: boolean; intervalMs?: number }): Promise<void> {
+    const mapping: Record<string, { enabled?: string; interval?: string }> = {
+      focus: { enabled: 'mentionMonitorEnabled', interval: 'mentionPollIntervalMs' },
+      flags: { enabled: 'monitorFlaggedConversations', interval: 'flaggedConversationSyncIntervalMs' },
+      overdue: { enabled: 'overdueMonitorEnabled', interval: 'overduePollIntervalMs' },
+      followup: { enabled: 'followupMonitorEnabled', interval: 'followupPollIntervalMs' },
+      xiaowei: { enabled: 'xiaoweiMonitorEnabled', interval: 'xiaoweiPollIntervalMs' },
+      'task-cleanup': { enabled: 'didaCompletedCleanupEnabled', interval: 'didaCompletedCleanupIntervalMs' },
+      'session-cleanup': { enabled: 'sessionCleanupEnabled', interval: 'sessionCleanupIntervalMs' },
+    }
+    const target = mapping[id]
+    if (!target) throw new Error(`monitor ${id} is read-only or unknown`)
+    if (input.intervalMs !== undefined && (!Number.isSafeInteger(input.intervalMs) || input.intervalMs < 15_000 || input.intervalMs > 86_400_000)) {
+      throw new Error('intervalMs must be an integer from 15000 to 86400000')
+    }
+    const document = JSON.parse(await readFile(this.configPath, 'utf8')) as Record<string, unknown>
+    if (input.enabled !== undefined && target.enabled) document[target.enabled] = input.enabled
+    if (input.intervalMs !== undefined && target.interval) document[target.interval] = input.intervalMs
+    const temporary = `${this.configPath}.tmp`
+    await writeFile(temporary, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 })
+    await rename(temporary, this.configPath)
   }
 
   async start(): Promise<void> {

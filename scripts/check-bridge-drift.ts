@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readdir, readFile } from 'node:fs/promises'
+import { access, readdir, readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -46,6 +46,19 @@ async function snapshot(root: string): Promise<{ hash: string; paths: readonly s
   return { hash: digest.digest('hex'), paths, contents }
 }
 
+const liveExists = await access(liveRoot).then(() => true, () => false)
+if (!liveExists) {
+  const compat = await snapshot(compatRoot)
+  if (process.argv.includes('--current')) {
+    process.stdout.write(`${JSON.stringify({ standalone: true, compatHash: compat.hash, compatFileCount: compat.paths.length }, null, 2)}\n`)
+    process.exit(0)
+  }
+  const baseline = JSON.parse(await readFile(baselinePath, 'utf8')) as { compatHash: string; compatFileCount: number }
+  assert.equal(compat.hash, baseline.compatHash, 'embedded compatibility provider changed after the audited baseline')
+  assert.equal(compat.paths.length, baseline.compatFileCount, 'embedded compatibility provider file count changed after the audited baseline')
+  process.stdout.write(`${JSON.stringify({ compatible: true, standalone: true, compatHash: compat.hash, compatFileCount: compat.paths.length, externalBridgeRequired: false }, null, 2)}\n`)
+  process.exit(0)
+}
 const [live, compat] = await Promise.all([snapshot(liveRoot), snapshot(compatRoot)])
 const livePaths = new Set(live.paths)
 const compatPaths = new Set(compat.paths)

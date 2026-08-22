@@ -86,6 +86,8 @@
     "snapshot:legacy-state": "node --import tsx scripts/snapshot-legacy-state.ts",
     "prepare:compat-handoff": "node --import tsx scripts/prepare-compat-handoff.ts",
     "replay:legacy-dida": "node scripts/replay-legacy-dida.mjs",
+    "cleanup:completed-state": "node --env-file=var/runtime.env scripts/prune-completed-compat-state.mjs",
+    "register:compat-state": "node --env-file=var/runtime.env --import tsx scripts/register-compat-state.ts",
     "takeover:preflight": "node --import tsx scripts/takeover-preflight.ts",
     "render:launchd": "node --import tsx scripts/render-launchd.ts",
     "dev": "node --import tsx src/app.ts",

@@ -11,7 +11,7 @@ test('uses SQLite on loopback by default', () => {
   assert.deepEqual(config.kernel, {
     mode: 'dsh',
     command: 'dsh',
-    args: ['--profile', 'feishu-assistant'],
+    args: ['--profile', 'feishu-assistant', '--no-open'],
     cwd: '/srv/quark',
     home: '/srv/quark/var/dsh',
     profile: 'feishu-assistant',

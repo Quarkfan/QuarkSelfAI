@@ -75,7 +75,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, config: RuntimeConfig) {
-  const [overview, events, matters, actions, approvals, policies, parity] = await Promise.all([
+  const [overview, events, matters, actions, approvals, policies, parity, diagnostics] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
     store.recentMatters(12),
@@ -83,6 +83,7 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
     store.pendingApprovals(12),
     store.policies(20),
     loadFeatureParity(),
+    runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
   ])
   return {
     runtime: {
@@ -98,7 +99,9 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
         mode: config.execution.mode,
         workspaceRootCount: config.execution.workspaceRoots.length,
       },
+      conversationUrl: config.web.dshUrl,
     },
+    diagnostics,
     overview,
     events,
     matters,
@@ -144,7 +147,8 @@ export function createConsoleServer(
     response.setHeader('x-content-type-options', 'nosniff')
     response.setHeader('x-frame-options', 'DENY')
     response.setHeader('referrer-policy', 'no-referrer')
-    response.setHeader('content-security-policy', "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:")
+    const dshOrigin = config.web.dshUrl ? new URL(config.web.dshUrl).origin : "'none'"
+    response.setHeader('content-security-policy', `default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; frame-src ${dshOrigin}`)
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
     try {
       if (request.method === 'POST' && url.pathname === '/api/login') {
@@ -160,6 +164,11 @@ export function createConsoleServer(
         }
         const secure = config.web.secureCookie ? '; Secure' : ''
         response.setHeader('set-cookie', `${sessionCookie}=${encodeURIComponent(tokenHash(expected))}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200${secure}`)
+        json(response, 200, { ok: true })
+        return
+      }
+      if (request.method === 'POST' && url.pathname === '/api/logout') {
+        response.setHeader('set-cookie', `${sessionCookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`)
         json(response, 200, { ok: true })
         return
       }
@@ -235,6 +244,26 @@ export function createConsoleServer(
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
           json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, config) })
+          return
+        }
+        const monitor = /^\/api\/monitors\/([^/]+)$/.exec(url.pathname)
+        if (request.method === 'PATCH' && monitor) {
+          if (!runtimeStatus.updateMonitor) {
+            json(response, 409, { ok: false, error: 'monitor configuration is unavailable in this runtime' })
+            return
+          }
+          const input = await body(request)
+          const enabled = typeof input.enabled === 'boolean' ? input.enabled : undefined
+          const intervalMs = typeof input.intervalMs === 'number' ? input.intervalMs : undefined
+          await runtimeStatus.updateMonitor(decodeURIComponent(monitor[1] ?? ''), {
+            ...(enabled !== undefined ? { enabled } : {}),
+            ...(intervalMs !== undefined ? { intervalMs } : {}),
+          })
+          json(response, 200, { ok: true, restarting: true })
+          setTimeout(() => {
+            process.exitCode = 75
+            process.kill(process.pid, 'SIGTERM')
+          }, 250).unref()
           return
         }
         json(response, 404, { ok: false, error: 'not found' })

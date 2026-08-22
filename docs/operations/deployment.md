@@ -71,9 +71,8 @@ systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/p
 `--path` 必须显式包含 Node、lark-cli、dida-cli、Claude Code 和 Codex 启动脚本所需目录；launchd 自带的
 最小 PATH 会覆盖 env-file 中同名变量，因此 PATH 作为非秘密运行依赖写入 plist。
 
-在旧 `com.blacklake.codex-lark-bridge` 仍运行时，只允许渲染和执行 `plutil -lint`，禁止 bootstrap 新
-LaunchAgent。正式切换必须先获得常东旭批准，再按单消费者步骤优雅停止旧服务、复制最终状态、启动新
-服务；失败时先停止新服务，再恢复旧服务。
+本机已完成正式切换，`com.blacklake.codex-lark-bridge` 仓库与 LaunchAgent 不再是运行依赖。新安装不得
+重新 bootstrap 旧服务；升级只替换 QuarkSelfAI 构建产物、校验 Profile，然后由同一个 LaunchAgent 优雅重启。
 
 兼容子进程在 ready 后异常退出会让 QuarkSelfAI 父进程以失败状态退出，因此 launchd、systemd 和容器
 的 restart policy 能统一执行退避重启。`/api/health` 在 compat worker 非 ready 时返回 503。
@@ -95,4 +94,6 @@ LaunchAgent。正式切换必须先获得常东旭批准，再按单消费者步
 
 ## 回滚
 
-停止新消费者并确认退出后，从旧 checkpoint 恢复旧 bridge。数据库迁移默认向前兼容；没有经过单独审批不得执行破坏性回滚。事故期间保留原始事件和 action transition，使用补偿处理而非手工改历史。
+回滚到上一个已验证的 QuarkSelfAI Git 版本并复用同一 checkpoint，不恢复已移除的外部旧 bridge。数据库
+迁移默认向前兼容；没有经过单独审批不得执行破坏性回滚。事故期间保留原始事件和 action transition，
+使用补偿处理而非手工改历史。

@@ -39,6 +39,7 @@ async function loadConfig() {
     notificationTimeZone: "Asia/Shanghai",
     progressIntervalMs: 60000,
     bridgeControlMcpEnabled: true,
+    mentionMonitorEnabled: true,
     mentionPollIntervalMs: 60000,
     mentionRateLimitBaseMs: 120000,
     mentionRateLimitMaxMs: 1800000,
@@ -60,6 +61,7 @@ async function loadConfig() {
     didaCliConfigPath: path.join(os.homedir(), ".config", "dida-cli", "config.json"),
     didaTokenEnvVar: "DIDA365_TOKEN",
     overduePollIntervalMs: 1800000,
+    overdueMonitorEnabled: true,
     overdueRetryIntervalMs: 120000,
     overdueFailureNotifyThreshold: 3,
     didaCompletedCleanupEnabled: true,
@@ -72,10 +74,13 @@ async function loadConfig() {
     sessionRetryBaseMs: 30000,
     sessionRetryMaxMs: 300000,
     xiaoweiPollIntervalMs: 300000,
+    xiaoweiMonitorEnabled: true,
     xiaoweiInitialLookbackMinutes: 180,
     sessionCleanupIntervalMs: 21600000,
+    sessionCleanupEnabled: true,
     sessionDeleteAfterDays: 7,
     followupPollIntervalMs: 3600000,
+    followupMonitorEnabled: true,
     followupReplyPollIntervalMs: 1800000,
     followupTimeZone: "Asia/Shanghai",
     followupScheduledHour: 10,
@@ -194,22 +199,22 @@ function startCardListener() {
 
 startCardListener();
 const timer = setInterval(() => void bridge.retryQueued(), 15000);
-const mentionTimer = setInterval(() => void mentionMonitor.poll(), config.mentionPollIntervalMs);
-void mentionMonitor.poll();
-const overdueTimer = setInterval(() => void overdueMonitor.poll(), config.overduePollIntervalMs);
-const overdueStartupTimer = setTimeout(() => void overdueMonitor.poll(), Math.min(300000, config.overduePollIntervalMs));
+const mentionTimer = setInterval(() => config.mentionMonitorEnabled !== false && void mentionMonitor.poll(), config.mentionPollIntervalMs);
+if (config.mentionMonitorEnabled !== false) void mentionMonitor.poll();
+const overdueTimer = setInterval(() => config.overdueMonitorEnabled !== false && void overdueMonitor.poll(), config.overduePollIntervalMs);
+const overdueStartupTimer = setTimeout(() => config.overdueMonitorEnabled !== false && void overdueMonitor.poll(), Math.min(300000, config.overduePollIntervalMs));
 const didaCompletedCleanupTimer = setInterval(
   () => void didaCompletedCleanupMonitor.poll(), config.didaCompletedCleanupIntervalMs,
 );
 const didaCompletedCleanupStartupTimer = setTimeout(
   () => void didaCompletedCleanupMonitor.poll(), Math.min(120000, config.didaCompletedCleanupIntervalMs),
 );
-const cleanupTimer = setInterval(() => void sessionJanitor.sweep(), config.sessionCleanupIntervalMs);
-const cleanupStartupTimer = setTimeout(() => void sessionJanitor.sweep(), Math.min(10000, config.sessionCleanupIntervalMs));
-const followupTimer = setInterval(() => void followupMonitor.poll(), config.followupPollIntervalMs);
-void followupMonitor.poll();
-const xiaoweiTimer = setInterval(() => void xiaoweiResearch.poll(), config.xiaoweiPollIntervalMs);
-void xiaoweiResearch.poll();
+const cleanupTimer = setInterval(() => config.sessionCleanupEnabled !== false && void sessionJanitor.sweep(), config.sessionCleanupIntervalMs);
+const cleanupStartupTimer = setTimeout(() => config.sessionCleanupEnabled !== false && void sessionJanitor.sweep(), Math.min(10000, config.sessionCleanupIntervalMs));
+const followupTimer = setInterval(() => config.followupMonitorEnabled !== false && void followupMonitor.poll(), config.followupPollIntervalMs);
+if (config.followupMonitorEnabled !== false) void followupMonitor.poll();
+const xiaoweiTimer = setInterval(() => config.xiaoweiMonitorEnabled !== false && void xiaoweiResearch.poll(), config.xiaoweiPollIntervalMs);
+if (config.xiaoweiMonitorEnabled !== false) void xiaoweiResearch.poll();
 const shadowTimer = setInterval(() => void shadowCollaboration.poll(), config.shadowPollIntervalMs);
 void shadowCollaboration.poll();
 async function recordListenerFailure(detail) {
@@ -249,4 +254,4 @@ function shutdown(signal) {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
-console.error("codex-lark-bridge started");
+console.error("QuarkSelfAI compatibility provider started");

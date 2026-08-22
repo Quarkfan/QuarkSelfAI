@@ -1,117 +1,15 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <title>QuarkSelfAI · Control Room</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
-</head>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>QuarkSelfAI · Control Room</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/monitor.css"></head>
 <body>
-  <div class="grain" aria-hidden="true"></div>
-  <header class="masthead">
-    <a class="brand" href="/" aria-label="QuarkSelfAI 控制台首页">
-      <span class="brand-mark"><i></i><i></i><i></i></span>
-      <span><b>QUARK</b><em>SELF AI</em></span>
-    </a>
-    <div class="runtime-strip">
-      <span class="pulse" id="health-pulse"></span>
-      <span id="runtime-status">正在连接控制面</span>
-      <time id="clock"></time>
-    </div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">PERSONAL OPERATIONS / 01</p>
-        <h1>你的工作流，<br><span>正在被持续接住。</span></h1>
-        <p class="lede">飞书是入口，Matter 是事实，Action 是承诺。所有执行、等待、批准和异常都在这里留下可恢复的轨迹。</p>
-      </div>
-      <div class="cutover-dial" id="cutover-card">
-        <div class="dial-ring"><strong id="parity-score">—</strong><small>CAPABILITY</small></div>
-        <div>
-          <p class="label">接管门禁</p>
-          <h2 id="cutover-title">正在核验</h2>
-          <p id="cutover-detail">读取能力清单与运行状态…</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="metric-grid" aria-label="运行指标">
-      <article><span>EVENTS</span><strong id="metric-events">—</strong><small>已持久化事件</small></article>
-      <article><span>MATTERS</span><strong id="metric-matters">—</strong><small>开放与等待事项</small></article>
-      <article><span>ACTIONS</span><strong id="metric-actions">—</strong><small>进行中动作</small></article>
-      <article class="metric-alert"><span>APPROVALS</span><strong id="metric-approvals">—</strong><small>等待你的批准</small></article>
-      <article><span>FAILURES</span><strong id="metric-failures">—</strong><small>需要处置</small></article>
-    </section>
-
-    <nav class="view-tabs" aria-label="控制台视图">
-      <button class="active" data-view="operations">运行现场</button>
-      <button data-view="capabilities">迁移能力</button>
-      <button data-view="policies">策略库</button>
-      <button data-view="events">事件流</button>
-      <span class="tab-line"></span>
-      <button class="refresh" id="refresh" title="立即刷新" aria-label="立即刷新">↻</button>
-    </nav>
-
-    <section class="view active" id="view-operations">
-      <div class="operations-grid">
-        <article class="panel wide">
-          <header><div><span class="section-no">A</span><h3>行动队列</h3></div><small id="actions-count">0 ITEMS</small></header>
-          <div class="timeline" id="actions-list"></div>
-        </article>
-        <article class="panel approvals-panel">
-          <header><div><span class="section-no">B</span><h3>批准台</h3></div><small>HUMAN GATE</small></header>
-          <div id="approvals-list"></div>
-        </article>
-        <article class="panel matters-panel">
-          <header><div><span class="section-no">C</span><h3>事项雷达</h3></div><small>MATTER MAP</small></header>
-          <div id="matters-list"></div>
-        </article>
-      </div>
-    </section>
-
-    <section class="view" id="view-capabilities">
-      <article class="panel capability-panel">
-        <header><div><span class="section-no">D</span><h3>接管能力矩阵</h3></div><small id="capability-summary">AUDITING</small></header>
-        <div class="capability-list" id="capability-list"></div>
-      </article>
-    </section>
-
-    <section class="view" id="view-events">
-      <article class="panel event-panel">
-        <header><div><span class="section-no">E</span><h3>最近事件</h3></div><small>IMMUTABLE INTAKE</small></header>
-        <div class="event-list" id="events-list"></div>
-      </article>
-    </section>
-
-    <section class="view" id="view-policies">
-      <article class="panel capability-panel">
-        <header><div><span class="section-no">P</span><h3>自然语言策略库</h3></div><small>COMPILED POLICY</small></header>
-        <div class="policy-list" id="policy-list"></div>
-      </article>
-    </section>
-  </main>
-
-  <footer>
-    <span>QUARKSELFAI / CONTROL ROOM</span>
-    <span id="footer-meta">STORAGE — · UPTIME —</span>
-    <span id="last-updated">等待首次同步</span>
-  </footer>
-
-  <dialog id="login-dialog">
-    <form id="login-form">
-      <p class="eyebrow">SECURE CONSOLE</p>
-      <h2>进入控制室</h2>
-      <p>服务已启用远程访问保护。输入部署时设置的控制台令牌。</p>
-      <label>CONSOLE TOKEN<input id="login-token" type="password" autocomplete="current-password" required></label>
-      <button type="submit">验证并进入 <span>→</span></button>
-      <output id="login-error"></output>
-    </form>
-  </dialog>
-
-  <script type="module" src="/app.js"></script>
-</body>
-</html>
+<aside class="sidebar"><a class="brand" href="/"><span class="brand-mark">Q</span><span><b>Quark</b><small>SELF AI</small></span></a><nav id="navigation"><button class="active" data-view="overview"><span>◫</span>总览</button><button data-view="monitors"><span>⌁</span>监控</button><button data-view="work"><span>≡</span>事项与执行</button><button data-view="approvals"><span>◇</span>待我批准<i id="approval-badge">0</i></button><button data-view="policies"><span>⌘</span>策略</button><button data-view="capabilities"><span>▦</span>能力</button><button data-view="conversation"><span>◌</span>DSH 会话</button></nav><div class="sidebar-foot"><div class="identity"><span>常</span><div><b>常东旭</b><small>本地管理员</small></div></div><button id="logout" class="icon-button" title="退出登录">↪</button></div></aside>
+<main class="shell"><header class="topbar"><div><h1 id="page-title">协作总览</h1><p id="page-subtitle">飞书、滴答清单与执行通道的统一运行视图</p></div><div class="top-actions"><span class="health"><i id="health-dot"></i><b id="health-text">连接中</b></span><time id="clock"></time><button id="refresh" class="button secondary">刷新</button></div></header>
+<section class="view active" id="view-overview"><div class="metric-grid"><article><small>开放事项</small><strong id="metric-matters">—</strong><span>需要持续跟踪</span></article><article><small>执行中</small><strong id="metric-actions">—</strong><span>当前动作</span></article><article class="attention"><small>等待批准</small><strong id="metric-approvals">—</strong><span>需要你的决定</span></article><article><small>失败</small><strong id="metric-failures">—</strong><span>需要处置</span></article></div><div class="grid two-one"><article class="panel"><header><div><h2>运行中的监控</h2><p>实时健康与积压</p></div><button class="text-button" data-jump="monitors">管理监控</button></header><div class="table-wrap"><table><thead><tr><th>监控</th><th>状态</th><th>最近执行</th><th>积压</th></tr></thead><tbody id="overview-monitors"></tbody></table></div></article><article class="panel status-panel"><header><div><h2>运行栈</h2><p>当前接管状态</p></div></header><div id="runtime-stack"></div></article></div><article class="panel"><header><div><h2>最近动作</h2><p>按更新时间排序</p></div><button class="text-button" data-jump="work">查看全部</button></header><div class="table-wrap"><table><thead><tr><th>动作</th><th>执行器</th><th>状态</th><th>更新时间</th></tr></thead><tbody id="overview-actions"></tbody></table></div></article></section>
+<section class="view" id="view-monitors"><article class="panel"><header><div><h2>监控中心</h2><p>所有后台轮询、异常和待处理积压</p></div><span class="legend"><i></i>运行正常</span></header><div class="table-wrap"><table><thead><tr><th>名称</th><th>开关</th><th>周期</th><th>最近运行</th><th>下次运行</th><th>积压</th><th></th></tr></thead><tbody id="monitor-table"></tbody></table></div></article><div class="grid halves"><article class="panel compact"><header><div><h2>队列</h2><p>未完成工作负载</p></div></header><div id="queue-grid" class="queue-grid"></div></article><article class="panel compact"><header><div><h2>清理策略</h2><p>保留必要幂等记录</p></div></header><div id="retention-list" class="definition-list"></div></article></div></section>
+<section class="view" id="view-work"><article class="panel"><header><div><h2>事项与执行</h2><p>Matter 聚合事实，Action 记录承诺</p></div></header><div class="split-tables"><div><h3>开放事项</h3><div class="table-wrap"><table><thead><tr><th>标题</th><th>摘要</th><th>状态</th></tr></thead><tbody id="matter-table"></tbody></table></div></div><div><h3>执行记录</h3><div class="table-wrap"><table><thead><tr><th>动作</th><th>执行器</th><th>状态</th><th>更新时间</th></tr></thead><tbody id="action-table"></tbody></table></div></div></div></article></section>
+<section class="view" id="view-approvals"><article class="panel"><header><div><h2>批准台</h2><p>正式回复、外部写入与调研调用都在这里等待确认</p></div></header><div id="approval-list" class="approval-list"></div></article></section>
+<section class="view" id="view-policies"><article class="panel"><header><div><h2>自然语言策略</h2><p>通过机器人私聊描述，编译、演练后生效</p></div></header><div class="table-wrap"><table><thead><tr><th>策略</th><th>原始描述</th><th>版本</th><th>命中样本</th><th>状态</th></tr></thead><tbody id="policy-table"></tbody></table></div></article></section>
+<section class="view" id="view-capabilities"><article class="panel"><header><div><h2>能力矩阵</h2><p>迁移证据与完整性门禁</p></div><b id="capability-summary">—</b></header><div class="table-wrap"><table><thead><tr><th>能力</th><th>证据</th><th>状态</th></tr></thead><tbody id="capability-table"></tbody></table></div></article></section>
+<section class="view conversation" id="view-conversation"><article class="panel conversation-shell"><header><div><h2>DSH 会话</h2><p>DeepSeek Harness 原生会话、插件和工作区能力</p></div><a id="open-dsh" class="button secondary" target="_blank" rel="noreferrer">新窗口打开</a></header><div id="conversation-empty" class="conversation-empty"><span>◌</span><h3>正在连接 DSH 工作台</h3><p>DSH 只监听本机回环地址，由 QuarkSelfAI 统一托管。</p></div><iframe id="dsh-frame" title="DeepSeek Harness 会话工作台"></iframe></article></section></main>
+<dialog id="detail-dialog"><form method="dialog" class="dialog-card"><header><div><small id="detail-kicker">DETAIL</small><h2 id="detail-title">详情</h2></div><button class="dialog-close" aria-label="关闭">×</button></header><div id="detail-body"></div><footer><button class="button secondary">关闭</button></footer></form></dialog>
+<dialog id="login-dialog"><form id="login-form" class="login-card"><div class="login-brand">Q</div><small>QUARKSELFAI / LOCAL CONSOLE</small><h2>欢迎回来，常东旭</h2><p>输入本机控制台令牌以继续。凭证只保存在 HttpOnly 会话 Cookie 中。</p><label>控制台令牌<input id="login-token" type="password" autocomplete="current-password" required autofocus></label><button class="button primary" type="submit">进入工作台</button><output id="login-error"></output></form></dialog>
+<script type="module" src="/app.js"></script></body></html>

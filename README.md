@@ -2,7 +2,8 @@
 
 QuarkSelfAI 是基于 DeepSeek Harness（DSH）的本地优先个人工作助手，飞书是主要交互通道之一。
 它已经在 2026-08-23 以 DSH 内核监管的 compatibility provider 接管本机现网；旧
-`codex-lark-bridge` LaunchAgent 已停止。滴答 current-schema 样本与完整影子窗口仍保持真实 partial，
+`codex-lark-bridge` 外部仓库与 LaunchAgent 已移除；现网能力由仓库内受审计的 compatibility plugin 承接。
+滴答 current-schema 样本与完整影子窗口仍保持真实 partial，
 本次按 owner 明确接受的已知风险运行，不把证据缺口伪装成 complete。
 
 当前阶段已经建立：
@@ -65,7 +66,10 @@ skill 存在性及多步操作链门禁；不会查询生产系统或执行外�
 证据项时还必须按 ADR 0004 精确列出本次接受的 ID；未知或新增 ID 会继续 fail closed。架构保护边界见
 `docs/adr/0002-compatibility-provider.md` 与 `docs/adr/0004-owner-accepted-early-cutover.md`。
 
-控制台默认打开 `http://127.0.0.1:3210`，使用 SQLite `var/quarkselfai.sqlite3`。执行默认发生在本机，
+控制台默认打开 `http://127.0.0.1:3210`，必须使用 `CONSOLE_TOKEN` 登录；令牌只存放在权限为 `0600` 的
+`var/runtime.env`，登录后写入 HttpOnly Cookie。控制台提供监控、事项、执行、批准和策略视图，并内嵌只监听
+`127.0.0.1:3211` 的 DSH 原生会话工作台。推理端点通过 `openai-completions` 接入，默认模型为
+`deepseek/openai/deepseek-v4-pro`，API key 不进入 Git。主存储使用 SQLite `var/quarkselfai.sqlite3`。执行默认发生在本机，
 且默认只能访问启动目录；正式本地配置应通过 `ASSISTANT_WORKSPACE_ROOTS` 显式列出允许的工作区。
 本地文件只由本机 executor 在白名单内读取，不会自动同步到飞书、滴答、远端数据库或服务器。服务器部署是
 可选形态，必须配置控制台令牌和 HTTPS；详见部署手册。
@@ -75,10 +79,13 @@ skill 存在性及多步操作链门禁；不会查询生产系统或执行外�
 ```bash
 npm run setup:dsh
 dsh --profile feishu-assistant --dump-config
+npm run cleanup:completed-state
+npm run register:compat-state
 ```
 
 从源码验证时，DSH checkout 固定放在同级 `github/deepseek-harness`。隔离验证使用 `var/dsh-validation`；
-本机现网使用 `var/dsh` 下的 `feishu-assistant` profile，由 QuarkSelfAI 父守护统一监管。
+本机现网使用 `var/dsh` 下的 `feishu-assistant` profile；它组合 DSH base、web-app 与 QuarkSelfAI Bundle，
+由父守护统一监管。清理命令只删除终态记录，拒绝在工作队列非空时运行，并保留消息幂等检查点与活动影子窗口。
 
 ## 文档入口
 

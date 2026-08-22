@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { promisify } from 'node:util'
 
@@ -27,4 +27,18 @@ await exec('corepack', [
   env: { ...process.env, DSH_HOME: home },
   maxBuffer: 4 * 1024 * 1024,
 })
+const profileManifestPath = resolve(home, 'profiles', profile, 'package.json')
+const profileManifest = JSON.parse(await readFile(profileManifestPath, 'utf8')) as {
+  dsh?: { profile?: { bundles?: string[] } }
+}
+const bundles = profileManifest.dsh?.profile?.bundles
+if (!Array.isArray(bundles)) throw new Error(`DSH profile ${profile} has no bundle list`)
+profileManifest.dsh = profileManifest.dsh ?? {}
+profileManifest.dsh.profile = profileManifest.dsh.profile ?? {}
+profileManifest.dsh.profile.bundles = [
+  '@deepseek-ai/dsh-base',
+  '@deepseek-ai/dsh-web-app',
+  '@quarkfan/quark-self-ai',
+]
+await writeFile(profileManifestPath, `${JSON.stringify(profileManifest, null, 2)}\n`, { mode: 0o600 })
 process.stdout.write(`DSH profile ready profile=${profile} home=${home} baseline=${baseline.version}@${baseline.sourceCommit}\n`)

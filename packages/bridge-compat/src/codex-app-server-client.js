@@ -43,7 +43,7 @@ export function createVisibleThread(config, prompt, options = {}) {
             approvalPolicy: "never",
             ephemeral: false,
             model,
-            threadSource: "codex-lark-bridge",
+            threadSource: "quark-self-ai-compat",
             sessionStartSource: "startup",
           },
         });
@@ -114,7 +114,7 @@ export function createVisibleThread(config, prompt, options = {}) {
     send({
       id: 1,
       method: "initialize",
-      params: { clientInfo: { name: "codex-lark-bridge", version: "0.1.0" }, capabilities: { experimentalApi: true } },
+      params: { clientInfo: { name: "quark-self-ai-compat", version: "0.1.0" }, capabilities: { experimentalApi: true } },
     });
   });
 }
