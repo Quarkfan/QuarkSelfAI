@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import type { RuntimeConfig } from '../config/runtime.js'
 import { loadFeatureParity } from '../config/feature-parity.js'
 import type { AssistantStore } from '../storage/types.js'
+import { ControlOnlyRuntime, type RuntimeStatusProvider } from '../runtime/compat.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
@@ -62,7 +63,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: AssistantStore) {
+async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider) {
   const [overview, events, matters, actions, approvals, policies, parity] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
@@ -78,6 +79,7 @@ async function dashboard(store: AssistantStore) {
       storage: store.kind,
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
       mode: parity.takeoverReady ? 'ready-for-cutover' : 'migration',
+      worker: runtimeStatus.snapshot(),
     },
     overview,
     events,
@@ -109,7 +111,11 @@ async function staticFile(pathname: string, response: ServerResponse): Promise<v
   }
 }
 
-export function createConsoleServer(store: AssistantStore, config: RuntimeConfig): Server {
+export function createConsoleServer(
+  store: AssistantStore,
+  config: RuntimeConfig,
+  runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
+): Server {
   return createServer(async (request, response) => {
     response.setHeader('x-content-type-options', 'nosniff')
     response.setHeader('x-frame-options', 'DENY')
@@ -145,7 +151,7 @@ export function createConsoleServer(store: AssistantStore, config: RuntimeConfig
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
-          json(response, 200, { ok: true, data: await dashboard(store) })
+          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus) })
           return
         }
         json(response, 404, { ok: false, error: 'not found' })

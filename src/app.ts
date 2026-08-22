@@ -2,21 +2,39 @@ import { once } from 'node:events'
 import { loadRuntimeConfig } from './config/runtime.js'
 import { createAssistantStore } from './storage/factory.js'
 import { createConsoleServer } from './web/server.js'
+import { CompatRuntime, ControlOnlyRuntime } from './runtime/compat.js'
 
 const config = loadRuntimeConfig()
 const store = await createAssistantStore(config)
 await store.health()
-const server = createConsoleServer(store, config)
+const runtime = config.runtime.mode === 'compat'
+  ? new CompatRuntime(config.runtime.configPath)
+  : new ControlOnlyRuntime()
+const server = createConsoleServer(store, config, runtime)
 
 server.listen(config.web.port, config.web.host)
 await once(server, 'listening')
 process.stdout.write(`QuarkSelfAI console ready at http://${config.web.host}:${config.web.port} storage=${store.kind}\n`)
+if (runtime instanceof CompatRuntime) {
+  try {
+    await runtime.start()
+    await runtime.waitUntilReady()
+    process.stdout.write('QuarkSelfAI compatibility runtime ready\n')
+  } catch (error) {
+    await runtime.stop().catch(() => undefined)
+    server.close()
+    await once(server, 'close')
+    await store.close()
+    throw error
+  }
+}
 
 let stopping = false
 async function stop(signal: string): Promise<void> {
   if (stopping) return
   stopping = true
   process.stdout.write(`QuarkSelfAI stopping on ${signal}\n`)
+  if (runtime instanceof CompatRuntime) await runtime.stop()
   server.close()
   await once(server, 'close')
   await store.close()

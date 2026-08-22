@@ -1,0 +1,19 @@
+{
+  "name": "@quarkfan/bridge-compat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Compatibility runtime preserving the production Codex-Lark bridge behavior during DSH migration",
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node --check src/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  }
+}

@@ -34,11 +34,13 @@ docker compose -f compose.yaml -f compose.postgres.yaml up -d --build
 1. 数据库备份并应用迁移。
 2. 部署新代码但保持 event consumer 和外部写插件关闭。
 3. 执行构建、契约、CLI compatibility 和数据库健康检查。
-4. 开启只读影子处理，比较新旧系统决策。
-5. 冻结旧 consumer checkpoint，确认新系统已加载 action ledger。
-6. 优雅停止旧消费者，确认 server-side subscription 已释放。
-7. 启动新消费者并等待每个 EventKey 的 ready marker。
-8. 逐个启用投影和 executor；持续检查双写、重复任务和越权回复。
+4. 执行 `npm run takeover:preflight`；未返回 `ready=true` 必须停止，不能用修改 manifest 或跳过测试绕过。
+5. 开启只读影子处理，比较新旧系统决策。
+6. 冻结旧 consumer checkpoint，确认新系统已加载 action ledger。
+7. 获得常东旭对本次切换的明确批准后，才设置 `TAKEOVER_CONFIRMED=true`。
+8. 优雅停止旧消费者，确认 server-side subscription 已释放。
+9. 启动新消费者并等待消息与卡片 EventKey 的 ready marker。
+10. 逐个启用投影和 executor；持续检查双写、重复任务和越权回复。
 
 ## 回滚
 

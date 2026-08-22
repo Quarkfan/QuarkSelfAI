@@ -1,0 +1,184 @@
+import { createHash } from "node:crypto";
+import { mkdir, readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { run, shortId } from "./util.js";
+import { createVisibleThread } from "./codex-app-server-client.js";
+import { codexEnvironment, isCodexInfrastructureFailure, runClaudeSession } from "./cli-failover.js";
+
+const SAFETY_CONTEXT = `
+
+[来自飞书的远程指令]
+这是用户本人通过飞书发送到当前 Codex 会话的要求。请延续当前会话上下文执行。
+如果操作涉及 git push、部署、DDL/数据库写入、删除数据或文件、向外部人员发送消息，而本条指令没有明确授权该具体动作，请不要执行；请在最终回复中以“需要确认：”开头，列出动作、目标和影响，等待用户下一条飞书确认。
+如果推进任务确实需要用户补充信息、授权、账号操作或业务决定，请遵循 /Users/edy/BlackLakeWork/AGENTS.md，使用 ask-human-via-lark skill 联系常东旭并长时间等待回复；收到后继续当前 session。不要因为用户未立即回复就结束任务。
+完成后给出自包含的最终结论，清楚区分已完成、验证结果、未完成和需要确认的事项。
+`;
+
+const CONTROLLER_CONTEXT = `
+
+[飞书总控职责]
+你正在充当常东旭的飞书总控。请直接理解并执行他的自然语言要求，不要先把要求归类成固定枚举，也不要要求他输入命令。
+普通要求就在当前任务中处理。只有当他明确指定另一个 Codex 任务，或明确要求创建新任务时，才使用 codex_bridge MCP：
+- codex_bridge_list_sessions：查找本机已有任务；不确定目标时先查，不要猜 ID。
+- codex_bridge_send_to_session：把要求交给指定任务并等待结果，然后将结果汇总给常东旭。
+- codex_bridge_create_session：创建左侧栏可见的新任务并执行首条要求。
+- codex_bridge_get_status：查看桥接器排队和运行状态。
+会话工具是执行能力，不是输出格式。不要为了普通工作额外创建任务。不得通过这些工具绕过外部回复、发布、删除、数据库写入等确认门禁。
+`;
+
+function shanghaiTimestamp(now) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}${value.month}${value.day}-${value.hour}${value.minute}${value.second}-${String(now.getMilliseconds()).padStart(3, "0")}`;
+}
+
+export function buildUniqueSessionTitle(baseTitle, requestId, now = new Date()) {
+  const marker = createHash("sha256").update(String(requestId || now.getTime())).digest("hex").slice(0, 6).toUpperCase();
+  const prefix = `【AI创建·${shanghaiTimestamp(now)}·${marker}】`;
+  const readable = String(baseTitle || "未命名任务")
+    .replace(/^【AI创建·[^】]+】/, "")
+    .replace(/\s+/g, " ")
+    .trim() || "未命名任务";
+  return `${prefix}${readable.slice(0, Math.max(1, 80 - prefix.length))}`;
+}
+
+export class SessionBusyError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "SessionBusyError";
+  }
+}
+
+export class CodexRunner {
+  constructor(config, logger = console) {
+    this.config = config;
+    this.logger = logger;
+    this.running = new Map();
+  }
+
+  isRunning(sessionId) {
+    return this.running.has(sessionId);
+  }
+
+  async execute(job, onProgress = async () => {}) {
+    const runDir = path.join(this.config.varDir, "runs", `${Date.now()}-${shortId(job.sessionId)}`);
+    await mkdir(runDir, { recursive: true });
+    const finalPath = path.join(runDir, "final.md");
+    const prompt = `${job.prompt}${SAFETY_CONTEXT}${job.controller ? CONTROLLER_CONTEXT : ""}`;
+    if (job.executor === "claude") {
+      try {
+        const result = await runClaudeSession(this.config, job, prompt, {
+          timeoutMs: this.config.claudeSessionTimeoutMs || 20 * 60_000,
+          onSpawn: (child) => this.running.set(job.sessionId, child),
+        });
+        return result.final;
+      } finally {
+        this.running.delete(job.sessionId);
+      }
+    }
+    let jsonBuffer = "";
+    let lastProgressAt = 0;
+    const emitProgress = async (line) => {
+      try {
+        const event = JSON.parse(line);
+        if (event.type === "item.started" && event.item?.type === "command_execution") {
+          const now = Date.now();
+          if (now - lastProgressAt >= this.config.progressIntervalMs) {
+            lastProgressAt = now;
+            await onProgress("正在执行并验证，请稍候……");
+          }
+        }
+      } catch {
+        // Non-JSON diagnostics are retained by run() and summarized on failure.
+      }
+    };
+
+    const args = ["exec"];
+    if (job.controller && this.config.bridgeControlMcpEnabled !== false) {
+      const serverPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "codex-bridge-mcp.js");
+      args.push(
+        "-c", "mcp_servers.github.enabled=false",
+        "-c", "mcp_servers.slack.enabled=false",
+        "-c", `mcp_servers.codex_bridge.command=${JSON.stringify(process.execPath)}`,
+        "-c", `mcp_servers.codex_bridge.args=${JSON.stringify([serverPath])}`,
+        "-c", "mcp_servers.codex_bridge.startup_timeout_sec=10",
+        "-c", "mcp_servers.codex_bridge.tool_timeout_sec=1200",
+      );
+    }
+    args.push("resume", "--all", "--skip-git-repo-check", "--json", "-o", finalPath, job.sessionId, "-");
+    const execution = run(this.config.codexCli, args, {
+      cwd: this.config.workspaceRoot,
+      input: prompt,
+      env: codexEnvironment(this.config),
+      onSpawn: (child) => this.running.set(job.sessionId, child),
+      onStdout: (data) => {
+        jsonBuffer += data;
+        const lines = jsonBuffer.split("\n");
+        jsonBuffer = lines.pop() ?? "";
+        for (const line of lines) void emitProgress(line);
+      },
+    });
+    const result = await execution;
+    this.running.delete(job.sessionId);
+
+    let final = "";
+    try { final = (await readFile(finalPath, "utf8")).trim(); } catch {}
+    if (result.code !== 0) {
+      const detail = (result.stderr || result.stdout || `exit ${result.code}`).trim().slice(-4000);
+      if (/writer.*lock|thread.*lock|already.*running|session.*busy|resource busy/i.test(detail)) {
+        throw new SessionBusyError(detail);
+      }
+      if (this.config.claudeFallbackEnabled !== false && isCodexInfrastructureFailure(result)) {
+        try {
+          const fallback = await runClaudeSession(this.config, job, prompt, {
+            timeoutMs: this.config.claudeSessionTimeoutMs || 20 * 60_000,
+            onSpawn: (child) => this.running.set(job.sessionId, child),
+          });
+          return fallback.final;
+        } finally {
+          this.running.delete(job.sessionId);
+        }
+      }
+      throw new Error(`Codex 会话执行失败（exit ${result.code}）：\n${detail}`);
+    }
+    return final || "任务已执行完成，但 Codex 未返回最终文本。";
+  }
+
+  async create(prompt, requestId, onProgress = async () => {}, options = {}) {
+    const fullPrompt = `${prompt}${SAFETY_CONTEXT.replace("请延续当前会话上下文执行。", "这是一个新会话，请从这条要求开始处理。")}`;
+    const title = buildUniqueSessionTitle(
+      options.title || prompt.trim().split("\n")[0],
+      requestId,
+    );
+    try {
+      const result = await createVisibleThread(this.config, fullPrompt, {
+        ...options,
+        title,
+        onSpawn: (child) => this.running.set(`new:${requestId}`, child),
+        onProgress,
+      });
+      return { ...result, title };
+    } catch (error) {
+      if (this.config.claudeFallbackEnabled === false || !isCodexInfrastructureFailure(error)) throw error;
+      const job = { sessionId: null, prompt, executor: "claude" };
+      const result = await runClaudeSession(this.config, job, fullPrompt, {
+        readOnly: options.readOnly,
+        timeoutMs: options.timeoutMs || this.config.claudeSessionTimeoutMs || 20 * 60_000,
+        onSpawn: (child) => this.running.set(`new:${requestId}`, child),
+      });
+      return { sessionId: `claude:${result.sessionId}`, final: result.final, provider: "claude", title };
+    } finally {
+      this.running.delete(`new:${requestId}`);
+    }
+  }
+}

@@ -2,6 +2,9 @@
   "name": "@quarkfan/quark-self-ai",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "description": "Plugin-based Feishu work assistant powered by DeepSeek Harness",
   "repository": {
     "type": "git",
@@ -25,9 +28,11 @@
     "dist/config",
     "dist/web",
     "dist/policy",
+    "dist/runtime",
     "migrations",
     "config",
     "web",
+    "packages/bridge-compat",
     "cordis.patch.yml"
   ],
   "engines": {
@@ -41,8 +46,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "npm run build && npm test",
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "node --import tsx --test test/*.test.ts && npm test --workspace @quarkfan/bridge-compat",
     "compat:lark": "node --import tsx scripts/check-lark-compat.ts",
+    "audit:legacy-state": "node --import tsx scripts/audit-legacy-state.ts",
+    "takeover:preflight": "node --import tsx scripts/takeover-preflight.ts",
     "dev": "node --import tsx src/app.ts",
     "start": "node dist/app.js"
   },

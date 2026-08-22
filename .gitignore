@@ -4,3 +4,5 @@ dist/
 compat/report.local.json
 var/
 .env
+packages/bridge-compat/config.json
+packages/bridge-compat/var/

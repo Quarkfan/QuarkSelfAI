@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projectId", "totalActive", "updates", "reminders", "outreachRequests", "summary"],
+  "properties": {
+    "projectId": { "type": "string" },
+    "totalActive": { "type": "integer", "minimum": 0 },
+    "updates": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId", "title", "changes", "reason", "url"],
+        "properties": {
+          "taskId": { "type": "string" },
+          "title": { "type": "string" },
+          "changes": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "string" } },
+          "reason": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      }
+    },
+    "reminders": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId", "title", "reason", "recommendedAction", "urgency", "url"],
+        "properties": {
+          "taskId": { "type": "string" },
+          "title": { "type": "string" },
+          "reason": { "type": "string" },
+          "recommendedAction": { "type": "string" },
+          "urgency": { "type": "string", "enum": ["high", "medium", "low"] },
+          "url": { "type": "string" }
+        }
+      }
+    },
+    "outreachRequests": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId", "title", "personName", "personOpenId", "question", "reason", "context", "url"],
+        "properties": {
+          "taskId": { "type": "string" },
+          "title": { "type": "string" },
+          "personName": { "type": "string" },
+          "personOpenId": { "type": "string" },
+          "question": { "type": "string" },
+          "reason": { "type": "string" },
+          "context": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      }
+    },
+    "summary": { "type": "string" }
+  }
+}

@@ -15,6 +15,7 @@ QuarkSelfAI 是基于 DeepSeek Harness（DSH）的通用飞书工作助手。它
 - 默认 SQLite、可配置 PostgreSQL 的统一存储接口。
 - 可见的本地 Web 控制台，以及 Docker Compose/systemd 服务器部署基线。
 - 自然语言策略的受限 DSL、历史样本模拟、版本存储和安全激活门禁。
+- 默认关闭的现网兼容 Provider，以及能力、配置和人工批准三重接管门禁。
 
 DSH 的兼容基线固定在 `compat/dsh-baseline.json`，不把整个 Harness 安装闭包塞进插件的
 开发依赖；profile 验证使用工作区 `github/deepseek-harness` 下的正式 checkout。
@@ -25,11 +26,16 @@ DSH 的兼容基线固定在 `compat/dsh-baseline.json`，不把整个 Harness �
 npm install
 npm run check
 npm run compat:lark
+npm run takeover:preflight
 npm start
 ```
 
 `compat:lark` 只执行读取操作。缺少必须事件时返回非零；新增字段和可选事件只进入报告，
 不会要求业务插件同步升级。
+
+`takeover:preflight` 在现阶段返回非零是正确行为。未经常东旭明确批准，不得设置
+`TAKEOVER_CONFIRMED=true`，也不得启动兼容消费者。架构保护边界见
+`docs/adr/0002-compatibility-provider.md`。
 
 控制台默认打开 `http://127.0.0.1:3210`，使用 SQLite `var/quarkselfai.sqlite3`。服务器部署必须配置控制台令牌和 HTTPS；详见部署手册。
 

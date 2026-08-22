@@ -1,5 +1,8 @@
 # 从 codex-lark-bridge 迁移
 
+架构边界见 `docs/adr/0002-compatibility-provider.md`。当前兼容包只是临时叶子 Provider，DSH/Cordis
+仍是目标内核；迁移准备不得改变旧服务的运行状态。
+
 ## 阶段
 
 1. **契约固化**：导出现有消息、任务、审批、会话和通知语义，建立脱敏回放集。
@@ -18,3 +21,7 @@
 - 飞书 CLI 断线、升级、schema 变化和恢复通知均通过故障演练；
 - 任一 action 只有一个实际 executor；
 - 有明确一键回滚到旧 bridge 的操作手册。
+
+本地可执行 `npm run takeover:preflight` 查看机器可读门禁。它在能力未齐、配置不可读或没有显式
+批准时必须以非零状态退出。`audit:legacy-state` 仅输出文件 fingerprint 和结构统计，不复制、不修改
+旧状态，也不打印业务内容。

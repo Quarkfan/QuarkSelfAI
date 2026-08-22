@@ -1,0 +1,59 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { XiaoweiResearchChannel } from "../src/xiaowei-research-channel.js";
+
+function harness() {
+  const sentToAgent = [];
+  const sentToUser = [];
+  const state = {
+    state: { xiaoweiResearchRequests: [], xiaoweiProcessedMessageIds: [], xiaoweiLastPollAt: null },
+    async save() {},
+  };
+  const lark = {
+    async sendAsUser(userId, message) {
+      sentToAgent.push({ userId, message });
+      return { message_id: "om_request", chat_id: "oc_xiaowei" };
+    },
+    async send(message) { sentToUser.push(message); },
+    async getChatMessagesSince() { return []; },
+  };
+  const channel = new XiaoweiResearchChannel({
+    config: {
+      allowedOpenId: "ou_me",
+      xiaoweiAgent: { name: "智造湖小维", openId: "ou_xiaowei", chatId: "oc_xiaowei" },
+      xiaoweiInitialLookbackMinutes: 180,
+    },
+    state, lark,
+  });
+  return { channel, state, lark, sentToAgent, sentToUser };
+}
+
+test("sends a read-only BlackLake research request once and waits persistently", async () => {
+  const h = harness();
+  const task = { taskId: "task_1", title: "【重要】排查生产超时", researchPrompt: "核对生产日志和 Trace" };
+  const message = { message_id: "om_source", chat_name: "内部群", sender: { name: "同事" } };
+  const first = await h.channel.request(task, message);
+  const second = await h.channel.request(task, message);
+  assert.equal(first.id, second.id);
+  assert.equal(h.sentToAgent.length, 1);
+  assert.equal(first.status, "waiting_reply");
+  assert.match(h.sentToAgent[0].message, /只读排查/);
+});
+
+test("correlates a slow reply, notifies the user, and keeps it out of normal intake", async () => {
+  const h = harness();
+  const request = await h.channel.request(
+    { taskId: "task_1", title: "排查问题", researchPrompt: "查日志" },
+    { message_id: "om_source", chat_name: "内部群", sender: { name: "同事" } },
+  );
+  h.lark.getChatMessagesSince = async () => [{
+    message_id: "om_answer", chat_id: "oc_xiaowei", reply_to: "om_request",
+    content: "已确认 First Bad Hop", sender: { id: "ou_xiaowei", name: "智造湖小维" },
+    create_time: "2026-08-16 16:00",
+  }];
+  await h.channel.poll(new Date("2026-08-16T08:01:00Z"));
+  assert.equal(request.status, "reply_received");
+  assert.equal(request.replyMessageId, "om_answer");
+  assert.equal(h.sentToUser.length, 1);
+  assert.match(h.sentToUser[0], /First Bad Hop/);
+});

@@ -27,3 +27,19 @@ test('refuses an unauthenticated non-loopback console', () => {
 test('rejects an ambiguous Lark identity', () => {
   assert.throws(() => loadRuntimeConfig({ LARK_IDENTITY: 'auto' }), /LARK_IDENTITY must be user or bot/)
 })
+
+test('keeps the compatibility consumer disabled without an explicit takeover confirmation', () => {
+  assert.throws(() => loadRuntimeConfig({
+    ASSISTANT_RUNTIME: 'compat',
+    COMPAT_CONFIG_PATH: './bridge.json',
+  }, '/srv/quark'), /TAKEOVER_CONFIRMED=true/)
+})
+
+test('resolves a compatibility config only after both startup gates are present', () => {
+  const config = loadRuntimeConfig({
+    ASSISTANT_RUNTIME: 'compat',
+    COMPAT_CONFIG_PATH: './bridge.json',
+    TAKEOVER_CONFIRMED: 'true',
+  }, '/srv/quark')
+  assert.deepEqual(config.runtime, { mode: 'compat', configPath: '/srv/quark/bridge.json' })
+})

@@ -16,6 +16,9 @@ export interface RuntimeConfig {
     readonly executable: string
     readonly identity: AssistantIdentity
   }
+  readonly runtime:
+    | { readonly mode: 'control-only' }
+    | { readonly mode: 'compat'; readonly configPath: string }
 }
 
 function storageKind(value: string | undefined): StorageKind {
@@ -57,6 +60,17 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
     throw new Error(`LARK_IDENTITY must be user or bot, received ${env.LARK_IDENTITY}`)
   }
   const identity = env.LARK_IDENTITY === 'user' ? 'user' : 'bot'
+  const runtimeMode = env.ASSISTANT_RUNTIME ?? 'control-only'
+  if (runtimeMode !== 'control-only' && runtimeMode !== 'compat') {
+    throw new Error(`ASSISTANT_RUNTIME must be control-only or compat, received ${runtimeMode}`)
+  }
+  const compatConfigPath = env.COMPAT_CONFIG_PATH?.trim()
+  if (runtimeMode === 'compat' && !compatConfigPath) {
+    throw new Error('COMPAT_CONFIG_PATH is required when ASSISTANT_RUNTIME=compat')
+  }
+  if (runtimeMode === 'compat' && env.TAKEOVER_CONFIRMED !== 'true') {
+    throw new Error('TAKEOVER_CONFIRMED=true is required to start the production compatibility runtime')
+  }
   return {
     storage,
     web: {
@@ -69,5 +83,8 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
       executable: env.LARK_CLI_EXECUTABLE ?? 'lark-cli',
       identity,
     },
+    runtime: runtimeMode === 'compat'
+      ? { mode: runtimeMode, configPath: resolve(cwd, compatConfigPath ?? '') }
+      : { mode: 'control-only' },
   }
 }

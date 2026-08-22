@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projectId", "cutoff", "inspected", "deleted", "skipped", "summary"],
+  "properties": {
+    "projectId": { "type": "string" },
+    "cutoff": { "type": "string" },
+    "inspected": { "type": "integer", "minimum": 0 },
+    "deleted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId", "title", "completedAt"],
+        "properties": {
+          "taskId": { "type": "string" },
+          "title": { "type": "string" },
+          "completedAt": { "type": "string" }
+        }
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId", "reason"],
+        "properties": {
+          "taskId": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "summary": { "type": "string" }
+  }
+}

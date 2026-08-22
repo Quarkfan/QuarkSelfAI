@@ -1,6 +1,7 @@
 FROM node:22.22.0-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY packages/bridge-compat/package.json ./packages/bridge-compat/package.json
 RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
@@ -13,9 +14,11 @@ WORKDIR /app
 RUN npm install --global "@larksuite/cli@${LARK_CLI_VERSION}" \
     && npm cache clean --force
 COPY package.json package-lock.json ./
+COPY packages/bridge-compat/package.json ./packages/bridge-compat/package.json
 RUN npm ci --omit=dev \
     && npm cache clean --force
 COPY --from=build /app/dist ./dist
+COPY packages/bridge-compat ./packages/bridge-compat
 COPY config ./config
 COPY migrations ./migrations
 COPY web ./web
