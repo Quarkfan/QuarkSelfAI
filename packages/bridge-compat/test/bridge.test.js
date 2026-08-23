@@ -37,7 +37,7 @@ function createHarness(matches) {
 }
 
 function event(id, content) {
-  return { message_id: id, content, sender_id: "ou_me", sender_type: "user", chat_type: "p2p", message_type: "text" };
+  return { message_id: id, chat_id: "oc_control", content, sender_id: "ou_me", sender_type: "user", chat_type: "p2p", message_type: "text" };
 }
 
 test("ignores other senders and duplicate messages", async () => {
@@ -141,6 +141,21 @@ test("records a natural-language research confirmation without treating it as a 
   assert.equal(harness.state.state.mentionResearchConfirmations[0].status, "approved");
   assert.match(harness.replies.at(-1).text, /使用 Codex 调研/);
   assert.deepEqual(harness.state.state.queue, []);
+});
+
+test("does not hijack an unrelated direct instruction while research confirmations are pending", async () => {
+  const harness = createHarness([]);
+  harness.state.state.mentionResearchConfirmations = [1, 2, 3].map((index) => ({
+    questionMessageId: `question-${index}`,
+    status: "pending",
+    task: { taskId: `task-${index}`, title: `待调研事项 ${index}` },
+  }));
+  let executed = null;
+  harness.bridge.runner.execute = async (job) => { executed = job; return "健康"; };
+  await harness.bridge.handle(event("m-health", "健康检查一下"));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(executed.prompt, "健康检查一下");
+  assert.equal(harness.replies.some((reply) => /调研确认/.test(reply.text)), false);
 });
 
 test("learns from a decision to skip research", async () => {

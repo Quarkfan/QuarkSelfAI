@@ -8,6 +8,7 @@ const EMPTY_STATE = {
   pendingPrompt: null,
   queue: [],
   processedMessageIds: [],
+  ownerControlChatIds: [],
   processedCardEventIds: [],
   ownerConversation: [],
   mentionLastPollAt: null,
@@ -149,6 +150,7 @@ export class StateStore {
   async save() {
     const operation = async () => {
       this.state.processedMessageIds = this.state.processedMessageIds.slice(-500);
+      this.state.ownerControlChatIds = [...new Set(this.state.ownerControlChatIds || [])].slice(-20);
       this.state.processedCardEventIds = this.state.processedCardEventIds.slice(-500);
       this.state.ownerConversation = (this.state.ownerConversation || []).slice(-20);
       this.state.mentionProcessedMessageIds = this.state.mentionProcessedMessageIds.slice(-2000);

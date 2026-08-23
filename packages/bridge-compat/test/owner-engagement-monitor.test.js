@@ -67,6 +67,15 @@ test("keeps bot-control messages and Xiaowei requests out of owner business part
   assert.equal(h.enqueued.length, 0);
 });
 
+test("excludes the owner's bot control chat even before direct-message idempotency catches up", async () => {
+  const h = harness({ config: { ownerControlChatIds: ["oc_control"] } });
+  assert.equal(await h.monitor.recordOwnerMessage({
+    message_id: "om_health", chat_id: "oc_control", chat_type: "p2p",
+    content: "健康检查一下", sender: { id: "ou_me" },
+  }), false);
+  assert.equal(h.enqueued.length, 0);
+});
+
 test("durably resolves owner reactions and reactions to owner messages", async () => {
   const targets = new Map([
     ["om_other", { message_id: "om_other", chat_id: "oc_work", chat_type: "group", content: "请确认方案", sender: { id: "ou_other", name: "同事" } }],

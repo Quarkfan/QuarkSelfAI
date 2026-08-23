@@ -44,6 +44,13 @@ export class Bridge {
       await this.lark.reply(event.message_id, "目前只接受文字指令。", "unsupported");
       return;
     }
+    if (event.chat_id) {
+      this.state.state.ownerControlChatIds ??= [];
+      if (!this.state.state.ownerControlChatIds.includes(event.chat_id)) {
+        this.state.state.ownerControlChatIds.push(event.chat_id);
+        await this.state.save();
+      }
+    }
     if (this.state.hasProcessed(event.message_id)) return;
     if (this.state.state.queue.some((item) => item.id === event.message_id)) return;
     if (this.collaborationLearning) await this.collaborationLearning.recordOwnerMessage(event);
@@ -187,7 +194,10 @@ export class Bridge {
       || text.includes(item.task.taskId.slice(-8))
       || (item.task.title.length >= 4 && text.includes(item.task.title)),
     );
-    if (!matches.length && pending.length === 1) matches = pending;
+    const explicitlyAboutResearch = /(调研|调查)/i.test(text);
+    const standaloneDecision = /^(?:可以|确认|需要|开始|启动|继续|同意|批准|查一下|调研|调查|先不|暂不|不用|不要|不需要|取消|跳过)(?:了|吧|一下|处理|调研|调查|查|启动|，|。|！|!|\s)*$/i.test(text);
+    if (!matches.length && pending.length === 1 && (explicitlyAboutResearch || standaloneDecision)) matches = pending;
+    if (!matches.length && !explicitlyAboutResearch) return false;
     await this.state.markProcessed(event.message_id);
     if (matches.length !== 1) {
       await this.lark.reply(

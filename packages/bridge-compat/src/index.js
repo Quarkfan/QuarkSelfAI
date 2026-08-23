@@ -54,6 +54,7 @@ async function loadConfig() {
     mentionRealtimeSettleDelayMs: 30000,
     monitorDirectMessages: true,
     ownerName: "常东旭",
+    ownerControlChatIds: [],
     delegationInviter: null,
     groupMembershipMonitorEnabled: true,
     groupMembershipSyncIntervalMs: 1800000,

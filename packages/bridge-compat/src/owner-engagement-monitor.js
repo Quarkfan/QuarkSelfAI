@@ -107,6 +107,11 @@ export class OwnerEngagementMonitor {
     if (!message?.message_id || !message?.chat_id || message.deleted === true) return false;
     if (message.sender?.id !== this.config.allowedOpenId) return false;
     if (this.state.state.processedMessageIds?.includes(message.message_id)) return false;
+    const controlChatIds = new Set([
+      ...(this.config.ownerControlChatIds || []),
+      ...(this.state.state.ownerControlChatIds || []),
+    ]);
+    if (controlChatIds.has(message.chat_id)) return false;
     if (message.chat_id === this.config.xiaoweiAgent?.chatId) return false;
     if (this.state.state.ownerEngagementProcessedMessageIds.includes(message.message_id)) return false;
     this.upsertEngagement(message, now);

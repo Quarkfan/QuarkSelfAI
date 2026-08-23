@@ -25,6 +25,7 @@
   "mentionRealtimeSettleDelayMs": 30000,
   "monitorDirectMessages": true,
   "ownerName": "常东旭",
+  "ownerControlChatIds": [],
   "delegationInviter": { "name": "任永强", "openId": "ou_42f49a29bc7599fe3f47db53fa8eaf94" },
   "groupMembershipMonitorEnabled": true,
   "groupMembershipSyncIntervalMs": 1800000,
