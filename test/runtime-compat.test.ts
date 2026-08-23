@@ -23,18 +23,38 @@ test('waits for both compatibility consumers and handles markers split across ch
     pid: 321,
     messageReady: true,
     cardReady: true,
+    requiredEventKeys: ['im.message.receive_v1', 'card.action.trigger'],
+    readyEventKeys: ['im.message.receive_v1', 'card.action.trigger'],
   })
+})
+
+test('includes optional membership and reaction streams in readiness', () => {
+  const keys = [
+    'im.message.receive_v1', 'card.action.trigger', 'im.chat.member.user.added_v1',
+    'im.message.reaction.created_v1', 'im.message.reaction.deleted_v1',
+  ]
+  const observer = new CompatReadinessObserver(keys)
+  let snapshot: RuntimeSnapshot = {
+    mode: 'compat', state: 'starting', messageReady: false, cardReady: false,
+  }
+  snapshot = observer.observe(snapshot, keys.slice(0, 4).map((key) => `[event] ready event_key=${key}\n`).join(''))
+  assert.equal(snapshot.state, 'starting')
+  snapshot = observer.observe(snapshot, `[event] ready event_key=${keys[4]}\n`)
+  assert.equal(snapshot.state, 'ready')
+  assert.deepEqual(snapshot.readyEventKeys, keys)
 })
 
 test('surfaces an unexpected ready child exit so the outer daemon can restart it', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'quark-compat-runtime-'))
   const fixture = join(directory, 'fixture.mjs')
+  const config = join(directory, 'config.json')
+  await writeFile(config, '{}')
   await writeFile(fixture, [
     "process.stderr.write('[event] ready event_key=im.message.receive_v1\\n')",
     "process.stderr.write('[event] ready event_key=card.action.trigger\\n')",
     'setTimeout(() => process.exit(7), 100)',
   ].join('\n'))
-  const runtime = new CompatRuntime('/unused/config.json', { entry: fixture, cwd: directory })
+  const runtime = new CompatRuntime(config, { entry: fixture, cwd: directory })
   await runtime.start()
   await runtime.waitUntilReady(2_000)
   const failure = await runtime.waitForFailure()

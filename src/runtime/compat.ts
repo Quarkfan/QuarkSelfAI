@@ -14,6 +14,8 @@ export interface RuntimeSnapshot {
   readonly pid?: number
   readonly messageReady: boolean
   readonly cardReady: boolean
+  readonly requiredEventKeys?: readonly string[]
+  readonly readyEventKeys?: readonly string[]
   readonly startedAt?: string
   readonly lastError?: string
 }
@@ -44,15 +46,26 @@ export interface RuntimeDiagnostics {
 export class CompatReadinessObserver {
   private tail = ''
 
+  constructor(private readonly requiredEventKeys: readonly string[] = [
+    'im.message.receive_v1',
+    'card.action.trigger',
+  ]) {}
+
   observe(snapshot: RuntimeSnapshot, text: string, pid?: number): RuntimeSnapshot {
     this.tail = `${this.tail}${text}`.slice(-4_096)
     const messageReady = snapshot.messageReady || this.tail.includes('[event] ready event_key=im.message.receive_v1')
     const cardReady = snapshot.cardReady || this.tail.includes('[event] ready event_key=card.action.trigger')
+    const readyEventKeys = this.requiredEventKeys.filter((eventKey) => (
+      snapshot.readyEventKeys?.includes(eventKey)
+      || this.tail.includes(`[event] ready event_key=${eventKey}`)
+    ))
     return {
       ...snapshot,
-      state: messageReady && cardReady ? 'ready' : snapshot.state,
+      state: readyEventKeys.length === this.requiredEventKeys.length ? 'ready' : snapshot.state,
       messageReady,
       cardReady,
+      requiredEventKeys: [...this.requiredEventKeys],
+      readyEventKeys,
       ...(pid ? { pid } : {}),
     }
   }
@@ -66,7 +79,7 @@ export class ControlOnlyRuntime implements RuntimeStatusProvider {
 
 export class CompatRuntime implements RuntimeStatusProvider {
   private child: ChildProcessWithoutNullStreams | undefined
-  private readonly readiness = new CompatReadinessObserver()
+  private readiness = new CompatReadinessObserver()
   private readonly failurePromise: Promise<Error>
   private resolveFailure!: (error: Error) => void
   private current: RuntimeSnapshot = {
@@ -170,11 +183,20 @@ export class CompatRuntime implements RuntimeStatusProvider {
   async start(): Promise<void> {
     if (this.child) throw new Error('compat runtime is already started')
     await this.validateWorkspaceBoundary()
+    const config = JSON.parse(await readFile(this.configPath, 'utf8')) as Record<string, unknown>
+    const requiredEventKeys = ['im.message.receive_v1', 'card.action.trigger']
+    if (config.membershipRealtimeEnabled === true) requiredEventKeys.push('im.chat.member.user.added_v1')
+    if (config.reactionRealtimeEnabled === true) {
+      requiredEventKeys.push('im.message.reaction.created_v1', 'im.message.reaction.deleted_v1')
+    }
+    this.readiness = new CompatReadinessObserver(requiredEventKeys)
     this.current = {
       mode: 'compat',
       state: 'starting',
       messageReady: false,
       cardReady: false,
+      requiredEventKeys,
+      readyEventKeys: [],
       startedAt: new Date().toISOString(),
     }
     const child = spawn(this.processOptions.executable ?? process.execPath, [this.processOptions.entry ?? compatEntry], {
@@ -224,7 +246,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
     this.current = { ...this.current, state: 'degraded', lastError: 'compat runtime readiness timed out' }
-    throw new Error('compat runtime did not make both Feishu consumers ready')
+    throw new Error('compat runtime did not make every configured Feishu consumer ready')
   }
 
   async waitForFailure(): Promise<Error> {
