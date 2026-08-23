@@ -103,6 +103,7 @@ test("treats reaction deletion as reevaluation instead of a fixed negative meani
 test("polls owner activity and reaction fallback on a bounded interval", async () => {
   let ownerSearches = 0;
   let engagedSearches = 0;
+  let engagedWindow = null;
   const ownerMessage = {
     message_id: "om_owner", chat_id: "oc_work", chat_name: "项目群", chat_type: "group",
     content: "我来处理", sender: { id: "ou_me" }, create_time: "2026-08-23T09:00:00Z",
@@ -111,7 +112,11 @@ test("polls owner activity and reaction fallback on a bounded interval", async (
     config: { ownerEngagementPollIntervalMs: 1800000 },
     lark: {
       async searchOwnerMessages() { ownerSearches += 1; return [ownerMessage]; },
-      async searchEngagedConversationMessages() { engagedSearches += 1; return []; },
+      async searchEngagedConversationMessages(start, end) {
+        engagedSearches += 1;
+        engagedWindow = { start, end };
+        return [];
+      },
     },
   });
   const now = new Date("2026-08-23T09:10:00Z");
@@ -119,5 +124,9 @@ test("polls owner activity and reaction fallback on a bounded interval", async (
   await h.monitor.poll(new Date("2026-08-23T09:20:00Z"));
   assert.equal(ownerSearches, 1);
   assert.equal(engagedSearches, 1);
+  assert.deepEqual(engagedWindow, {
+    start: "2026-08-22T17:10:00+08:00",
+    end: "2026-08-23T17:10:00+08:00",
+  });
   assert.equal(h.state.state.ownerEngagementHealthFailure, null);
 });

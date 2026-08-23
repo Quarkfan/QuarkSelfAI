@@ -286,10 +286,7 @@ export class OwnerEngagementMonitor {
       const active = this.activeEngagements(now);
       if (active.length) {
         const fallbackHours = Number(this.config.reactionFallbackLookbackHours || 24);
-        const scanStart = new Date(Math.max(
-          now.getTime() - fallbackHours * 60 * 60_000,
-          Math.min(...active.map((item) => new Date(item.startedAt).getTime())),
-        ));
+        const scanStart = new Date(now.getTime() - fallbackHours * 60 * 60_000);
         const messages = await this.lark.searchEngagedConversationMessages(
           isoWithOffset(scanStart), isoWithOffset(now), active.map((item) => item.chatId),
         );
