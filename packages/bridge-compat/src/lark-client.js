@@ -33,6 +33,13 @@ export class LarkClient {
     return this.listenToEvent("card.action.trigger", jq, onEvent);
   }
 
+  listenMembershipAdded(onEvent) {
+    const inviter = JSON.stringify(String(this.config.delegationInviter?.openId || ""));
+    const owner = JSON.stringify(String(this.config.allowedOpenId));
+    const jq = `select(.event.operator_id.open_id==${inviter} and any(.event.users[]?; .user_id.open_id==${owner}))`;
+    return this.listenToEvent("im.chat.member.user.added_v1", jq, onEvent);
+  }
+
   listenToEvent(eventKey, jq, onEvent) {
     const child = spawn(this.config.larkCli, [
       "event", "consume", eventKey, "--as", "bot", "--jq", jq,
@@ -194,12 +201,21 @@ export class LarkClient {
 
   async searchFlaggedConversationMessages(start, end, chatIds) {
     if (this.config.monitorFlaggedConversations === false || !chatIds.length) return [];
+    return this.searchConversationMessages(start, end, chatIds, "飞书标记会话消息搜索");
+  }
+
+  async searchDelegatedGroupMessages(start, end, chatIds) {
+    if (!chatIds.length) return [];
+    return this.searchConversationMessages(start, end, chatIds, "任永强交接群消息搜索");
+  }
+
+  async searchConversationMessages(start, end, chatIds, label) {
     const messages = [];
     for (let index = 0; index < chatIds.length; index += 20) {
       messages.push(...await this.searchMessages([
         "--query", "", "--chat-id", chatIds.slice(index, index + 20).join(","),
         "--sender-type", "user", "--start", start, "--end", end,
-      ], "飞书标记会话消息搜索"));
+      ], label));
     }
     return messages;
   }
@@ -222,6 +238,20 @@ export class LarkClient {
       if (message?.chat_id) chatIds.add(message.chat_id);
     }
     return [...chatIds].sort();
+  }
+
+  async listGroupChats() {
+    const result = await this.run([
+      "im", "+chat-list", "--as", "user", "--page-all", "--page-limit", "100",
+      "--page-size", "100", "--sort", "active_time", "--format", "json",
+    ]);
+    if (result.code !== 0) throw new Error(`飞书群列表读取失败: ${result.stderr || result.stdout}`);
+    const envelope = parseCliJson(result.stdout);
+    if (envelope.ok !== true) throw new Error(`飞书群列表读取失败: ${result.stdout}`);
+    if (envelope.data?.has_more === true || envelope.meta?.pagination?.complete === false) {
+      throw new Error("飞书群列表分页未完成，无法安全识别新加入群聊。");
+    }
+    return envelope.data?.chats ?? [];
   }
 
   async listAgenda(start, end) {

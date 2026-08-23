@@ -13,6 +13,7 @@
 | 创建、续接指定 Codex 会话；左侧可见；标题唯一；默认 gpt-5.6-sol medium | visible-codex-sessions | app-server 契约；桌面端 projectless 合成任务创建、列表可见、同 task 续接和归档 | complete |
 | 任务完成后归档；自建会话归档七日后强制删除；失败退避 | session-janitor | 生命周期测试；现网 2/2 自动研究会话均 archived+deleted 且累计失败为 0 | complete |
 | @我、他人私聊、特别关注联系人、飞书标记群/会话统一接入 | focus-intake | 明确 @ 实时事件契约；其他来源 30 分钟扫描与 10 分钟重叠恢复；MentionMonitor 幂等契约 | complete |
+| 任永强邀请本人入群时视为工作交接，读取上下文并持续关注该群 | focus-intake, context-and-external-guard | 成员加入事件精确 ID 过滤；群列表差分+系统消息兜底；首次基线不回溯；交接群独立低频扫描、幂等与上下文沉淀测试 | implemented：实时事件待在飞书应用后台启用；30 分钟兜底已配置，重启后生效 |
 | 读取附近上下文与最新会话尾部，避免迟到任务和已回复后再建任务 | focus-intake, context-and-external-guard | stale message 双窗口读取、settle window、低信号清理；现网 41/41 来源有上下文 | complete |
 | 外部群不追问、不回复；无法确认群属性时 fail closed | context-and-external-guard | external/unknown group 阻断测试；实时只读查询“油脂客户沟通群”返回 `external=true` | complete |
 | 必要追问标注 AI 分身；正式回复必须先由本人确认 | context-and-external-guard, approval-cards | 策略/审批测试；现网 10 个卡片回调无重复、3 个待确认动作跨重启保留 | complete |

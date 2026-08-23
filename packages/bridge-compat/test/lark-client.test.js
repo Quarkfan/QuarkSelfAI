@@ -53,3 +53,33 @@ test("reads both nearby context and the newest conversation tail for stale messa
   assert.equal(messages.at(-1).message_id, "latest");
   assert.ok(calls[1].includes("desc"));
 });
+
+test("builds an exact membership listener filter for Ren inviting the owner", () => {
+  const client = new LarkClient({
+    larkCli: "lark-cli", allowedOpenId: "ou_me",
+    delegationInviter: { openId: "ou_ren" },
+  });
+  let observed;
+  client.listenToEvent = (eventKey, jq) => { observed = { eventKey, jq }; return "listener"; };
+  assert.equal(client.listenMembershipAdded(() => {}), "listener");
+  assert.equal(observed.eventKey, "im.chat.member.user.added_v1");
+  assert.match(observed.jq, /operator_id\.open_id=="ou_ren"/);
+  assert.match(observed.jq, /user_id\.open_id=="ou_me"/);
+});
+
+test("delegated group searches remain active when flagged-conversation monitoring is disabled", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli", monitorFlaggedConversations: false });
+  const labels = [];
+  client.searchMessages = async (_filters, label) => { labels.push(label); return [{ message_id: "om_1" }]; };
+  assert.deepEqual(await client.searchFlaggedConversationMessages("start", "end", ["oc_1"]), []);
+  assert.equal((await client.searchDelegatedGroupMessages("start", "end", ["oc_1"])).length, 1);
+  assert.deepEqual(labels, ["任永强交接群消息搜索"]);
+});
+
+test("reads a complete user group list and rejects incomplete pagination", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli" });
+  client.run = async () => ({ code: 0, stderr: "", stdout: JSON.stringify({ ok: true, data: { chats: [{ chat_id: "oc_1" }], has_more: false }, meta: { pagination: { complete: true } } }) });
+  assert.deepEqual(await client.listGroupChats(), [{ chat_id: "oc_1" }]);
+  client.run = async () => ({ code: 0, stderr: "", stdout: JSON.stringify({ ok: true, data: { chats: [], has_more: true } }) });
+  await assert.rejects(() => client.listGroupChats(), /分页未完成/);
+});

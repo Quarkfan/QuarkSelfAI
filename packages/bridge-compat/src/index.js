@@ -52,6 +52,12 @@ async function loadConfig() {
     mentionSettleDelayMs: 120000,
     mentionRealtimeSettleDelayMs: 30000,
     monitorDirectMessages: true,
+    ownerName: "常东旭",
+    delegationInviter: null,
+    groupMembershipMonitorEnabled: true,
+    groupMembershipSyncIntervalMs: 1800000,
+    groupMembershipSettleDelayMs: 600000,
+    membershipRealtimeEnabled: false,
     specialAttentionUsers: [],
     monitorFlaggedConversations: true,
     flaggedConversationSyncIntervalMs: 1800000,
@@ -145,6 +151,7 @@ const listener = lark.listen((event) => {
   }
   void mentionMonitor.ingestRealtime(event);
 });
+let membershipListener = null;
 let cardListener = null;
 let cardReconnectTimer = null;
 let stopping = false;
@@ -218,6 +225,11 @@ function startCardListener() {
 }
 
 startCardListener();
+if (config.membershipRealtimeEnabled === true) {
+  membershipListener = lark.listenMembershipAdded((event) => void mentionMonitor.ingestMembershipAdded(event));
+  membershipListener.on("error", (error) => void recordListenerFailure(`成员加入事件连接失败：${error.message}`));
+  membershipListener.on("exit", (code, signal) => void recordListenerFailure(`成员加入事件连接退出：exit=${code} signal=${signal}`));
+}
 const timer = setInterval(() => void bridge.retryQueued(), 15000);
 const mentionTimer = setInterval(() => config.mentionMonitorEnabled !== false && void mentionMonitor.poll(), config.mentionPollIntervalMs);
 const mentionLocalTimer = setInterval(
@@ -283,6 +295,7 @@ function shutdown(signal) {
   clearInterval(notificationDigestTimer);
   clearTimeout(cardReconnectTimer);
   listener.stdin.end();
+  membershipListener?.stdin.end();
   cardListener?.stdin.end();
   setTimeout(() => process.exit(0), 5000).unref();
 }

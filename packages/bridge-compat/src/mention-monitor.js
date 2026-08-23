@@ -52,6 +52,23 @@ export function isSyntheticTestMessage(content) {
   return /^(?:测试|测试任务|测试消息|联调测试|自动化测试|test|test task|test message|smoke test)(?:\s*(?:勿回|请忽略|ignore))?$/iu.test(normalized);
 }
 
+export function isDelegationJoinSystemMessage(message, inviterName = "任永强", ownerName = "常东旭") {
+  if (message?.msg_type !== "system") return false;
+  const content = String(message.content || "").normalize("NFKC");
+  return content.includes(inviterName)
+    && (content.includes(ownerName) || content.includes("你"))
+    && /(邀请|添加|拉).{0,20}(加入|进).{0,12}(群|会话)|加入了群聊/u.test(content);
+}
+
+function normalizeEventTime(value) {
+  if (typeof value === "number" || /^\d{10,13}$/.test(String(value || ""))) {
+    const numeric = Number(value);
+    return new Date(numeric < 10_000_000_000 ? numeric * 1000 : numeric).toISOString();
+  }
+  const parsed = new Date(value || Date.now());
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
 export class MentionMonitor {
   constructor({ config, state, lark, taskCreator, runner = null, xiaoweiResearch = null, shadowCollaboration = null, collaborationLearning = null, policyManager = null, logger = console }) {
     this.config = config;
@@ -77,6 +94,113 @@ export class MentionMonitor {
     this.state.state.flaggedConversationChatIds ??= [];
     this.state.state.mentionPending ??= [];
     this.state.state.mentionProcessedMessageIds ??= [];
+    this.state.state.delegatedGroupChatIds ??= [];
+    this.state.state.groupMembershipKnownChatIds ??= [];
+  }
+
+  async ingestMembershipAdded(payload) {
+    const event = payload?.event || {};
+    const header = payload?.header || {};
+    const inviter = this.config.delegationInviter;
+    if (!inviter?.openId || event.operator_id?.open_id !== inviter.openId) return false;
+    if (!(event.users || []).some((user) => user.user_id?.open_id === this.config.allowedOpenId)) return false;
+    return this.ingestDelegationSignal({
+      eventId: header.event_id || `membership:${event.chat_id}:${header.create_time || Date.now()}`,
+      chatId: event.chat_id,
+      chatName: event.name || event.i18n_names?.zh_cn || event.chat_id,
+      external: event.external === true,
+      occurredAt: normalizeEventTime(header.create_time),
+      evidence: "飞书成员加入实时事件精确确认邀请人与被邀请人",
+    });
+  }
+
+  async ingestDelegationSignal({ eventId, chatId, chatName, external = false, occurredAt, evidence }) {
+    this.initializeState();
+    if (!eventId || !chatId) return false;
+    const messageId = String(eventId).startsWith("om_") ? eventId : `membership:${eventId}`;
+    const exists = this.state.state.mentionProcessedMessageIds.includes(messageId)
+      || this.state.state.mentionPending.some((item) => item.message.message_id === messageId);
+    if (!this.state.state.delegatedGroupChatIds.includes(chatId)) this.state.state.delegatedGroupChatIds.push(chatId);
+    if (!this.state.state.groupMembershipKnownChatIds.includes(chatId)) this.state.state.groupMembershipKnownChatIds.push(chatId);
+    if (exists) {
+      await this.state.save();
+      return false;
+    }
+    const inviter = this.config.delegationInviter;
+    const settleDelayMs = Number(this.config.groupMembershipSettleDelayMs ?? 10 * 60_000);
+    this.state.state.mentionPending.push({
+      message: {
+        message_id: messageId,
+        chat_id: chatId,
+        chat_name: chatName,
+        chat_type: "group",
+        create_time: occurredAt || new Date().toISOString(),
+        content: `${inviter?.name || "任永强"}邀请常东旭加入群聊「${chatName}」。这通常表示需要常东旭接手或分担相关工作；必须结合群内上下文确认具体责任、现状和下一步。核验依据：${evidence}。`,
+        sender: { id: inviter?.openId, name: inviter?.name || "任永强" },
+        external,
+        intakeReasons: ["任永强邀请入群：工作接手"],
+        message_app_link: `https://applink.feishu.cn/client/chat/open?openChatId=${encodeURIComponent(chatId)}`,
+      },
+      discoveredAt: new Date().toISOString(),
+      readyAt: settleDelayMs > 0 ? new Date(Date.now() + settleDelayMs).toISOString() : null,
+      attempts: 0,
+      nextAttemptAt: null,
+      lastError: null,
+    });
+    await this.state.save();
+    await this.processLocalQueues();
+    return true;
+  }
+
+  async syncGroupMemberships(now = new Date()) {
+    if (this.config.groupMembershipMonitorEnabled === false || !this.lark.listGroupChats) return;
+    const intervalMs = Number(this.config.groupMembershipSyncIntervalMs || 30 * 60_000);
+    const lastSyncAt = this.state.state.groupMembershipLastSyncAt
+      ? new Date(this.state.state.groupMembershipLastSyncAt).getTime() : 0;
+    if (lastSyncAt && now.getTime() - lastSyncAt < intervalMs) return;
+    try {
+      const chats = await this.lark.listGroupChats();
+      const known = new Set(this.state.state.groupMembershipKnownChatIds || []);
+      if (!known.size && !this.state.state.groupMembershipLastSyncAt) {
+        this.state.state.groupMembershipKnownChatIds = chats.map((chat) => chat.chat_id).filter(Boolean);
+        this.state.state.groupMembershipLastSyncAt = now.toISOString();
+        this.state.state.groupMembershipHealthFailure = null;
+        await this.state.save();
+        return;
+      }
+      const newChats = chats.filter((chat) => chat.chat_id && !known.has(chat.chat_id));
+      const start = this.state.state.groupMembershipLastSyncAt
+        ? new Date(new Date(this.state.state.groupMembershipLastSyncAt).getTime() - 10 * 60_000).toISOString()
+        : new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+      for (const chat of newChats) {
+        const messages = await this.lark.getChatMessagesSince(chat.chat_id, start);
+        const evidence = [...messages].reverse().find((message) => isDelegationJoinSystemMessage(
+          message, this.config.delegationInviter?.name || "任永强", this.config.ownerName || "常东旭",
+        ));
+        if (evidence) {
+          await this.ingestDelegationSignal({
+            eventId: evidence.message_id,
+            chatId: chat.chat_id,
+            chatName: chat.name || chat.chat_id,
+            external: chat.external === true,
+            occurredAt: evidence.create_time || now.toISOString(),
+            evidence: "本人群列表差分及系统入群消息双重确认",
+          });
+        }
+      }
+      this.state.state.groupMembershipKnownChatIds = chats.map((chat) => chat.chat_id).filter(Boolean);
+      this.state.state.groupMembershipLastSyncAt = now.toISOString();
+      this.state.state.groupMembershipHealthFailure = null;
+      await this.state.save();
+    } catch (error) {
+      const failure = this.state.state.groupMembershipHealthFailure || { at: now.toISOString(), attempts: 0 };
+      failure.attempts += 1;
+      failure.lastError = String(error?.message || error).slice(-1000);
+      failure.lastAt = now.toISOString();
+      this.state.state.groupMembershipHealthFailure = failure;
+      await this.state.save();
+      this.logger.error("group membership fallback sync failed", error);
+    }
   }
 
   async ingestRealtime(event) {
@@ -143,6 +267,7 @@ export class MentionMonitor {
       this.initializeState();
       const now = new Date();
       await this.syncFlaggedConversations(now);
+      await this.syncGroupMemberships(now);
       const previous = this.state.state.mentionLastPollAt
         ? new Date(this.state.state.mentionLastPollAt)
         : new Date(now.getTime() - this.config.mentionInitialLookbackMinutes * 60_000);
@@ -156,6 +281,9 @@ export class MentionMonitor {
       const directMessages = await (this.lark.searchDirectMessages?.(startText, endText) ?? []);
       const flaggedConversationMessages = await (this.lark.searchFlaggedConversationMessages?.(
         startText, endText, this.state.state.flaggedConversationChatIds,
+      ) ?? []);
+      const delegatedGroupMessages = await (this.lark.searchDelegatedGroupMessages?.(
+        startText, endText, this.state.state.delegatedGroupChatIds,
       ) ?? []);
       const specialIds = new Set((this.config.specialAttentionUsers || []).map((user) => user.openId));
       const foundById = new Map();
@@ -185,6 +313,7 @@ export class MentionMonitor {
         if (message.chat_type === "p2p") addFound(message, "他人私聊");
       }
       for (const message of flaggedConversationMessages) addFound(message, "飞书标记会话");
+      for (const message of delegatedGroupMessages) addFound(message, "任永强交接群");
       const processed = new Set(this.state.state.mentionProcessedMessageIds);
       for (const messageId of lowSignalIds) {
         if (!processed.has(messageId)) {

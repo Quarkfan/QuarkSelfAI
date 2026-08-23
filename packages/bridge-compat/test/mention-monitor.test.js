@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MentionMonitor, isLarkRateLimitError, isLowSignalAcknowledgement, isSyntheticTestMessage, userFacingError } from "../src/mention-monitor.js";
+import { MentionMonitor, isDelegationJoinSystemMessage, isLarkRateLimitError, isLowSignalAcknowledgement, isSyntheticTestMessage, userFacingError } from "../src/mention-monitor.js";
 
 function stateHarness() {
   return {
@@ -544,4 +544,81 @@ test("does not let shadow observation failures block the official task pipeline"
   await monitor.poll();
   assert.deepEqual(state.state.mentionProcessedMessageIds, ["om_shadow_failure"]);
   assert.equal(state.state.mentionPending.length, 0);
+});
+
+test("accepts only an exact Ren Yongqiang membership event and registers the group as delegated", async () => {
+  const state = stateHarness();
+  const created = [];
+  const monitor = new MentionMonitor({
+    config: {
+      allowedOpenId: "ou_me", ownerName: "常东旭", mentionContextMinutes: 30,
+      delegationInviter: { name: "任永强", openId: "ou_ren" }, groupMembershipSettleDelayMs: 0,
+    },
+    state,
+    lark: { async getMentionContext(message) { return [message]; }, async send() {} },
+    taskCreator: { async createFromMention(message) {
+      created.push(message);
+      return { taskAction: "ignored", notificationDecision: "silent", researchDecision: "skip" };
+    } },
+  });
+
+  assert.equal(await monitor.ingestMembershipAdded({
+    header: { event_id: "evt_join", create_time: "1787443200000" },
+    event: {
+      chat_id: "oc_handoff", name: "客户交接群", external: false,
+      operator_id: { open_id: "ou_ren" }, users: [{ user_id: { open_id: "ou_me" } }],
+    },
+  }), true);
+  assert.equal(await monitor.ingestMembershipAdded({
+    header: { event_id: "evt_other" },
+    event: { chat_id: "oc_other", operator_id: { open_id: "ou_other" }, users: [{ user_id: { open_id: "ou_me" } }] },
+  }), false);
+  assert.deepEqual(state.state.delegatedGroupChatIds, ["oc_handoff"]);
+  assert.equal(created.length, 1);
+  assert.deepEqual(created[0].intakeReasons, ["任永强邀请入群：工作接手"]);
+  assert.match(created[0].create_time, /^2026-/);
+});
+
+test("baselines existing groups and only promotes a new group with exact system-message evidence", async () => {
+  const state = stateHarness();
+  let chats = [{ chat_id: "oc_existing", name: "原有群" }];
+  const created = [];
+  const monitor = new MentionMonitor({
+    config: {
+      allowedOpenId: "ou_me", ownerName: "常东旭", mentionContextMinutes: 30,
+      delegationInviter: { name: "任永强", openId: "ou_ren" },
+      groupMembershipSyncIntervalMs: 1800000, groupMembershipSettleDelayMs: 0,
+    },
+    state,
+    lark: {
+      async listGroupChats() { return chats; },
+      async getChatMessagesSince(chatId) {
+        return chatId === "oc_handoff" ? [{
+          message_id: "om_join", msg_type: "system", create_time: "2026-08-23T11:00:00+08:00",
+          content: "任永强邀请常东旭加入了群聊",
+        }] : [];
+      },
+      async getMentionContext(message) { return [message]; },
+      async send() {},
+    },
+    taskCreator: { async createFromMention(message) {
+      created.push(message);
+      return { taskAction: "ignored", notificationDecision: "silent", researchDecision: "skip" };
+    } },
+  });
+
+  const baselineAt = new Date("2026-08-23T10:00:00Z");
+  await monitor.syncGroupMemberships(baselineAt);
+  assert.equal(created.length, 0);
+  chats = [...chats, { chat_id: "oc_handoff", name: "客户交接群", external: true }];
+  await monitor.syncGroupMemberships(new Date("2026-08-23T10:31:00Z"));
+  assert.equal(created.length, 1);
+  assert.deepEqual(state.state.delegatedGroupChatIds, ["oc_handoff"]);
+  assert.equal(created[0].external, true);
+});
+
+test("recognizes only system membership messages naming Ren and the owner", () => {
+  assert.equal(isDelegationJoinSystemMessage({ msg_type: "system", content: "任永强邀请常东旭加入了群聊" }), true);
+  assert.equal(isDelegationJoinSystemMessage({ msg_type: "text", content: "任永强邀请常东旭加入了群聊" }), false);
+  assert.equal(isDelegationJoinSystemMessage({ msg_type: "system", content: "其他人邀请常东旭加入了群聊" }), false);
 });

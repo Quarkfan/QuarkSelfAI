@@ -25,3 +25,10 @@
 4. 最后才启用对应 policy/plugin。
 
 禁止把新 CLI 参数散落到路由、任务或审批模块。
+
+## 成员加入事件
+
+任永强邀请本人入群的实时识别使用 `im.chat.member.user.added_v1`，筛选字段固定为
+`event.operator_id.open_id` 与 `event.users[].user_id.open_id`。启用 `membershipRealtimeEnabled` 前必须先在
+飞书应用后台订阅该事件，并用 `lark-cli event schema im.chat.member.user.added_v1 --json` 复核字段与 bot
+身份；否则保持关闭，依靠 30 分钟群列表差分和系统消息核验兜底，避免未订阅事件导致守护进程重启循环。

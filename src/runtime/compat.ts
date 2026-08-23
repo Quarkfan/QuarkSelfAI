@@ -114,6 +114,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
       monitors: [
         { id: 'focus', name: '飞书重点消息', enabled: document.mentionMonitorEnabled !== false, intervalMs: number('mentionPollIntervalMs'), lastRunAt: value('mentionLastPollAt'), nextRunAt: value('mentionNextPollAt'), failure: failure('mentionHealthFailure'), pending: arrayCount('mentionPending') },
         { id: 'flags', name: '标记会话同步', enabled: document.monitorFlaggedConversations !== false, intervalMs: number('flaggedConversationSyncIntervalMs'), lastRunAt: value('flaggedConversationLastSyncAt'), failure: failure('flaggedConversationHealthFailure'), pending: arrayCount('flaggedConversationChatIds') },
+        { id: 'delegated-groups', name: '任永强交接群', enabled: document.groupMembershipMonitorEnabled !== false, intervalMs: number('groupMembershipSyncIntervalMs'), lastRunAt: value('groupMembershipLastSyncAt'), failure: failure('groupMembershipHealthFailure'), pending: arrayCount('delegatedGroupChatIds') },
         { id: 'cards', name: '交互卡片回调', enabled: true, intervalMs: undefined, failure: failure('cardActionHealthFailure'), pending: arrayCount('mentionResearchConfirmations') + arrayCount('followupOutreachRequests') },
         { id: 'overdue', name: '滴答超期待办', enabled: document.overdueMonitorEnabled !== false, intervalMs: number('overduePollIntervalMs'), failure: failure('overdueHealthFailure'), pending: state.overdueNotified && typeof state.overdueNotified === 'object' ? Object.keys(state.overdueNotified).length : 0 },
         { id: 'followup', name: '自动化跟进', enabled: document.followupMonitorEnabled !== false, intervalMs: number('followupPollIntervalMs'), lastRunAt: value('followupLastCheckedAt'), failure: failure('followupHealthFailure'), pending: arrayCount('followupOutreachRequests') },
@@ -142,6 +143,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
     const mapping: Record<string, { enabled?: string; interval?: string }> = {
       focus: { enabled: 'mentionMonitorEnabled', interval: 'mentionPollIntervalMs' },
       flags: { enabled: 'monitorFlaggedConversations', interval: 'flaggedConversationSyncIntervalMs' },
+      'delegated-groups': { enabled: 'groupMembershipMonitorEnabled', interval: 'groupMembershipSyncIntervalMs' },
       overdue: { enabled: 'overdueMonitorEnabled', interval: 'overduePollIntervalMs' },
       followup: { enabled: 'followupMonitorEnabled', interval: 'followupPollIntervalMs' },
       xiaowei: { enabled: 'xiaoweiMonitorEnabled', interval: 'xiaoweiPollIntervalMs' },

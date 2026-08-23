@@ -27,6 +27,10 @@ const EMPTY_STATE = {
   flaggedConversationChatIds: [],
   flaggedConversationLastSyncAt: null,
   flaggedConversationHealthFailure: null,
+  delegatedGroupChatIds: [],
+  groupMembershipKnownChatIds: [],
+  groupMembershipLastSyncAt: null,
+  groupMembershipHealthFailure: null,
   cardActionHealthFailure: null,
   overdueNotified: {},
   overdueHealthFailure: null,
@@ -141,6 +145,8 @@ export class StateStore {
       this.state.processedCardEventIds = this.state.processedCardEventIds.slice(-500);
       this.state.ownerConversation = (this.state.ownerConversation || []).slice(-20);
       this.state.mentionProcessedMessageIds = this.state.mentionProcessedMessageIds.slice(-2000);
+      this.state.delegatedGroupChatIds = [...new Set(this.state.delegatedGroupChatIds || [])].slice(-500);
+      this.state.groupMembershipKnownChatIds = [...new Set(this.state.groupMembershipKnownChatIds || [])].slice(-2000);
       this.state.researchDecisionHistory = this.state.researchDecisionHistory.slice(-100);
       this.state.xiaoweiResearchRequests = this.state.xiaoweiResearchRequests.slice(-300);
       this.state.xiaoweiProcessedMessageIds = this.state.xiaoweiProcessedMessageIds.slice(-2000);

@@ -24,6 +24,12 @@
   "mentionSettleDelayMs": 120000,
   "mentionRealtimeSettleDelayMs": 30000,
   "monitorDirectMessages": true,
+  "ownerName": "常东旭",
+  "delegationInviter": { "name": "任永强", "openId": "ou_42f49a29bc7599fe3f47db53fa8eaf94" },
+  "groupMembershipMonitorEnabled": true,
+  "groupMembershipSyncIntervalMs": 1800000,
+  "groupMembershipSettleDelayMs": 600000,
+  "membershipRealtimeEnabled": false,
   "specialAttentionUsers": [
     { "name": "任永强", "openId": "ou_42f49a29bc7599fe3f47db53fa8eaf94" },
     { "name": "张以宁", "openId": "ou_0e014dee555bda6a127ca43da4966cf4" }
