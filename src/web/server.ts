@@ -8,6 +8,7 @@ import { loadFeatureParity } from '../config/feature-parity.js'
 import type { AssistantStore } from '../storage/types.js'
 import { ControlOnlyRuntime, type RuntimeStatusProvider } from '../runtime/compat.js'
 import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js'
+import { matchesPolicy } from '../policy/engine.js'
 import type { PolicyDocument } from '../policy/types.js'
 import { DisabledKernelRuntime, type KernelStatusProvider } from '../runtime/kernel.js'
 
@@ -193,6 +194,30 @@ export function createConsoleServer(
             policyProposalId(input.sourceText, input.document as unknown as PolicyDocument),
           )
           json(response, 201, { ok: true, proposal })
+          return
+        }
+        if (request.method === 'POST' && url.pathname === '/internal/policies/evaluate') {
+          const input = await body(request)
+          if (typeof input.facts !== 'object' || input.facts === null || Array.isArray(input.facts)) {
+            json(response, 400, { ok: false, error: 'facts object is required' })
+            return
+          }
+          const matches = (await store.policies(200))
+            .filter((policy) => policy.status === 'enabled' && matchesPolicy(policy.document.when, input.facts as Record<string, unknown>))
+            .sort((left, right) => right.document.priority - left.document.priority)
+          const effect: Record<string, unknown> = {}
+          for (const policy of matches) {
+            for (const [key, value] of Object.entries(policy.document.effect)) {
+              if (effect[key] === undefined) effect[key] = value
+            }
+          }
+          json(response, 200, {
+            ok: true,
+            evaluation: {
+              effect,
+              matches: matches.map((policy) => ({ id: policy.id, revision: policy.revision, name: policy.name })),
+            },
+          })
           return
         }
         const activation = /^\/internal\/policies\/([^/]+)\/revisions\/(\d+)\/activate$/.exec(url.pathname)

@@ -25,7 +25,7 @@ function executionChannel(job) {
 }
 
 export class Bridge {
-  constructor({ config, sessions, state, lark, runner, followupManager = null, policyManager = null, logger = console }) {
+  constructor({ config, sessions, state, lark, runner, followupManager = null, policyManager = null, collaborationLearning = null, logger = console }) {
     this.config = config;
     this.sessions = sessions;
     this.state = state;
@@ -33,6 +33,7 @@ export class Bridge {
     this.runner = runner;
     this.followupManager = followupManager;
     this.policyManager = policyManager;
+    this.collaborationLearning = collaborationLearning;
     this.logger = logger;
     this.draining = false;
   }
@@ -45,6 +46,7 @@ export class Bridge {
     }
     if (this.state.hasProcessed(event.message_id)) return;
     if (this.state.state.queue.some((item) => item.id === event.message_id)) return;
+    if (this.collaborationLearning) await this.collaborationLearning.recordOwnerMessage(event);
     // A reply to an outstanding approval is a safety-state transition, not a
     // general intent category, so it remains program-enforced.
     if (await this.handleResearchConfirmation(event)) return;
@@ -91,6 +93,9 @@ export class Bridge {
       || String(event.action_name || "").startsWith("followup_");
     if (isFollowupAction && this.followupManager) {
       await this.followupManager.handleCardAction(event, action);
+      if (this.collaborationLearning) await this.collaborationLearning.recordOwnerSignal({
+        type: "followup_decision", decision: action.decision || "unknown", requestId: action.requestId || null,
+      });
       this.state.state.processedCardEventIds.push(event.event_id);
       await this.state.save();
       return;
@@ -113,6 +118,10 @@ export class Bridge {
           : `已记录暂不调研：**${item.task.title}**\n\n对应的滴答待办会继续保留。`;
         tone = action.decision === "approve" ? "green" : "grey";
       }
+      if (this.collaborationLearning) await this.collaborationLearning.recordOwnerSignal({
+        type: "research_decision", decision: action.decision, channel: action.channel || null,
+        sourceMessageId: action.sourceMessageId || null,
+      });
     } else if (action.type === "policy_decision") {
       if (!this.policyManager) throw new Error("策略控制层当前不可用，请稍后重试。");
       if (action.decision === "approve") {
@@ -123,6 +132,9 @@ export class Bridge {
         result = `已保留但不激活策略草案：**${String(action.name || action.policyId)}**`;
         tone = "grey";
       }
+      if (this.collaborationLearning) await this.collaborationLearning.recordOwnerSignal({
+        type: "policy_decision", decision: action.decision, policyId: action.policyId, revision: Number(action.revision),
+      });
     } else if (event.action_tag === "select_static" && event.action_name === "session_choice") {
       const sessionId = event.option;
       const allowed = this.state.state.lastCandidates.some((item) => item.id === sessionId);

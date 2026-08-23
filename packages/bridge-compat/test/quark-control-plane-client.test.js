@@ -29,3 +29,20 @@ test('cannot activate a policy without forwarding explicit owner confirmation', 
   })
   await assert.rejects(() => client.activatePolicy('policy-1', 1, false), /ownerConfirmed=true is required/)
 })
+
+test('evaluates enabled policies through the local authenticated control plane', async () => {
+  const client = new QuarkControlPlaneClient({
+    token: 'protected-token',
+    fetchImpl: async (url, options) => {
+      assert.match(url, /\/internal\/policies\/evaluate$/)
+      assert.equal(JSON.parse(options.body).facts.source.chatId, 'oc_1')
+      return {
+        ok: true, status: 200,
+        json: async () => ({ ok: true, evaluation: { effect: { attention: 'batch' }, matches: [{ id: 'policy-1' }] } }),
+      }
+    },
+  })
+  const result = await client.evaluatePolicies({ source: { chatId: 'oc_1' } })
+  assert.equal(result.effect.attention, 'batch')
+  assert.equal(result.matches.length, 1)
+})

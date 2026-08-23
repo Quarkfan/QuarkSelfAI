@@ -108,6 +108,8 @@ export class CompatRuntime implements RuntimeStatusProvider {
       return null
     }
     const number = (key: string): number | undefined => typeof document[key] === 'number' ? document[key] : undefined
+    const learning = state.collaborationLearning && typeof state.collaborationLearning === 'object'
+      ? state.collaborationLearning as Record<string, unknown> : {}
     return {
       monitors: [
         { id: 'focus', name: '飞书重点消息', enabled: document.mentionMonitorEnabled !== false, intervalMs: number('mentionPollIntervalMs'), lastRunAt: value('mentionLastPollAt'), nextRunAt: value('mentionNextPollAt'), failure: failure('mentionHealthFailure'), pending: arrayCount('mentionPending') },
@@ -118,6 +120,8 @@ export class CompatRuntime implements RuntimeStatusProvider {
         { id: 'xiaowei', name: '智造湖小维', enabled: document.xiaoweiMonitorEnabled !== false, intervalMs: number('xiaoweiPollIntervalMs'), lastRunAt: value('xiaoweiLastPollAt'), failure: failure('xiaoweiHealthFailure'), pending: arrayCount('xiaoweiResearchRequests') },
         { id: 'task-cleanup', name: '已完成待办清理', enabled: document.didaCompletedCleanupEnabled === true, intervalMs: number('didaCompletedCleanupIntervalMs'), lastRunAt: value('didaCompletedCleanupLastAt'), failure: failure('didaCompletedCleanupHealthFailure') },
         { id: 'session-cleanup', name: '调研会话清理', enabled: document.sessionCleanupEnabled !== false, intervalMs: number('sessionCleanupIntervalMs'), pending: arrayCount('mentionResearchSessions') },
+        { id: 'collaboration-learning', name: '协作模式学习', enabled: document.collaborationLearningEnabled !== false, intervalMs: number('collaborationLearningIntervalMs'), lastRunAt: typeof learning.lastEvaluatedAt === 'string' ? learning.lastEvaluatedAt : null, pending: Array.isArray(learning.candidates) ? learning.candidates.filter((item) => item && typeof item === 'object' && (item as Record<string, unknown>).status === 'proposed').length : 0 },
+        { id: 'notification-digest', name: '协作事项汇总', enabled: true, intervalMs: number('notificationDigestPollIntervalMs'), lastRunAt: value('notificationDigestLastSentAt'), failure: failure('notificationDigestFailure'), pending: arrayCount('notificationDigestPending') },
       ],
       queues: {
         commands: arrayCount('queue'),
@@ -143,6 +147,8 @@ export class CompatRuntime implements RuntimeStatusProvider {
       xiaowei: { enabled: 'xiaoweiMonitorEnabled', interval: 'xiaoweiPollIntervalMs' },
       'task-cleanup': { enabled: 'didaCompletedCleanupEnabled', interval: 'didaCompletedCleanupIntervalMs' },
       'session-cleanup': { enabled: 'sessionCleanupEnabled', interval: 'sessionCleanupIntervalMs' },
+      'collaboration-learning': { enabled: 'collaborationLearningEnabled', interval: 'collaborationLearningIntervalMs' },
+      'notification-digest': { interval: 'notificationDigestPollIntervalMs' },
     }
     const target = mapping[id]
     if (!target) throw new Error(`monitor ${id} is read-only or unknown`)

@@ -80,6 +80,15 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     )
     assert.equal(activationResponse.status, 200)
     assert.equal((await store.policies(10))[0]?.status, 'enabled')
+    const evaluationResponse = await fetch(`http://127.0.0.1:${port}/internal/policies/evaluate`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer control-test-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ facts: { source: { senderId: 'ou_ren' }, urgency: 'normal' } }),
+    })
+    assert.equal(evaluationResponse.status, 200)
+    const evaluation = await evaluationResponse.json() as { evaluation: { effect: { attention?: string }; matches: unknown[] } }
+    assert.equal(evaluation.evaluation.effect.attention, 'realtime')
+    assert.equal(evaluation.evaluation.matches.length, 1)
     worker = { mode: 'compat', state: 'failed', messageReady: false, cardReady: false, lastError: 'fixture failure' }
     const unhealthy = await fetch(`http://127.0.0.1:${port}/api/health`)
     assert.equal(unhealthy.status, 503)

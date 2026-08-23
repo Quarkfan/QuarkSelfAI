@@ -36,4 +36,9 @@ export class QuarkControlPlaneClient {
     await this.request(`/internal/policies/${encodeURIComponent(id)}/revisions/${revision}/activate`, { ownerConfirmed })
     return { id, revision, status: 'enabled' }
   }
+
+  async evaluatePolicies(facts) {
+    const envelope = await this.request('/internal/policies/evaluate', { facts })
+    return envelope.evaluation
+  }
 }

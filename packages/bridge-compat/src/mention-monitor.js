@@ -53,7 +53,7 @@ export function isSyntheticTestMessage(content) {
 }
 
 export class MentionMonitor {
-  constructor({ config, state, lark, taskCreator, runner = null, xiaoweiResearch = null, shadowCollaboration = null, logger = console }) {
+  constructor({ config, state, lark, taskCreator, runner = null, xiaoweiResearch = null, shadowCollaboration = null, collaborationLearning = null, policyManager = null, logger = console }) {
     this.config = config;
     this.state = state;
     this.lark = lark;
@@ -61,9 +61,12 @@ export class MentionMonitor {
     this.runner = runner;
     this.xiaoweiResearch = xiaoweiResearch;
     this.shadowCollaboration = shadowCollaboration;
+    this.collaborationLearning = collaborationLearning;
+    this.policyManager = policyManager;
     this.logger = logger;
     this.polling = false;
     this.localProcessing = false;
+    this.digestFlushing = false;
   }
 
   initializeState() {
@@ -291,6 +294,10 @@ export class MentionMonitor {
           context,
           this.state.state.researchDecisionHistory,
         );
+        if (this.collaborationLearning) {
+          try { await this.collaborationLearning.observe(pending.message, task); }
+          catch (error) { this.logger.error("collaboration learning observe failed", error); }
+        }
         if (this.shadowCollaboration) {
           try { await this.shadowCollaboration.observe(pending.message, context, task); }
           catch (error) { this.logger.error("shadow collaboration observe failed", error); }
@@ -364,6 +371,15 @@ export class MentionMonitor {
         await this.state.save();
         const taskAction = task.taskAction || (task.created === false ? "unchanged" : "created");
         const notificationDecision = task.notificationDecision || "notify";
+        const policyEvaluation = notificationDecision === "notify"
+          ? await this.evaluateNotificationPolicy(pending.message, task)
+          : { effect: {}, matches: [] };
+        if (policyEvaluation.effect?.attention === "batch" && !userNotified) {
+          await this.queueDigestNotification(pending.message, task, taskAction, policyEvaluation);
+          userNotified = true;
+        } else if (policyEvaluation.effect?.attention === "silent" && !userNotified) {
+          userNotified = true;
+        }
         if (notificationDecision === "notify" && !userNotified) {
           const actionText = taskAction === "updated" ? "更新了已有自动化待办" : "创建了自动化待办";
           const details = `已根据飞书重点消息${actionText}：**${task.title}**\n\n${task.approvalRequired ? `待批准：${task.approvalSummary}\n` : ""}${task.materialChangeSummary ? `变化：${task.materialChangeSummary}\n` : ""}通知原因：${task.notificationReason || "需要你关注或处理"}\n纳入原因：${pending.message.intakeReasons?.join("、") || "@常东旭"}\n来源：${pending.message.chat_name || pending.message.chat_id} · ${pending.message.sender?.name || "未知发送人"}\n识别：${task.urgencyLabel}${task.keyItem ? " · 关键事项" : ""} · 滴答优先级 ${task.priority}\n标签：${task.tags?.join("、") || "无"}${task.dueDate ? ` · 截止：${task.dueDate}` : ""}\n与你的关联：${task.relationshipSummary}\n任务 ID：${task.taskId}${task.url ? `\n${task.url}` : ""}`;
@@ -395,6 +411,90 @@ export class MentionMonitor {
         }
         index += 1;
       }
+    }
+  }
+
+  async evaluateNotificationPolicy(message, task) {
+    if (!this.policyManager?.evaluatePolicies) return { effect: {}, matches: [] };
+    const priority = Number(task.priority || 0);
+    const urgency = priority === 5 ? "urgent" : priority >= 3 ? "important" : "normal";
+    try {
+      return await this.policyManager.evaluatePolicies({
+        channel: { chatType: message.chat_type, external: undefined },
+        source: { chatId: message.chat_id, senderId: message.sender?.id },
+        message: {
+          mentionsOwner: (message.intakeReasons || []).includes("@常东旭"),
+          hasDeadline: Boolean(task.dueDate),
+        },
+        relation: { kind: task.actionOwner || "unknown" },
+        business: { tags: task.tags || [] },
+        attention: { current: task.notificationDecision || "notify" },
+        urgency,
+      });
+    } catch (error) {
+      this.logger.error("active policy evaluation failed; preserving original notification", error);
+      return { effect: {}, matches: [] };
+    }
+  }
+
+  async queueDigestNotification(message, task, taskAction, policyEvaluation, now = new Date()) {
+    this.state.state.notificationDigestPending ??= [];
+    const existing = this.state.state.notificationDigestPending.find((item) => item.taskId === task.taskId);
+    const item = {
+      messageId: message.message_id,
+      taskId: task.taskId,
+      title: task.title,
+      taskAction,
+      materialChange: task.materialChangeSummary || "",
+      nextAction: task.nextAction || "",
+      source: message.chat_name || message.chat_id,
+      sender: message.sender?.name || "未知发送人",
+      url: task.url || null,
+      queuedAt: now.toISOString(),
+      policyIds: (policyEvaluation.matches || []).map((match) => match.id),
+    };
+    if (existing) Object.assign(existing, item);
+    else this.state.state.notificationDigestPending.push(item);
+    await this.state.save();
+  }
+
+  async flushNotificationDigest(now = new Date()) {
+    if (this.digestFlushing) return;
+    const pending = this.state.state.notificationDigestPending || [];
+    if (!pending.length) return;
+    if (this.state.state.notificationDigestFailure?.nextAttemptAt
+      && new Date(this.state.state.notificationDigestFailure.nextAttemptAt) > now) return;
+    const oldest = new Date(pending[0].queuedAt);
+    const maxDelay = Number(this.config.notificationDigestMaxDelayMs || 6 * 60 * 60_000);
+    if (now - oldest < maxDelay) return;
+    this.digestFlushing = true;
+    try {
+      const items = pending.slice(0, Number(this.config.notificationDigestMaxItems || 20));
+      const lines = items.map((item) => (
+        `- **${item.title}**${item.materialChange ? `：${item.materialChange}` : item.nextAction ? `：${item.nextAction}` : ""}\n  ${item.source} · ${item.sender}${item.url ? ` · ${item.url}` : ""}`
+      ));
+      await this.lark.send(
+        `**协作事项汇总**\n\n我合并了 ${items.length} 条不需要立即打断你的更新：\n\n${lines.join("\n")}\n\n紧急、明确 @、待批准、特别关注和调研事项不会进入这里。`,
+        `notification-digest:${items[0].queuedAt}:${items.at(-1).messageId}`,
+      );
+      const ids = new Set(items.map((item) => item.messageId));
+      this.state.state.notificationDigestPending = pending.filter((item) => !ids.has(item.messageId));
+      this.state.state.notificationDigestLastSentAt = now.toISOString();
+      this.state.state.notificationDigestFailure = null;
+      await this.state.save();
+    } catch (error) {
+      const attempts = (this.state.state.notificationDigestFailure?.attempts || 0) + 1;
+      const delayMs = Math.min(6 * 60 * 60_000, 10 * 60_000 * (2 ** Math.min(attempts - 1, 5)));
+      this.state.state.notificationDigestFailure = {
+        at: this.state.state.notificationDigestFailure?.at || now.toISOString(),
+        attempts,
+        lastError: String(error?.message || error).slice(-1000),
+        nextAttemptAt: new Date(now.getTime() + delayMs).toISOString(),
+      };
+      await this.state.save();
+      this.logger.error("notification digest delivery failed; retained for retry", error);
+    } finally {
+      this.digestFlushing = false;
     }
   }
 

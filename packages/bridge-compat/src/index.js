@@ -17,6 +17,7 @@ import { XiaoweiResearchChannel } from "./xiaowei-research-channel.js";
 import { ShadowCollaborationMonitor } from "./shadow-collaboration.js";
 import { formatUserTime } from "./util.js";
 import { QuarkControlPlaneClient } from "./quark-control-plane-client.js";
+import { CollaborationLearningMonitor } from "./collaboration-learning.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -93,6 +94,14 @@ async function loadConfig() {
     shadowCalendarLookaheadDays: 8,
     shadowTaskFeedbackPollIntervalMs: 21600000,
     shadowNotifyOnComplete: true,
+    collaborationLearningEnabled: true,
+    collaborationLearningIntervalMs: 86400000,
+    collaborationLearningMinimumSamples: 20,
+    collaborationLearningMinimumScopeSamples: 8,
+    collaborationLearningProposalCooldownMs: 604800000,
+    notificationDigestPollIntervalMs: 600000,
+    notificationDigestMaxDelayMs: 21600000,
+    notificationDigestMaxItems: 20,
     ...config,
     varDir: config.varDir || path.join(projectRoot, "var"),
     didaResultSchemaPath: config.didaResultSchemaPath || path.join(projectRoot, "schemas", "dida-task-result.schema.json"),
@@ -119,9 +128,12 @@ const followupMonitor = new WorkdayFollowupMonitor({ config, state, lark, taskCr
 const xiaoweiResearch = new XiaoweiResearchChannel({ config, state, lark, taskCreator });
 const shadowCollaboration = new ShadowCollaborationMonitor({ config, state, lark });
 const policyManager = new QuarkControlPlaneClient();
-const bridge = new Bridge({ config, sessions, state, lark, runner, followupManager: followupMonitor, policyManager });
+const collaborationLearning = new CollaborationLearningMonitor({ config, state, lark, policyManager });
+const bridge = new Bridge({
+  config, sessions, state, lark, runner, followupManager: followupMonitor, policyManager, collaborationLearning,
+});
 const mentionMonitor = new MentionMonitor({
-  config, state, lark, taskCreator, runner, xiaoweiResearch, shadowCollaboration,
+  config, state, lark, taskCreator, runner, xiaoweiResearch, shadowCollaboration, collaborationLearning, policyManager,
 });
 const overdueMonitor = new DidaOverdueMonitor({ config, state, lark, taskCreator });
 const didaCompletedCleanupMonitor = new DidaCompletedCleanupMonitor({ config, state, lark, taskCreator });
@@ -229,6 +241,14 @@ const xiaoweiTimer = setInterval(() => config.xiaoweiMonitorEnabled !== false &&
 if (config.xiaoweiMonitorEnabled !== false) void xiaoweiResearch.poll();
 const shadowTimer = setInterval(() => void shadowCollaboration.poll(), config.shadowPollIntervalMs);
 void shadowCollaboration.poll();
+const collaborationLearningTimer = setInterval(
+  () => void collaborationLearning.poll(), config.collaborationLearningIntervalMs,
+);
+void collaborationLearning.poll();
+const notificationDigestTimer = setInterval(
+  () => void mentionMonitor.flushNotificationDigest(), config.notificationDigestPollIntervalMs,
+);
+void mentionMonitor.flushNotificationDigest();
 async function recordListenerFailure(detail) {
   if (stopping) return;
   if (!state.state.mentionHealthFailure) {
@@ -259,6 +279,8 @@ function shutdown(signal) {
   clearInterval(followupTimer);
   clearInterval(xiaoweiTimer);
   clearInterval(shadowTimer);
+  clearInterval(collaborationLearningTimer);
+  clearInterval(notificationDigestTimer);
   clearTimeout(cardReconnectTimer);
   listener.stdin.end();
   cardListener?.stdin.end();

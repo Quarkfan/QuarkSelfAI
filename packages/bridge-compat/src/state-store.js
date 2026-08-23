@@ -45,6 +45,10 @@ const EMPTY_STATE = {
   shadowTaskSnapshots: {},
   shadowFeedback: [],
   shadowReport: null,
+  collaborationLearning: null,
+  notificationDigestPending: [],
+  notificationDigestLastSentAt: null,
+  notificationDigestFailure: null,
 };
 
 function firstCompleteJsonObject(text) {
@@ -143,6 +147,12 @@ export class StateStore {
       this.state.shadowMatters = (this.state.shadowMatters || []).slice(-300);
       this.state.shadowDecisions = (this.state.shadowDecisions || []).slice(-2000);
       this.state.shadowFeedback = (this.state.shadowFeedback || []).slice(-1000);
+      if (this.state.collaborationLearning) {
+        this.state.collaborationLearning.observations = (this.state.collaborationLearning.observations || []).slice(-2000);
+        this.state.collaborationLearning.ownerSignals = (this.state.collaborationLearning.ownerSignals || []).slice(-1000);
+        this.state.collaborationLearning.candidates = (this.state.collaborationLearning.candidates || []).slice(-100);
+      }
+      this.state.notificationDigestPending = (this.state.notificationDigestPending || []).slice(-500);
       const temporary = `${this.path}.tmp`;
       await writeFile(temporary, `${JSON.stringify(this.state, null, 2)}\n`, { mode: 0o600 });
       await rename(temporary, this.path);

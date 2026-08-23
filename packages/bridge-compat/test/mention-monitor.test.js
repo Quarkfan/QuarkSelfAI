@@ -457,6 +457,46 @@ test("updates one existing task and only notifies for a material change", async 
   assert.match(sent[0], /截止时间提前且优先级升高/);
 });
 
+test("batches ordinary notifications only after an enabled policy matches", async () => {
+  const message = {
+    message_id: "om_batch", chat_id: "oc_batch", chat_name: "普通项目群", chat_type: "group",
+    create_time: "2026-08-23 10:00", content: "同步普通进展", sender: { id: "ou_other", name: "同事" },
+  };
+  const state = stateHarness();
+  const sent = [];
+  const monitor = new MentionMonitor({
+    config: {
+      mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, mentionContextMinutes: 30,
+      allowedOpenId: "ou_me", notificationDigestMaxDelayMs: 1,
+    },
+    state,
+    lark: {
+      async searchMentions() { return [message]; },
+      async getMentionContext() { return [message]; },
+      async send(text) { sent.push(text); },
+    },
+    policyManager: { async evaluatePolicies() {
+      return { effect: { attention: "batch" }, matches: [{ id: "policy-batch" }] };
+    } },
+    taskCreator: { async createFromMention() {
+      return {
+        taskId: "task_batch", title: "【跟进】了解普通进展", taskAction: "updated",
+        notificationDecision: "notify", materialChangeSummary: "进度更新", priority: 1,
+        actionOwner: "other", researchDecision: "skip", tags: ["飞书"],
+      };
+    } },
+  });
+
+  await monitor.poll();
+  assert.equal(sent.length, 0);
+  assert.equal(state.state.notificationDigestPending.length, 1);
+  state.state.notificationDigestPending[0].queuedAt = new Date(0).toISOString();
+  await monitor.flushNotificationDigest(new Date("2026-08-23T12:00:00Z"));
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /协作事项汇总/);
+  assert.equal(state.state.notificationDigestPending.length, 0);
+});
+
 test("does not turn Xiaowei agent replies into new automated tasks", async () => {
   const message = {
     message_id: "om_xiaowei", chat_id: "oc_xiaowei", chat_type: "p2p",
