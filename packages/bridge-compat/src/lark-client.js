@@ -40,6 +40,22 @@ export class LarkClient {
     return this.listenToEvent("im.chat.member.user.added_v1", jq, onEvent);
   }
 
+  listenReactionCreated(onEvent) {
+    return this.listenToEvent(
+      "im.message.reaction.created_v1",
+      'select(.event.operator_type=="user")',
+      onEvent,
+    );
+  }
+
+  listenReactionDeleted(onEvent) {
+    return this.listenToEvent(
+      "im.message.reaction.deleted_v1",
+      'select(.event.operator_type=="user")',
+      onEvent,
+    );
+  }
+
   listenToEvent(eventKey, jq, onEvent) {
     const child = spawn(this.config.larkCli, [
       "event", "consume", eventKey, "--as", "bot", "--jq", jq,
@@ -209,6 +225,25 @@ export class LarkClient {
     return this.searchConversationMessages(start, end, chatIds, "任永强交接群消息搜索");
   }
 
+  async searchOwnerMessages(start, end) {
+    return this.searchMessages([
+      "--query", "", "--sender", this.config.allowedOpenId,
+      "--sender-type", "user", "--start", start, "--end", end,
+    ], "本人参与消息搜索", { includeReactions: true });
+  }
+
+  async searchEngagedConversationMessages(start, end, chatIds) {
+    if (!chatIds.length) return [];
+    const messages = [];
+    for (let index = 0; index < chatIds.length; index += 20) {
+      messages.push(...await this.searchMessages([
+        "--query", "", "--chat-id", chatIds.slice(index, index + 20).join(","),
+        "--sender-type", "user", "--start", start, "--end", end,
+      ], "本人参与会话表情补偿搜索", { includeReactions: true, pageLimit: 2 }));
+    }
+    return messages;
+  }
+
   async searchConversationMessages(start, end, chatIds, label) {
     const messages = [];
     for (let index = 0; index < chatIds.length; index += 20) {
@@ -265,14 +300,27 @@ export class LarkClient {
     return envelope.data?.events ?? envelope.events ?? [];
   }
 
-  async searchMessages(filters, label) {
+  async searchMessages(filters, label, options = {}) {
+    const enrichment = options.includeReactions === true ? [] : ["--no-reactions"];
     const result = await this.run([
-      "im", "+messages-search", "--as", "user", ...filters, "--page-size", "50", "--page-limit", "5",
-      "--no-reactions", "--format", "json",
+      "im", "+messages-search", "--as", "user", ...filters, "--page-size", "50",
+      "--page-limit", String(options.pageLimit || 5), ...enrichment, "--format", "json",
     ]);
     if (result.code !== 0) throw new Error(`${label}失败: ${result.stderr || result.stdout}`);
     const envelope = parseCliJson(result.stdout);
     if (envelope.ok !== true) throw new Error(`${label}失败: ${result.stdout}`);
+    return envelope.data?.messages ?? [];
+  }
+
+  async getMessagesByIds(messageIds, { includeReactions = false } = {}) {
+    if (!messageIds.length) return [];
+    const result = await this.run([
+      "im", "+messages-mget", "--as", "user", "--message-ids", messageIds.slice(0, 50).join(","),
+      ...(includeReactions ? [] : ["--no-reactions"]), "--format", "json",
+    ]);
+    if (result.code !== 0) throw new Error(`飞书目标消息读取失败: ${result.stderr || result.stdout}`);
+    const envelope = parseCliJson(result.stdout);
+    if (envelope.ok !== true) throw new Error(`飞书目标消息读取失败: ${result.stdout}`);
     return envelope.data?.messages ?? [];
   }
 

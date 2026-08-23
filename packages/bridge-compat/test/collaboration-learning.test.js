@@ -54,6 +54,28 @@ test("stores privacy-bounded collaboration observations", async () => {
   assert.equal("title" in observation, false);
 });
 
+test("turns matching interaction history into non-binding privacy-bounded guidance", async () => {
+  const h = harness();
+  const signal = {
+    type: "reaction",
+    operation: "created",
+    emojiType: "THUMBSUP",
+    ownerOperated: true,
+  };
+  await h.monitor.observe(message(1, { collaborationSignal: signal }), {
+    ...ordinaryTask(), taskAction: "created", actionOwner: "changdongxu",
+  });
+  await h.monitor.observe(message(2, { collaborationSignal: signal }), {
+    ...ordinaryTask(), taskAction: "ignored", notificationDecision: "silent",
+  });
+  const guidance = h.monitor.guidanceFor(message(3, { collaborationSignal: signal }));
+  assert.match(guidance, /同类脱敏样本 2 条/);
+  assert.match(guidance, /建单 1、更新 0、忽略 1/);
+  assert.match(guidance, /即时通知 1、静默 1/);
+  assert.equal(guidance.includes("业务同步"), false);
+  assert.match(h.monitor.guidanceFor(message(4)), /当前上下文保守判断/);
+});
+
 test("proposes one exact-scope batching policy only after repeated safe evidence", async () => {
   const h = harness();
   for (let index = 0; index < 20; index += 1) {

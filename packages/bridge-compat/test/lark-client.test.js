@@ -83,3 +83,40 @@ test("reads a complete user group list and rejects incomplete pagination", async
   client.run = async () => ({ code: 0, stderr: "", stdout: JSON.stringify({ ok: true, data: { chats: [], has_more: true } }) });
   await assert.rejects(() => client.listGroupChats(), /分页未完成/);
 });
+
+test("reaction listeners use separate native V2 event streams", () => {
+  const client = new LarkClient({ larkCli: "lark-cli" });
+  const calls = [];
+  client.listenToEvent = (eventKey, jq) => { calls.push({ eventKey, jq }); return eventKey; };
+  client.listenReactionCreated(() => {});
+  client.listenReactionDeleted(() => {});
+  assert.deepEqual(calls.map((item) => item.eventKey), [
+    "im.message.reaction.created_v1", "im.message.reaction.deleted_v1",
+  ]);
+  assert.equal(calls.every((item) => item.jq.includes(".event.operator_type")), true);
+});
+
+test("owner engagement searches keep reaction enrichment while ordinary focus searches opt out", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli", allowedOpenId: "ou_me" });
+  const calls = [];
+  client.run = async (args) => {
+    calls.push(args);
+    return { code: 0, stderr: "", stdout: JSON.stringify({ ok: true, data: { messages: [] } }) };
+  };
+  await client.searchMentions("start", "end");
+  await client.searchOwnerMessages("start", "end");
+  assert.equal(calls[0].includes("--no-reactions"), true);
+  assert.equal(calls[1].includes("--no-reactions"), false);
+  assert.ok(calls[1].includes("ou_me"));
+});
+
+test("fetches a known reaction target by message id without extra enrichment", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli" });
+  let args;
+  client.run = async (value) => {
+    args = value;
+    return { code: 0, stderr: "", stdout: JSON.stringify({ ok: true, data: { messages: [{ message_id: "om_1", chat_id: "oc_1" }] } }) };
+  };
+  assert.equal((await client.getMessagesByIds(["om_1"]))[0].chat_id, "oc_1");
+  assert.equal(args.includes("--no-reactions"), true);
+});

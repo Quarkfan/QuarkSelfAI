@@ -1,8 +1,11 @@
 {
-  "minimumVersion": "1.0.88",
+  "minimumVersion": "1.0.89",
   "requiredEventKeys": [
     "im.message.receive_v1",
-    "card.action.trigger"
+    "card.action.trigger",
+    "im.chat.member.user.added_v1",
+    "im.message.reaction.created_v1",
+    "im.message.reaction.deleted_v1"
   ],
   "policy": {
     "schemaSource": "runtime",

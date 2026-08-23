@@ -32,3 +32,14 @@
 `event.operator_id.open_id` 与 `event.users[].user_id.open_id`。启用 `membershipRealtimeEnabled` 前必须先在
 飞书应用后台订阅该事件，并用 `lark-cli event schema im.chat.member.user.added_v1 --json` 复核字段与 bot
 身份；否则保持关闭，依靠 30 分钟群列表差分和系统消息核验兜底，避免未订阅事件导致守护进程重启循环。
+
+## 表情回复事件
+
+本人主动参与链路要求 `im.message.reaction.created_v1` 与 `im.message.reaction.deleted_v1` 同时存在，并分别启动
+独立消费者。两者都使用 bot 身份，读取 `.event.message_id`、`.event.user_id.open_id`、
+`.event.reaction_type.emoji_type` 和 `.event.action_time`；目标消息由 `im message mget` 回读上下文。只有在两个
+消费者都通过 schema/ready 校验后才能打开 `reactionRealtimeEnabled`。低频扫描只补偿新增表情，不根据列表
+缺失推断撤回，以免分页或权限变化制造错误的删除事件。
+
+当前最低兼容版本为 `1.0.89`。升级时需要同时检查守护进程配置所引用的绝对 CLI 路径，不能只验证当前 shell
+PATH 下的另一个全局安装。

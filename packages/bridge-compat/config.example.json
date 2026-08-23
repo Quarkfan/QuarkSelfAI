@@ -30,6 +30,15 @@
   "groupMembershipSyncIntervalMs": 1800000,
   "groupMembershipSettleDelayMs": 600000,
   "membershipRealtimeEnabled": false,
+  "ownerEngagementEnabled": true,
+  "ownerEngagementPollIntervalMs": 1800000,
+  "ownerEngagementInitialLookbackMinutes": 30,
+  "ownerEngagementOverlapMinutes": 10,
+  "ownerEngagementSettleDelayMs": 600000,
+  "ownerEngagementBusinessDays": 3,
+  "reactionRealtimeEnabled": false,
+  "reactionSettleDelayMs": 120000,
+  "reactionFallbackLookbackHours": 24,
   "specialAttentionUsers": [
     { "name": "任永强", "openId": "ou_42f49a29bc7599fe3f47db53fa8eaf94" },
     { "name": "张以宁", "openId": "ou_0e014dee555bda6a127ca43da4966cf4" }

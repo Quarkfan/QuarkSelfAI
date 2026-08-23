@@ -245,6 +245,25 @@ export class MentionMonitor {
     return true;
   }
 
+  async enqueueSignal(message, settleDelayMs = 0) {
+    this.initializeState();
+    if (!message?.message_id || !message?.chat_id) return false;
+    const exists = this.state.state.mentionProcessedMessageIds.includes(message.message_id)
+      || this.state.state.mentionPending.some((item) => item.message.message_id === message.message_id);
+    if (exists) return false;
+    this.state.state.mentionPending.push({
+      message,
+      discoveredAt: new Date().toISOString(),
+      readyAt: settleDelayMs > 0 ? new Date(Date.now() + settleDelayMs).toISOString() : null,
+      attempts: 0,
+      nextAttemptAt: null,
+      lastError: null,
+    });
+    await this.state.save();
+    await this.processLocalQueues();
+    return true;
+  }
+
   async processLocalQueues() {
     if (this.localProcessing) return;
     this.localProcessing = true;
@@ -422,6 +441,7 @@ export class MentionMonitor {
           pending.message,
           context,
           this.state.state.researchDecisionHistory,
+          this.collaborationLearning?.guidanceFor?.(pending.message) || "暂无协作模式样本。",
         );
         if (this.collaborationLearning) {
           try { await this.collaborationLearning.observe(pending.message, task); }

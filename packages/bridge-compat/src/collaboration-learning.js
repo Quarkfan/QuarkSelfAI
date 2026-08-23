@@ -59,9 +59,31 @@ export class CollaborationLearningMonitor {
       researchDecision: task.researchDecision || "skip",
       actionOwner: task.actionOwner || "unknown",
       materialChange: Boolean(task.materialChangeSummary),
+      signalType: message.collaborationSignal?.type || null,
+      signalOperation: message.collaborationSignal?.operation || null,
+      emojiType: message.collaborationSignal?.emojiType || null,
+      ownerOperated: message.collaborationSignal?.ownerOperated ?? null,
     });
     learning.observations = learning.observations.slice(-2000);
     await this.state.save();
+  }
+
+  guidanceFor(message) {
+    const signal = message?.collaborationSignal;
+    if (!signal?.type) return "暂无同类协作信号样本；按当前上下文保守判断。";
+    const observations = this.ensureState().observations
+      .filter((item) => item.signalType === signal.type)
+      .filter((item) => !signal.emojiType || item.emojiType === signal.emojiType)
+      .filter((item) => signal.ownerOperated === undefined || item.ownerOperated === signal.ownerOperated)
+      .slice(-20);
+    if (!observations.length) return "暂无同类协作信号样本；按当前上下文保守判断。";
+    const count = (field, value) => observations.filter((item) => item[field] === value).length;
+    return [
+      `同类脱敏样本 ${observations.length} 条`,
+      `建单 ${count("taskAction", "created")}、更新 ${count("taskAction", "updated")}、忽略 ${count("taskAction", "ignored")}`,
+      `即时通知 ${count("actualNotification", "notify")}、静默 ${count("actualNotification", "silent")}`,
+      `本人责任 ${count("actionOwner", "changdongxu")}、共同责任 ${count("actionOwner", "shared")}、他人责任 ${count("actionOwner", "other")}`,
+    ].join("；");
   }
 
   async recordOwnerMessage(event, now = new Date()) {

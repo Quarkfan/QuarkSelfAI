@@ -31,6 +31,13 @@ const EMPTY_STATE = {
   groupMembershipKnownChatIds: [],
   groupMembershipLastSyncAt: null,
   groupMembershipHealthFailure: null,
+  ownerEngagedConversations: [],
+  ownerEngagementProcessedMessageIds: [],
+  ownerEngagementLastPollAt: null,
+  ownerEngagementHealthFailure: null,
+  reactionPendingEvents: [],
+  reactionProcessedEventIds: [],
+  reactionStates: {},
   cardActionHealthFailure: null,
   overdueNotified: {},
   overdueHealthFailure: null,
@@ -147,6 +154,14 @@ export class StateStore {
       this.state.mentionProcessedMessageIds = this.state.mentionProcessedMessageIds.slice(-2000);
       this.state.delegatedGroupChatIds = [...new Set(this.state.delegatedGroupChatIds || [])].slice(-500);
       this.state.groupMembershipKnownChatIds = [...new Set(this.state.groupMembershipKnownChatIds || [])].slice(-2000);
+      this.state.ownerEngagedConversations = (this.state.ownerEngagedConversations || []).slice(-500);
+      this.state.ownerEngagementProcessedMessageIds = (this.state.ownerEngagementProcessedMessageIds || []).slice(-2000);
+      this.state.reactionPendingEvents = (this.state.reactionPendingEvents || []).slice(-500);
+      this.state.reactionProcessedEventIds = (this.state.reactionProcessedEventIds || []).slice(-2000);
+      const reactionEntries = Object.entries(this.state.reactionStates || {})
+        .sort((left, right) => String(right[1]?.lastAt || "").localeCompare(String(left[1]?.lastAt || "")))
+        .slice(0, 2000);
+      this.state.reactionStates = Object.fromEntries(reactionEntries);
       this.state.researchDecisionHistory = this.state.researchDecisionHistory.slice(-100);
       this.state.xiaoweiResearchRequests = this.state.xiaoweiResearchRequests.slice(-300);
       this.state.xiaoweiProcessedMessageIds = this.state.xiaoweiProcessedMessageIds.slice(-2000);

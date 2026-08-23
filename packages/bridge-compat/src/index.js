@@ -18,6 +18,7 @@ import { ShadowCollaborationMonitor } from "./shadow-collaboration.js";
 import { formatUserTime } from "./util.js";
 import { QuarkControlPlaneClient } from "./quark-control-plane-client.js";
 import { CollaborationLearningMonitor } from "./collaboration-learning.js";
+import { OwnerEngagementMonitor } from "./owner-engagement-monitor.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -58,6 +59,15 @@ async function loadConfig() {
     groupMembershipSyncIntervalMs: 1800000,
     groupMembershipSettleDelayMs: 600000,
     membershipRealtimeEnabled: false,
+    ownerEngagementEnabled: true,
+    ownerEngagementPollIntervalMs: 1800000,
+    ownerEngagementInitialLookbackMinutes: 30,
+    ownerEngagementOverlapMinutes: 10,
+    ownerEngagementSettleDelayMs: 600000,
+    ownerEngagementBusinessDays: 3,
+    reactionRealtimeEnabled: false,
+    reactionSettleDelayMs: 120000,
+    reactionFallbackLookbackHours: 24,
     specialAttentionUsers: [],
     monitorFlaggedConversations: true,
     flaggedConversationSyncIntervalMs: 1800000,
@@ -141,6 +151,9 @@ const bridge = new Bridge({
 const mentionMonitor = new MentionMonitor({
   config, state, lark, taskCreator, runner, xiaoweiResearch, shadowCollaboration, collaborationLearning, policyManager,
 });
+const ownerEngagementMonitor = new OwnerEngagementMonitor({
+  config, state, lark, mentionMonitor, collaborationLearning,
+});
 const overdueMonitor = new DidaOverdueMonitor({ config, state, lark, taskCreator });
 const didaCompletedCleanupMonitor = new DidaCompletedCleanupMonitor({ config, state, lark, taskCreator });
 const sessionJanitor = new SessionJanitor({ config, state, lark, runner, taskCreator });
@@ -152,6 +165,8 @@ const listener = lark.listen((event) => {
   void mentionMonitor.ingestRealtime(event);
 });
 let membershipListener = null;
+let reactionCreatedListener = null;
+let reactionDeletedListener = null;
 let cardListener = null;
 let cardReconnectTimer = null;
 let stopping = false;
@@ -230,13 +245,33 @@ if (config.membershipRealtimeEnabled === true) {
   membershipListener.on("error", (error) => void recordListenerFailure(`成员加入事件连接失败：${error.message}`));
   membershipListener.on("exit", (code, signal) => void recordListenerFailure(`成员加入事件连接退出：exit=${code} signal=${signal}`));
 }
+if (config.reactionRealtimeEnabled === true) {
+  reactionCreatedListener = lark.listenReactionCreated(
+    (event) => void ownerEngagementMonitor.ingestReaction(event, "created"),
+  );
+  reactionDeletedListener = lark.listenReactionDeleted(
+    (event) => void ownerEngagementMonitor.ingestReaction(event, "deleted"),
+  );
+  for (const [label, child] of [["表情新增", reactionCreatedListener], ["表情撤销", reactionDeletedListener]]) {
+    child.on("error", (error) => void recordListenerFailure(`${label}事件连接失败：${error.message}`));
+    child.on("exit", (code, signal) => void recordListenerFailure(`${label}事件连接退出：exit=${code} signal=${signal}`));
+  }
+}
 const timer = setInterval(() => void bridge.retryQueued(), 15000);
 const mentionTimer = setInterval(() => config.mentionMonitorEnabled !== false && void mentionMonitor.poll(), config.mentionPollIntervalMs);
 const mentionLocalTimer = setInterval(
-  () => config.mentionMonitorEnabled !== false && void mentionMonitor.processLocalQueues(),
+  () => {
+    if (config.mentionMonitorEnabled !== false) void mentionMonitor.processLocalQueues();
+    if (config.ownerEngagementEnabled !== false) void ownerEngagementMonitor.processReactionQueue();
+  },
   config.mentionLocalTickIntervalMs,
 );
 if (config.mentionMonitorEnabled !== false) void mentionMonitor.poll();
+const ownerEngagementTimer = setInterval(
+  () => config.ownerEngagementEnabled !== false && void ownerEngagementMonitor.poll(),
+  config.ownerEngagementPollIntervalMs,
+);
+if (config.ownerEngagementEnabled !== false) void ownerEngagementMonitor.poll();
 const overdueTimer = setInterval(() => config.overdueMonitorEnabled !== false && void overdueMonitor.poll(), config.overduePollIntervalMs);
 const overdueStartupTimer = setTimeout(() => config.overdueMonitorEnabled !== false && void overdueMonitor.poll(), Math.min(300000, config.overduePollIntervalMs));
 const didaCompletedCleanupTimer = setInterval(
@@ -282,6 +317,7 @@ function shutdown(signal) {
   clearInterval(timer);
   clearInterval(mentionTimer);
   clearInterval(mentionLocalTimer);
+  clearInterval(ownerEngagementTimer);
   clearInterval(overdueTimer);
   clearTimeout(overdueStartupTimer);
   clearInterval(didaCompletedCleanupTimer);
@@ -296,6 +332,8 @@ function shutdown(signal) {
   clearTimeout(cardReconnectTimer);
   listener.stdin.end();
   membershipListener?.stdin.end();
+  reactionCreatedListener?.stdin.end();
+  reactionDeletedListener?.stdin.end();
   cardListener?.stdin.end();
   setTimeout(() => process.exit(0), 5000).unref();
 }
