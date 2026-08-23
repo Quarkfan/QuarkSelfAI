@@ -29,6 +29,26 @@ const CONTROLLER_CONTEXT = `
 会话工具是执行能力，不是输出格式。不要为了普通工作额外创建任务。不得通过这些工具绕过外部回复、发布、删除、数据库写入等确认门禁。
 `;
 
+export function buildConversationContinuityContext(conversationContext) {
+  if (!conversationContext) return "";
+  const previous = (conversationContext.previousMessages || []).slice(-6).map((message) => ({
+    messageId: message.messageId,
+    content: String(message.content || "").slice(0, 800),
+    receivedAt: message.receivedAt || null,
+    replyTo: message.replyTo || null,
+    rootId: message.rootId || null,
+    threadId: message.threadId || null,
+  }));
+  const current = conversationContext.currentMessage || {};
+  return `
+
+[飞书私聊上下文连贯性]
+请判断当前消息是否在继续、修正、确认或补充前文。优先使用 replyTo、rootId、threadId 的明确关联，其次使用时间邻近且主题相容的前文；不要把无关事项强行串联，也不要从含糊短句推断高影响操作的批准。当前消息仍是唯一待执行要求，以下历史只用于消歧。
+当前消息元数据：${JSON.stringify({ messageId: current.messageId, replyTo: current.replyTo || null, rootId: current.rootId || null, threadId: current.threadId || null })}
+最近本人私聊：${JSON.stringify(previous)}
+`;
+}
+
 function shanghaiTimestamp(now) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Shanghai",
@@ -76,7 +96,7 @@ export class CodexRunner {
     const runDir = path.join(this.config.varDir, "runs", `${Date.now()}-${shortId(job.sessionId)}`);
     await mkdir(runDir, { recursive: true });
     const finalPath = path.join(runDir, "final.md");
-    const prompt = `${job.prompt}${SAFETY_CONTEXT}${job.controller ? CONTROLLER_CONTEXT : ""}`;
+    const prompt = `${job.prompt}${buildConversationContinuityContext(job.conversationContext)}${SAFETY_CONTEXT}${job.controller ? CONTROLLER_CONTEXT : ""}`;
     if (job.executor === "claude") {
       try {
         const result = await runClaudeSession(this.config, job, prompt, {

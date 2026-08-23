@@ -3,7 +3,18 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { buildUniqueSessionTitle, CodexRunner, SessionBusyError } from "../src/codex-runner.js";
+import { buildConversationContinuityContext, buildUniqueSessionTitle, CodexRunner, SessionBusyError } from "../src/codex-runner.js";
+
+test("builds bounded continuity guidance without replacing the current request", () => {
+  const context = buildConversationContinuityContext({
+    previousMessages: [{ messageId: "m1", content: "检查飞书断线", receivedAt: "2026-08-23T01:00:00Z" }],
+    currentMessage: { messageId: "m2", replyTo: "m1" },
+  });
+  assert.match(context, /上下文连贯性/);
+  assert.match(context, /检查飞书断线/);
+  assert.match(context, /"replyTo":"m1"/);
+  assert.match(context, /不要从含糊短句推断高影响操作的批准/);
+});
 import { runStructuredTurn } from "../src/codex-app-server-client.js";
 
 async function fakeCodex(script) {

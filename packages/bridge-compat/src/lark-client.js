@@ -3,6 +3,11 @@ import { spawn } from "node:child_process";
 import { parseCliJson, run, splitMessage } from "./util.js";
 import { buildActionCard, buildInputCard, buildNotificationCard, buildSelectionCard } from "./lark-card.js";
 
+export function buildPriorityMessageFilter(allowedOpenId) {
+  const owner = JSON.stringify(String(allowedOpenId));
+  return `select(.sender_type=="user" and ((.chat_type=="p2p" and .sender_id==${owner}) or (.chat_type=="group" and ((.mentions // []) | any(.id==${owner})))))`;
+}
+
 export class LarkClient {
   constructor(config, logger = console) {
     this.config = config;
@@ -19,7 +24,7 @@ export class LarkClient {
   }
 
   listen(onEvent) {
-    const jq = `select(.chat_type==\"p2p\" and .sender_id==\"${this.config.allowedOpenId}\" and .sender_type==\"user\")`;
+    const jq = buildPriorityMessageFilter(this.config.allowedOpenId);
     return this.listenToEvent("im.message.receive_v1", jq, onEvent);
   }
 

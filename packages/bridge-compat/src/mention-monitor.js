@@ -63,6 +63,73 @@ export class MentionMonitor {
     this.shadowCollaboration = shadowCollaboration;
     this.logger = logger;
     this.polling = false;
+    this.localProcessing = false;
+  }
+
+  initializeState() {
+    this.state.state.mentionClarifications ??= [];
+    this.state.state.mentionResearchSessions ??= [];
+    this.state.state.mentionResearchConfirmations ??= [];
+    this.state.state.researchDecisionHistory ??= [];
+    this.state.state.flaggedConversationChatIds ??= [];
+    this.state.state.mentionPending ??= [];
+    this.state.state.mentionProcessedMessageIds ??= [];
+  }
+
+  async ingestRealtime(event) {
+    this.initializeState();
+    if (event.chat_type !== "group" || event.sender_type !== "user" || event.sender_id === this.config.allowedOpenId) return false;
+    const explicitlyMentioned = (event.mentions || []).some((mention) => mention.id === this.config.allowedOpenId);
+    if (!explicitlyMentioned || !event.message_id) return false;
+    const message = {
+      message_id: event.message_id,
+      chat_id: event.chat_id,
+      chat_type: event.chat_type,
+      create_time: event.create_time || event.timestamp || new Date().toISOString(),
+      content: event.content,
+      reply_to: event.reply_to || null,
+      root_id: event.root_id || null,
+      thread_id: event.thread_id || null,
+      mentions: event.mentions || [],
+      sender: { id: event.sender_id, name: event.sender_name || null },
+      intakeReasons: ["@常东旭"],
+    };
+    if (isLowSignalAcknowledgement(message.content) || isSyntheticTestMessage(message.content)) {
+      if (!this.state.state.mentionProcessedMessageIds.includes(message.message_id)) {
+        this.state.state.mentionProcessedMessageIds.push(message.message_id);
+        await this.state.save();
+      }
+      return false;
+    }
+    const exists = this.state.state.mentionProcessedMessageIds.includes(message.message_id)
+      || this.state.state.mentionPending.some((item) => item.message.message_id === message.message_id);
+    if (exists) return false;
+    const settleDelayMs = Number(this.config.mentionRealtimeSettleDelayMs || 0);
+    this.state.state.mentionPending.push({
+      message,
+      discoveredAt: new Date().toISOString(),
+      readyAt: settleDelayMs > 0 ? new Date(Date.now() + settleDelayMs).toISOString() : null,
+      attempts: 0,
+      nextAttemptAt: null,
+      lastError: null,
+    });
+    await this.state.save();
+    await this.processLocalQueues();
+    return true;
+  }
+
+  async processLocalQueues() {
+    if (this.localProcessing) return;
+    this.localProcessing = true;
+    try {
+      this.initializeState();
+      await this.discardLowSignalPending();
+      await this.processPending();
+      await this.processApprovedResearch();
+      await this.processClarificationReplies();
+    } finally {
+      this.localProcessing = false;
+    }
   }
 
   async poll() {
@@ -70,12 +137,7 @@ export class MentionMonitor {
     if (this.state.state.mentionNextPollAt && new Date(this.state.state.mentionNextPollAt) > new Date()) return;
     this.polling = true;
     try {
-      this.state.state.mentionClarifications ??= [];
-      this.state.state.mentionResearchSessions ??= [];
-      this.state.state.mentionResearchConfirmations ??= [];
-      this.state.state.researchDecisionHistory ??= [];
-      this.state.state.flaggedConversationChatIds ??= [];
-      await this.discardLowSignalPending();
+      this.initializeState();
       const now = new Date();
       await this.syncFlaggedConversations(now);
       const previous = this.state.state.mentionLastPollAt
@@ -145,9 +207,7 @@ export class MentionMonitor {
       }
       this.state.state.mentionLastPollAt = now.toISOString();
       await this.state.save();
-      await this.processPending();
-      await this.processApprovedResearch();
-      await this.processClarificationReplies();
+      await this.processLocalQueues();
       const rateLimitFailure = this.state.state.mentionRateLimitFailure;
       this.state.state.mentionRateLimitFailure = null;
       this.state.state.mentionNextPollAt = null;

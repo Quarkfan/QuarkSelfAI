@@ -74,6 +74,20 @@ test("authorized private messages go directly to the Codex controller", async ()
   assert.deepEqual(harness.state.state.processedMessageIds, ["m-codex-intent"]);
 });
 
+test("carries recent owner DM and reply metadata for continuity judgment", async () => {
+  const harness = createHarness([]);
+  harness.state.state.ownerConversation = [];
+  const executed = [];
+  harness.bridge.runner.execute = async (job) => { executed.push(job); return "完成"; };
+  await harness.bridge.handle(event("m-context-1", "先检查飞书断线问题"));
+  await new Promise((resolve) => setImmediate(resolve));
+  await harness.bridge.handle({ ...event("m-context-2", "继续处理这个"), reply_to: "m-context-1" });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(executed[1].conversationContext.previousMessages[0].content, "先检查飞书断线问题");
+  assert.equal(executed[1].conversationContext.currentMessage.replyTo, "m-context-1");
+  assert.equal(executed[1].prompt, "继续处理这个");
+});
+
 test("retains a private message when direct Codex execution is temporarily unavailable", async () => {
   const harness = createHarness([]);
   harness.bridge.config.sessionRetryBaseMs = 30_000;

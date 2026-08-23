@@ -55,8 +55,22 @@ export class Bridge {
     }
     this.state.state.controllerSessionId = controllerSessionId;
     await this.state.markProcessed(event.message_id);
+    const previousMessages = (this.state.state.ownerConversation || []).slice(-6);
+    const currentMessage = {
+      messageId: event.message_id,
+      content: String(event.content || "").slice(0, 2000),
+      receivedAt: new Date().toISOString(),
+      replyTo: event.reply_to || null,
+      rootId: event.root_id || null,
+      threadId: event.thread_id || null,
+    };
+    this.state.state.ownerConversation ??= [];
+    this.state.state.ownerConversation.push(currentMessage);
     try {
-      await this.enqueue(controllerSessionId, event.content, event, { controller: true });
+      await this.enqueue(controllerSessionId, event.content, event, {
+        controller: true,
+        conversationContext: { previousMessages, currentMessage },
+      });
     } catch (error) {
       // markProcessed prevents the Feishu event from duplicating the request;
       // enqueue persists before replying, so only failures before persistence
@@ -255,6 +269,7 @@ export class Bridge {
       executor: session.provider || "codex",
       requestedExecutor: session.provider || "codex",
       controller: Boolean(options.controller),
+      conversationContext: options.conversationContext || null,
     });
     await this.state.save();
     const busy = this.runner.isRunning(sessionId) || ahead > 0;

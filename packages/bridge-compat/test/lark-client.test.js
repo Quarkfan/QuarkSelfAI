@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { LarkClient } from "../src/lark-client.js";
+import { buildPriorityMessageFilter, LarkClient } from "../src/lark-client.js";
+
+test("uses one event filter for owner DMs and explicit group mentions", () => {
+  const filter = buildPriorityMessageFilter("ou_me");
+  assert.match(filter, /chat_type=="p2p"/);
+  assert.match(filter, /sender_id=="ou_me"/);
+  assert.match(filter, /chat_type=="group"/);
+  assert.match(filter, /mentions/);
+  assert.match(filter, /any\(\.id=="ou_me"\)/);
+});
 
 test("reads agenda arrays from the lark-cli success envelope", async () => {
   const client = new LarkClient({ larkCli: "lark-cli" });

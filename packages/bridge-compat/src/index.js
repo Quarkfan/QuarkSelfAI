@@ -40,18 +40,20 @@ async function loadConfig() {
     progressIntervalMs: 60000,
     bridgeControlMcpEnabled: true,
     mentionMonitorEnabled: true,
-    mentionPollIntervalMs: 60000,
+    mentionPollIntervalMs: 1800000,
+    mentionLocalTickIntervalMs: 30000,
     mentionRateLimitBaseMs: 120000,
     mentionRateLimitMaxMs: 1800000,
     mentionRateLimitNotifyAfterMs: 1800000,
     mentionInitialLookbackMinutes: 30,
-    mentionOverlapMinutes: 2,
+    mentionOverlapMinutes: 10,
     mentionContextMinutes: 30,
     mentionSettleDelayMs: 120000,
+    mentionRealtimeSettleDelayMs: 30000,
     monitorDirectMessages: true,
     specialAttentionUsers: [],
     monitorFlaggedConversations: true,
-    flaggedConversationSyncIntervalMs: 300000,
+    flaggedConversationSyncIntervalMs: 1800000,
     flagPageLimit: 1000,
     didaExecutionTimeoutMs: 300000,
     didaCli: "dida",
@@ -73,7 +75,7 @@ async function loadConfig() {
     didaCompletedCleanupFailureNotifyThreshold: 3,
     sessionRetryBaseMs: 30000,
     sessionRetryMaxMs: 300000,
-    xiaoweiPollIntervalMs: 300000,
+    xiaoweiPollIntervalMs: 600000,
     xiaoweiMonitorEnabled: true,
     xiaoweiInitialLookbackMinutes: 180,
     sessionCleanupIntervalMs: 21600000,
@@ -124,7 +126,13 @@ const mentionMonitor = new MentionMonitor({
 const overdueMonitor = new DidaOverdueMonitor({ config, state, lark, taskCreator });
 const didaCompletedCleanupMonitor = new DidaCompletedCleanupMonitor({ config, state, lark, taskCreator });
 const sessionJanitor = new SessionJanitor({ config, state, lark, runner, taskCreator });
-const listener = lark.listen((event) => void bridge.handle(event));
+const listener = lark.listen((event) => {
+  if (event.chat_type === "p2p" && event.sender_id === config.allowedOpenId) {
+    void bridge.handle(event);
+    return;
+  }
+  void mentionMonitor.ingestRealtime(event);
+});
 let cardListener = null;
 let cardReconnectTimer = null;
 let stopping = false;
@@ -200,6 +208,10 @@ function startCardListener() {
 startCardListener();
 const timer = setInterval(() => void bridge.retryQueued(), 15000);
 const mentionTimer = setInterval(() => config.mentionMonitorEnabled !== false && void mentionMonitor.poll(), config.mentionPollIntervalMs);
+const mentionLocalTimer = setInterval(
+  () => config.mentionMonitorEnabled !== false && void mentionMonitor.processLocalQueues(),
+  config.mentionLocalTickIntervalMs,
+);
 if (config.mentionMonitorEnabled !== false) void mentionMonitor.poll();
 const overdueTimer = setInterval(() => config.overdueMonitorEnabled !== false && void overdueMonitor.poll(), config.overduePollIntervalMs);
 const overdueStartupTimer = setTimeout(() => config.overdueMonitorEnabled !== false && void overdueMonitor.poll(), Math.min(300000, config.overduePollIntervalMs));
@@ -237,6 +249,7 @@ function shutdown(signal) {
   stopping = true;
   clearInterval(timer);
   clearInterval(mentionTimer);
+  clearInterval(mentionLocalTimer);
   clearInterval(overdueTimer);
   clearTimeout(overdueStartupTimer);
   clearInterval(didaCompletedCleanupTimer);

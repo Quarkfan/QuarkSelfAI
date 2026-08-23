@@ -33,6 +33,45 @@ test("finds mentions, reads context, creates one task and deduplicates", async (
   assert.equal(state.state.mentionPending.length, 0);
 });
 
+test("ingests an explicit group mention from the realtime event without a remote search", async () => {
+  const state = stateHarness();
+  let creates = 0;
+  const monitor = new MentionMonitor({
+    config: { allowedOpenId: "ou_me", mentionRealtimeSettleDelayMs: 0, mentionContextMinutes: 30 },
+    state,
+    lark: {
+      async getMentionContext(message) { return [message]; },
+      async send() {},
+    },
+    taskCreator: { async createFromMention(message) {
+      creates += 1;
+      assert.deepEqual(message.intakeReasons, ["@常东旭"]);
+      return { taskId: "task_realtime", taskAction: "ignored" };
+    } },
+  });
+  const realtime = {
+    message_id: "om_realtime", chat_id: "oc_group", chat_type: "group", message_type: "text",
+    content: "@常东旭 请处理", sender_id: "ou_other", sender_type: "user",
+    mentions: [{ id: "ou_me", name: "常东旭", key: "@_user_1" }],
+  };
+
+  assert.equal(await monitor.ingestRealtime(realtime), true);
+  assert.equal(await monitor.ingestRealtime(realtime), false);
+  assert.equal(creates, 1);
+  assert.deepEqual(state.state.mentionProcessedMessageIds, ["om_realtime"]);
+});
+
+test("ignores a realtime group event that does not explicitly mention the owner", async () => {
+  const state = stateHarness();
+  const monitor = new MentionMonitor({ config: { allowedOpenId: "ou_me" }, state, lark: {}, taskCreator: {} });
+  const accepted = await monitor.ingestRealtime({
+    message_id: "om_background", chat_id: "oc_group", chat_type: "group",
+    content: "普通群消息", sender_id: "ou_other", sender_type: "user", mentions: [],
+  });
+  assert.equal(accepted, false);
+  assert.equal(state.state.mentionPending.length, 0);
+});
+
 test("merges mentions, watched group messages, and incoming direct messages by message id", async () => {
   const watchedGroupMessage = {
     message_id: "om_watch", chat_id: "oc_group", chat_name: "共同群", chat_type: "group",

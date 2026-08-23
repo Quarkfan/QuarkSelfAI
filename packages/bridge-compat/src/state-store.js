@@ -9,6 +9,7 @@ const EMPTY_STATE = {
   queue: [],
   processedMessageIds: [],
   processedCardEventIds: [],
+  ownerConversation: [],
   mentionLastPollAt: null,
   mentionPending: [],
   mentionProcessedMessageIds: [],
@@ -134,6 +135,7 @@ export class StateStore {
     const operation = async () => {
       this.state.processedMessageIds = this.state.processedMessageIds.slice(-500);
       this.state.processedCardEventIds = this.state.processedCardEventIds.slice(-500);
+      this.state.ownerConversation = (this.state.ownerConversation || []).slice(-20);
       this.state.mentionProcessedMessageIds = this.state.mentionProcessedMessageIds.slice(-2000);
       this.state.researchDecisionHistory = this.state.researchDecisionHistory.slice(-100);
       this.state.xiaoweiResearchRequests = this.state.xiaoweiResearchRequests.slice(-300);
