@@ -51,6 +51,18 @@ ASSISTANT_WORKSPACE_ROOTS=["/Users/your-name/BlackLakeWork","/Users/your-name/Do
 `npm run setup:dsh` 在 `var/dsh` 初始化；脚本会先核验 DSH 版本和 commit，再把本项目以 link 方式加入
 `feishu-assistant`，不会修改同级 DSH checkout。
 
+## 在 DSH 会话里创建临时插件
+
+打开控制台的“DSH 会话”，直接用自然语言描述需要的能力即可，不需要输入 Cordis 指令。模型会使用
+`cordis_inspect_*` 确认实际服务和 UI 插槽，再用 `cordis_define` 生成不可变版本。定义不会执行代码；启动或
+更新时必须在界面完成一次明确批准。纯 Host 包显示 QuarkSelfAI 的通用 approval，包含 Client 半的包显示
+DSH 原生代码审批，不会同时出现两次。
+
+每个动态插件只属于创建它的 DSH 会话，并只保存在当前进程内存中。可以在后续消息中用 `@插件ID` 继续修改；
+`cordis_stop` 可立即停用并保留版本，重新运行旧 package 即为回滚，`cordis_undefine` 会再次请求批准后永久移除。
+DSH 重启后动态插件自然消失。确认值得长期使用时，应要求助手把实验版本沉淀为本仓库插件并完成常规验证，
+不要把内存插件当作部署产物。
+
 ## 数据库
 
 不设置变量时直接使用 SQLite。需要 PostgreSQL 时复制 `.env.example` 的变量名到本地秘密管理方式中，设置真实 `DATABASE_URL`，再按 `docs/storage/postgresql.md` 初始化。测试不得依赖生产数据库。

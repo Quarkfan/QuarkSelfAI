@@ -25,6 +25,8 @@ assert.equal('default' in plugin, false, 'DSH namespace plugin must not expose a
 assert.equal(typeof plugin.apply, 'function', 'DSH namespace plugin must expose apply(ctx, config)')
 const ledgerPlugin = await import(resolve(projectRoot, 'dist/execution/ledger-plugin.js'))
 assert.equal(typeof ledgerPlugin.apply, 'function', 'DSH action ledger plugin must expose apply(ctx, config)')
+const dynamicPluginPolicy = await import(resolve(projectRoot, 'dist/runtime/dynamic-plugin-policy.js'))
+assert.equal(typeof dynamicPluginPolicy.apply, 'function', 'dynamic plugin approval policy must expose apply(ctx)')
 
 const { stdout: dump } = await exec('corepack', [
   'pnpm', 'dsh', '--profile', 'feishu-assistant', '--dump-config',
@@ -48,6 +50,8 @@ assert.match(dump, /id: quark-executor-codex-read[\s\S]*permissionMode: never/)
 assert.match(dump, /id: quark-executor-codex-write[\s\S]*permissionMode: approve-for-me/)
 assert.match(dump, /id: quark-executor-router[\s\S]*name: '@quarkfan\/quark-self-ai\/executor-router'/)
 assert.match(dump, /id: quark-action-ledger[\s\S]*name: '@quarkfan\/quark-self-ai\/action-ledger'/)
+assert.match(dump, /id: quark-dynamic-plugin-policy[\s\S]*name: '@quarkfan\/quark-self-ai\/dynamic-plugin-policy'/)
+assert.match(dump, /id: dsh-tool-cordis[\s\S]*name: '@deepseek-ai\/dsh-tool-cordis'/)
 
 const ledgerPath = resolve(validationHome, 'compat-action-ledger.sqlite3')
 await rm(ledgerPath, { force: true })

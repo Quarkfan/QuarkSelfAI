@@ -11,6 +11,13 @@
 7. **Console surface**：3210 提供带登录门禁的运维控制面，3211 承载仅回环可达的 DSH 原生会话 UI；
    DSH 会话嵌入统一导航，但不会扩大到远程网络。
 
+DSH 会话显式启用官方 `@deepseek-ai/dsh-tool-cordis`，因此模型可以先检查运行时，再在当前会话中定义、
+启动、更新、停止和回滚临时 Cordis 插件。动态包仅存在于当前 DSH 进程内存中，重启即消失，不会暗中改写
+仓库或 profile。QuarkSelfAI 的 `dynamic-plugin-policy` 补齐安全边界：纯 Host 包在 `cordis_run` 前进入 DSH
+一次性 approval；带 Client 半的包沿用 DSH 原生代码审批，避免重复弹两次；`cordis_undefine` 必须批准，
+`cordis_stop` 不阻塞，作为随时可用的紧急回滚路径。需要跨重启保留的能力仍必须转成仓库内普通插件，走构建、
+测试和发布流程。
+
 DSH Loader 从包根的 named `apply(ctx, config)` 装配 `LarkCliService`。包根不提供 default export，避免
 Loader 将 namespace 折叠后丢失插件元数据。该入口只注册 capability，不自动调用 `start()`；现网消费者
 是否启动仍由独立运行时门禁决定。

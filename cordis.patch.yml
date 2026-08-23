@@ -83,3 +83,7 @@
         leaseMs: 7200000
         retryDelayMs: 120000
         maxAttempts: 5
+    - id: quark-dynamic-plugin-policy
+      name: '@quarkfan/quark-self-ai/dynamic-plugin-policy'
+    - id: dsh-tool-cordis
+      name: '@deepseek-ai/dsh-tool-cordis'

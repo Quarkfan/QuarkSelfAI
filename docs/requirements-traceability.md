@@ -18,6 +18,7 @@
 | 读取附近上下文与最新会话尾部，避免迟到任务和已回复后再建任务 | focus-intake, context-and-external-guard | stale message 双窗口读取、settle window、低信号清理；现网 41/41 来源有上下文 | complete |
 | 外部群不追问、不回复；无法确认群属性时 fail closed | context-and-external-guard | external/unknown group 阻断测试；实时只读查询“油脂客户沟通群”返回 `external=true` | complete |
 | 必要追问标注 AI 分身；正式回复必须先由本人确认 | context-and-external-guard, approval-cards | 策略/审批测试；现网 10 个卡片回调无重复、3 个待确认动作跨重启保留 | complete |
+| 可在 DSH 会话中自然语言创建临时插件，启动需明确批准且可回滚 | dsh-tool-cordis, dynamic-plugin-policy | Cordis 配置兼容校验；Host/Client 单次审批分流与删除门禁单测 | complete |
 | 交互消息使用卡片、按钮和输入框；普通通知格式化 | approval-cards | Card 2.0 hierarchy、button/input/select/navigation 测试及现网卡片回调 | complete |
 | 自动化待办只建真正任务；禁止 NOTE；标题一眼可见紧急/关键；标签、优先级、截止日合理 | dida-projection | task admission/presentation、NOTE/TEXT 删除补偿、实际 kind 核验测试 | gated：当前 schema 真实结果仍为 0/20 |
 | 同一事项优先更新而非重复创建；仅物质变化通知；每次重写快速摘要 | dida-projection | marker/matter 搜索、created/updated/unchanged、material change、通知去重测试 | observing：23 次真实创建/更新结构通过，结果文件样本不足 |
