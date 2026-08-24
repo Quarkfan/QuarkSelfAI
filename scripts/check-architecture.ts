@@ -67,7 +67,7 @@ for (const filename of files) {
       && startsWithAny(to, ['src/lark/', 'src/blacklake/', 'src/runtime/compat', 'src/migration/', 'src/web/', 'src/bootstrap/'])) {
       violations.push(`${from} imports upper or migration layer ${to}`)
     }
-    if (from.startsWith('src/web/') && startsWithAny(to, ['src/lark/', 'src/blacklake/', 'src/runtime/compat', 'src/migration/'])) {
+    if (from.startsWith('src/web/') && startsWithAny(to, ['src/lark/', 'src/blacklake/', 'src/runtime/', 'src/migration/', 'src/config/feature-parity'])) {
       violations.push(`${from} imports feature or migration implementation ${to}`)
     }
     if (to.startsWith('src/runtime/compat') && from !== 'src/bootstrap/application.ts') {

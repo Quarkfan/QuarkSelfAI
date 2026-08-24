@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url'
 import type { RuntimeConfig } from '../src/config/runtime.js'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 import { createConsoleServer } from '../src/web/server.js'
-import type { RuntimeSnapshot } from '../src/runtime/compat.js'
+import type { RuntimeSnapshot } from '../src/platform/operations.js'
+import { loadFeatureParity } from '../src/config/feature-parity.js'
 
 const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
 
@@ -27,7 +28,7 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     kernel: { mode: 'off' },
   }
   let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
-  const server = createConsoleServer(store, config, { snapshot: () => worker })
+  const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadFeatureParity })
   server.listen(0, '127.0.0.1')
   try {
     await once(server, 'listening')
@@ -114,7 +115,7 @@ test('reports an accepted-risk cutover without falsifying feature parity', async
     kernel: { mode: 'off' },
   }
   const worker: RuntimeSnapshot = { mode: 'compat', state: 'ready', messageReady: true, cardReady: true }
-  const server = createConsoleServer(store, config, { snapshot: () => worker })
+  const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadFeatureParity })
   server.listen(0, '127.0.0.1')
   try {
     await once(server, 'listening')

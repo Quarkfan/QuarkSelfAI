@@ -1,18 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { once } from 'node:events'
+import type { KernelSnapshot, KernelStatusProvider } from '../platform/operations.js'
 
-export interface KernelSnapshot {
-  readonly mode: 'off' | 'dsh'
-  readonly state: 'stopped' | 'starting' | 'ready' | 'degraded' | 'failed'
-  readonly profile?: string
-  readonly pid?: number
-  readonly startedAt?: string
-  readonly lastError?: string
-}
-
-export interface KernelStatusProvider {
-  snapshot(): KernelSnapshot
-}
+export type { KernelSnapshot, KernelStatusProvider } from '../platform/operations.js'
 
 export class DisabledKernelRuntime implements KernelStatusProvider {
   snapshot(): KernelSnapshot {

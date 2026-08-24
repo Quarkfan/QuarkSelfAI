@@ -7,6 +7,7 @@ import { CompatRuntime } from '../runtime/compat.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import { LifecycleSupervisor, type ComponentFailure, type ManagedComponent } from '../platform/lifecycle.js'
 import { ControlOnlyRuntime } from '../platform/operations.js'
+import { loadFeatureParity } from '../config/feature-parity.js'
 
 export interface AssistantApplication {
   start(): Promise<void>
@@ -21,7 +22,7 @@ export async function createAssistantApplication(config: RuntimeConfig): Promise
     ? new CompatRuntime(config.runtime.configPath, { workspaceRoots: config.execution.workspaceRoots })
     : new ControlOnlyRuntime()
   const kernel = config.kernel.mode === 'dsh' ? new DshKernelRuntime(config.kernel) : new DisabledKernelRuntime()
-  const server = createConsoleServer(store, config, runtime, kernel)
+  const server = createConsoleServer(store, config, runtime, kernel, { inspect: loadFeatureParity })
   const components: ManagedComponent[] = [
     {
       id: 'assistant-store',

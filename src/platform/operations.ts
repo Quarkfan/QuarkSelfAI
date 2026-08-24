@@ -33,9 +33,40 @@ export interface RuntimeDiagnostics {
   readonly retention: Readonly<Record<string, number | boolean>>
 }
 
+export interface KernelSnapshot {
+  readonly mode: 'off' | 'dsh'
+  readonly state: 'stopped' | 'starting' | 'ready' | 'degraded' | 'failed'
+  readonly profile?: string
+  readonly pid?: number
+  readonly startedAt?: string
+  readonly lastError?: string
+}
+
+export interface KernelStatusProvider { snapshot(): KernelSnapshot }
+
+export interface TakeoverReadinessReport {
+  readonly source: string
+  readonly features: readonly unknown[]
+  readonly takeoverReady: boolean
+  readonly missingRequired: number
+  readonly completed: number
+}
+
+export interface TakeoverReadinessProvider { inspect(): Promise<TakeoverReadinessReport> }
+
 /** Neutral runtime status used when no message consumer feature is mounted. */
 export class ControlOnlyRuntime implements RuntimeStatusProvider {
   snapshot(): RuntimeSnapshot {
     return { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
+  }
+}
+
+export class ControlOnlyKernel implements KernelStatusProvider {
+  snapshot(): KernelSnapshot { return { mode: 'off', state: 'stopped' } }
+}
+
+export class UnconfiguredReadiness implements TakeoverReadinessProvider {
+  async inspect(): Promise<TakeoverReadinessReport> {
+    return { source: 'unconfigured', features: [], takeoverReady: false, missingRequired: 0, completed: 0 }
   }
 }

@@ -4,13 +4,14 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { RuntimeConfig } from '../config/runtime.js'
-import { loadFeatureParity } from '../config/feature-parity.js'
 import type { AssistantStore } from '../storage/types.js'
-import { ControlOnlyRuntime, type RuntimeStatusProvider } from '../platform/operations.js'
+import {
+  ControlOnlyKernel, ControlOnlyRuntime, UnconfiguredReadiness,
+  type KernelStatusProvider, type RuntimeStatusProvider, type TakeoverReadinessProvider,
+} from '../platform/operations.js'
 import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js'
 import { matchesPolicy } from '../policy/engine.js'
 import type { PolicyDocument } from '../policy/types.js'
-import { DisabledKernelRuntime, type KernelStatusProvider } from '../runtime/kernel.js'
 import { loadModuleCatalog, summarizeModules } from '../platform/modules.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
@@ -76,7 +77,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, config: RuntimeConfig) {
+async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readiness: TakeoverReadinessProvider, config: RuntimeConfig) {
   const [overview, events, matters, actions, approvals, policies, parity, diagnostics, moduleCatalog] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
@@ -84,7 +85,7 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
     store.recentActions(12),
     store.pendingApprovals(12),
     store.policies(20),
-    loadFeatureParity(),
+    readiness.inspect(),
     runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
     loadModuleCatalog(),
   ])
@@ -145,7 +146,8 @@ export function createConsoleServer(
   store: AssistantStore,
   config: RuntimeConfig,
   runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
-  kernelStatus: KernelStatusProvider = new DisabledKernelRuntime(),
+  kernelStatus: KernelStatusProvider = new ControlOnlyKernel(),
+  readiness: TakeoverReadinessProvider = new UnconfiguredReadiness(),
 ): Server {
   const policyAuthoring = new PolicyAuthoringService(store, {
     async compile() {
@@ -254,7 +256,7 @@ export function createConsoleServer(
       if (url.pathname.startsWith('/api/')) {
         if (request.method === 'GET' && url.pathname === '/api/health') {
           await store.health()
-          const parity = await loadFeatureParity()
+          const parity = await readiness.inspect()
           const worker = runtimeStatus.snapshot()
           const workerHealthy = worker.mode === 'control-only' || worker.state === 'ready'
           const kernel = kernelStatus.snapshot()
@@ -276,7 +278,7 @@ export function createConsoleServer(
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
-          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, config) })
+          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, readiness, config) })
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dsh-health') {

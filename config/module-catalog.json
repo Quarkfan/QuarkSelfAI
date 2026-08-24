@@ -21,10 +21,10 @@
 
     { "id": "feishu-channel", "classification": "feature", "layer": "adapter", "status": "native", "source": "src/lark/service.ts", "dependsOn": ["channel-contract"] },
     { "id": "feishu-effect-contracts", "classification": "feature", "layer": "contract", "status": "planned", "source": "src/lark/effects.ts", "dependsOn": ["workflow-effect-contracts", "feishu-channel"] },
-    { "id": "feishu-native-ingress", "classification": "feature", "layer": "adapter", "status": "planned", "source": "src/lark/ingress-plugin.ts", "dependsOn": ["feishu-channel", "durable-action-ledger"] },
+    { "id": "feishu-native-ingress", "classification": "feature", "layer": "adapter", "status": "planned", "source": "src/lark/ingress-plugin.ts", "dependsOn": ["feishu-channel", "durable-state-host"] },
     { "id": "message-intake-native", "classification": "feature", "layer": "workflow", "status": "planned", "source": "src/intake/plugin.ts", "dependsOn": ["durable-event-runtime", "durable-workflow-runtime", "workflow-effect-contracts", "feishu-native-ingress"] },
     { "id": "message-projection-contracts", "classification": "feature", "layer": "contract", "status": "planned", "source": "src/intake/types.ts", "dependsOn": ["workflow-effect-contracts", "task-system-effects", "feishu-effect-contracts"] },
-    { "id": "collaboration-learning-native", "classification": "feature", "layer": "policy", "status": "planned", "source": "src/collaboration/plugin.ts", "dependsOn": ["policy-runtime", "durable-action-ledger"] },
+    { "id": "collaboration-learning-native", "classification": "feature", "layer": "policy", "status": "planned", "source": "src/collaboration/plugin.ts", "dependsOn": ["policy-runtime", "durable-state-host"] },
     { "id": "task-system-effects", "classification": "feature", "layer": "contract", "status": "planned", "source": "src/task-system/effects.ts", "dependsOn": ["workflow-effect-contracts"] },
     { "id": "dida-maintenance-native", "classification": "feature", "layer": "workflow", "status": "planned", "source": "src/task-maintenance/plugin.ts", "dependsOn": ["durable-workflow-runtime", "workflow-effect-contracts", "task-system-effects"] },
     { "id": "codex-session-effects", "classification": "feature", "layer": "contract", "status": "planned", "source": "src/session-lifecycle/types.ts", "dependsOn": ["workflow-effect-contracts"] },
