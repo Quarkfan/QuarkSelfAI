@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { loadModuleCatalog } from '../platform/modules.js'
 
 export type FeatureStatus = 'complete' | 'partial' | 'missing'
 
@@ -17,6 +18,8 @@ export interface FeatureParityReport {
   readonly takeoverReady: boolean
   readonly missingRequired: number
   readonly completed: number
+  readonly nativeCutoverReady: boolean
+  readonly nativeCutoverBlockers: readonly string[]
 }
 
 export interface TakeoverRiskAcceptance {
@@ -57,15 +60,21 @@ export function evaluateTakeoverRiskAcceptance(
 const manifestFile = fileURLToPath(new URL('../../config/feature-parity.json', import.meta.url))
 
 export async function loadFeatureParity(): Promise<FeatureParityReport> {
-  const manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as {
-    source: string
-    features: FeatureParityItem[]
-  }
+  const [manifest, catalog] = await Promise.all([
+    readFile(manifestFile, 'utf8').then(value => JSON.parse(value) as { source: string; features: FeatureParityItem[] }),
+    loadModuleCatalog(),
+  ])
   const incomplete = manifest.features.filter((feature) => feature.requiredForTakeover && feature.status !== 'complete')
+  const nativeCutoverBlockers = catalog.modules
+    .filter(module => module.classification === 'feature' && module.status !== 'native')
+    .map(module => module.id)
+    .sort()
   return {
     ...manifest,
     takeoverReady: incomplete.length === 0,
     missingRequired: incomplete.length,
     completed: manifest.features.filter((feature) => feature.status === 'complete').length,
+    nativeCutoverReady: incomplete.length === 0 && nativeCutoverBlockers.length === 0,
+    nativeCutoverBlockers,
   }
 }

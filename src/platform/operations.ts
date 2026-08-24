@@ -50,6 +50,8 @@ export interface TakeoverReadinessReport {
   readonly takeoverReady: boolean
   readonly missingRequired: number
   readonly completed: number
+  readonly nativeCutoverReady?: boolean
+  readonly nativeCutoverBlockers?: readonly string[]
 }
 
 export interface TakeoverReadinessProvider { inspect(): Promise<TakeoverReadinessReport> }
@@ -67,6 +69,6 @@ export class ControlOnlyKernel implements KernelStatusProvider {
 
 export class UnconfiguredReadiness implements TakeoverReadinessProvider {
   async inspect(): Promise<TakeoverReadinessReport> {
-    return { source: 'unconfigured', features: [], takeoverReady: false, missingRequired: 0, completed: 0 }
+    return { source: 'unconfigured', features: [], takeoverReady: false, missingRequired: 0, completed: 0, nativeCutoverReady: false, nativeCutoverBlockers: ['readiness-provider-unconfigured'] }
   }
 }

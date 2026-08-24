@@ -94,8 +94,10 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
       version: '0.1.0',
       storage: store.kind,
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
-      mode: parity.takeoverReady
-        ? 'ready-for-cutover'
+      mode: parity.nativeCutoverReady
+        ? 'native-ready'
+        : parity.takeoverReady
+          ? 'compatibility-operational'
         : config.runtime.mode === 'compat' ? 'accepted-risk-cutover' : 'migration',
       worker: runtimeStatus.snapshot(),
       kernel: kernelStatus.snapshot(),
@@ -265,8 +267,12 @@ export function createConsoleServer(
             ok: workerHealthy && kernelHealthy,
             storage: store.kind,
             takeoverReady: parity.takeoverReady,
-            operationalMode: parity.takeoverReady
-              ? 'ready-for-cutover'
+            nativeCutoverReady: parity.nativeCutoverReady ?? false,
+            nativeCutoverBlockers: parity.nativeCutoverBlockers ?? [],
+            operationalMode: parity.nativeCutoverReady
+              ? 'native-ready'
+              : parity.takeoverReady
+                ? 'compatibility-operational'
               : config.runtime.mode === 'compat' ? 'accepted-risk-cutover' : 'migration',
             worker,
             kernel,

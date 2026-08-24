@@ -53,6 +53,9 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
 
+`feature-parity` 的业务完成度与模块目录的原生所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
+`feature/compat` 或 `feature/planned`，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
+
 DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-state`。新功能不得把私有 JSON state、
 业务 timer 或状态读写重新塞进 action ledger；跨重启流程必须使用 `quark-durable-workflows`。
 外层控制面与 DSH 在 SQLite 模式下必须解析到同一个 `SQLITE_PATH`，PostgreSQL 模式下必须使用同一个

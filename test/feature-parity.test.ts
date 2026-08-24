@@ -1,12 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { evaluateTakeoverRiskAcceptance, type FeatureParityReport } from '../src/config/feature-parity.js'
+import { evaluateTakeoverRiskAcceptance, loadFeatureParity, type FeatureParityReport } from '../src/config/feature-parity.js'
 
 const report: FeatureParityReport = {
   source: 'test',
   takeoverReady: false,
   missingRequired: 2,
   completed: 1,
+  nativeCutoverReady: false,
+  nativeCutoverBlockers: ['focus-intake'],
   features: [
     { id: 'complete', name: 'complete', requiredForTakeover: true, status: 'complete', evidence: 'test' },
     { id: 'dida-projection', name: 'dida', requiredForTakeover: true, status: 'partial', evidence: 'test' },
@@ -24,6 +26,13 @@ test('allows only an exact owner-accepted set of known incomplete takeover risks
   assert.equal(result.acceptedRiskCutover, true)
   assert.deepEqual(result.unacceptedIncomplete, [])
   assert.deepEqual(result.unknownAccepted, [])
+})
+
+test('keeps functional parity separate from native module ownership', async () => {
+  const current = await loadFeatureParity()
+  assert.equal(current.nativeCutoverReady, false)
+  assert.ok(current.nativeCutoverBlockers.includes('message-intake-native'))
+  assert.ok(current.nativeCutoverBlockers.includes('focus-intake'))
 })
 
 test('fails closed for missing confirmation, omitted risks, and unknown risk ids', () => {
