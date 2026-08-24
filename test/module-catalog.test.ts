@@ -141,6 +141,59 @@ test('rejects active unfinished modules and the ambiguous legacy status field', 
   }), /ambiguous legacy status/)
 })
 
+test('fails closed for misspelled fields and invalid migration ownership combinations', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [],
+    module: [],
+  }), /module catalog has unknown fields: module/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{
+      id: 'typo', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive',
+      source: 'a', owns: [], dependsOn: [], runtimeDependOn: [],
+    }],
+  }), /unknown fields: runtimeDependOn/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{
+      id: 'ordinary', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'inactive',
+      source: 'a', owns: [], dependsOn: [], hostedBy: 'migration-a',
+    }],
+  }), /can declare hostedBy only with runtime=compat/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{
+      id: 'ordinary', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'inactive',
+      source: 'a', owns: [], dependsOn: [], exitCriteria: 'delete later',
+    }],
+  }), /only migration modules can declare exitCriteria/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{
+      id: 'migration-a', classification: 'migration', layer: 'operations', implementation: 'ready', runtime: 'compat',
+      source: 'a', owns: [], dependsOn: [], hostedBy: 'migration-a', exitCriteria: 'delete later',
+    }],
+  }), /only feature modules can use runtime=compat/)
+})
+
+test('rejects module source paths that escape the project', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{
+      id: 'escape', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive',
+      source: '../outside.ts', owns: [], dependsOn: [],
+    }],
+  }), /must be a normalized project-relative path/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{
+      id: 'windows-escape', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive',
+      source: '..\\outside.ts', owns: [], dependsOn: [],
+    }],
+  }), /must be a normalized project-relative path/)
+})
+
 test('requires each effect to have only one provider', () => {
   assert.throws(() => validateModuleCatalog({
     version: 3,

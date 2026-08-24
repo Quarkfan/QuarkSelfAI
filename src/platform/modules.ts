@@ -62,6 +62,11 @@ const classifications = new Set<ModuleClassification>(['skeleton', 'feature', 'm
 const layers = new Set<ModuleLayer>(['kernel', 'contract', 'adapter', 'provider', 'policy', 'workflow', 'projection', 'surface', 'operations'])
 const implementations = new Set<ModuleImplementation>(['planned', 'partial', 'ready'])
 const runtimes = new Set<ModuleRuntime>(['inactive', 'shadow', 'active', 'compat'])
+const catalogFields = new Set(['version', 'modules'])
+const moduleFields = new Set([
+  'id', 'classification', 'layer', 'implementation', 'runtime', 'source', 'owns', 'dependsOn',
+  'runtimeDependsOn', 'requiresEffects', 'providesEffects', 'plugin', 'hostedBy', 'exitCriteria',
+])
 
 export async function loadModuleCatalog(path = catalogPath): Promise<AssistantModuleCatalog> {
   return validateModuleCatalog(JSON.parse(await readFile(path, 'utf8')))
@@ -71,6 +76,8 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
   if (!isRecord(value) || value.version !== 3 || !Array.isArray(value.modules)) {
     throw new Error('module catalog must be a version 3 object with a modules array')
   }
+  const unknownCatalogFields = Object.keys(value).filter(key => !catalogFields.has(key))
+  if (unknownCatalogFields.length) throw new Error(`module catalog has unknown fields: ${unknownCatalogFields.join(', ')}`)
   const modules = value.modules.map(parseModule)
   const byId = new Map<string, AssistantModuleDescriptor>()
   for (const module of modules) {
@@ -89,10 +96,13 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       }
     }
     if (module.runtime === 'compat') {
+      if (module.classification !== 'feature') throw new Error(`only feature modules can use runtime=compat: ${module.id}`)
       const host = module.hostedBy ? byId.get(module.hostedBy) : undefined
       if (!host || host.classification !== 'migration') {
         throw new Error(`compat module ${module.id} must name a migration host`)
       }
+    } else if (module.hostedBy !== undefined) {
+      throw new Error(`module ${module.id} can declare hostedBy only with runtime=compat`)
     }
     if (module.runtime === 'active' && module.implementation !== 'ready') {
       throw new Error(`active module ${module.id} must have a ready implementation`)
@@ -102,6 +112,9 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
     if (module.classification === 'migration' && !module.exitCriteria?.trim()) {
       throw new Error(`migration module ${module.id} must define exitCriteria`)
+    }
+    if (module.classification !== 'migration' && module.exitCriteria !== undefined) {
+      throw new Error(`only migration modules can declare exitCriteria: ${module.id}`)
     }
     if (module.source.startsWith('src/') && !module.owns.includes(module.source)) {
       throw new Error(`module ${module.id} must own its src entrypoint ${module.source}`)
@@ -187,6 +200,9 @@ export function summarizeModules(catalog: AssistantModuleCatalog): ModuleSummary
 
 function parseModule(value: unknown): AssistantModuleDescriptor {
   if (!isRecord(value)) throw new Error('each module descriptor must be an object')
+  if ('status' in value) throw new Error('module uses ambiguous legacy status; use implementation and runtime')
+  const unknownFields = Object.keys(value).filter(key => !moduleFields.has(key))
+  if (unknownFields.length) throw new Error(`module descriptor has unknown fields: ${unknownFields.join(', ')}`)
   const id = string(value.id, 'module id')
   if (!/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(`invalid module id: ${id}`)
   const classification = string(value.classification, `classification for ${id}`) as ModuleClassification
@@ -197,7 +213,6 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
   if (!layers.has(layer)) throw new Error(`invalid layer for ${id}: ${layer}`)
   if (!implementations.has(implementation)) throw new Error(`invalid implementation for ${id}: ${implementation}`)
   if (!runtimes.has(runtime)) throw new Error(`invalid runtime for ${id}: ${runtime}`)
-  if ('status' in value) throw new Error(`module ${id} uses ambiguous legacy status; use implementation and runtime`)
   if (!Array.isArray(value.dependsOn) || value.dependsOn.some(item => typeof item !== 'string')) {
     throw new Error(`dependsOn for ${id} must be a string array`)
   }
@@ -225,21 +240,28 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
   const providesEffects = effectList(value.providesEffects, `providesEffects for ${id}`)
   if (dependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
   if (runtimeDependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
+  const hostedBy = value.hostedBy === undefined ? undefined : string(value.hostedBy, `hostedBy for ${id}`)
+  const exitCriteria = value.exitCriteria === undefined ? undefined : string(value.exitCriteria, `exitCriteria for ${id}`)
+  const source = string(value.source, `source for ${id}`)
+  if (source !== source.trim() || source.startsWith('/') || source.includes('\\')
+    || source.split('/').some(segment => segment === '.' || segment === '..')) {
+    throw new Error(`source for ${id} must be a normalized project-relative path: ${source}`)
+  }
   return {
     id,
     classification,
     layer,
     implementation,
     runtime,
-    source: string(value.source, `source for ${id}`),
+    source,
     owns,
     dependsOn,
     runtimeDependsOn,
     requiresEffects,
     providesEffects,
     ...(value.plugin === undefined ? {} : { plugin: parsePlugin(value.plugin, id) }),
-    ...(typeof value.hostedBy === 'string' ? { hostedBy: value.hostedBy } : {}),
-    ...(typeof value.exitCriteria === 'string' ? { exitCriteria: value.exitCriteria } : {}),
+    ...(hostedBy === undefined ? {} : { hostedBy }),
+    ...(exitCriteria === undefined ? {} : { exitCriteria }),
   }
 }
 

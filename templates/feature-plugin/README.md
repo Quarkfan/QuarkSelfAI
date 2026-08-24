@@ -12,6 +12,8 @@
 - 插件入口只负责装配 Service，不在模块顶层启动消费者或定时器；
 - 外部协议放 adapter，业务判断放 service/workflow；
 - 一个模块只承担一种主要层次；contract、adapter、workflow 复杂时拆成多个 catalog module；
+- catalog 及 descriptor 不接受未登记字段或未规范化、逃逸项目目录的 `source`；仅 compat feature 可声明 `hostedBy`，仅
+  migration 可声明 `exitCriteria`；
 - 只依赖 catalog 中声明的骨架或功能契约；
 - 外部写入进入 durable action/approval；
 - 长期等待进入 durable workflow，事件源进入 durable inbox；不得新增业务 `sleep` 或私有 JSON 真源；
@@ -22,4 +24,5 @@
 `npm run architecture:check` 会验证所有 `src/*.ts` 的唯一 owner、真实 import 与 `dependsOn` 双向一致、
 DSH/Cordis import 对应 `runtimeDependsOn`、effect provider 唯一性，
 并双向核对 `plugin.profileId`、`package.json#exports` 与 Cordis profile；漏挂、错挂或无主本地插件都会失败；
+未知字段和非法 migration/compat 组合也会失败关闭；
 `test/feature-plugin-template.test.ts` 会额外阻止模板重新漂移到旧 schema。
