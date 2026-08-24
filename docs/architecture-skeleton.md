@@ -11,7 +11,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | --- | --- | --- |
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
-| Module catalog | 模块分类、依赖和迁移退出条件 | 动态启停业务功能 |
+| Module catalog | 模块分类、逐文件源码所有权、真实 import 依赖和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | 批准绑定、租约、重试、结算 | 选择联系人或撰写回复 |
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
@@ -29,6 +29,11 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 通道和 executor 使用插件注册的开放标识；现有 Claude → Codex fallback 是组合配置，不是内核分支。事件 `kind`
 由 channel adapter 规范化后持久化，storage 不允许通过飞书 EventKey 猜测领域类型。
 控制台也只能读取通用状态端口；迁移就绪度、compat 诊断和 DSH 进程状态由 composition root 注入，控制台不得直接读取迁移 manifest 或 runtime 实现。
+
+`module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件必须恰好出现
+一次，模块入口也必须由自身拥有。架构检查会把源码的相对 import 映射回 owner，并要求真实依赖出现在
+`dependsOn` 中；新增 helper、重复归属、失效路径和未声明跨模块 import 都会阻断 `npm check`。这使分类约束
+覆盖全部源码，而不是只检查少数代表入口。
 
 ## 功能
 
@@ -54,6 +59,8 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
+5. 当前 `app/bootstrap/runtime config` 仍直接组合 compatibility host 和 takeover readiness，因此被明确归为
+   `bridge-compat-host` 迁移所有权；原生 application composition 尚未建立，不能把当前启动入口误称为最终骨架。
 
 `feature-parity` 的业务完成度与模块目录的原生所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
 `feature/compat` 或 `feature/planned`，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
@@ -78,7 +85,7 @@ DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-sta
 ## 新想法如何接入
 
 1. 先回答：换掉当前外部系统后，这个机制是否仍成立？若否，它是 feature。
-2. 在 `config/module-catalog.json` 增加模块及依赖；`architecture:check` 必须通过。
+2. 在 `config/module-catalog.json` 增加模块、精确 `owns` 文件和真实依赖；`architecture:check` 必须通过。
 3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表。
 4. 外部写入必须创建 durable action/approval；长期等待必须持久化，不靠进程内 `sleep`。
 5. 用 DSH 动态插件验证想法可以，但跨重启能力必须沉淀为仓库插件。

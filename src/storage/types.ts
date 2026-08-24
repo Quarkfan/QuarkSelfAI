@@ -3,6 +3,9 @@ import type { PolicyDocument, PolicySimulation } from '../policy/types.js'
 import type { PolicySample } from '../policy/types.js'
 
 export type StorageKind = 'sqlite' | 'postgres'
+export type StorageConfig =
+  | { readonly kind: 'sqlite'; readonly path: string }
+  | { readonly kind: 'postgres'; readonly databaseUrl: string }
 
 export interface StoredEvent {
   readonly id: string

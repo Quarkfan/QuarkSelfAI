@@ -11,6 +11,8 @@ export interface AssistantModuleDescriptor {
   readonly layer: ModuleLayer
   readonly status: ModuleStatus
   readonly source: string
+  /** Exact src/*.ts files owned by this module. New source files must be assigned explicitly. */
+  readonly owns: readonly string[]
   readonly dependsOn: readonly string[]
   readonly hostedBy?: string
   readonly exitCriteria?: string
@@ -60,9 +62,34 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     if (module.classification === 'migration' && !module.exitCriteria?.trim()) {
       throw new Error(`migration module ${module.id} must define exitCriteria`)
     }
+    if (module.source.startsWith('src/') && !module.owns.includes(module.source)) {
+      throw new Error(`module ${module.id} must own its src entrypoint ${module.source}`)
+    }
+  }
+  const ownership = new Map<string, string>()
+  for (const module of modules) {
+    for (const source of module.owns) {
+      const existing = ownership.get(source)
+      if (existing) throw new Error(`source ${source} is owned by both ${existing} and ${module.id}`)
+      ownership.set(source, module.id)
+    }
   }
   assertAcyclic(modules, byId)
   return { version: 1, modules }
+}
+
+export function validateSourceOwnership(catalog: AssistantModuleCatalog, sourceFiles: readonly string[]): void {
+  const expected = new Set(sourceFiles)
+  const owned = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
+  const missing = [...expected].filter(source => !owned.has(source)).sort()
+  const stale = [...owned.keys()].filter(source => !expected.has(source)).sort()
+  if (missing.length || stale.length) {
+    const details = [
+      ...missing.map(source => `unowned source: ${source}`),
+      ...stale.map(source => `owned source does not exist: ${source}`),
+    ]
+    throw new Error(`source ownership violations:\n${details.join('\n')}`)
+  }
 }
 
 export function summarizeModules(catalog: AssistantModuleCatalog): Record<ModuleClassification, Record<ModuleStatus, number>> {
@@ -88,6 +115,16 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
   if (!Array.isArray(value.dependsOn) || value.dependsOn.some(item => typeof item !== 'string')) {
     throw new Error(`dependsOn for ${id} must be a string array`)
   }
+  if (!Array.isArray(value.owns) || value.owns.some(item => typeof item !== 'string')) {
+    throw new Error(`owns for ${id} must be a string array`)
+  }
+  const owns = [...new Set(value.owns as string[])]
+  if (owns.length !== value.owns.length) throw new Error(`owns for ${id} must not contain duplicates`)
+  for (const ownedSource of owns) {
+    if (!/^src\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.ts$/.test(ownedSource)) {
+      throw new Error(`invalid owned source for ${id}: ${ownedSource}`)
+    }
+  }
   const dependsOn = [...new Set(value.dependsOn as string[])]
   if (dependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
   return {
@@ -96,6 +133,7 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     layer,
     status,
     source: string(value.source, `source for ${id}`),
+    owns,
     dependsOn,
     ...(typeof value.hostedBy === 'string' ? { hostedBy: value.hostedBy } : {}),
     ...(typeof value.exitCriteria === 'string' ? { exitCriteria: value.exitCriteria } : {}),

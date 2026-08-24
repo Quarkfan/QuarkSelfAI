@@ -1,7 +1,8 @@
 # 架构
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
-`config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md)。本文件描述
+`config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
+[ADR-0009](adr/0009-exhaustive-source-ownership.md)。本文件描述
 运行链路，不能用来把 compatibility host 误称为长期骨架。
 
 ## 分层

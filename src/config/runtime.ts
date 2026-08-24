@@ -1,15 +1,13 @@
 import { existsSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
 import type { AssistantIdentity } from '../domain/contracts.js'
-import type { StorageKind } from '../storage/types.js'
+import type { StorageConfig, StorageKind } from '../storage/types.js'
 
 export interface RuntimeConfig {
   readonly execution:
     | { readonly mode: 'local'; readonly workspaceRoots: readonly string[] }
     | { readonly mode: 'remote'; readonly workspaceRoots: readonly [] }
-  readonly storage:
-    | { readonly kind: 'sqlite'; readonly path: string }
-    | { readonly kind: 'postgres'; readonly databaseUrl: string }
+  readonly storage: StorageConfig
   readonly web: {
     readonly host: string
     readonly port: number

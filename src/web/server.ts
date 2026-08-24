@@ -3,7 +3,6 @@ import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { RuntimeConfig } from '../config/runtime.js'
 import type { AssistantStore } from '../storage/types.js'
 import {
   ControlOnlyKernel, ControlOnlyRuntime, UnconfiguredReadiness,
@@ -17,6 +16,17 @@ import { loadModuleCatalog, summarizeModules } from '../platform/modules.js'
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
 const sessionCookie = 'quark_console_session'
+
+export interface ConsoleConfig {
+  readonly execution: { readonly mode: 'local' | 'remote'; readonly workspaceRoots: readonly string[] }
+  readonly web: {
+    readonly consoleToken?: string
+    readonly secureCookie: boolean
+    readonly dshUrl?: string
+  }
+  readonly controlPlane: { readonly token?: string }
+  readonly runtime: { readonly mode: 'control-only' | 'compat' }
+}
 
 const contentTypes: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
@@ -49,14 +59,14 @@ function cookie(request: IncomingMessage, name: string): string | undefined {
   return undefined
 }
 
-function authorized(request: IncomingMessage, config: RuntimeConfig): boolean {
+function authorized(request: IncomingMessage, config: ConsoleConfig): boolean {
   const expected = config.web.consoleToken
   if (!expected) return true
   const current = cookie(request, sessionCookie)
   return current !== undefined && safeEqual(current, tokenHash(expected))
 }
 
-function controlPlaneAuthorized(request: IncomingMessage, config: RuntimeConfig): boolean {
+function controlPlaneAuthorized(request: IncomingMessage, config: ConsoleConfig): boolean {
   const expected = config.controlPlane.token
   if (!expected) return false
   const authorization = request.headers.authorization
@@ -77,7 +87,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readiness: TakeoverReadinessProvider, config: RuntimeConfig) {
+async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readiness: TakeoverReadinessProvider, config: ConsoleConfig) {
   const [overview, events, matters, actions, approvals, policies, parity, diagnostics, moduleCatalog] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
@@ -146,7 +156,7 @@ async function staticFile(pathname: string, response: ServerResponse): Promise<v
 
 export function createConsoleServer(
   store: AssistantStore,
-  config: RuntimeConfig,
+  config: ConsoleConfig,
   runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
   kernelStatus: KernelStatusProvider = new ControlOnlyKernel(),
   readiness: TakeoverReadinessProvider = new UnconfiguredReadiness(),

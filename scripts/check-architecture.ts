@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
-import { loadModuleCatalog, summarizeModules } from '../src/platform/modules.js'
+import { loadModuleCatalog, summarizeModules, validateSourceOwnership } from '../src/platform/modules.js'
 
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
@@ -41,6 +41,9 @@ const compatModuleIds = catalog.modules.filter(module => module.classification =
 assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'migration units must cover every compat feature exactly once')
 
 const files = await sourceFiles(resolve(root, 'src'))
+validateSourceOwnership(catalog, files.map(filename => relative(root, filename)))
+const moduleById = new Map(catalog.modules.map(module => [module.id, module]))
+const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
 const violations: string[] = []
 for (const filename of files) {
   const source = await readFile(filename, 'utf8')
@@ -59,6 +62,11 @@ for (const filename of files) {
   for (const specifier of relativeImports(source)) {
     const target = resolve(dirname(filename), specifier).replace(/\.js$/, '.ts')
     const to = relative(root, target)
+    const fromOwner = ownerBySource.get(from)
+    const toOwner = ownerBySource.get(to)
+    if (fromOwner && toOwner && fromOwner !== toOwner && !moduleById.get(fromOwner)?.dependsOn.includes(toOwner)) {
+      violations.push(`${from} (${fromOwner}) imports ${to} (${toOwner}) without declaring the module dependency`)
+    }
     if (from.startsWith('src/platform/') && from !== 'src/platform/index.ts' && outside(to, ['src/platform/'])) {
       violations.push(`${from} imports ${to}; platform skeleton must not depend on implementation layers`)
     }

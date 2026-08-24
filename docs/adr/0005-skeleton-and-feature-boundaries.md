@@ -10,7 +10,9 @@ QuarkSelfAI 的所有模块必须明确归入三类之一，并登记在 `config
 2. `feature`：通过骨架契约实现用户可感知能力，可以安装、替换或停用；不得依赖迁移代码。
 3. `migration`：为兼容旧实现、状态搬迁、影子验证或切换证据而存在；必须写明退出条件。
 
-分类不是目录标签。`npm run architecture:check` 校验模块依赖、循环、源码入口和关键目录的 import 方向。
+分类不是目录标签。每个 `src/**/*.ts` 必须且只能由一个模块的 `owns` 清单持有；模块入口必须归自身所有。
+`npm run architecture:check` 校验模块依赖、循环、完整源码所有权、失效路径和源码真实 import 方向。
+跨模块相对 import 必须显式出现在 `dependsOn`，因此代表入口不能再掩盖未分类 helper 或隐式反向依赖。
 骨架不能依赖功能或迁移模块，功能不能依赖迁移模块。组合根可以装配三者，但不得把迁移实现重新导出成平台契约。
 
 实现状态含义：`native` 表示由正式骨架/DSH 插件直接承载；`compat` 表示仍由 migration host 承载；`planned`
@@ -41,6 +43,10 @@ QuarkSelfAI 的所有模块必须明确归入三类之一，并登记在 `config
 `bridge-compat` 仍在 DSH 外侧拥有飞书消费者、定时器和 `state.json`，父进程同时监管它和 DSH。这与最终的
 “DSH 是唯一运行内核”不一致，也使数据库与 JSON 同时成为状态来源。现阶段先用统一生命周期和模块目录把它
 隔离成有退出条件的 migration host。
+
+当前 `src/app.ts`、`src/bootstrap/application.ts` 和 `src/config/runtime.ts` 仍直接认识 compat 启动门禁，因而
+和 `src/runtime/compat.ts` 一起由 `bridge-compat-host` 迁移模块拥有。它们不是最终 application skeleton；在原生
+模块取得状态所有权后，需要建立不依赖 migration 的组合入口，再按退出条件删除这组代码。
 
 把这些消费者和写入点迁入 DSH-native 插件会改变现网核心边界，必须按仓库协作规则另设维护窗口：冻结旧
 checkpoint、逐模块切换、验证单消费者与投影血缘，并保留回滚版本。不能为了目录看起来整齐而直接搬代码。
