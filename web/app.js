@@ -41,7 +41,7 @@ function actionRows(actions, limit) {
 
 function render(data) {
   dashboard = data
-  const { runtime, overview, diagnostics, parity } = data
+  const { runtime, overview, diagnostics, readiness } = data
   $('#health-dot').className = runtime.worker.state === 'ready' && runtime.kernel.state === 'ready' ? 'ok' : 'warn'
   $('#health-text').textContent = runtime.worker.state === 'ready' && runtime.kernel.state === 'ready' ? '运行正常' : '需要检查'
   $('#metric-matters').textContent = overview.openMatters
@@ -65,8 +65,8 @@ function render(data) {
   $('#matter-table').innerHTML = data.matters.length ? data.matters.map((m) => `<tr class="clickable" data-detail="matter" data-id="${esc(m.id)}"><td><b>${esc(m.title)}</b></td><td>${esc(m.latestSummary || '—')}</td><td>${status(m.status)}</td></tr>`).join('') : emptyRow('暂无开放事项', 3)
   $('#approval-list').innerHTML = data.approvals.length ? data.approvals.map((a) => `<button class="approval-card" data-detail="approval" data-id="${esc(a.id)}"><span>${status(a.status)}</span><h3>${esc(a.prompt)}</h3><p>${esc(fmt(a.requestedAt))}</p><b>查看详情 →</b></button>`).join('') : `<div class="empty-card"><span>✓</span><h3>当前没有等待批准的事项</h3><p>需要你确认的正式回复、外部写操作和调研调用会出现在这里。</p></div>`
   $('#policy-table').innerHTML = data.policies.length ? data.policies.map((p) => `<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.sourceText)}</td><td>REV ${esc(p.revision)}</td><td>${esc(p.simulation.matchedCount)}/${esc(p.simulation.sampleCount)}</td><td>${status(p.status === 'enabled' ? 'ready' : 'disabled', p.status)}</td></tr>`).join('') : emptyRow('暂无已编译策略', 5)
-  $('#capability-summary').textContent = `${parity.completed}/${parity.features.length} 已完成`
-  $('#capability-table').innerHTML = parity.features.map((f) => `<tr><td><b>${esc(f.name)}</b></td><td>${esc(f.evidence)}</td><td>${status(f.status, f.status)}</td></tr>`).join('')
+  $('#capability-summary').textContent = `${readiness.summary.completed ?? 0}/${readiness.summary.total ?? readiness.items.length} 已完成`
+  $('#capability-table').innerHTML = readiness.items.map((f) => `<tr><td><b>${esc(f.name)}</b></td><td>${esc(f.evidence)}</td><td>${status(f.status, f.status)}</td></tr>`).join('')
   const architecture = data.architecture
   const moduleSummary = architecture?.summary
   $('#architecture-summary').textContent = moduleSummary
@@ -120,7 +120,7 @@ async function refresh() {
   } catch (error) { $('#health-dot').className = 'error'; $('#health-text').textContent = error instanceof Error ? error.message : String(error) }
 }
 
-const pageMeta = { overview:['协作总览','飞书、滴答清单与执行通道的统一运行视图'], monitors:['监控中心','检查后台任务的状态、频率与积压'], work:['事项与执行','从事实聚合到可恢复动作'], approvals:['批准台','所有高影响动作等待你的明确确认'], policies:['策略库','把自然语言偏好沉淀为可审计规则'], capabilities:['能力矩阵','查看接管完整度与实现证据'], conversation:['DSH 会话','在统一控制台使用 DeepSeek Harness'] }
+const pageMeta = { overview:['协作总览','飞书、滴答清单与执行通道的统一运行视图'], monitors:['监控中心','检查后台任务的状态、频率与积压'], work:['事项与执行','从事实聚合到可恢复动作'], approvals:['批准台','所有高影响动作等待你的明确确认'], policies:['策略库','把自然语言偏好沉淀为可审计规则'], capabilities:['能力矩阵','查看当前 readiness gate 与实现证据'], conversation:['DSH 会话','在统一控制台使用 DeepSeek Harness'] }
 function switchView(name) { $$('#navigation button').forEach((b)=>b.classList.toggle('active', b.dataset.view===name)); $$('.view').forEach((v)=>v.classList.toggle('active',v.id===`view-${name}`)); const [title,sub]=pageMeta[name]; $('#page-title').textContent=title; $('#page-subtitle').textContent=sub }
 $('#navigation').addEventListener('click',(e)=>{const b=e.target.closest('[data-view]');if(b)switchView(b.dataset.view)})
 document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})

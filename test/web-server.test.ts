@@ -10,7 +10,7 @@ import type { RuntimeConfig } from '../src/config/runtime.js'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 import { createConsoleServer } from '../src/web/server.js'
 import type { RuntimeSnapshot } from '../src/platform/operations.js'
-import { loadFeatureParity } from '../src/config/feature-parity.js'
+import { loadNativeCutoverReadiness } from '../src/config/feature-parity.js'
 
 const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
 
@@ -28,7 +28,7 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     kernel: { mode: 'off' },
   }
   let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
-  const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadFeatureParity })
+  const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadNativeCutoverReadiness })
   server.listen(0, '127.0.0.1')
   try {
     await once(server, 'listening')
@@ -47,9 +47,10 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     assert.equal(page.status, 200)
     assert.match(await page.text(), /QuarkSelfAI · Control Room/)
     const response = await fetch(`http://127.0.0.1:${port}/api/dashboard`)
-    const payload = await response.json() as { ok: boolean; data: { parity: { takeoverReady: boolean } } }
+    const payload = await response.json() as { ok: boolean; data: { readiness: { id: string; state: string } } }
     assert.equal(payload.ok, true)
-    assert.equal(payload.data.parity.takeoverReady, false)
+    assert.equal(payload.data.readiness.id, 'native-cutover')
+    assert.equal(payload.data.readiness.state, 'blocked')
     const unauthorized = await fetch(`http://127.0.0.1:${port}/internal/policies/proposals`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
     })
@@ -118,7 +119,7 @@ test('reports an accepted-risk cutover without falsifying feature parity', async
     mode: 'compat', operationalMode: 'accepted-risk-cutover',
     state: 'ready', messageReady: true, cardReady: true,
   }
-  const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadFeatureParity })
+  const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadNativeCutoverReadiness })
   server.listen(0, '127.0.0.1')
   try {
     await once(server, 'listening')
@@ -134,9 +135,10 @@ test('reports an accepted-risk cutover without falsifying feature parity', async
   try {
     const port = (server.address() as AddressInfo).port
     const response = await fetch(`http://127.0.0.1:${port}/api/health`)
-    const payload = await response.json() as { takeoverReady: boolean; operationalMode: string }
+    const payload = await response.json() as { readiness: { id: string; state: string }; operationalMode: string }
     assert.equal(response.status, 200)
-    assert.equal(payload.takeoverReady, false)
+    assert.equal(payload.readiness.id, 'native-cutover')
+    assert.equal(payload.readiness.state, 'blocked')
     assert.equal(payload.operationalMode, 'accepted-risk-cutover')
   } finally {
     server.close()

@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { evaluateTakeoverRiskAcceptance, loadFeatureParity, type FeatureParityReport } from '../src/config/feature-parity.js'
+import {
+  evaluateTakeoverRiskAcceptance, loadFeatureParity, loadNativeCutoverReadiness, type FeatureParityReport,
+} from '../src/config/feature-parity.js'
 
 const report: FeatureParityReport = {
   source: 'test',
@@ -33,6 +35,15 @@ test('keeps functional parity separate from native module ownership', async () =
   assert.equal(current.nativeCutoverReady, false)
   assert.ok(current.nativeCutoverBlockers.includes('message-intake-native'))
   assert.ok(current.nativeCutoverBlockers.includes('focus-intake'))
+})
+
+test('adapts migration parity into the open operational readiness contract', async () => {
+  const readiness = await loadNativeCutoverReadiness()
+  assert.equal(readiness.id, 'native-cutover')
+  assert.equal(readiness.state, 'blocked')
+  assert.ok(readiness.items.length > 0)
+  assert.ok(readiness.blockers.includes('message-intake-native'))
+  assert.equal(typeof readiness.summary.functionalParityReady, 'boolean')
 })
 
 test('fails closed for missing confirmation, omitted risks, and unknown risk ids', () => {

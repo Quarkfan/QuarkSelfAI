@@ -22,7 +22,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Policy runtime | 受限 DSL、模拟、版本和激活 | 任意代码执行 |
 | Executor router | Provider 选择、串行兜底、权限边界 | Claude/Codex 的具体协议 |
 | Workspace boundary | 本地路径授权与防逃逸 | 上传或同步文件 |
-| Control plane | 登录、健康、模块与领域状态可见性 | 硬编码每项业务规则 |
+| Control plane | 登录、健康、模块、开放 readiness gate 与领域状态可见性 | 硬编码每项业务规则或某次迁移字段 |
 
 消息接入属于骨架上生长的功能：`message-intake` 使用 durable event/workflow 骨架，但“本人私聊直接委托、重点关注、上下文判断、任务标题/优先级、是否通知”等均留在可替换的 feature policy 与 effect adapter 中。低优先级非艾特消息允许由 10 分钟级 discovery effect 补充，不要求骨架高频轮询。
 
@@ -112,6 +112,8 @@ adapter 仍明确标记为 `implementation=partial,runtime=inactive`；配置缺
 
 `feature-parity` 的业务完成度与模块目录的运行所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
 `runtime=compat|inactive|shadow` 的 feature，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
+这组历史字段只存在于 takeover migration adapter；骨架和控制台使用通用 `OperationalReadinessReport`，当前
+adapter 将其呈现为 `native-cutover` gate。以后新增发布、凭证或其他门禁不需要扩展平台枚举，见 ADR 0023。
 
 DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-state`。新功能不得把私有 JSON state、
 业务 timer 或状态读写重新塞进 action ledger；跨重启流程必须使用 `quark-durable-workflows`。

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { analyzeEffectCoverage, loadModuleCatalog } from '../platform/modules.js'
+import type { OperationalReadinessReport } from '../platform/operations.js'
 
 export type FeatureStatus = 'complete' | 'partial' | 'missing'
 
@@ -79,5 +80,26 @@ export async function loadFeatureParity(): Promise<FeatureParityReport> {
     completed: manifest.features.filter((feature) => feature.status === 'complete').length,
     nativeCutoverReady: incomplete.length === 0 && nativeCutoverBlockers.length === 0,
     nativeCutoverBlockers,
+  }
+}
+
+/** Migration adapter from the historical parity document to an open readiness gate. */
+export async function loadNativeCutoverReadiness(): Promise<OperationalReadinessReport> {
+  const report = await loadFeatureParity()
+  return {
+    id: 'native-cutover',
+    source: report.source,
+    state: report.nativeCutoverReady ? 'ready' : 'blocked',
+    items: report.features.map(feature => ({
+      id: feature.id, name: feature.name, status: feature.status, evidence: feature.evidence,
+    })),
+    blockers: report.nativeCutoverBlockers,
+    summary: {
+      completed: report.completed,
+      total: report.features.length,
+      missingRequired: report.missingRequired,
+      functionalParityReady: report.takeoverReady,
+      nativeCutoverReady: report.nativeCutoverReady,
+    },
   }
 }

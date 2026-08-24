@@ -49,17 +49,24 @@ export interface KernelSnapshot {
 
 export interface KernelStatusProvider { snapshot(): KernelSnapshot }
 
-export interface TakeoverReadinessReport {
-  readonly source: string
-  readonly features: readonly unknown[]
-  readonly takeoverReady: boolean
-  readonly missingRequired: number
-  readonly completed: number
-  readonly nativeCutoverReady?: boolean
-  readonly nativeCutoverBlockers?: readonly string[]
+export interface ReadinessItem {
+  readonly id: string
+  readonly name: string
+  readonly status: string
+  readonly evidence?: string
 }
 
-export interface TakeoverReadinessProvider { inspect(): Promise<TakeoverReadinessReport> }
+export interface OperationalReadinessReport {
+  /** Open gate id such as native-cutover, server-release or credential-health. */
+  readonly id: string
+  readonly source: string
+  readonly state: 'ready' | 'blocked' | 'unknown'
+  readonly items: readonly ReadinessItem[]
+  readonly blockers: readonly string[]
+  readonly summary: Readonly<Record<string, string | number | boolean>>
+}
+
+export interface OperationalReadinessProvider { inspect(): Promise<OperationalReadinessReport> }
 
 /** Neutral runtime status used when no message consumer feature is mounted. */
 export class ControlOnlyRuntime implements RuntimeStatusProvider {
@@ -75,8 +82,11 @@ export class ControlOnlyKernel implements KernelStatusProvider {
   snapshot(): KernelSnapshot { return { mode: 'off', state: 'stopped' } }
 }
 
-export class UnconfiguredReadiness implements TakeoverReadinessProvider {
-  async inspect(): Promise<TakeoverReadinessReport> {
-    return { source: 'unconfigured', features: [], takeoverReady: false, missingRequired: 0, completed: 0, nativeCutoverReady: false, nativeCutoverBlockers: ['readiness-provider-unconfigured'] }
+export class UnconfiguredReadiness implements OperationalReadinessProvider {
+  async inspect(): Promise<OperationalReadinessReport> {
+    return {
+      id: 'unconfigured', source: 'unconfigured', state: 'unknown', items: [],
+      blockers: ['readiness-provider-unconfigured'], summary: {},
+    }
   }
 }

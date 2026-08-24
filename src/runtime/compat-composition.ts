@@ -1,6 +1,6 @@
 import { createAssistantApplication, type AssistantApplication } from '../bootstrap/application.js'
 import type { RuntimeConfig } from '../config/runtime.js'
-import { loadFeatureParity } from '../config/feature-parity.js'
+import { loadNativeCutoverReadiness } from '../config/feature-parity.js'
 import { ControlOnlyRuntime } from '../platform/operations.js'
 import { CompatRuntime, compatRuntimeComponent } from './compat.js'
 
@@ -15,7 +15,7 @@ export async function createConfiguredAssistantApplication(config: RuntimeConfig
     : new ControlOnlyRuntime()
   return await createAssistantApplication(config, {
     runtimeStatus: runtime,
-    readiness: { inspect: loadFeatureParity },
+    readiness: { inspect: loadNativeCutoverReadiness },
     components: runtime instanceof CompatRuntime ? [compatRuntimeComponent(runtime)] : [],
   })
 }

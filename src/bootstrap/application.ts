@@ -7,7 +7,7 @@ import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import type { ManagedComponent } from '../platform/lifecycle.js'
 import {
   ControlOnlyRuntime, UnconfiguredReadiness,
-  type RuntimeStatusProvider, type TakeoverReadinessProvider,
+  type OperationalReadinessProvider, type RuntimeStatusProvider,
 } from '../platform/operations.js'
 import { createAssistantApplicationHost, type AssistantApplication } from './host.js'
 
@@ -38,7 +38,7 @@ export interface AssistantApplicationConfig {
 
 export interface AssistantApplicationExtensions {
   readonly runtimeStatus?: RuntimeStatusProvider
-  readonly readiness?: TakeoverReadinessProvider
+  readonly readiness?: OperationalReadinessProvider
   readonly components?: readonly ManagedComponent[]
 }
 

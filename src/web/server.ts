@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import type { AssistantStore } from '../storage/types.js'
 import {
   ControlOnlyKernel, ControlOnlyRuntime, UnconfiguredReadiness,
-  type KernelStatusProvider, type RuntimeStatusProvider, type TakeoverReadinessProvider,
+  type KernelStatusProvider, type OperationalReadinessProvider, type RuntimeStatusProvider,
 } from '../platform/operations.js'
 import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js'
 import { matchesPolicy } from '../policy/engine.js'
@@ -86,15 +86,15 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readiness: TakeoverReadinessProvider, config: ConsoleConfig) {
-  const [overview, events, matters, actions, approvals, policies, parity, diagnostics, moduleCatalog] = await Promise.all([
+async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, config: ConsoleConfig) {
+  const [overview, events, matters, actions, approvals, policies, readiness, diagnostics, moduleCatalog] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
     store.recentMatters(12),
     store.recentActions(12),
     store.pendingApprovals(12),
     store.policies(20),
-    readiness.inspect(),
+    readinessProvider.inspect(),
     runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
     loadModuleCatalog(),
   ])
@@ -104,11 +104,7 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
       version: '0.1.0',
       storage: store.kind,
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
-      mode: worker.operationalMode ?? (parity.nativeCutoverReady
-        ? 'native-ready'
-        : parity.takeoverReady
-          ? 'compatibility-operational'
-          : 'migration'),
+      mode: worker.operationalMode ?? 'unknown',
       worker,
       kernel: kernelStatus.snapshot(),
       execution: {
@@ -124,7 +120,7 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
     actions,
     approvals,
     policies,
-    parity,
+    readiness,
     architecture: {
       summary: summarizeModules(moduleCatalog),
       modules: moduleCatalog.modules,
@@ -159,7 +155,7 @@ export function createConsoleServer(
   config: ConsoleConfig,
   runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
   kernelStatus: KernelStatusProvider = new ControlOnlyKernel(),
-  readiness: TakeoverReadinessProvider = new UnconfiguredReadiness(),
+  readiness: OperationalReadinessProvider = new UnconfiguredReadiness(),
 ): Server {
   const policyAuthoring = new PolicyAuthoringService(store, {
     async compile() {
@@ -268,7 +264,7 @@ export function createConsoleServer(
       if (url.pathname.startsWith('/api/')) {
         if (request.method === 'GET' && url.pathname === '/api/health') {
           await store.health()
-          const parity = await readiness.inspect()
+          const readinessReport = await readiness.inspect()
           const worker = runtimeStatus.snapshot()
           const workerHealthy = worker.requiredForHealth === false || worker.state === 'ready'
           const kernel = kernelStatus.snapshot()
@@ -276,14 +272,12 @@ export function createConsoleServer(
           json(response, workerHealthy && kernelHealthy ? 200 : 503, {
             ok: workerHealthy && kernelHealthy,
             storage: store.kind,
-            takeoverReady: parity.takeoverReady,
-            nativeCutoverReady: parity.nativeCutoverReady ?? false,
-            nativeCutoverBlockers: parity.nativeCutoverBlockers ?? [],
-            operationalMode: worker.operationalMode ?? (parity.nativeCutoverReady
-              ? 'native-ready'
-              : parity.takeoverReady
-                ? 'compatibility-operational'
-                : 'migration'),
+            readiness: {
+              id: readinessReport.id,
+              state: readinessReport.state,
+              blockers: readinessReport.blockers,
+            },
+            operationalMode: worker.operationalMode ?? 'unknown',
             worker,
             kernel,
           })
