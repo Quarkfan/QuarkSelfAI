@@ -107,7 +107,8 @@
       config:
         workerId: !!js process.env.QUARK_WORKFLOW_WORKER_ID || ('workflow-' + process.pid)
         enabled: true
-        pollIntervalMs: 30000
+        # Durable transitions schedule exact wake-ups. This is only crash/restart recovery.
+        pollIntervalMs: 600000
         leaseMs: 120000
         retryDelayMs: 120000
         maxAttempts: 5

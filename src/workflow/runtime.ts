@@ -43,6 +43,9 @@ export interface WorkflowRuntimeConfig {
   readonly batchSize?: number
 }
 
+export const DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS = 600_000
+const MAX_TIMER_DELAY_MS = 2_147_000_000
+
 declare module '@deepseek-ai/cordis' {
   interface Context {
     quarkWorkflows: DurableWorkflowRuntime
@@ -53,14 +56,25 @@ export class DurableWorkflowRuntime extends Service {
   private readonly definitions = new Map<string, WorkflowDefinition>()
   private readonly effectHandlers = new Map<string, WorkflowEffectHandler>()
   private running = false
+  private wakePending = false
+  private draining = false
+  private scheduledTimer: NodeJS.Timeout | undefined
+  private scheduledAt: number | undefined
 
   constructor(ctx: Context, private readonly config: WorkflowRuntimeConfig) {
     super(ctx, 'quarkWorkflows')
     if (!config.workerId?.trim()) throw new Error('workflow runtime workerId is required')
     if (config.enabled === true) {
-      const timer = setInterval(() => void this.runOnce().catch(error => ctx.logger('quark-workflows').error(error)), config.pollIntervalMs ?? 30_000)
+      ctx.on('quark/workflow-wake', at => this.wake(at))
+      const timer = setInterval(() => this.wake(), config.pollIntervalMs ?? DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS)
       timer.unref()
-      ctx.effect(() => () => clearInterval(timer), 'quark durable workflow timer')
+      ctx.effect(() => () => {
+        clearInterval(timer)
+        if (this.scheduledTimer) clearTimeout(this.scheduledTimer)
+        this.scheduledTimer = undefined
+        this.scheduledAt = undefined
+        this.wakePending = false
+      }, 'quark durable workflow recovery timer')
     }
   }
 
@@ -70,6 +84,7 @@ export class DurableWorkflowRuntime extends Service {
     }
     if (this.definitions.has(definition.kind)) throw new Error(`workflow definition ${definition.kind} is already registered`)
     this.definitions.set(definition.kind, definition)
+    this.wake()
     return () => this.definitions.delete(definition.kind)
   }
 
@@ -77,7 +92,32 @@ export class DurableWorkflowRuntime extends Service {
     if (!kind.trim()) throw new Error('workflow effect kind is required')
     if (this.effectHandlers.has(kind)) throw new Error(`workflow effect handler ${kind} is already registered`)
     this.effectHandlers.set(kind, handler)
+    this.wake()
     return () => this.effectHandlers.delete(kind)
+  }
+
+  /** Schedule the exact durable deadline, or drain immediately when no future time is supplied. */
+  wake(at?: string): void {
+    if (this.config.enabled !== true) return
+    const timestamp = at ? new Date(at).getTime() : Date.now()
+    if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
+      this.wakePending = true
+      if (this.draining) return
+      this.draining = true
+      queueMicrotask(() => void this.drain())
+      return
+    }
+    if (this.scheduledAt !== undefined && this.scheduledAt <= timestamp) return
+    if (this.scheduledTimer) clearTimeout(this.scheduledTimer)
+    this.scheduledAt = timestamp
+    const delay = Math.min(timestamp - Date.now(), MAX_TIMER_DELAY_MS)
+    this.scheduledTimer = setTimeout(() => {
+      const target = this.scheduledAt
+      this.scheduledTimer = undefined
+      this.scheduledAt = undefined
+      this.wake(target === undefined ? undefined : new Date(target).toISOString())
+    }, delay)
+    this.scheduledTimer.unref()
   }
 
   async start(id: string, kind: string, input: Readonly<Record<string, unknown>>, now = new Date()): Promise<WorkflowInstance> {
@@ -188,6 +228,23 @@ export class DurableWorkflowRuntime extends Service {
     const definition = this.definitions.get(kind)
     if (!definition) throw new Error(`workflow definition ${kind} is not registered`)
     return definition
+  }
+
+  private async drain(): Promise<void> {
+    try {
+      let passes = 0
+      while (this.wakePending && passes < 100) {
+        this.wakePending = false
+        const result = await this.runOnce()
+        if (result.effect !== 'idle' || result.due >= (this.config.batchSize ?? 20)) this.wakePending = true
+        passes += 1
+      }
+    } catch (error) {
+      this.ctx.logger('quark-workflows').error(error)
+    } finally {
+      this.draining = false
+      if (this.wakePending) this.wake()
+    }
   }
 }
 

@@ -7,9 +7,13 @@ import { fileURLToPath } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 import { DurableStateService } from '../src/storage/service.js'
-import { DurableWorkflowRuntime } from '../src/workflow/runtime.js'
+import { DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS, DurableWorkflowRuntime } from '../src/workflow/runtime.js'
 
 const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
+
+test('uses a ten-minute workflow poll only as restart recovery', () => {
+  assert.equal(DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS, 600_000)
+})
 
 test('workflow storage advances state and effect outbox atomically with idempotent events', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'quark-workflow-store-'))
@@ -105,6 +109,40 @@ test('workflow runtime resumes due instances and dispatches durable effects thro
     assert.deepEqual(delivered, ['started'])
     assert.deepEqual((await ctx.quarkState.workflow('counter-1'))?.state, { count: 1, delivered: 'started' })
     assert.equal((await ctx.quarkState.workflow('counter-1'))?.status, 'completed')
+  } finally {
+    await ctx.fiber.dispose()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('durable workflow commits schedule immediate effects without scan latency', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-workflow-auto-wake-'))
+  const ctx = new Context()
+  try {
+    await ctx.plugin(DurableStateService, { sqlitePath: join(directory, 'assistant.sqlite3') })
+    await ctx.plugin(DurableWorkflowRuntime, { workerId: 'auto-wake-worker', enabled: true, pollIntervalMs: 600_000 })
+    ctx.quarkWorkflows.register({
+      kind: 'auto-wake', version: 1,
+      initialize(_input, now) {
+        return { status: 'waiting', state: {}, effects: [{ id: 'immediate', kind: 'record', payload: {}, availableAt: now }] }
+      },
+      reduce(state, event) {
+        return { status: 'completed', state: { ...state, delivered: event.payload.effectId } }
+      },
+    })
+    let delivered!: () => void
+    const handled = new Promise<void>((resolve) => { delivered = resolve })
+    ctx.quarkWorkflows.registerEffect('record', { async execute() { delivered() } })
+    await ctx.quarkWorkflows.start('auto-wake-1', 'auto-wake', {})
+    let timeout: NodeJS.Timeout | undefined
+    try {
+      await Promise.race([
+        handled,
+        new Promise<never>((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('workflow wake timed out')), 1_000) }),
+      ])
+    } finally {
+      if (timeout) clearTimeout(timeout)
+    }
   } finally {
     await ctx.fiber.dispose()
     await rm(directory, { recursive: true, force: true })

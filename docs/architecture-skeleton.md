@@ -164,6 +164,8 @@ DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-sta
 新 channel event 成功写入 durable state 后会发布 `quark/event-appended` wake hint，由 durable event runtime 合并唤醒并
 立即清空积压；10 分钟数据库扫描仅用于进程重启、监听器暂未装载或漏唤醒恢复，不再每秒空轮询。adapter 只负责
 append，不直接依赖或手工驱动 inbox runtime。
+workflow create/advance/retry 同样由 durable state 发布最早可执行时间；runtime 对立即 effect 合并 drain，对未来
+`wakeAt` 安排精确 timer。30 秒 workflow 空轮询已移除，10 分钟扫描只补偿重启后丢失的内存 timer。
 外层控制面与 DSH 在 SQLite 模式下必须解析到同一个 `SQLITE_PATH`，PostgreSQL 模式下必须使用同一个
 `DATABASE_URL`；不得用 `DSH_HOME` 下的隐式第二数据库制造分叉真源。
 

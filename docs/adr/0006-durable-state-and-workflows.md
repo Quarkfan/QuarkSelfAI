@@ -28,6 +28,8 @@
 8. `wakeAt` 使用三态更新：省略表示保留既有唤醒点，`null` 表示明确取消，timestamp 表示重新调度。进入外部
    effect 前必须显式清空旧 timer；附带通知的完成/失败事件不得意外冲掉业务重试或保留期。
 9. 旧 compat timer 在对应维护窗口之前仍是唯一生产 owner；新增 workflow 表和空 runtime 不构成切换。
+10. durable transition 提交后发布最早 `wakeAt/effect.availableAt`；runtime 使用精确内存 timer 和即时 drain，10 分钟
+    扫描只做重启恢复。调度细节见 ADR 0040。
 
 ## 结果
 

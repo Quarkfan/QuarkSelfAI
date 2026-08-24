@@ -27,5 +27,7 @@ declare module '@deepseek-ai/cordis' {
   interface Events {
     /** Emitted only after a new normalized event is durable; consumers use it as a wake hint. */
     'quark/event-appended'(eventId: string): void
+    /** Earliest durable workflow timer/effect that may now be actionable. */
+    'quark/workflow-wake'(at?: string): void
   }
 }

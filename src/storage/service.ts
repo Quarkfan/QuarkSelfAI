@@ -126,7 +126,9 @@ export class DurableStateService extends Service implements DurableStatePort {
   }
 
   async createWorkflow(input: CreateWorkflowInput): Promise<{ readonly inserted: boolean; readonly instance: WorkflowInstance }> {
-    return await (await this.ready).createWorkflow(input)
+    const result = await (await this.ready).createWorkflow(input)
+    if (result.inserted) this.signalWorkflowWake(result.instance, input.effects)
+    return result
   }
 
   async workflow(id: string): Promise<WorkflowInstance | undefined> {
@@ -138,7 +140,9 @@ export class DurableStateService extends Service implements DurableStatePort {
   }
 
   async advanceWorkflow(input: AdvanceWorkflowInput): Promise<{ readonly advanced: boolean; readonly instance: WorkflowInstance }> {
-    return await (await this.ready).advanceWorkflow(input)
+    const result = await (await this.ready).advanceWorkflow(input)
+    if (result.advanced) this.signalWorkflowWake(result.instance, input.effects)
+    return result
   }
 
   async claimNextWorkflowEffect(workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedWorkflowEffect | undefined> {
@@ -151,5 +155,22 @@ export class DurableStateService extends Service implements DurableStatePort {
 
   async releaseWorkflowEffect(effectId: string, workerId: string, error: string, availableAt: string, terminal: boolean): Promise<void> {
     await (await this.ready).releaseWorkflowEffect(effectId, workerId, error, availableAt, terminal)
+    if (!terminal) this.emitWake('quark/workflow-wake', availableAt)
+  }
+
+  private signalWorkflowWake(instance: WorkflowInstance, effects?: readonly { readonly availableAt?: string }[]): void {
+    const now = new Date().toISOString()
+    const candidates = [
+      ...(instance.wakeAt ? [instance.wakeAt] : []),
+      ...(effects ?? []).map(effect => effect.availableAt ?? now),
+    ]
+    const earliest = candidates.reduce<string | undefined>((current, candidate) => (
+      current === undefined || new Date(candidate).getTime() < new Date(current).getTime() ? candidate : current
+    ), undefined)
+    if (earliest) this.emitWake('quark/workflow-wake', earliest)
+  }
+
+  private emitWake(event: 'quark/workflow-wake', at?: string): void {
+    void this.ctx.parallel(event, at).catch(error => this.ctx.logger('quark-state').error(error))
   }
 }

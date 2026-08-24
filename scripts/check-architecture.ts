@@ -4,6 +4,8 @@ import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
 import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
 import { ControlOnlyRuntime } from '../src/platform/operations.js'
+import { DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS } from '../src/events/runtime.js'
+import { DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS } from '../src/workflow/runtime.js'
 
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
@@ -23,6 +25,11 @@ assert.ok(!platformApiSource.includes("export type * from '../storage/types.js'"
 assert.ok(!/\b(?:AssistantStore|StorageConfig)\b/.test(storagePortsSource), 'public storage ports must not expose provider aggregate or configuration')
 assert.ok(!/\b(?:messageReady|cardReady|requiredEventKeys|readyEventKeys)\b/.test(operationsContractSource), 'runtime status contract must expose open capabilities instead of channel-specific readiness fields')
 const profilePlugins = cordisPlugins(profileSource)
+assert.ok(DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS >= 600_000, 'durable event fallback polling must be at least ten minutes')
+assert.ok(DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS >= 600_000, 'durable workflow fallback polling must be at least ten minutes')
+for (const profileId of ['quark-durable-events', 'quark-durable-workflows']) {
+  assert.match(profilePlugins.get(profileId)?.block ?? '', /pollIntervalMs:\s*600000\b/, `${profileId} must use ten-minute recovery polling`)
+}
 const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ module, plugin: module.plugin }] : [])
 for (const { module, plugin } of pluginBindings) {
   assert.ok(plugin.packageExport in packageManifest.exports, `module ${module.id} references missing package export ${plugin.packageExport}`)
