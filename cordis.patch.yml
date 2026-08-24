@@ -227,9 +227,12 @@
       name: '@quarkfan/quark-self-ai/codex-session-effects'
       # Read-only inspection plus owner-authorized archive/delete. Keep absent
       # until compat session ownership is frozen and exact workflows migrate.
-      disabled: !!js process.env.QUARK_NATIVE_CODEX_SESSION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js >-
+        process.env.QUARK_NATIVE_CODEX_SESSION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat' || !process.env.CODEX_APP_SERVER_SOCKET
       config:
         executable: codex
+        appServerSocket: !!js process.env.CODEX_APP_SERVER_SOCKET
+        activityTimeoutMs: 5000
         stateDatabase: !!js >-
           process.env.CODEX_STATE_DB || ((process.env.CODEX_HOME || (process.env.HOME + '/.codex')) + '/state_5.sqlite')
         workspace: !!js process.env.QUARK_OWNER_WORKSPACE || '/Users/edy/BlackLakeWork'

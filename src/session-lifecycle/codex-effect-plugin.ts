@@ -1,5 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import { createInterface } from 'node:readline'
 import { resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { requireAuthorizationEvidence } from '../domain/authorization.js'
@@ -12,6 +13,8 @@ const DAY_MS = 86_400_000
 
 export interface CodexSessionEffectConfig {
   readonly executable?: string
+  readonly appServerSocket?: string
+  readonly activityTimeoutMs?: number
   readonly stateDatabase: string
   readonly workspace: string
 }
@@ -23,7 +26,7 @@ export interface CodexSessionSnapshot {
 }
 
 export interface CodexSessionReader { inspect(sessionId: string): CodexSessionSnapshot }
-export interface CodexSessionActivityProbe { running(sessionId: string): boolean | 'unknown' }
+export interface CodexSessionActivityProbe { running(sessionId: string): boolean | 'unknown' | Promise<boolean | 'unknown'> }
 export interface CodexSessionCommandRunner {
   run(executable: string, args: readonly string[], cwd: string): Promise<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }>
 }
@@ -55,12 +58,76 @@ class ProcessCodexSessionRunner implements CodexSessionCommandRunner {
   }
 }
 
+/**
+ * Reads activity from the public Codex app-server protocol. Only an explicit
+ * `idle` response is safe enough to authorize lifecycle mutations. A thread
+ * absent from this app-server process is `notLoaded`, not necessarily idle.
+ */
+export class CodexAppServerActivityProbe implements CodexSessionActivityProbe {
+  constructor(
+    private readonly socket: string,
+    private readonly executable = 'codex',
+    private readonly timeoutMs = 5_000,
+  ) {
+    if (!socket.trim()) throw new Error('Codex app-server socket is required')
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30_000) {
+      throw new Error('Codex activity timeout must be between 100 and 30000 milliseconds')
+    }
+  }
+
+  async running(sessionId: string): Promise<boolean | 'unknown'> {
+    return await new Promise(resolvePromise => {
+      const child = spawn(this.executable, ['app-server', 'proxy', '--sock', resolve(this.socket)], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      const lines = createInterface({ input: child.stdout })
+      let settled = false
+      const finish = (result: boolean | 'unknown') => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        lines.close()
+        child.kill()
+        resolvePromise(result)
+      }
+      const send = (message: Readonly<Record<string, unknown>>) => {
+        try {
+          if (!child.stdin.destroyed) child.stdin.write(`${JSON.stringify(message)}\n`)
+        } catch { finish('unknown') }
+      }
+      const timer = setTimeout(() => finish('unknown'), this.timeoutMs)
+      child.once('error', () => finish('unknown'))
+      child.once('exit', () => finish('unknown'))
+      child.stdin.once('error', () => finish('unknown'))
+      lines.on('line', line => {
+        let message: unknown
+        try { message = JSON.parse(line) } catch { return }
+        if (!isRecord(message)) return
+        if (message.id === 1 && isRecord(message.result)) {
+          send({ method: 'initialized' })
+          send({ id: 2, method: 'thread/read', params: { threadId: sessionId, includeTurns: false } })
+          return
+        }
+        if (message.id !== 2 || !isRecord(message.result)) return
+        finish(codexThreadActivity(message.result))
+      })
+      send({
+        id: 1,
+        method: 'initialize',
+        params: { clientInfo: { name: 'quarkselfai-session-lifecycle', version: '1.0.0' }, capabilities: {} },
+      })
+    })
+  }
+}
+
 export class CodexSessionEffectAdapter {
   constructor(
     private readonly config: CodexSessionEffectConfig,
     private readonly reader: CodexSessionReader = new SqliteCodexSessionReader(config.stateDatabase),
     private readonly runner: CodexSessionCommandRunner = new ProcessCodexSessionRunner(),
-    private readonly activity: CodexSessionActivityProbe = { running: () => 'unknown' },
+    private readonly activity: CodexSessionActivityProbe = config.appServerSocket
+      ? new CodexAppServerActivityProbe(config.appServerSocket, config.executable, config.activityTimeoutMs)
+      : { running: () => 'unknown' },
   ) {
     if (!config.stateDatabase?.trim()) throw new Error('Codex session stateDatabase is required')
     if (!config.workspace?.trim()) throw new Error('Codex session workspace is required')
@@ -70,14 +137,14 @@ export class CodexSessionEffectAdapter {
     const sessionId = uuid(effect.payload.sessionId)
     if (effect.kind === SESSION_EFFECTS.inspect) {
       const state = this.reader.inspect(sessionId)
-      return { ...state, running: this.activity.running(sessionId) }
+      return { ...state, running: await this.activity.running(sessionId) }
     }
     const effectiveAt = timestamp(effect.payload.effectiveAt, 'session effectiveAt')
     const authorization = requireAuthorizationEvidence(
       effect.payload.authorization, 'codex.auto-research-session-lifecycle', effectiveAt,
     )
     if (effect.payload.managedBy !== 'quarkselfai-auto-research') throw new Error('session is not owned by QuarkSelfAI auto research')
-    if (this.activity.running(sessionId) !== false) throw new Error('Codex session activity is not confirmed idle')
+    if (await this.activity.running(sessionId) !== false) throw new Error('Codex session activity is not confirmed idle')
     if (effect.kind === SESSION_EFFECTS.archiveIfNeeded) return await this.archive(sessionId, effectiveAt, authorization.id)
     if (effect.kind === SESSION_EFFECTS.deleteIfArchived) return await this.delete(effect, sessionId, effectiveAt, authorization.id)
     throw new Error(`unsupported Codex session effect ${effect.kind}`)
@@ -132,3 +199,11 @@ function timestamp(value: unknown, label: string): string { if (typeof value !==
 function integer(value: unknown, label: string): number { if (!Number.isSafeInteger(value) || Number(value) < 1) throw new Error(`${label} must be a positive integer`); return Number(value) }
 function detail(output: { readonly stdout: string; readonly stderr: string }): string { return (output.stderr || output.stdout || 'no output').trim().slice(-1_500) }
 function epoch(value: number): string { return new Date(value > 10_000_000_000 ? value : value * 1_000).toISOString() }
+function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
+export function codexThreadActivity(result: unknown): boolean | 'unknown' {
+  if (!isRecord(result)) return 'unknown'
+  const thread = result.thread
+  const status = isRecord(thread) ? thread.status : undefined
+  const type = isRecord(status) ? status.type : undefined
+  return type === 'active' ? true : type === 'idle' ? false : 'unknown'
+}

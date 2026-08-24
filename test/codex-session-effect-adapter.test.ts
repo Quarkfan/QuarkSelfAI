@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   CodexSessionEffectAdapter,
+  codexThreadActivity,
   type CodexSessionCommandRunner,
   type CodexSessionActivityProbe,
   type CodexSessionReader,
@@ -48,6 +49,28 @@ test('inspects an exact session through the injected activity probe', async () =
   })
   assert.equal(harness.runner.calls.length, 0)
   await assert.rejects(harness.adapter.execute(effect('codex-session.inspect.v1', { sessionId: 'latest' })), /exact UUID/)
+})
+
+test('maps only authoritative app-server thread states to lifecycle activity', () => {
+  assert.equal(codexThreadActivity({ thread: { status: { type: 'active', activeFlags: [] } } }), true)
+  assert.equal(codexThreadActivity({ thread: { status: { type: 'idle' } } }), false)
+  assert.equal(codexThreadActivity({ thread: { status: { type: 'notLoaded' } } }), 'unknown')
+  assert.equal(codexThreadActivity({ thread: { status: { type: 'systemError' } } }), 'unknown')
+  assert.equal(codexThreadActivity({ thread: {} }), 'unknown')
+})
+
+test('awaits an asynchronous host activity probe before inspecting or mutating', async () => {
+  const reader = new Reader()
+  const runner = new Runner(reader)
+  const activity: CodexSessionActivityProbe = { running: async () => false }
+  const adapter = new CodexSessionEffectAdapter(
+    { stateDatabase: '/fixture/state.sqlite', workspace: '/fixture/workspace' }, reader, runner, activity,
+  )
+  assert.equal((await adapter.execute(effect('codex-session.inspect.v1', { sessionId }))).running, false)
+  await adapter.execute(effect('codex-session.archive-if-needed.v1', {
+    sessionId, managedBy: 'quarkselfai-auto-research', effectiveAt: '2026-08-24T00:00:00Z', authorization,
+  }))
+  assert.equal(runner.calls.length, 1)
 })
 
 test('mutating effects fail closed when session activity is not authoritative', async () => {
