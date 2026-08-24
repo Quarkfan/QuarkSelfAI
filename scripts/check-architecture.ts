@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
 import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
+import { ControlOnlyRuntime } from '../src/platform/operations.js'
 
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
@@ -151,6 +152,10 @@ for (const filename of files) {
   const owner = ownerBySource.get(from)
   const ownerModule = moduleById.get(owner ?? '')
   if (owner && /@deepseek-ai\/(?:cordis|dsh-)/.test(source)) dshSourceModules.add(owner)
+  if (ownerModule?.layer === 'contract'
+    && /(?:\bextends\s+Service\b|\bexport\s+(?:async\s+)?function\s+apply\s*\()/.test(source)) {
+    violations.push(`${from} is executable plugin/service code owned by contract module ${ownerModule.id}`)
+  }
   if (ownerModule?.classification === 'skeleton'
     && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|codex|claude|xiaowei|takeover|nativecutover)\b|常东旭|任永强|张以宁)/i.test(source)) {
     violations.push(`${from} hard-codes a feature or migration identity inside skeleton module ${ownerModule.id}`)
@@ -204,6 +209,9 @@ for (const filename of files) {
     }
   }
 }
+const neutralRuntime = new ControlOnlyRuntime().snapshot()
+assert.equal(neutralRuntime.mode, 'control-only', 'neutral runtime must identify itself as control-only')
+assert.equal(neutralRuntime.operationalMode, 'control-only', 'neutral runtime must not carry migration or product semantics')
 for (const module of catalog.modules) {
   const actual = [...(actualDependencies.get(module.id) ?? [])].sort()
   const declared = [...module.dependsOn].sort()

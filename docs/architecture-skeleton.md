@@ -49,6 +49,11 @@ skeleton/feature/migration 方向约束，但不会再把编译耦合与运行�
 contract/policy；provider、adapter、workflow、projection 和 surface 只能向各自允许的内层依赖。只有 operations
 允许跨层执行组合、审计和迁移。具体矩阵见 ADR 0033。
 
+`contract` 还必须保持行为纯净：可以声明类型、端口、事件和校验函数，但不能实现 Cordis `Service` 或插件
+`apply`。例如 durable action ledger 虽然只依赖稳定存储端口，仍负责入队和审批写入，因此属于 kernel，不能用
+`contract` 标签伪装实现。骨架的空实现同样必须保持中立；control-only 状态不能默认带有 migration、compat 或某个
+产品运行模式。
+
 长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。
 `implementation` 单独回答代码是否 ready，`runtime` 单独回答当前是否 inactive、shadow、active 或仍归 compat。
 没有实现的 provider 与已经实现但尚未激活的 provider 会分别进入 `nativeCutoverBlockers`；active workflow 的

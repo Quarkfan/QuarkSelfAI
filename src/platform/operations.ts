@@ -72,7 +72,7 @@ export interface OperationalReadinessProvider { inspect(): Promise<OperationalRe
 export class ControlOnlyRuntime implements RuntimeStatusProvider {
   snapshot(): RuntimeSnapshot {
     return {
-      mode: 'control-only', operationalMode: 'migration', requiredForHealth: false,
+      mode: 'control-only', operationalMode: 'control-only', requiredForHealth: false,
       state: 'stopped', messageReady: false, cardReady: false,
     }
   }
