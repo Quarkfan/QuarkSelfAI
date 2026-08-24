@@ -23,6 +23,7 @@ QuarkSelfAI 自动创建的调研会话需要在完成后归档，并在归档�
 
 ## 结果
 
-adapter 已具备可替换的异步活动探针和公共协议实现，但在真实共享 app-server socket 完成只读回放前仍标为
-`partial/inactive`。后续可以由桌面宿主或独立、受监督的 Codex app-server 提供 socket，不需要改变 workflow 或
-会话生命周期领域契约。运行所有权切换属于维护窗口动作，不能随代码部署自动发生。
+adapter 已具备可替换的异步活动探针和公共协议实现，因此代码状态标为 `implementation=ready`。真实共享
+app-server socket 尚未完成只读回放，运行状态保持 `runtime=inactive`。后续可以由桌面宿主或独立、受监督的
+Codex app-server 提供 socket，不需要改变 workflow 或会话生命周期领域契约。运行所有权切换属于维护窗口动作，
+不能随代码部署自动发生；“未取得运行证据”不得再冒充“代码未实现”。

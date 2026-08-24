@@ -106,9 +106,9 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 
 Codex session adapter 已实现 UUID 限制、只读状态核验、归档后复核、`delete --force <UUID>`、七天保留期、
 长期授权门禁，以及公共 app-server `thread/read` 活动探针。只有 `idle` 能继续，`active` 会等待，`notLoaded`、
-`systemError`、超时或协议异常全部失败关闭。由于当前没有由 QuarkSelfAI 和桌面端共享的 app-server control socket，
-adapter 仍明确标记为 `implementation=partial,runtime=inactive`；配置缺少 socket 时插件也不会装载。完成真实只读
-回放并明确会话运行所有权前，不得提升为 ready。详细边界见 ADR 0021。
+`systemError`、超时或协议异常全部失败关闭。adapter 的代码状态为 `implementation=ready`。当前没有由
+QuarkSelfAI 和桌面端共享的 app-server control socket，所以运行状态仍是 `runtime=inactive`；配置缺少 socket 时
+插件也不会装载。完成真实只读回放并明确会话运行所有权前，不得启用或接管生产 effect。详细边界见 ADR 0021。
 
 `feature-parity` 的业务完成度与模块目录的运行所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
 `runtime=compat|inactive|shadow` 的 feature，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
