@@ -30,17 +30,12 @@ import type { ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
 
 interface SqliteEventRow {
   id: string
+  kind: NormalizedChannelEvent['kind']
   event_key: string
   deduplication_key: string
   source: string
   occurred_at: string | null
   received_at: string
-}
-
-interface SqlitePolicyEventRow {
-  id: string
-  source: string
-  payload: string
 }
 
 interface SqliteClaimedEventRow extends SqliteEventRow {
@@ -52,7 +47,7 @@ interface SqliteClaimedEventRow extends SqliteEventRow {
 function claimedEvent(row: SqliteClaimedEventRow): ClaimedChannelEvent {
   const source = JSON.parse(row.source) as NormalizedChannelEvent['source']
   return { id: row.id, attempt: Number(row.attempt), event: {
-    kind: row.event_key === 'im.message.receive_v1' ? 'message.received' : row.event_key === 'card.action.trigger' ? 'card.action' : 'lark.event',
+    kind: row.kind,
     source, eventKey: row.event_key, deduplicationKey: row.deduplication_key,
     payload: JSON.parse(row.payload) as Record<string, unknown>, raw: JSON.parse(row.raw) as Record<string, unknown>,
     ...(row.occurred_at ? { occurredAt: row.occurred_at } : {}),
@@ -114,11 +109,12 @@ export class SqliteAssistantStore implements AssistantStore {
   async appendEvent(id: string, event: NormalizedChannelEvent): Promise<StoredEvent> {
     const result = this.database.prepare(
       `INSERT INTO assistant_event
-        (id, event_key, deduplication_key, source, payload, raw, occurred_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+        (id, kind, event_key, deduplication_key, source, payload, raw, occurred_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (deduplication_key) DO NOTHING`,
     ).run(
       id,
+      event.kind,
       event.eventKey,
       event.deduplicationKey,
       JSON.stringify(event.source),
@@ -140,7 +136,7 @@ export class SqliteAssistantStore implements AssistantStore {
     this.database.exec('BEGIN IMMEDIATE')
     try {
       const row = this.database.prepare(
-        `SELECT e.id, e.event_key, e.deduplication_key, e.source, e.payload, e.raw, e.occurred_at, e.received_at
+        `SELECT e.id, e.kind, e.event_key, e.deduplication_key, e.source, e.payload, e.raw, e.occurred_at, e.received_at
          FROM assistant_event e LEFT JOIN event_delivery d ON d.consumer_name = ? AND d.event_id = e.id
          WHERE e.event_key IN (${placeholders}) AND (
            d.event_id IS NULL OR (d.status = 'pending' AND d.available_at <= ?)
@@ -386,11 +382,12 @@ export class SqliteAssistantStore implements AssistantStore {
 
   async recentEvents(limit: number): Promise<readonly EventSummary[]> {
     const rows = this.database.prepare(
-      `SELECT id, event_key, deduplication_key, source, occurred_at, received_at
+      `SELECT id, kind, event_key, deduplication_key, source, occurred_at, received_at
        FROM assistant_event ORDER BY received_at DESC LIMIT ?`,
     ).all(limit) as unknown as SqliteEventRow[]
     return rows.map((row) => ({
       id: row.id,
+      kind: row.kind,
       eventKey: row.event_key,
       deduplicationKey: row.deduplication_key,
       source: JSON.parse(row.source) as Record<string, unknown>,
@@ -402,9 +399,9 @@ export class SqliteAssistantStore implements AssistantStore {
   async recentPolicySamples(limit: number) {
     const rows = this.database.prepare(
       `SELECT id, source, payload FROM assistant_event
-       WHERE event_key = 'im.message.receive_v1'
+       WHERE kind = 'message.received'
        ORDER BY received_at DESC LIMIT ?`,
-    ).all(limit) as unknown as SqlitePolicyEventRow[]
+    ).all(limit) as unknown as Array<{ id: string; source: string; payload: string }>
     return rows.map((row) => eventToPolicySample({
       id: row.id,
       source: JSON.parse(row.source) as Record<string, unknown>,

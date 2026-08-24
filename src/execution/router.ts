@@ -2,12 +2,12 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { SubagentResult, SubagentRun } from '@deepseek-ai/dsh-subagent'
-import type { ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
+import type { ExecutorId, ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
 import { WorkspacePolicy } from './workspace-policy.js'
 
 const INFRASTRUCTURE_FAILURE = /(timeout|timed out|transport|network|connection|socket|websocket|dns|rate.?limit|quota|process-exit|spawn|enoent|unauthorized|authentication|429|502|503|504)/i
 
-export type RoutedExecutor = ExecutorResult['executor']
+export type RoutedExecutor = ExecutorId
 
 export interface RoutedExecutorRequest extends ExecutorRequest {
   readonly parent: Agent
@@ -39,11 +39,9 @@ export interface SubagentDispatcher {
 
 export interface ExecutorRouterConfig {
   readonly workspaceRoots: readonly string[]
-  readonly claudeReadProvider?: string
-  readonly claudeWriteProvider?: string
-  readonly codexReadProvider?: string
-  readonly codexWriteProvider?: string
-  readonly nativeProvider?: string
+  readonly defaultExecutor: RoutedExecutor
+  readonly providers: Readonly<Record<RoutedExecutor, ExecutorProviderNames>>
+  readonly routes: Readonly<Record<RoutedExecutor, readonly RoutedExecutor[]>>
 }
 
 export interface ExecutorProviderNames {
@@ -72,7 +70,9 @@ export class SequentialExecutorRouter {
     private readonly dispatcher: SubagentDispatcher,
     private readonly policy: WorkspacePolicy,
     private readonly providers: Readonly<Record<RoutedExecutor, ExecutorProviderNames>>,
-  ) {}
+    private readonly routes: Readonly<Record<RoutedExecutor, readonly RoutedExecutor[]>>,
+    private readonly defaultExecutor: RoutedExecutor,
+  ) { validateRouting(providers, routes, defaultExecutor) }
 
   async execute(request: RoutedExecutorRequest, signal: AbortSignal): Promise<RoutedExecutorResult> {
     if (this.active.has(request.actionId)) throw new Error(`action ${request.actionId} already has an active executor`)
@@ -86,13 +86,17 @@ export class SequentialExecutorRouter {
       if (!parentWorkspace || await this.policy.authorizeExisting(parentWorkspace) !== workspace) {
         throw new Error('executor request workspace must match the parent DSH session workspace')
       }
-      const requested = request.requestedExecutor ?? 'claude-code'
-      const route: readonly RoutedExecutor[] = requested === 'claude-code' ? ['claude-code', 'codex'] : [requested]
+      const requested = request.requestedExecutor ?? this.defaultExecutor
+      const route = this.routes[requested] ?? [requested]
+      if (!this.providers[requested]) throw new Error(`executor ${requested} is not registered`)
       const attempts: ExecutorAttempt[] = []
-      for (const executor of route) {
+      for (let index = 0; index < route.length; index += 1) {
+        const executor = route[index]!
+        const names = this.providers[executor]
+        if (!names) throw new Error(`executor route ${requested} references unregistered executor ${executor}`)
         const provider = request.mode === 'read-only'
-          ? this.providers[executor].readOnly
-          : this.providers[executor].write
+          ? names.readOnly
+          : names.write
         let run: SubagentRun | undefined
         try {
           run = await this.dispatcher.start(provider, {
@@ -116,20 +120,20 @@ export class SequentialExecutorRouter {
           }
           const reason = result.diagnostic ?? result.stopReason
           attempts.push({ executor, provider, status: 'failed', failureStage: 'run', failureReason: reason })
-          if (executor !== 'claude-code' || !isInfrastructureFailure(reason)) {
+          if (index === route.length - 1 || !isInfrastructureFailure(reason)) {
             return this.failed(request.actionId, executor, attempts, result)
           }
         } catch (error) {
           const reason = diagnostic(error)
           attempts.push({ executor, provider, status: 'failed', failureStage: run ? 'run' : 'start', failureReason: reason })
-          if (executor !== 'claude-code' || !isInfrastructureFailure(reason)) {
+          if (index === route.length - 1 || !isInfrastructureFailure(reason)) {
             return this.failed(request.actionId, executor, attempts)
           }
         } finally {
           await run?.dispose()
         }
       }
-      return this.failed(request.actionId, 'codex', attempts)
+      return this.failed(request.actionId, attempts.at(-1)?.executor ?? requested, attempts)
     } finally {
       this.active.delete(request.actionId)
     }
@@ -162,24 +166,29 @@ export class ExecutorRouterService extends Service {
     this.ready = WorkspacePolicy.create(config.workspaceRoots).then((policy) => new SequentialExecutorRouter(
       ctx.subagents,
       policy,
-      {
-        'claude-code': {
-          readOnly: config.claudeReadProvider ?? 'quark-claude-code-read',
-          write: config.claudeWriteProvider ?? 'quark-claude-code-write',
-        },
-        codex: {
-          readOnly: config.codexReadProvider ?? 'quark-codex-read',
-          write: config.codexWriteProvider ?? 'quark-codex-write',
-        },
-        'dsh-native': {
-          readOnly: config.nativeProvider ?? 'spawn',
-          write: config.nativeProvider ?? 'spawn',
-        },
-      },
+      config.providers,
+      config.routes,
+      config.defaultExecutor,
     ))
   }
 
   async execute(request: RoutedExecutorRequest, signal: AbortSignal): Promise<RoutedExecutorResult> {
     return await (await this.ready).execute(request, signal)
+  }
+}
+
+function validateRouting(
+  providers: Readonly<Record<string, ExecutorProviderNames>>,
+  routes: Readonly<Record<string, readonly string[]>>,
+  defaultExecutor: string,
+): void {
+  if (!defaultExecutor.trim() || !providers[defaultExecutor]) throw new Error('executor default must name a registered provider')
+  for (const [id, names] of Object.entries(providers)) {
+    if (!id.trim() || !names.readOnly?.trim() || !names.write?.trim()) throw new Error(`executor ${id || '<empty>'} requires readOnly and write providers`)
+  }
+  for (const [id, route] of Object.entries(routes)) {
+    if (!providers[id]) throw new Error(`executor route ${id} has no registered provider`)
+    if (route.length === 0 || route[0] !== id || new Set(route).size !== route.length) throw new Error(`executor route ${id} must start with itself and contain unique entries`)
+    for (const target of route) if (!providers[target]) throw new Error(`executor route ${id} references unregistered executor ${target}`)
   }
 }

@@ -71,11 +71,15 @@
       name: '@quarkfan/quark-self-ai/executor-router'
       config:
         workspaceRoots: !!js JSON.parse(process.env.ASSISTANT_WORKSPACE_ROOTS || JSON.stringify([process.cwd()]))
-        claudeReadProvider: quark-claude-code-read
-        claudeWriteProvider: quark-claude-code-write
-        codexReadProvider: quark-codex-read
-        codexWriteProvider: quark-codex-write
-        nativeProvider: spawn
+        defaultExecutor: claude-code
+        providers:
+          claude-code: { readOnly: quark-claude-code-read, write: quark-claude-code-write }
+          codex: { readOnly: quark-codex-read, write: quark-codex-write }
+          dsh-native: { readOnly: spawn, write: spawn }
+        routes:
+          claude-code: [claude-code, codex]
+          codex: [codex]
+          dsh-native: [dsh-native]
     - id: quark-durable-state
       name: '@quarkfan/quark-self-ai/durable-state'
       config:

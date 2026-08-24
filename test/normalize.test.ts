@@ -21,7 +21,7 @@ test('normalizes messages and preserves newly introduced fields', () => {
 
 test('passes an unknown event through instead of discarding it', () => {
   const event = normalizeLarkEvent('calendar.new_feature_v1', { event_id: 'evt-new', value: true })
-  assert.equal(event.kind, 'lark.event')
+  assert.equal(event.kind, 'channel.event')
   assert.equal(event.deduplicationKey, 'evt-new')
   assert.equal(event.payload.value, true)
 })

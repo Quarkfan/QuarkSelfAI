@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { SourceRef } from '../domain/contracts.js'
+import type { ExecutorId, SourceRef } from '../domain/contracts.js'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
 import type { DurableActionInput } from '../storage/types.js'
 
@@ -82,7 +82,7 @@ export interface BlacklakeResearchPlanInput {
   readonly expectedBenefit: string
   readonly evidenceGap: string
   readonly researchPrompt?: string
-  readonly requestedExecutor?: 'claude-code' | 'codex' | 'dsh-native'
+  readonly requestedExecutor?: ExecutorId
   readonly risk: 'production' | 'security' | 'customer-blocking' | 'ordinary'
   readonly goalClear: boolean
   readonly evidenceNeedsLocalInspection: boolean

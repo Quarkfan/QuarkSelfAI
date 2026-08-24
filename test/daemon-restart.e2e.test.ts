@@ -85,7 +85,7 @@ test('control daemon preserves SQLite state across a real process restart', asyn
   const store = await createSqliteStore(database, migrations)
   await store.migrate()
   await store.appendEvent('restart-event', {
-    kind: 'lark.event',
+    kind: 'channel.event',
     source: { channel: 'feishu', eventId: 'restart-fixture' },
     eventKey: 'fixture.restart',
     deduplicationKey: 'fixture.restart',

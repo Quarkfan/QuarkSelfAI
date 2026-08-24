@@ -100,6 +100,7 @@ export interface OverviewCounts {
 
 export interface EventSummary {
   readonly id: string
+  readonly kind: NormalizedChannelEvent['kind']
   readonly eventKey: string
   readonly deduplicationKey: string
   readonly source: Readonly<Record<string, unknown>>

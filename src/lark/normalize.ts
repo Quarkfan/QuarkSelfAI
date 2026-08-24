@@ -66,7 +66,7 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
   }
   return {
     ...common,
-    kind: 'lark.event',
+    kind: 'channel.event',
     deduplicationKey: eventId ?? `${eventKey}:${JSON.stringify(value)}`,
     payload: value,
   }

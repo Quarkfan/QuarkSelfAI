@@ -1,7 +1,9 @@
 export type AssistantIdentity = 'user' | 'bot'
+export type ChannelId = string
+export type ExecutorId = string
 
 export interface SourceRef {
-  readonly channel: 'feishu'
+  readonly channel: ChannelId
   readonly conversationId?: string
   readonly messageId?: string
   readonly eventId?: string
@@ -9,13 +11,13 @@ export interface SourceRef {
 }
 
 export interface NormalizedChannelEvent {
-  readonly kind: 'message.received' | 'card.action' | 'lark.event'
+  readonly kind: 'message.received' | 'card.action' | 'channel.event'
   readonly source: SourceRef
   readonly occurredAt?: string
   readonly eventKey: string
   readonly deduplicationKey: string
   readonly payload: Readonly<Record<string, unknown>>
-  /** Complete CLI payload retained for forward compatibility and replay. */
+  /** Complete adapter payload retained for forward compatibility and replay. */
   readonly raw: Readonly<Record<string, unknown>>
 }
 
@@ -41,7 +43,7 @@ export interface ActionRecord {
   readonly state: ActionState
   readonly intent: string
   readonly source: SourceRef
-  readonly executor?: 'claude-code' | 'codex' | 'dsh-native'
+  readonly executor?: ExecutorId
   readonly approvalId?: string
   readonly supersedes?: string
   readonly updatedAt: string
@@ -57,13 +59,13 @@ export interface ExecutorRequest {
 
 export interface ExecutorResult {
   readonly actionId: string
-  readonly executor: 'claude-code' | 'codex' | 'dsh-native'
+  readonly executor: ExecutorId
   readonly status: 'completed' | 'needs-input' | 'failed'
   readonly summary: string
   readonly sessionId?: string
 }
 
 export interface ExecutorProvider {
-  readonly name: ExecutorResult['executor']
+  readonly name: ExecutorId
   execute(request: ExecutorRequest, signal: AbortSignal): Promise<ExecutorResult>
 }

@@ -8,6 +8,13 @@ import type { SubagentResult, SubagentRun } from '@deepseek-ai/dsh-subagent'
 import { SequentialExecutorRouter, type SubagentDispatcher } from '../src/execution/router.js'
 import { WorkspacePolicy } from '../src/execution/workspace-policy.js'
 
+const providers = {
+  'claude-code': { readOnly: 'quark-claude-code-read', write: 'quark-claude-code-write' },
+  codex: { readOnly: 'quark-codex-read', write: 'quark-codex-write' },
+  'dsh-native': { readOnly: 'spawn', write: 'spawn' },
+}
+const routes = { 'claude-code': ['claude-code', 'codex'], codex: ['codex'], 'dsh-native': ['dsh-native'] }
+
 function parent(cwd: string): Agent {
   return { session: { header: { cwd } } } as unknown as Agent
 }
@@ -35,11 +42,7 @@ async function harness(results: Array<SubagentResult | Error>) {
     },
   }
   const policy = await WorkspacePolicy.create([workspace])
-  const router = new SequentialExecutorRouter(dispatcher, policy, {
-    'claude-code': { readOnly: 'quark-claude-code-read', write: 'quark-claude-code-write' },
-    codex: { readOnly: 'quark-codex-read', write: 'quark-codex-write' },
-    'dsh-native': { readOnly: 'spawn', write: 'spawn' },
-  })
+  const router = new SequentialExecutorRouter(dispatcher, policy, providers, routes, 'claude-code')
   return { workspace, calls, disposed, router }
 }
 
@@ -99,6 +102,17 @@ test('supports explicit DSH-native execution without entering the Claude fallbac
   assert.deepEqual(h.calls, ['spawn'])
 })
 
+test('accepts a new harness through configuration without changing the router kernel', async () => {
+  const workspace = await mkdtemp(join(tmpdir(), 'quark-executor-router-custom-'))
+  const calls: string[] = []
+  const dispatcher: SubagentDispatcher = { async start(provider) { calls.push(provider); return run('custom-session', { stopReason: 'completed', output: [] }, []) } }
+  const policy = await WorkspacePolicy.create([workspace])
+  const router = new SequentialExecutorRouter(dispatcher, policy, { custom: { readOnly: 'custom-read', write: 'custom-write' } }, { custom: ['custom'] }, 'custom')
+  const result = await router.execute(request(workspace), new AbortController().signal)
+  assert.equal(result.executor, 'custom')
+  assert.deepEqual(calls, ['custom-read'])
+})
+
 test('rejects concurrent execution of the same durable action', async () => {
   const workspace = await mkdtemp(join(tmpdir(), 'quark-executor-router-active-'))
   const pending = Promise.withResolvers<SubagentResult>()
@@ -115,11 +129,7 @@ test('rejects concurrent execution of the same durable action', async () => {
     },
   }
   const policy = await WorkspacePolicy.create([workspace])
-  const router = new SequentialExecutorRouter(dispatcher, policy, {
-    'claude-code': { readOnly: 'quark-claude-code-read', write: 'quark-claude-code-write' },
-    codex: { readOnly: 'quark-codex-read', write: 'quark-codex-write' },
-    'dsh-native': { readOnly: 'spawn', write: 'spawn' },
-  })
+  const router = new SequentialExecutorRouter(dispatcher, policy, providers, routes, 'claude-code')
   const first = router.execute(request(workspace), new AbortController().signal)
   await started.promise
   await assert.rejects(router.execute(request(workspace), new AbortController().signal), /already has an active executor/)

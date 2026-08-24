@@ -54,10 +54,9 @@ function pgWorkflow(row: Record<string, unknown>): WorkflowInstance {
 }
 
 function pgClaimedEvent(row: Record<string, unknown>): ClaimedChannelEvent {
-  const eventKey = String(row.eventKey)
   return { id: String(row.id), attempt: Number(row.attempt), event: {
-    kind: eventKey === 'im.message.receive_v1' ? 'message.received' : eventKey === 'card.action.trigger' ? 'card.action' : 'lark.event',
-    source: row.source as NormalizedChannelEvent['source'], eventKey, deduplicationKey: String(row.deduplicationKey),
+    kind: String(row.kind) as NormalizedChannelEvent['kind'],
+    source: row.source as NormalizedChannelEvent['source'], eventKey: String(row.eventKey), deduplicationKey: String(row.deduplicationKey),
     payload: row.payload as Record<string, unknown>, raw: row.raw as Record<string, unknown>,
     ...(pgTimestamp(row.occurredAt as string | Date | null) ? { occurredAt: pgTimestamp(row.occurredAt as string | Date | null)! } : {}),
   } }
@@ -140,8 +139,8 @@ export class PgAssistantStore implements AssistantStore {
     const result = await this.database.query<{ id: string; inserted: boolean }>(
       `WITH inserted AS (
          INSERT INTO assistant_event
-           (id, event_key, deduplication_key, source, payload, raw, occurred_at)
-         VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::timestamptz)
+           (id, kind, event_key, deduplication_key, source, payload, raw, occurred_at)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::timestamptz)
          ON CONFLICT (deduplication_key) DO NOTHING
          RETURNING id
        )
@@ -149,10 +148,11 @@ export class PgAssistantStore implements AssistantStore {
        UNION ALL
        SELECT id, false AS inserted
        FROM assistant_event
-       WHERE deduplication_key = $3 AND NOT EXISTS (SELECT 1 FROM inserted)
+       WHERE deduplication_key = $4 AND NOT EXISTS (SELECT 1 FROM inserted)
        LIMIT 1`,
       [
         id,
+        event.kind,
         event.eventKey,
         event.deduplicationKey,
         JSON.stringify(event.source),
@@ -170,7 +170,7 @@ export class PgAssistantStore implements AssistantStore {
     if (!consumerName.trim() || !workerId.trim() || eventKeys.length === 0) throw new Error('event claim requires consumer, worker, and event keys')
     return await this.transaction(async executor => {
       const candidate = await executor.query<Record<string, unknown>>(
-        `SELECT e.id, e.event_key AS "eventKey", e.deduplication_key AS "deduplicationKey", e.source, e.payload, e.raw,
+        `SELECT e.id, e.kind, e.event_key AS "eventKey", e.deduplication_key AS "deduplicationKey", e.source, e.payload, e.raw,
                 e.occurred_at AS "occurredAt"
          FROM assistant_event e LEFT JOIN event_delivery d ON d.consumer_name = $1 AND d.event_id = e.id
          WHERE e.event_key = ANY($2::text[]) AND (
@@ -451,7 +451,7 @@ export class PgAssistantStore implements AssistantStore {
 
   async recentEvents(limit: number): Promise<readonly EventSummary[]> {
     const result = await this.database.query<EventSummary>(
-      `SELECT id, event_key AS "eventKey", deduplication_key AS "deduplicationKey",
+      `SELECT id, kind, event_key AS "eventKey", deduplication_key AS "deduplicationKey",
               source, occurred_at AS "occurredAt", received_at AS "receivedAt"
        FROM assistant_event ORDER BY received_at DESC LIMIT $1`,
       [limit],
@@ -462,7 +462,7 @@ export class PgAssistantStore implements AssistantStore {
   async recentPolicySamples(limit: number) {
     const result = await this.database.query<PolicyEventSampleInput>(
       `SELECT id, source, payload FROM assistant_event
-       WHERE event_key = 'im.message.receive_v1'
+       WHERE kind = 'message.received'
        ORDER BY received_at DESC LIMIT $1`,
       [limit],
     )

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, mkdir, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -26,6 +26,7 @@ test('SQLite is a zero-configuration durable default with event idempotency', as
     assert.deepEqual(await store.appendEvent('row-1', event), { id: 'row-1', inserted: true })
     assert.deepEqual(await store.appendEvent('row-2', event), { id: 'row-1', inserted: false })
     assert.equal((await store.overview()).events, 1)
+    assert.equal((await store.recentEvents(10))[0]?.kind, 'message.received')
     assert.equal((await store.recentEvents(10))[0]?.deduplicationKey, 'om-sqlite')
     const signal = {
       id: 'signal-1', kind: 'collaboration.observation.v1', occurredAt: '2026-08-22T09:00:00.000Z',
@@ -192,6 +193,56 @@ test('SQLite also honors an explicit approval gate on read-only research', async
     assert.equal(claimed?.approvalGranted, true)
   } finally {
     await store.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('SQLite persists executor ids introduced by plugins without a kernel migration', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-open-executor-'))
+  const store = await createSqliteStore(join(directory, 'assistant.sqlite3'), migrations)
+  try {
+    await store.migrate()
+    await store.enqueueAction({
+      actionId: 'action-custom', matterId: 'matter-custom', matterTitle: 'Custom harness', matterSummary: 'Plugin provider', intent: 'custom execution',
+      source: { channel: 'test-channel' }, requestedExecutor: 'future-harness',
+      request: { title: 'Custom harness', prompt: 'run', workspace: directory, mode: 'read-only' },
+    })
+    const claim = await store.claimNextAction('worker', directory, '2099-01-01T00:00:00.000Z', '2099-01-01T01:00:00.000Z')
+    assert.equal(claim?.requestedExecutor, 'future-harness')
+    await store.settleAction('action-custom', 'worker', { actionId: 'action-custom', executor: 'future-harness', status: 'completed', summary: 'done' })
+    assert.equal((await store.recentActions(10))[0]?.executor, 'future-harness')
+  } finally {
+    await store.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('open executor migration preserves actions created by the closed schema', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-open-executor-upgrade-'))
+  const migrationCopy = join(directory, 'migrations')
+  const database = join(directory, 'assistant.sqlite3')
+  await mkdir(migrationCopy)
+  for (const file of (await readdir(migrations)).filter(file => file < '007_open_adapter_ids.sql')) {
+    await copyFile(join(migrations, file), join(migrationCopy, file))
+  }
+  let store = await createSqliteStore(database, migrationCopy)
+  try {
+    await store.migrate()
+    await store.enqueueAction({
+      actionId: 'action-before-upgrade', matterId: 'matter-before-upgrade', matterTitle: 'Existing action', matterSummary: 'Must survive', intent: 'upgrade fixture',
+      source: { channel: 'feishu' }, requestedExecutor: 'claude-code',
+      request: { title: 'Existing action', prompt: 'run after upgrade', workspace: directory, mode: 'read-only' },
+    })
+    await store.close()
+    await copyFile(join(migrations, '007_open_adapter_ids.sql'), join(migrationCopy, '007_open_adapter_ids.sql'))
+    store = await createSqliteStore(database, migrationCopy)
+    await store.migrate()
+    const claim = await store.claimNextAction('worker', directory, '2099-01-01T00:00:00.000Z', '2099-01-01T01:00:00.000Z')
+    assert.equal(claim?.actionId, 'action-before-upgrade')
+    await store.settleAction('action-before-upgrade', 'worker', { actionId: 'action-before-upgrade', executor: 'future-harness', status: 'completed', summary: 'preserved' })
+    assert.equal((await store.recentActions(10))[0]?.executor, 'future-harness')
+  } finally {
+    await store.close().catch(() => undefined)
     await rm(directory, { recursive: true, force: true })
   }
 })

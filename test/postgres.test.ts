@@ -21,8 +21,8 @@ test('persists the normalized event with its stable deduplication key', async ()
     raw: { message_id: 'om-1', future_field: true },
   })
   assert.deepEqual(result, { id: 'evt-row', inserted: true })
-  assert.equal(calls[0]?.values?.[2], 'om-1')
-  assert.match(String(calls[0]?.values?.[5]), /future_field/)
+  assert.equal(calls[0]?.values?.[3], 'om-1')
+  assert.match(String(calls[0]?.values?.[6]), /future_field/)
 })
 
 test('reports a duplicate event without creating another record', async () => {
@@ -32,7 +32,7 @@ test('reports a duplicate event without creating another record', async () => {
     },
   }
   const result = await new PgAssistantStore(database).appendEvent('new-id', {
-    kind: 'lark.event',
+    kind: 'channel.event',
     source: { channel: 'feishu' },
     eventKey: 'future.event',
     deduplicationKey: 'same-event',
