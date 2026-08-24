@@ -5,16 +5,12 @@ import { createAssistantStore } from '../storage/factory.js'
 import { createConsoleServer } from '../web/server.js'
 import { CompatRuntime } from '../runtime/compat.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
-import { LifecycleSupervisor, type ComponentFailure, type ManagedComponent } from '../platform/lifecycle.js'
+import type { ManagedComponent } from '../platform/lifecycle.js'
 import { ControlOnlyRuntime } from '../platform/operations.js'
 import { loadFeatureParity } from '../config/feature-parity.js'
+import { createAssistantApplicationHost, type AssistantApplication } from './host.js'
 
-export interface AssistantApplication {
-  start(): Promise<void>
-  stop(): Promise<void>
-  waitForFailure(): Promise<ComponentFailure>
-  snapshot(): ReturnType<LifecycleSupervisor['snapshot']>
-}
+export type { AssistantApplication } from './host.js'
 
 export async function createAssistantApplication(config: RuntimeConfig): Promise<AssistantApplication> {
   const store = await createAssistantStore(config)
@@ -57,13 +53,7 @@ export async function createAssistantApplication(config: RuntimeConfig): Promise
       waitForFailure: async () => await runtime.waitForFailure(),
     })
   }
-  const supervisor = new LifecycleSupervisor(components)
-  return {
-    start: async () => { await supervisor.start() },
-    stop: async () => { await supervisor.stop() },
-    waitForFailure: async () => await supervisor.waitForFailure(),
-    snapshot: () => supervisor.snapshot(),
-  }
+  return createAssistantApplicationHost(components)
 }
 
 function consoleComponent(server: Server, config: RuntimeConfig, storage: string): ManagedComponent {

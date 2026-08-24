@@ -27,6 +27,7 @@
 - 通道事件契约从通用 action/executor 契约中拆出，两个模块不再共享同一入口。
 - policy 数据契约、runtime status 契约与其实现分开，避免存储和内核运行时形成虚假的反向依赖。
 - 存储工厂只依赖 storage config，控制台只依赖自身 console config，不再引用 migration runtime config。
+- 稳定 application host 从 compat composition 中拆出；它只监管注入的组件，不知道具体通道或迁移模式。
 - 仍直接装配 compat 和 takeover readiness 的应用入口如实归入 `bridge-compat-host`，等待原生组合入口替换。
 
 ## 后果

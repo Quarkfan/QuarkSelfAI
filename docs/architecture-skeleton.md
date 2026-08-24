@@ -11,6 +11,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | --- | --- | --- |
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
+| Application host | 接收组件集合并提供统一启动、停止、失败等待和状态快照 | 决定启用 compat、飞书或某个业务功能 |
 | Module catalog | 模块分类、逐文件源码所有权、真实 import 依赖和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | 批准绑定、租约、重试、结算 | 选择联系人或撰写回复 |
