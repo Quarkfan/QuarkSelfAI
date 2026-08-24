@@ -23,11 +23,19 @@ const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ modu
 for (const { module, plugin } of pluginBindings) {
   assert.ok(plugin.packageExport in packageManifest.exports, `module ${module.id} references missing package export ${plugin.packageExport}`)
   const expectedPackage = plugin.packageExport === '.' ? packageName : `${packageName}/${plugin.packageExport.slice(2)}`
-  assert.equal(profilePlugins.get(plugin.profileId), expectedPackage, `module ${module.id} plugin binding differs from cordis.patch.yml`)
+  const mounted = profilePlugins.get(plugin.profileId)
+  assert.equal(mounted?.name, expectedPackage, `module ${module.id} plugin binding differs from cordis.patch.yml`)
+  const compatibilityGated = /disabled:[\s\S]*ASSISTANT_RUNTIME[^\n]*compat/.test(mounted?.block ?? '')
+  if (module.runtime === 'inactive') {
+    assert.ok(compatibilityGated, `inactive module ${module.id} must be compatibility-gated in cordis.patch.yml`)
+  }
+  if (module.runtime === 'active' || module.runtime === 'shadow') {
+    assert.ok(!compatibilityGated, `${module.runtime} module ${module.id} cannot be compatibility-gated in cordis.patch.yml`)
+  }
 }
 const boundProfileIds = new Set(pluginBindings.map(binding => binding.plugin.profileId))
-for (const [profileId, mountedPackage] of profilePlugins) {
-  if (mountedPackage === packageName || mountedPackage.startsWith(`${packageName}/`)) {
+for (const [profileId, mounted] of profilePlugins) {
+  if (mounted.name === packageName || mounted.name.startsWith(`${packageName}/`)) {
     assert.ok(boundProfileIds.has(profileId), `local Cordis plugin ${profileId} is not owned by a module catalog binding`)
   }
 }
@@ -198,19 +206,26 @@ function outside(value: string, allowed: readonly string[]): boolean {
   return value.startsWith('src/') && !startsWithAny(value, allowed)
 }
 
-function cordisPlugins(source: string): Map<string, string> {
-  const result = new Map<string, string>()
-  let currentId: string | undefined
+function cordisPlugins(source: string): Map<string, { readonly name: string; readonly block: string }> {
+  const result = new Map<string, { readonly name: string; readonly block: string }>()
+  let current: { id: string; lines: string[]; name?: string } | undefined
+  const flush = (): void => {
+    if (!current?.name) return
+    assert.ok(!result.has(current.id), `duplicate Cordis plugin id ${current.id}`)
+    result.set(current.id, { name: current.name, block: current.lines.join('\n') })
+  }
   for (const line of source.split(/\r?\n/)) {
     const id = line.match(/^\s*-\s+id:\s*([^\s#]+)\s*(?:#.*)?$/)?.[1]
-    if (id) { currentId = unquote(id); continue }
+    if (id) {
+      flush()
+      current = { id: unquote(id), lines: [line] }
+      continue
+    }
+    current?.lines.push(line)
     const name = line.match(/^\s+name:\s*([^\s#]+)\s*(?:#.*)?$/)?.[1]
-    if (!name || !currentId) continue
-    const pluginName = unquote(name)
-    assert.ok(!result.has(currentId), `duplicate Cordis plugin id ${currentId}`)
-    result.set(currentId, pluginName)
-    currentId = undefined
+    if (name && current) current.name = unquote(name)
   }
+  flush()
   return result
 }
 

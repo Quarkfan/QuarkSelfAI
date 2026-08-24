@@ -7,7 +7,7 @@
   `dependsOn` 中精确声明且不得保留过期项；没有相对 import 的注入、宿主和外部 runtime 关系放在
   `runtimeDependsOn`。长期 workflow 的外部能力必须登记 `requiresEffects`，native 模块不得依赖缺失或重复的
   `providesEffects`。清单未知字段、越界 `source` 和非法 `hostedBy/exitCriteria/runtime` 组合必须失败关闭。
-  `packages/bridge-compat` 不承接新的长期功能。
+  插件 `runtime` 必须与 Cordis profile 的 compat 门禁一致。`packages/bridge-compat` 不承接新的长期功能。
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
 - 事件必须保留原始 payload，写操作必须经过 durable action/approval 状态。
 - `QuarkSelfAI` 是唯一现网飞书消费者；`packages/bridge-compat` 是受 DSH 监督的兼容插件，不依赖外部旧仓库。
