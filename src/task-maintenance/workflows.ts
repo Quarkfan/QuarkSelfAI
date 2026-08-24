@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
-import { TASK_EFFECTS, type DeletedTask, type DidaMaintenanceConfig, type OverdueTask } from './types.js'
+import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
+import { TASK_EFFECTS } from '../task-system/effects.js'
+import type { DeletedTask, DidaMaintenanceConfig, OverdueTask } from './types.js'
 
 const MINUTE_MS = 60_000
 const DAY_MS = 86_400_000
@@ -66,7 +68,7 @@ function localSlot(now: string, timeZone: string, scheduledHour: number): { read
 }
 
 function notificationEffect(effectId: string, title: string, body: string, availableAt: string) {
-  return { id: effectId, kind: TASK_EFFECTS.notifyOwner, availableAt, payload: { title, body, idempotencyKey: effectId } }
+  return { id: effectId, kind: ASSISTANT_EFFECTS.notifyOwner, availableAt, payload: { title, body, idempotencyKey: effectId } }
 }
 
 function effectKind(event: WorkflowEvent): string | undefined {
@@ -91,10 +93,10 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
     reduce(rawState, event): WorkflowDecision {
       const state = rawState as OverdueState
       if (event.type === 'timer' && state.phase === 'scheduled') {
-        const scanId = id('dida-overdue-scan', projectId, String(event.payload.scheduledAt ?? event.occurredAt))
+        const scanId = id('dida-overdue-scan', state.projectId, String(event.payload.scheduledAt ?? event.occurredAt))
         return {
           status: 'waiting', state: { ...state, phase: 'scanning' },
-          effects: [{ id: scanId, kind: TASK_EFFECTS.listOverdue, availableAt: event.occurredAt, payload: { projectId } }],
+          effects: [{ id: scanId, kind: TASK_EFFECTS.listOverdue, availableAt: event.occurredAt, payload: { projectId: state.projectId } }],
         }
       }
       if (event.type === 'effect.delivered' && effectKind(event) === TASK_EFFECTS.listOverdue) {
@@ -116,21 +118,21 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
         const { failure: _failure, ...withoutFailure } = state
         return {
           status: 'waiting', state: { ...withoutFailure, phase: 'scheduled', notified: pruneFingerprints(nextNotified, event.occurredAt) },
-          wakeAt: at(event.occurredAt, intervalMs), effects,
+          wakeAt: at(event.occurredAt, state.intervalMs), effects,
         }
       }
       if (event.type === 'effect.failed' && effectKind(event) === TASK_EFFECTS.listOverdue) {
         const nextFailure = failure(state.failure, event.occurredAt)
-        const shouldNotify = !nextFailure.notified && nextFailure.count >= failureThreshold
+        const shouldNotify = !nextFailure.notified && nextFailure.count >= state.failureThreshold
         return {
           status: 'waiting',
           state: { ...state, phase: 'scheduled', failure: { ...nextFailure, notified: nextFailure.notified || shouldNotify } },
-          wakeAt: at(event.occurredAt, retryMs),
+          wakeAt: at(event.occurredAt, state.retryMs),
           ...(shouldNotify ? { effects: [notificationEffect(id('dida-overdue-failed', nextFailure.at),
             '滴答清单超期监控持续失败', `已连续失败 ${nextFailure.count} 次，后台会继续重试。`, event.occurredAt)] } : {}),
         }
       }
-      return { status: 'waiting', state, ...(state.phase === 'scheduled' ? { wakeAt: at(event.occurredAt, intervalMs) } : {}) }
+      return { status: 'waiting', state, ...(state.phase === 'scheduled' ? { wakeAt: at(event.occurredAt, state.intervalMs) } : {}) }
     },
   }
 }
@@ -157,16 +159,16 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
     reduce(rawState, event) {
       const state = rawState as CleanupState
       if (event.type === 'timer' && state.phase === 'scheduled') {
-        const slot = localSlot(event.occurredAt, timeZone, scheduledHour)
+        const slot = localSlot(event.occurredAt, state.timeZone, state.scheduledHour)
         if (!slot.due || state.lastCompletedDay === slot.day) {
-          return { status: 'waiting', state, wakeAt: at(event.occurredAt, pollIntervalMs) }
+          return { status: 'waiting', state, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
         }
         return {
           status: 'waiting', state: { ...state, phase: 'cleaning', pendingDay: slot.day },
           effects: [{
-            id: id('dida-completed-cleanup', projectId, slot.day), kind: TASK_EFFECTS.cleanupCompleted,
+            id: id('dida-completed-cleanup', state.projectId, slot.day), kind: TASK_EFFECTS.cleanupCompleted,
             availableAt: event.occurredAt,
-            payload: { projectId, cutoff: at(event.occurredAt, -retentionDays * DAY_MS), maxDeletes: maxPerRun },
+            payload: { projectId: state.projectId, cutoff: at(event.occurredAt, -state.retentionDays * DAY_MS), maxDeletes: state.maxPerRun },
           }],
         }
       }
@@ -174,7 +176,7 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
         const deleted = parseDeletedTasks(event.payload.deleted)
         const effects = []
         if (deleted.length) {
-          effects.push(notificationEffect(id('dida-cleanup-result', projectId, state.pendingDay ?? event.occurredAt),
+          effects.push(notificationEffect(id('dida-cleanup-result', state.projectId, state.pendingDay ?? event.occurredAt),
             `已清理 ${deleted.length} 条过期的已完成自动化待办`, deleted.slice(0, 10).map((task, index) => `${index + 1}. ${task.title}（${task.completedAt}）`).join('\n'), event.occurredAt))
         } else if (state.failure?.notified) {
           effects.push(notificationEffect(id('dida-cleanup-recovered', state.failure.at), '滴答已完成任务清理已恢复',
@@ -183,22 +185,22 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
         const { pendingDay, failure: _failure, ...settled } = state
         return {
           status: 'waiting', state: { ...settled, phase: 'scheduled', ...(pendingDay ? { lastCompletedDay: pendingDay } : {}) },
-          wakeAt: at(event.occurredAt, pollIntervalMs), effects,
+          wakeAt: at(event.occurredAt, state.pollIntervalMs), effects,
         }
       }
       if (event.type === 'effect.failed' && effectKind(event) === TASK_EFFECTS.cleanupCompleted) {
         const nextFailure = failure(state.failure, event.occurredAt)
-        const shouldNotify = !nextFailure.notified && nextFailure.count >= failureThreshold
+        const shouldNotify = !nextFailure.notified && nextFailure.count >= state.failureThreshold
         const { pendingDay: _pendingDay, ...withoutPending } = state
         return {
           status: 'waiting',
           state: { ...withoutPending, phase: 'scheduled', failure: { ...nextFailure, notified: nextFailure.notified || shouldNotify } },
-          wakeAt: at(event.occurredAt, pollIntervalMs),
+          wakeAt: at(event.occurredAt, state.pollIntervalMs),
           ...(shouldNotify ? { effects: [notificationEffect(id('dida-cleanup-failed', nextFailure.at),
             '滴答已完成任务清理持续失败', `已连续失败 ${nextFailure.count} 次，后台会继续重试。`, event.occurredAt)] } : {}),
         }
       }
-      return { status: 'waiting', state, ...(state.phase === 'scheduled' ? { wakeAt: at(event.occurredAt, pollIntervalMs) } : {}) }
+      return { status: 'waiting', state, ...(state.phase === 'scheduled' ? { wakeAt: at(event.occurredAt, state.pollIntervalMs) } : {}) }
     },
   }
 }

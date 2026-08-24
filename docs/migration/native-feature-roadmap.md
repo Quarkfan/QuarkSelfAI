@@ -42,6 +42,15 @@
 - 必须在 `message-intake-and-projection` 提供 task-system 与 notification handlers 并取得所有权后，才允许开启
   `QUARK_NATIVE_DIDA_MAINTENANCE`。
 
+### session-lifecycle 当前准备状态
+
+- 每个自动调研会话独立对应一个 durable workflow，明确记录待任务完成、归档、保留期等待、删除和完成状态；
+  普通定时器不再直接拥有不可逆动作。
+- Codex 状态检查、滴答完成检查、归档、删除和通知均为版本化 effect。删除 adapter 必须再次确认精确 UUID、
+  会话未运行且仍处于归档状态；`missing` 只做幂等对账，`not-archived` 不删除。
+- `npm run audit:session-lifecycle-handoff` 只读生成内容寻址交接，保留重试计数与游标但不迁移错误文本。
+  当前没有 effect handler、没有生产 workflow instance，compat 模式下强制禁用。
+
 ## 每个单元的统一完成证据
 
 1. native 插件拥有独立 manifest、服务契约、生命周期和架构目录项；

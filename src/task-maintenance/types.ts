@@ -12,12 +12,6 @@ export interface DeletedTask {
   readonly completedAt: string
 }
 
-export const TASK_EFFECTS = {
-  listOverdue: 'task-system.list-overdue.v1',
-  cleanupCompleted: 'task-system.cleanup-completed.v1',
-  notifyOwner: 'assistant.notify-owner.v1',
-} as const
-
 export interface DidaMaintenanceConfig {
   readonly enabled?: boolean
   readonly projectId: string

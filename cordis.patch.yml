@@ -116,6 +116,19 @@
         cleanupFailureNotifyThreshold: 3
         completedRetentionDays: 30
         cleanupMaxPerRun: 50
+    - id: quark-session-lifecycle
+      name: '@quarkfan/quark-self-ai/session-lifecycle'
+      # Archive/delete effects are irreversible. Keep the plugin absent until
+      # compat session ownership is frozen and its audited workflow state imports.
+      disabled: !!js process.env.QUARK_NATIVE_SESSION_LIFECYCLE !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        enabled: true
+        pollIntervalMs: 21600000
+        retryBaseMs: 3600000
+        retryMaxMs: 86400000
+        deleteAfterDays: 7
+        failureNotifyThreshold: 1
+        failureNotifyCooldownMs: 86400000
     - id: quark-feishu-ingress
       name: '@quarkfan/quark-self-ai/feishu-ingress'
       # This is the prepared native replacement. It must stay disabled while

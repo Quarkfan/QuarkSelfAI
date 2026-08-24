@@ -21,7 +21,10 @@
 4. workflow definition 必须是业务功能；workflow runtime、状态表和 effect delivery 机制属于骨架。
 5. effect handler 必须以 effect id 实现外部幂等。成功或最终失败会作为新事件送回原 workflow，不能靠内存
    callback 继续流程。
-6. 旧 compat timer 在对应维护窗口之前仍是唯一生产 owner；新增 workflow 表和空 runtime 不构成切换。
+6. effect 的投递协议与跨功能的 owner notification port 属于骨架；`task-system.*`、`codex-session.*` 等具名
+   外部能力属于 feature contract。一个功能可以依赖另一个功能的公开 contract，不得复制或改名冒充自身能力。
+7. workflow reducer 只能用持久状态决定已有实例的节奏；启动配置只初始化新实例，不能在重启后暗改旧实例。
+8. 旧 compat timer 在对应维护窗口之前仍是唯一生产 owner；新增 workflow 表和空 runtime 不构成切换。
 
 ## 结果
 
