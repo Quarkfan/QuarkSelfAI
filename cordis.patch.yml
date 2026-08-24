@@ -107,6 +107,14 @@
         leaseMs: 120000
         retryDelayMs: 120000
         maxAttempts: 5
+    - id: quark-dsh-conversation-effects
+      name: '@quarkfan/quark-self-ai/dsh-conversation-effects'
+      # Creates or resumes user-visible DSH sessions. Keep disabled until the
+      # native Feishu consumer owns intake and result-return correlation.
+      disabled: !!js process.env.QUARK_NATIVE_CONVERSATION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        enabled: true
+        titlePrefix: 飞书直办
     - id: quark-message-intake
       name: '@quarkfan/quark-self-ai/message-intake'
       # The definitions are loadable, but compat remains the sole production

@@ -2,10 +2,11 @@ import { createHash } from 'node:crypto'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import { TASK_PROJECTION_EFFECTS } from '../task-system/projection-effects.js'
+import { CONVERSATION_EFFECTS } from '../conversation/types.js'
 import { INTAKE_EFFECTS, type IntakeDecision, type IntakeInput, validateIntakeDecision } from './types.js'
 
 type IntakeState = Readonly<Record<string, unknown>> & {
-  readonly stage: 'loading-context' | 'evaluating' | 'projecting' | 'completed' | 'failed'
+  readonly stage: 'loading-context' | 'evaluating' | 'projecting' | 'reporting' | 'completed' | 'failed'
   readonly route: IntakeInput['route']
   readonly sourceEvent: IntakeInput['event']
   readonly workspace: string
@@ -44,7 +45,8 @@ export function messageIntakeWorkflow(): WorkflowDefinition {
       const effectKind = String(event.payload.effectKind ?? '')
       if (state.stage === 'loading-context' && effectKind === INTAKE_EFFECTS.loadContext) return afterContext(state, event)
       if (state.stage === 'evaluating' && effectKind === INTAKE_EFFECTS.evaluateFocus) return afterEvaluation(state, event)
-      if (state.stage === 'projecting') return settleProjection(state, event)
+      if (state.stage === 'projecting' && state.route === 'owner-command' && effectKind === CONVERSATION_EFFECTS.dispatch) return afterDelegation(state, event)
+      if (state.stage === 'projecting' || state.stage === 'reporting') return settleProjection(state, event)
       return { status: state.stage === 'completed' ? 'completed' : 'waiting', state }
     },
   }
@@ -56,12 +58,31 @@ function afterContext(state: IntakeState, event: WorkflowEvent): WorkflowDecisio
   if (state.route === 'owner-command') {
     return {
       status: 'waiting', state: { ...state, stage: 'projecting', pending: [effectId] },
-      effects: [{ id: effectId, kind: INTAKE_EFFECTS.delegateCommand, payload: { event: state.sourceEvent, context, workspace: state.workspace } }],
+      effects: [{ id: effectId, kind: CONVERSATION_EFFECTS.dispatch, payload: { event: state.sourceEvent, context, workspace: state.workspace } }],
     }
   }
   return {
     status: 'waiting', state: { ...state, stage: 'evaluating', pending: [effectId] },
     effects: [{ id: effectId, kind: INTAKE_EFFECTS.evaluateFocus, payload: { event: state.sourceEvent, context } }],
+  }
+}
+
+function afterDelegation(state: IntakeState, event: WorkflowEvent): WorkflowDecision {
+  const sessionId = requiredText(event.payload.sessionId, 'delegated sessionId', 300)
+  const summary = requiredText(event.payload.summary, 'delegated summary', 30_000)
+  const effectId = effect(state.sourceEvent, 'delegation-result')
+  return {
+    status: 'waiting',
+    state: { ...state, stage: 'reporting', pending: [effectId], delegatedSessionId: sessionId },
+    effects: [{
+      id: effectId,
+      kind: ASSISTANT_EFFECTS.notifyOwner,
+      payload: {
+        title: '飞书要求已处理',
+        body: `${summary}\n\nDSH 会话：${sessionId}`,
+        idempotencyKey: `conversation-result:${state.sourceEvent.deduplicationKey}`,
+      },
+    }],
   }
 }
 
@@ -90,4 +111,10 @@ function settleProjection(state: IntakeState, event: WorkflowEvent): WorkflowDec
 
 function effect(event: IntakeInput['event'], suffix: string): string {
   return `intake:${createHash('sha256').update(event.deduplicationKey).digest('hex').slice(0, 24)}:${suffix}`
+}
+
+function requiredText(value: unknown, label: string, max: number): string {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} is required`)
+  if (value.length > max) throw new Error(`${label} exceeds ${max} characters`)
+  return value
 }

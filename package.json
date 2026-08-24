@@ -42,6 +42,10 @@
       "types": "./dist/execution/ledger-plugin.d.ts",
       "import": "./dist/execution/ledger-plugin.js"
     },
+    "./dsh-conversation-effects": {
+      "types": "./dist/conversation/dsh-effect-plugin.d.ts",
+      "import": "./dist/conversation/dsh-effect-plugin.js"
+    },
     "./durable-state": {
       "types": "./dist/storage/plugin.d.ts",
       "import": "./dist/storage/plugin.js"
@@ -119,6 +123,7 @@
     "dist/policy",
     "dist/runtime",
     "dist/execution",
+    "dist/conversation",
     "dist/migration",
     "dist/deploy",
     "dist/blacklake",

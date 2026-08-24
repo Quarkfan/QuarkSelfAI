@@ -4,6 +4,7 @@ import { messageIntakeWorkflow } from '../src/intake/workflow.js'
 import { INTAKE_EFFECTS } from '../src/intake/types.js'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.js'
+import { CONVERSATION_EFFECTS } from '../src/conversation/types.js'
 
 const message = { kind: 'message.received' as const, source: { channel: 'feishu' as const, messageId: 'om-1', conversationId: 'oc-1', senderId: 'owner' }, eventKey: 'im.message.receive_v1', deduplicationKey: 'om-1', payload: { content: '帮我检查一下', chatType: 'p2p' }, raw: {} }
 
@@ -12,8 +13,13 @@ test('owner DM bypasses enum classification and delegates with loaded conversati
   const initial = workflow.initialize({ route: 'owner-command', event: message, workspace: '/workspace' }, '2026-08-24T00:00:00Z')
   assert.equal(initial.effects?.[0]?.kind, INTAKE_EFFECTS.loadContext)
   const next = workflow.reduce(initial.state, { id: 'context', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:01Z', payload: { effectId: initial.effects![0]!.id, effectKind: INTAKE_EFFECTS.loadContext, context: { messages: [{ text: 'previous' }], externalGroup: false } } })
-  assert.equal(next.effects?.[0]?.kind, INTAKE_EFFECTS.delegateCommand)
+  assert.equal(next.effects?.[0]?.kind, CONVERSATION_EFFECTS.dispatch)
   assert.equal(next.status, 'waiting')
+  const reporting = workflow.reduce(next.state, { id: 'result', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:02Z', payload: { effectKind: CONVERSATION_EFFECTS.dispatch, effectId: next.effects![0]!.id, sessionId: 'session-1', summary: '处理完成' } })
+  assert.equal(reporting.effects?.[0]?.kind, ASSISTANT_EFFECTS.notifyOwner)
+  assert.match(String(reporting.effects?.[0]?.payload.body), /session-1/)
+  const completed = workflow.reduce(reporting.state, { id: 'notified', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:03Z', payload: { effectKind: ASSISTANT_EFFECTS.notifyOwner, effectId: reporting.effects![0]!.id } })
+  assert.equal(completed.status, 'completed')
 })
 
 test('focus intake projects task and approval card exactly once through durable effects', () => {
