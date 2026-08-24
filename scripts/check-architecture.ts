@@ -48,16 +48,17 @@ const violations: string[] = []
 for (const filename of files) {
   const source = await readFile(filename, 'utf8')
   const from = relative(root, filename)
-  if (startsWithAny(from, ['src/domain/', 'src/storage/'])
-    && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\bfeishu\b|\blark\b)/i.test(source)) {
-    violations.push(`${from} hard-codes a feature adapter identity inside the skeleton`)
+  const owner = ownerBySource.get(from)
+  const ownerModule = moduleById.get(owner ?? '')
+  if (ownerModule?.classification === 'skeleton'
+    && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|codex|claude|xiaowei|takeover|nativecutover)\b|常东旭|任永强|张以宁)/i.test(source)) {
+    violations.push(`${from} hard-codes a feature or migration identity inside skeleton module ${ownerModule.id}`)
   }
   if (from === 'src/execution/router.ts' && /(claude-code|\bcodex\b|dsh-native)/i.test(source)) {
     violations.push(`${from} hard-codes an executor route instead of reading composition config`)
   }
-  const owner = ownerBySource.get(from)
   if (/from\s+['"]node:child_process['"]/.test(source)
-    && moduleById.get(owner ?? '')?.layer !== 'adapter'
+    && ownerModule?.layer !== 'adapter'
     && !startsWithAny(from, ['src/runtime/kernel', 'src/runtime/compat'])) {
     violations.push(`${from} invokes child_process outside an adapter or supervised runtime boundary`)
   }
