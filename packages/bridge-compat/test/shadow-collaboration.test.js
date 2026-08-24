@@ -7,6 +7,7 @@ import {
   ShadowCollaborationMonitor,
   buildShadowDecision,
   classifyAttention,
+  compactShadowHistory,
   detectTaskFeedback,
 } from "../src/shadow-collaboration.js";
 
@@ -68,6 +69,60 @@ test("merges repeated messages into one matter without storing raw content", asy
   assert.equal(h.state.state.shadowMatters[0].sources.length, 2);
   assert.equal(h.state.state.shadowDecisions.length, 2);
   assert.equal("content" in h.state.state.shadowMatters[0].sources[0], false);
+});
+
+test("compacts shadow decisions and sources as one lineage boundary", () => {
+  const root = {
+    shadowMatters: [{
+      key: "matter-1",
+      sources: [{ messageId: "kept" }],
+    }],
+    shadowDecisions: [
+      { messageId: "orphan", matterKey: "matter-1" },
+      { messageId: "kept", matterKey: "matter-1" },
+      { messageId: "kept", matterKey: "missing-matter" },
+    ],
+  };
+  compactShadowHistory(root);
+  assert.deepEqual(root.shadowDecisions, [{ messageId: "kept", matterKey: "matter-1" }]);
+  assert.deepEqual(root.shadowMatters[0].sources, [{ messageId: "kept" }]);
+});
+
+test("applies one global bound without orphaning matters or sources", () => {
+  const root = {
+    shadowMatters: Array.from({ length: 2001 }, (_, index) => ({
+      key: `matter-${index}`,
+      sources: [{ messageId: `message-${index}` }],
+    })),
+    shadowDecisions: Array.from({ length: 2001 }, (_, index) => ({
+      messageId: `message-${index}`,
+      matterKey: `matter-${index}`,
+    })),
+  };
+  compactShadowHistory(root);
+  assert.equal(root.shadowDecisions.length, 2000);
+  assert.equal(root.shadowMatters.length, 2000);
+  assert.equal(root.shadowDecisions[0].messageId, "message-1");
+  assert.equal(root.shadowMatters[0].key, "matter-1");
+});
+
+test("retains every source referenced by the bounded shadow decision window", async () => {
+  const h = harness();
+  const monitor = new ShadowCollaborationMonitor(h);
+  for (let index = 0; index < 25; index += 1) {
+    await monitor.observe({
+      message_id: `om_${index}`, chat_id: "oc_1", chat_name: "内部群", content: `同一事项 ${index}`,
+      sender: { id: "ou_1" },
+    }, [{ message_id: `om_${index}` }], {
+      taskId: "task_1", taskAction: index === 0 ? "created" : "unchanged", title: "同一事项",
+      priority: 1, notificationDecision: "silent", actionRequired: true,
+      actionOwner: "changdongxu", nextAction: "继续跟进",
+    });
+  }
+  const sources = new Set(h.state.state.shadowMatters.flatMap((matter) => matter.sources.map((source) => source.messageId)));
+  assert.equal(h.state.state.shadowDecisions.length, 25);
+  assert.equal(sources.size, 25);
+  assert.ok(h.state.state.shadowDecisions.every((decision) => sources.has(decision.messageId)));
 });
 
 test("records ignored information silently", async () => {

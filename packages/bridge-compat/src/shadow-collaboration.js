@@ -4,6 +4,7 @@ import path from "node:path";
 import { formatUserTime, run } from "./util.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const SHADOW_HISTORY_LIMIT = 2000;
 const TIER_SCORE = { silent: 0, today: 1, realtime: 2 };
 const STOP_WORDS = new Set([
   "常东旭", "飞书", "消息", "事项", "项目", "问题", "跟进", "关注", "确认", "处理", "需要",
@@ -13,6 +14,26 @@ const STOP_WORDS = new Set([
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+export function compactShadowHistory(root) {
+  const matters = Array.isArray(root.shadowMatters) ? root.shadowMatters : [];
+  const sourceMessageIds = new Set(matters.flatMap((matter) =>
+    Array.isArray(matter?.sources) ? matter.sources.map((source) => source?.messageId).filter(Boolean) : []));
+  const matterKeys = new Set(matters.map((matter) => matter?.key).filter(Boolean));
+  const decisions = (Array.isArray(root.shadowDecisions) ? root.shadowDecisions : [])
+    .filter((decision) => sourceMessageIds.has(decision?.messageId) && matterKeys.has(decision?.matterKey))
+    .slice(-SHADOW_HISTORY_LIMIT);
+  const retainedMessageIds = new Set(decisions.map((decision) => decision.messageId));
+  const retainedMatterKeys = new Set(decisions.map((decision) => decision.matterKey));
+  root.shadowDecisions = decisions;
+  root.shadowMatters = matters
+    .filter((matter) => retainedMatterKeys.has(matter?.key))
+    .map((matter) => ({
+      ...matter,
+      sources: (Array.isArray(matter.sources) ? matter.sources : [])
+        .filter((source) => retainedMessageIds.has(source?.messageId)),
+    }));
 }
 
 function truncate(value, max = 160) {
@@ -216,11 +237,10 @@ export class ShadowCollaborationMonitor {
       link: message.message_app_link || null,
       contextCount: Array.isArray(contextMessages) ? contextMessages.length : 0,
     });
-    matter.sources = matter.sources.slice(-20);
     decision.matterKey = matter.key;
     this.state.state.shadowDecisions.push(decision);
-    this.state.state.shadowDecisions = this.state.state.shadowDecisions.slice(-2000);
     this.correlateCalendarForMatter(matter);
+    compactShadowHistory(this.state.state);
     await this.state.save();
     return decision;
   }

@@ -167,8 +167,6 @@ export class StateStore {
       this.state.researchDecisionHistory = this.state.researchDecisionHistory.slice(-100);
       this.state.xiaoweiResearchRequests = this.state.xiaoweiResearchRequests.slice(-300);
       this.state.xiaoweiProcessedMessageIds = this.state.xiaoweiProcessedMessageIds.slice(-2000);
-      this.state.shadowMatters = (this.state.shadowMatters || []).slice(-300);
-      this.state.shadowDecisions = (this.state.shadowDecisions || []).slice(-2000);
       this.state.shadowFeedback = (this.state.shadowFeedback || []).slice(-1000);
       if (this.state.collaborationLearning) {
         this.state.collaborationLearning.observations = (this.state.collaborationLearning.observations || []).slice(-2000);
