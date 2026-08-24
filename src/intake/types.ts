@@ -1,4 +1,5 @@
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
+import type { TaskProjectionTarget } from '../task-system/projection-effects.js'
 
 export const INTAKE_EFFECTS = {
   evaluateFocus: 'assistant.intake.evaluate-focus.v1',
@@ -13,6 +14,7 @@ export interface IntakeInput {
   readonly route: IntakeRoute
   readonly event: NormalizedChannelEvent
   readonly workspace: string
+  readonly taskProjection?: TaskProjectionTarget
 }
 
 export interface IntakeDecision {
@@ -37,6 +39,7 @@ export interface IntakePluginConfig {
   readonly focusConversationIds?: readonly string[]
   readonly delegationInviterId?: string
   readonly discoveryIntervalMs?: number
+  readonly taskProjection?: TaskProjectionTarget
 }
 
 export interface IntakeContext {

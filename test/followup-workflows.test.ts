@@ -9,6 +9,7 @@ import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.j
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 
 const event = (id: string, type: string, occurredAt: string, payload: Record<string, unknown> = {}) => ({ id, type, occurredAt, payload })
+const taskProjection = { projectId: 'followup', authorization: { id: 'followup-projection-v1', grantedBy: 'owner' as const, grantedAt: '2026-08-20T00:00:00+08:00', scope: 'dida.task-projection', revision: 1, source: 'owner-directive', projectId: 'followup' } }
 
 test('workday review distributes updates, reminders, and outreach once per local workday', () => {
   const definition = followupReviewWorkflow({ timeZone: 'Asia/Shanghai', scheduledHour: 10, pollIntervalMs: 60_000 })
@@ -38,7 +39,7 @@ test('workday evaluation failure can create a fresh durable retry effect', () =>
 })
 
 test('outreach requires exact approval before sending and persists reply synchronization', () => {
-  const definition = followupOutreachWorkflow()
+  const definition = followupOutreachWorkflow({ taskProjection })
   const initial = definition.initialize({ taskId: 'task-1', title: '确认进度', personName: '张三', question: '当前进展如何？', reason: '约定时间已到', context: '项目跟进' }, '2026-08-24T00:00:00Z')
   const resolving = definition.reduce(initial.state, event('resolve-timer', 'timer', '2026-08-24T00:00:01Z'))
   const approval = definition.reduce(resolving.state, event('resolved', 'effect.delivered', '2026-08-24T00:00:02Z', {

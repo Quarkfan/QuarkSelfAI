@@ -82,6 +82,10 @@
       "types": "./dist/task-system/dida-plugin.d.ts",
       "import": "./dist/task-system/dida-plugin.js"
     },
+    "./dida-projection-effects": {
+      "types": "./dist/task-system/projection-plugin.d.ts",
+      "import": "./dist/task-system/projection-plugin.js"
+    },
     "./session-lifecycle": {
       "types": "./dist/session-lifecycle/plugin.d.ts",
       "import": "./dist/session-lifecycle/plugin.js"

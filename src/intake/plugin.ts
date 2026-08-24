@@ -13,6 +13,7 @@ export class IntakeService extends Service {
   constructor(ctx: Context, private readonly config: IntakePluginConfig) {
     super(ctx, 'quarkIntake')
     if (!config.ownerOpenId?.trim() || !config.workspace?.trim()) throw new Error('intake ownerOpenId and workspace are required')
+    if (config.enabled === true && !config.taskProjection) throw new Error('enabled intake requires taskProjection authorization')
     const disposeDefinition = ctx.quarkWorkflows.register(this.definition)
     const disposeConsumer = ctx.quarkEvents.register({
       name: 'message-intake', eventKeys: [
@@ -52,7 +53,7 @@ export class IntakeService extends Service {
     return `message-intake:${createHash('sha256').update(event.deduplicationKey).digest('hex').slice(0, 32)}`
   }
   private start(event: NormalizedChannelEvent, route: IntakeRoute) {
-    return this.ctx.quarkWorkflows.ensure(this.workflowId(event), INTAKE_WORKFLOW_KIND, { route, event, workspace: this.config.workspace })
+    return this.ctx.quarkWorkflows.ensure(this.workflowId(event), INTAKE_WORKFLOW_KIND, { route, event, workspace: this.config.workspace, ...(this.config.taskProjection ? { taskProjection: this.config.taskProjection } : {}) })
   }
   private isDelegatedMembership(event: NormalizedChannelEvent): boolean {
     if (event.eventKey !== 'im.chat.member.user.added_v1' || !this.config.delegationInviterId) return false

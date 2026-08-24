@@ -134,6 +134,16 @@
         focusSenderIds: []
         focusConversationIds: []
         discoveryIntervalMs: 600000
+        taskProjection:
+          projectId: !!js process.env.DIDA_PROJECT_ID
+          authorization:
+            id: owner-policy:dida-task-projection:v1
+            grantedBy: owner
+            grantedAt: '2026-08-20T00:00:00+08:00'
+            scope: dida.task-projection
+            revision: 1
+            source: owner-directive:auto-create-and-maintain-tasks
+            projectId: !!js process.env.DIDA_PROJECT_ID
     - id: quark-intake-interaction-effects
       name: '@quarkfan/quark-self-ai/intake-interaction-effects'
       # Card callbacks are consumers too: keep the provider under the same
@@ -156,6 +166,15 @@
       # Adapter preparation. Cleanup is bounded by authorization evidence carried
       # in durable workflow state. Keep disabled until real replay and cutover.
       disabled: !!js process.env.QUARK_NATIVE_DIDA_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        executable: dida
+        projectIds: !!js >-
+          [process.env.DIDA_PROJECT_ID, process.env.DIDA_FOLLOWUP_PROJECT_ID].filter(Boolean)
+    - id: quark-dida-projection-effects
+      name: '@quarkfan/quark-self-ai/dida-projection-effects'
+      # Writes only under durable owner evidence carried by each effect. Keep
+      # disabled until projection shadow replay and single-owner cutover.
+      disabled: !!js process.env.QUARK_NATIVE_DIDA_PROJECTION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
       config:
         executable: dida
         projectIds: !!js >-
@@ -231,6 +250,16 @@
         retryBaseMs: 120000
         retryMaxMs: 3600000
         failureNotifyThreshold: 3
+        taskProjection:
+          projectId: !!js process.env.DIDA_PROJECT_ID
+          authorization:
+            id: owner-policy:dida-task-projection:v1
+            grantedBy: owner
+            grantedAt: '2026-08-20T00:00:00+08:00'
+            scope: dida.task-projection
+            revision: 1
+            source: owner-directive:auto-create-and-maintain-tasks
+            projectId: !!js process.env.DIDA_PROJECT_ID
     - id: quark-followup
       name: '@quarkfan/quark-self-ai/followup'
       # The compatibility host remains the only workday timer, card callback,
@@ -244,6 +273,16 @@
         retryBaseMs: 120000
         retryMaxMs: 21600000
         failureNotifyThreshold: 1
+        taskProjection:
+          projectId: !!js process.env.DIDA_FOLLOWUP_PROJECT_ID
+          authorization:
+            id: owner-policy:dida-followup-projection:v1
+            grantedBy: owner
+            grantedAt: '2026-08-20T00:00:00+08:00'
+            scope: dida.task-projection
+            revision: 1
+            source: owner-directive:delegate-followup-task-management
+            projectId: !!js process.env.DIDA_FOLLOWUP_PROJECT_ID
     - id: quark-feishu-ingress
       name: '@quarkfan/quark-self-ai/feishu-ingress'
       # This is the prepared native replacement. It must stay disabled while

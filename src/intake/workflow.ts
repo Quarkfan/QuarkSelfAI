@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import { TASK_PROJECTION_EFFECTS } from '../task-system/projection-effects.js'
+import type { TaskProjectionTarget } from '../task-system/projection-effects.js'
 import { CONVERSATION_EFFECTS } from '../conversation/types.js'
 import { LARK_EFFECTS } from '../lark/effects.js'
 import { INTAKE_EFFECTS, type IntakeDecision, type IntakeInput, validateIntakeDecision } from './types.js'
@@ -14,6 +15,7 @@ type IntakeState = Readonly<Record<string, unknown>> & {
   readonly pending: readonly string[]
   readonly decision?: IntakeDecision
   readonly approvalId?: string
+  readonly taskProjection?: TaskProjectionTarget
 }
 
 export const INTAKE_WORKFLOW_KIND = 'message-intake.v1'
@@ -29,14 +31,14 @@ export function messageIntakeWorkflow(): WorkflowDefinition {
         const effectId = effect(value.event, 'interaction')
         return {
           status: 'waiting',
-          state: { stage: 'projecting', route: value.route, sourceEvent: value.event, workspace: value.workspace, pending: [effectId] },
+          state: { stage: 'projecting', route: value.route, sourceEvent: value.event, workspace: value.workspace, pending: [effectId], ...(value.taskProjection ? { taskProjection: value.taskProjection } : {}) },
           effects: [{ id: effectId, kind: INTAKE_EFFECTS.applyInteraction, payload: { event: value.event, requireExactOwnerAndCorrelation: true } }],
         }
       }
       const effectId = effect(value.event, 'context')
       return {
         status: 'waiting',
-        state: { stage: 'loading-context', route: value.route, sourceEvent: value.event, workspace: value.workspace, pending: [effectId] },
+        state: { stage: 'loading-context', route: value.route, sourceEvent: value.event, workspace: value.workspace, pending: [effectId], ...(value.taskProjection ? { taskProjection: value.taskProjection } : {}) },
         effects: [{ id: effectId, kind: LARK_EFFECTS.loadMessageContext, payload: { event: value.event, route: value.route, requestedAt: now } }],
       }
     },
@@ -94,10 +96,13 @@ function afterEvaluation(state: IntakeState, event: WorkflowEvent): WorkflowDeci
   const decision = validateIntakeDecision(event.payload.decision)
   if (decision.outcome === 'ignored') return { status: 'completed', state: { ...state, stage: 'completed', pending: [], decision }, wakeAt: null }
   const effects = []
-  if (decision.outcome === 'task') effects.push({
-    id: effect(state.sourceEvent, 'task'), kind: TASK_PROJECTION_EFFECTS.upsertIntake,
-    payload: { sourceEvent: state.sourceEvent, decision, idempotencyKey: `feishu:${state.sourceEvent.source.messageId ?? state.sourceEvent.deduplicationKey}` },
-  })
+  if (decision.outcome === 'task') {
+    if (!state.taskProjection) throw new Error('task intake requires projection target and authorization')
+    effects.push({
+      id: effect(state.sourceEvent, 'task'), kind: TASK_PROJECTION_EFFECTS.upsertIntake,
+      payload: { sourceEvent: state.sourceEvent, decision, ...state.taskProjection, effectiveAt: event.occurredAt, idempotencyKey: `feishu:${state.sourceEvent.source.messageId ?? state.sourceEvent.deduplicationKey}` },
+    })
+  }
   const approvalId = decision.approvalRequired ? effect(state.sourceEvent, 'approval-decision') : undefined
   if (decision.notifyOwner) effects.push({
     id: effect(state.sourceEvent, decision.approvalRequired ? 'approval-card' : 'notification'),

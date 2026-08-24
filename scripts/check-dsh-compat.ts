@@ -37,6 +37,8 @@ const interactionPlugin = await import(resolve(projectRoot, 'dist/intake/interac
 assert.equal(typeof interactionPlugin.apply, 'function', 'intake interaction effect plugin must expose apply(ctx, config)')
 const reasoningPlugin = await import(resolve(projectRoot, 'dist/reasoning/dsh-effect-plugin.js'))
 assert.equal(typeof reasoningPlugin.apply, 'function', 'DSH reasoning effect plugin must expose apply(ctx, config)')
+const projectionPlugin = await import(resolve(projectRoot, 'dist/task-system/projection-plugin.js'))
+assert.equal(typeof projectionPlugin.apply, 'function', 'Dida projection effect plugin must expose apply(ctx, config)')
 const dynamicPluginPolicy = await import(resolve(projectRoot, 'dist/runtime/dynamic-plugin-policy.js'))
 assert.equal(typeof dynamicPluginPolicy.apply, 'function', 'dynamic plugin approval policy must expose apply(ctx)')
 
@@ -72,6 +74,8 @@ assert.match(dump, /id: quark-intake-interaction-effects[\s\S]*name: '@quarkfan\
 assert.match(dump, /quark-intake-interaction-effects[\s\S]*QUARK_NATIVE_INTERACTION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-dsh-reasoning-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dsh-reasoning-effects'/)
 assert.match(dump, /quark-dsh-reasoning-effects[\s\S]*QUARK_NATIVE_REASONING_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /id: quark-dida-projection-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dida-projection-effects'/)
+assert.match(dump, /quark-dida-projection-effects[\s\S]*QUARK_NATIVE_DIDA_PROJECTION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-feishu-ingress[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-ingress'/)
 assert.match(dump, /quark-feishu-ingress[\s\S]*QUARK_NATIVE_FEISHU_INGRESS[\s\S]*ASSISTANT_RUNTIME === 'compat'[\s\S]*startConsumer: true/)
 assert.match(dump, /id: quark-dynamic-plugin-policy[\s\S]*name: '@quarkfan\/quark-self-ai\/dynamic-plugin-policy'/)
@@ -92,6 +96,9 @@ const activation = spawn(process.execPath, [
     QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS: 'true',
     QUARK_NATIVE_INTERACTION_EFFECTS: 'true',
     QUARK_NATIVE_REASONING_EFFECTS: 'true',
+    QUARK_NATIVE_DIDA_PROJECTION_EFFECTS: 'true',
+    DIDA_PROJECT_ID: 'compat-automation-project',
+    DIDA_FOLLOWUP_PROJECT_ID: 'compat-followup-project',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })

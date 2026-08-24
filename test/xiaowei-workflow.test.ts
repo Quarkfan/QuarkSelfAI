@@ -5,7 +5,7 @@ import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.j
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 import { xiaoweiResearchWorkflow } from '../src/xiaowei/workflow.js'
 
-const definition = () => xiaoweiResearchWorkflow({ agentOpenId: 'ou_agent', agentChatId: 'oc_agent', failureNotifyThreshold: 1 })
+const definition = () => xiaoweiResearchWorkflow({ agentOpenId: 'ou_agent', agentChatId: 'oc_agent', failureNotifyThreshold: 1, taskProjection: { projectId: 'automation', authorization: { id: 'task-projection-v1', grantedBy: 'owner', grantedAt: '2026-08-20T00:00:00+08:00', scope: 'dida.task-projection', revision: 1, source: 'owner-directive', projectId: 'automation' } } })
 const input = { requestId: 'req-1', approvedAt: '2026-08-24T00:00:00Z', taskId: 'task-1', title: '排查生产超时', prompt: '核对日志和 Trace' }
 const event = (id: string, type: string, at: string, payload: Record<string, unknown> = {}) => ({ id, type, occurredAt: at, payload })
 

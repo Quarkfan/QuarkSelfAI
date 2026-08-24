@@ -8,6 +8,7 @@ import { CONVERSATION_EFFECTS } from '../src/conversation/types.js'
 import { LARK_EFFECTS } from '../src/lark/effects.js'
 
 const message = { kind: 'message.received' as const, source: { channel: 'feishu' as const, messageId: 'om-1', conversationId: 'oc-1', senderId: 'owner' }, eventKey: 'im.message.receive_v1', deduplicationKey: 'om-1', payload: { content: '帮我检查一下', chatType: 'p2p' }, raw: {} }
+const taskProjection = { projectId: 'automation', authorization: { id: 'task-projection-v1', grantedBy: 'owner' as const, grantedAt: '2026-08-20T00:00:00+08:00', scope: 'dida.task-projection', revision: 1, source: 'owner-directive', projectId: 'automation' } }
 
 test('owner DM bypasses enum classification and delegates with loaded conversation context', () => {
   const workflow = messageIntakeWorkflow()
@@ -25,7 +26,7 @@ test('owner DM bypasses enum classification and delegates with loaded conversati
 
 test('focus intake projects a task but remains pending until the exact approval returns', () => {
   const workflow = messageIntakeWorkflow()
-  const initial = workflow.initialize({ route: 'focus', event: message, workspace: '/workspace' }, '2026-08-24T00:00:00Z')
+  const initial = workflow.initialize({ route: 'focus', event: message, workspace: '/workspace', taskProjection }, '2026-08-24T00:00:00Z')
   const evaluating = workflow.reduce(initial.state, { id: 'context', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:01Z', payload: { effectKind: LARK_EFFECTS.loadMessageContext, effectId: initial.effects![0]!.id, context: { messages: [], externalGroup: true } } })
   const projecting = workflow.reduce(evaluating.state, { id: 'decision', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:02Z', payload: { effectKind: INTAKE_EFFECTS.evaluateFocus, effectId: evaluating.effects![0]!.id, decision: { outcome: 'task', summary: '需要批准配额', materialChange: true, notifyOwner: true, approvalRequired: true, title: '确认配额', priority: 3, tags: ['待批准'], researchDecision: 'skip' } } })
   assert.deepEqual(projecting.effects?.map(item => item.kind), [TASK_PROJECTION_EFFECTS.upsertIntake, ASSISTANT_EFFECTS.requestInteraction])

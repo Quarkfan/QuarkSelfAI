@@ -1,3 +1,5 @@
+import type { TaskProjectionTarget } from '../task-system/projection-effects.js'
+
 export interface XiaoweiResearchConfig {
   readonly enabled?: boolean
   readonly agentName?: string
@@ -6,6 +8,7 @@ export interface XiaoweiResearchConfig {
   readonly retryBaseMs?: number
   readonly retryMaxMs?: number
   readonly failureNotifyThreshold?: number
+  readonly taskProjection?: TaskProjectionTarget
 }
 
 export interface XiaoweiResearchInput extends Readonly<Record<string, unknown>> {

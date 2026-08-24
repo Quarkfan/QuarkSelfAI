@@ -81,10 +81,12 @@ function notifyEffect(state: XiaoweiResearchState, now: string, sequence: number
       idempotencyKey: key } }
 }
 function taskEffect(state: XiaoweiResearchState, now: string, sequence: number) {
+  const target = state.taskProjection
+  if (!target || typeof target !== 'object' || Array.isArray(target)) throw new Error('Xiaowei task update requires projection authorization')
   const key = `xiaowei-task-result:${state.requestId}:${state.replyMessageId}`
   return { id: stable('xiaowei-task-update', key, String(sequence)), kind: TASK_PROJECTION_EFFECTS.recordResearchResult, availableAt: now,
     payload: { taskId: state.taskId, requestId: state.requestId, title: state.title, result: state.replyContent,
-      replyMessageId: state.replyMessageId, ...(state.replyUrl ? { replyUrl: state.replyUrl } : {}), idempotencyKey: key } }
+      replyMessageId: state.replyMessageId, ...(state.replyUrl ? { replyUrl: state.replyUrl } : {}), ...(target as Record<string, unknown>), effectiveAt: now, idempotencyKey: key } }
 }
 function retry(state: XiaoweiResearchState, operation: Operation, event: WorkflowEvent): WorkflowDecision {
   const prior = state.failure?.operation === operation ? state.failure : undefined
@@ -121,7 +123,7 @@ export function xiaoweiResearchWorkflow(config: XiaoweiResearchConfig): Workflow
         ...(input.sourceSender ? { sourceSender: text(input.sourceSender, 'sourceSender', 300) } : {}),
         agentName, agentOpenId, agentChatId, retryBaseMs, retryMaxMs, failureThreshold,
         phase: sentMessageId ? 'waiting-reply' : 'ready', sequence: 0, ...(sentMessageId && sentAt ? { sentMessageId, sentAt } : {}),
-        ownerNotified: false, taskUpdated: !input.taskId,
+        ...(config.taskProjection ? { taskProjection: config.taskProjection } : {}), ownerNotified: false, taskUpdated: !input.taskId,
       }
       return { status: 'waiting', state, ...(sentMessageId ? {} : { wakeAt: now }) }
     },

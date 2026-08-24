@@ -17,7 +17,7 @@ test('intake cheaply selects owner DM, focus people, owner cards, membership and
     await ctx.plugin(DurableStateService, { sqlitePath: join(directory, 'state.sqlite3') })
     await ctx.plugin(DurableWorkflowRuntime, { workerId: 'workflow', enabled: false })
     await ctx.plugin(DurableEventRuntime, { workerId: 'events', enabled: false })
-    await ctx.plugin(intakePlugin, { enabled: true, ownerOpenId: 'owner', workspace: '/workspace', focusSenderIds: ['focus'], delegationInviterId: 'delegate' })
+    await ctx.plugin(intakePlugin, { enabled: true, ownerOpenId: 'owner', workspace: '/workspace', focusSenderIds: ['focus'], delegationInviterId: 'delegate', taskProjection: { projectId: 'automation', authorization: { id: 'task-projection-v1', grantedBy: 'owner', grantedAt: '2026-08-20T00:00:00+08:00', scope: 'dida.task-projection', revision: 1, source: 'owner-directive', projectId: 'automation' } } })
     const base = { source: { channel: 'feishu' as const }, occurredAt: '2026-08-24T00:00:00Z', raw: {} }
     await ctx.quarkIntake.handle({ ...base, kind: 'message.received', eventKey: 'im.message.receive_v1', deduplicationKey: 'dm', source: { ...base.source, senderId: 'owner' }, payload: { chatType: 'p2p', content: '自然语言目标' } })
     await ctx.quarkIntake.handle({ ...base, kind: 'message.received', eventKey: 'im.message.receive_v1', deduplicationKey: 'focus', source: { ...base.source, senderId: 'focus' }, payload: { chatType: 'group', content: '更新' } })

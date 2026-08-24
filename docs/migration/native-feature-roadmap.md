@@ -86,6 +86,8 @@
   durable event。批准卡片送达后 workflow 保持等待；补充输入只记录为 response，不会替代明确批准或拒绝。
 - 重点消息语义判断已接入 JSON-only 的 DSH LLM effect provider；模型输出还要通过领域约束校验，消息中的提示词
   只作为不可信业务数据。该 provider 不创建侧栏会话，并与本人私聊直办的可见 conversation dispatcher 分离。
+- 滴答 projection provider 已覆盖 intake upsert、小维结果和联系人回复：外部写入携带持久 owner 授权，更新优先，
+  写后复核真实任务类型/清单/血缘，快速摘要重写且幂等进展只追加一次。NOTE 或多任务冲突不会被当成成功。
 - 非艾特消息的低频发现被定义为 feature effect，默认目标间隔 10 分钟；它不进入通用事件/工作流骨架，也不要求用 sleep
   维持会话。当前没有注册真实飞书/滴答/模型 effect handler，插件在 compat 模式下强制禁用。
 - `npm run audit:message-intake-handoff` 只读盘点消息、卡片、通知、本人参与、表情、标记会话与交接群的队列和游标，

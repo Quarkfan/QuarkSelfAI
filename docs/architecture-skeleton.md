@@ -89,6 +89,9 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 10. 后台语义判断使用独立的结构化 DSH LLM effect provider，不占用可见会话，也不把模型调用藏进 workflow
     reducer。输入被标为不可信数据，输出必须通过领域 validator；provider/model 与运行开关由 profile 显式注入。
     重点消息评估已实现，任务与跟进的具体 evaluator 继续作为独立 feature 扩展，见 ADR 0017。
+11. 滴答语义投影是独立 feature adapter：每个写 effect 携带 durable owner authorization 与精确 projectId，按
+    飞书/projection 血缘更新优先并在写后重新读取验证。NOTE、跨清单、重复血缘和隐式重开完成任务都失败关闭；
+    快速摘要每次重写、历史进展只追加一次。任务存储与助手投影仍保持 ADR 0012 的边界，详见 ADR 0018。
 
 滴答 adapter 已实现超期查询、在白名单清单中核验任务是否完成，以及受限的已完成任务清理。它不会把“查不到
 任务”解释为已完成。清理不是仅凭环境开关获得删除权限：常东旭的长期授权会作为不可变快照进入 workflow state，
