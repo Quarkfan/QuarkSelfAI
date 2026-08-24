@@ -6,6 +6,7 @@
   "runtime": "inactive",
   "source": "src/features/feature-id/plugin.ts",
   "owns": ["src/features/feature-id/plugin.ts"],
+  "assets": [],
   "dependsOn": [],
   "runtimeDependsOn": ["dsh-runtime"],
   "requiresEffects": [],

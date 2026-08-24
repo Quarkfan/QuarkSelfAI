@@ -169,7 +169,8 @@ DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-sta
 ## 新想法如何接入
 
 1. 先回答：换掉当前外部系统后，这个机制是否仍成立？若否，它是 feature。
-2. 在 `config/module-catalog.json` 增加模块、精确 `owns` 文件、真实依赖和插件绑定；`architecture:check` 必须通过。
+2. 在 `config/module-catalog.json` 增加模块，选择符合依赖矩阵的 layer，并精确登记 `owns`、`assets`、真实依赖和
+   插件绑定；`architecture:check` 必须通过。
 3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表。
 4. 外部写入必须创建 durable action/approval；长期等待必须持久化，不靠进程内 `sleep`。
 5. 用 DSH 动态插件验证想法可以，但跨重启能力必须沉淀为仓库插件。
