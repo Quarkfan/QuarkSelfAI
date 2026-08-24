@@ -124,6 +124,15 @@
         focusSenderIds: []
         focusConversationIds: []
         discoveryIntervalMs: 600000
+    - id: quark-dida-task-effects
+      name: '@quarkfan/quark-self-ai/dida-task-effects'
+      # Read-only adapter preparation. Keep disabled until real CLI replay and
+      # state ownership transfer are approved; deletion is intentionally absent.
+      disabled: !!js process.env.QUARK_NATIVE_DIDA_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        executable: dida
+        projectIds: !!js >-
+          [process.env.DIDA_PROJECT_ID, process.env.DIDA_FOLLOWUP_PROJECT_ID].filter(Boolean)
     - id: quark-dida-maintenance
       name: '@quarkfan/quark-self-ai/dida-maintenance'
       # Definitions are ready, but task-system and notification effect handlers

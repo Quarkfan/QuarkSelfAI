@@ -55,8 +55,10 @@ for (const filename of files) {
   if (from === 'src/execution/router.ts' && /(claude-code|\bcodex\b|dsh-native)/i.test(source)) {
     violations.push(`${from} hard-codes an executor route instead of reading composition config`)
   }
+  const owner = ownerBySource.get(from)
   if (/from\s+['"]node:child_process['"]/.test(source)
-    && !startsWithAny(from, ['src/lark/', 'src/runtime/kernel', 'src/runtime/compat'])) {
+    && moduleById.get(owner ?? '')?.layer !== 'adapter'
+    && !startsWithAny(from, ['src/runtime/kernel', 'src/runtime/compat'])) {
     violations.push(`${from} invokes child_process outside an adapter or supervised runtime boundary`)
   }
   for (const specifier of relativeImports(source)) {

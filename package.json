@@ -66,6 +66,10 @@
       "types": "./dist/task-system/effects.d.ts",
       "import": "./dist/task-system/effects.js"
     },
+    "./dida-task-effects": {
+      "types": "./dist/task-system/dida-plugin.d.ts",
+      "import": "./dist/task-system/dida-plugin.js"
+    },
     "./session-lifecycle": {
       "types": "./dist/session-lifecycle/plugin.d.ts",
       "import": "./dist/session-lifecycle/plugin.js"
