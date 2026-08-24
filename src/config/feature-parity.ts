@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { analyzeEffectCoverage, loadModuleCatalog } from '../platform/modules.js'
+import { loadModuleCatalog } from '../platform/modules.js'
 import type { OperationalReadinessReport } from '../platform/operations.js'
 
 export type FeatureStatus = 'complete' | 'partial' | 'missing'
@@ -59,19 +59,31 @@ export function evaluateTakeoverRiskAcceptance(
 }
 
 const manifestFile = fileURLToPath(new URL('../../config/feature-parity.json', import.meta.url))
+const migrationPlanFile = fileURLToPath(new URL('../../config/native-migration-plan.json', import.meta.url))
 
 export async function loadFeatureParity(): Promise<FeatureParityReport> {
-  const [manifest, catalog] = await Promise.all([
+  const [manifest, catalog, migrationPlan] = await Promise.all([
     readFile(manifestFile, 'utf8').then(value => JSON.parse(value) as { source: string; features: FeatureParityItem[] }),
     loadModuleCatalog(),
+    readFile(migrationPlanFile, 'utf8').then(value => JSON.parse(value) as {
+      version: number
+      units: Array<{ modules: string[]; targetModules: string[] }>
+    }),
   ])
+  if (migrationPlan.version !== 2 || !Array.isArray(migrationPlan.units)) throw new Error('native migration plan must be version 2')
   const incomplete = manifest.features.filter((feature) => feature.requiredForTakeover && feature.status !== 'complete')
+  const migrationModuleIds = new Set(migrationPlan.units.flatMap(unit => [...unit.modules, ...unit.targetModules]))
   const nativeCutoverBlockers = catalog.modules
-    .filter(module => module.classification === 'feature' && module.runtime !== 'active')
+    .filter(module => migrationModuleIds.has(module.id) && module.runtime !== 'active')
     .map(module => module.id)
-  const coverage = analyzeEffectCoverage(catalog)
-  nativeCutoverBlockers.push(...coverage.missingImplementation.map(effect => `effect-implementation:${effect}`))
-  nativeCutoverBlockers.push(...coverage.inactive.map(effect => `effect-inactive:${effect}`))
+  const targetModules = catalog.modules.filter(module => migrationPlan.units.some(unit => unit.targetModules.includes(module.id)))
+  const requiredEffects = new Set(targetModules.flatMap(module => module.requiresEffects))
+  const effectProviders = new Map(catalog.modules.flatMap(module => module.providesEffects.map(effect => [effect, module] as const)))
+  for (const effect of requiredEffects) {
+    const provider = effectProviders.get(effect)
+    if (!provider || provider.implementation !== 'ready') nativeCutoverBlockers.push(`effect-implementation:${effect}`)
+    else if (provider.runtime !== 'active') nativeCutoverBlockers.push(`effect-inactive:${effect}`)
+  }
   nativeCutoverBlockers.sort()
   return {
     ...manifest,

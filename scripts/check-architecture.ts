@@ -31,7 +31,7 @@ const migrationPlan = JSON.parse(await readFile(resolve(root, 'config/native-mig
   sourceRuntime?: unknown
   units?: unknown
 }
-assert.equal(migrationPlan.version, 1, 'native migration plan must be version 1')
+assert.equal(migrationPlan.version, 2, 'native migration plan must be version 2')
 assert.equal(migrationPlan.sourceRuntime, 'bridge-compat-host', 'native migration plan must identify the compatibility host')
 assert.ok(Array.isArray(migrationPlan.units), 'native migration plan must contain units')
 const migrationUnits = migrationPlan.units as Array<Record<string, unknown>>
@@ -42,6 +42,14 @@ const buildOrders = new Set<number>()
 for (const unit of migrationUnits) {
   assert.equal(typeof unit.id, 'string', 'migration unit id must be a string')
   assert.ok(Array.isArray(unit.modules) && unit.modules.length > 0 && unit.modules.every(value => typeof value === 'string'), `migration unit ${String(unit.id)} must contain module ids`)
+  assert.ok(Array.isArray(unit.targetModules) && unit.targetModules.length > 0 && unit.targetModules.every(value => typeof value === 'string'), `migration unit ${String(unit.id)} must contain target module ids`)
+  assert.equal(new Set(unit.targetModules as string[]).size, (unit.targetModules as string[]).length, `migration unit ${String(unit.id)} target modules must be unique`)
+  for (const targetId of unit.targetModules as string[]) {
+    const target = catalog.modules.find(module => module.id === targetId)
+    assert.ok(target, `migration unit ${String(unit.id)} references unknown target module ${targetId}`)
+    assert.equal(target.classification, 'feature', `migration target ${targetId} must be a feature`)
+    assert.notEqual(target.runtime, 'compat', `migration target ${targetId} cannot remain compatibility-owned`)
+  }
   assert.equal(typeof unit.cutoverBoundary, 'string', `migration unit ${String(unit.id)} must define its cutover boundary`)
   assert.equal(typeof unit.rollback, 'string', `migration unit ${String(unit.id)} must define rollback`)
   assert.equal(unit.requiresMaintenanceWindow, true, `migration unit ${String(unit.id)} must require a maintenance window`)

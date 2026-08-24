@@ -1,9 +1,9 @@
 # 现网能力迁移与接管门禁
 
 这里的 `status=complete` 只表示当前运行路径具备该业务能力，可能仍由 compatibility provider 承载；它不代表
-DSH-native 所有权已经完成。控制台同时计算 `nativeCutoverReady`：只有所有必需业务能力 complete，且模块目录中
-所有 required effect 已实现且 active，并且不存在 `runtime=compat|inactive|shadow` 的 feature，才允许把兼容层
-视为可退出。两个门禁不得互相替代。
+DSH-native 所有权已经完成。控制台同时计算 `nativeCutoverReady`：只有所有必需业务能力 complete，且
+`config/native-migration-plan.json` 明确列出的旧所有者、目标模块及目标模块所需 effect 全部 active，才允许把
+兼容层视为可退出。未列入迁移目标的可选 provider、未来插件和纯契约模块不参与本次门禁。两个门禁不得互相替代。
 
 机器可读真源是 `config/feature-parity.json`，Web 控制台直接读取它计算 `takeoverReady`。默认情况下，任何
 必要能力为 `partial` 或 `missing` 都会阻断切换；ADR 0004 允许 owner 精确接受当前全部已知证据缺口，

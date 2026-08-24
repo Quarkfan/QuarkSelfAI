@@ -35,6 +35,9 @@ test('keeps functional parity separate from native module ownership', async () =
   assert.equal(current.nativeCutoverReady, false)
   assert.ok(current.nativeCutoverBlockers.includes('message-intake-native'))
   assert.ok(current.nativeCutoverBlockers.includes('focus-intake'))
+  assert.equal(current.nativeCutoverBlockers.includes('postgres-storage'), false)
+  assert.equal(current.nativeCutoverBlockers.includes('message-projection-contracts'), false)
+  assert.equal(current.nativeCutoverBlockers.includes('agent-bound-action-worker'), false)
 })
 
 test('adapts migration parity into the open operational readiness contract', async () => {

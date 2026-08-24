@@ -1,7 +1,8 @@
 # Compatibility 功能原生化路线
 
 机器真源：`config/native-migration-plan.json`。架构检查要求 11 个 `runtime=compat` 功能恰好落入一个迁移单元，
-不能遗漏，也不能同时出现在两个切换单元中。
+不能遗漏，也不能同时出现在两个切换单元中。每个单元还必须显式列出 `targetModules`；原生切换门禁只检查这些
+旧所有者、目标模块和目标模块声明的 effect，不把无关的未来插件或可选 provider 误算为本次迁移阻塞项。
 
 ## 为什么不能直接删 bridge-compat
 

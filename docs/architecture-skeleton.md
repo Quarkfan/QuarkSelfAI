@@ -116,8 +116,9 @@ Codex session adapter 已实现 UUID 限制、只读状态核验、归档后复�
 QuarkSelfAI 和桌面端共享的 app-server control socket，所以运行状态仍是 `runtime=inactive`；配置缺少 socket 时
 插件也不会装载。完成真实只读回放并明确会话运行所有权前，不得启用或接管生产 effect。详细边界见 ADR 0021。
 
-`feature-parity` 的业务完成度与模块目录的运行所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
-`runtime=compat|inactive|shadow` 的 feature，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
+`feature-parity` 的业务完成度与模块目录的运行所有权是两个门禁：compat 功能可以业务上 complete，但只要迁移
+计划中的旧所有者、目标模块或目标模块所需 effect 仍非 active，`nativeCutoverReady` 就必须为 false，不能据此
+删除 compatibility host。可选存储、未来插件和未纳入本次迁移的能力不会因为 inactive 而污染当前门禁。
 这组历史字段只存在于 takeover migration adapter；骨架和控制台使用通用 `OperationalReadinessReport`，当前
 adapter 将其呈现为 `native-cutover` gate。以后新增发布、凭证或其他门禁不需要扩展平台枚举，见 ADR 0023。
 
