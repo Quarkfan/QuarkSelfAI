@@ -28,7 +28,8 @@
 - policy 数据契约、runtime status 契约与其实现分开，避免存储和内核运行时形成虚假的反向依赖。
 - 存储工厂只依赖 storage config，控制台只依赖自身 console config，不再引用 migration runtime config。
 - 稳定 application host 从 compat composition 中拆出；它只监管注入的组件，不知道具体通道或迁移模式。
-- 仍直接装配 compat 和 takeover readiness 的应用入口如实归入 `bridge-compat-host`，等待原生组合入口替换。
+- 进程 selector、compat composition 和 runtime config 如实归入 `bridge-compat-host`；通用 application
+  composition 已独立归入骨架，并通过开放组件贡献接收迁移宿主，见 ADR 0022。
 
 ## 后果
 

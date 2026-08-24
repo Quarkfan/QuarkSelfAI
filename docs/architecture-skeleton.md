@@ -11,7 +11,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | --- | --- | --- |
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
-| Application host | 接收组件集合并提供统一启动、停止、失败等待和状态快照 | 决定启用 compat、飞书或某个业务功能 |
+| Application composition/host | 装配存储、内核、控制台等稳定组件，并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 枚举 compat、飞书或某个业务功能 |
 | Module catalog | 模块分类、逐文件源码所有权、真实 import 依赖和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
@@ -70,8 +70,10 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
-5. 当前 `app/bootstrap/runtime config` 仍直接组合 compatibility host 和 takeover readiness，因此被明确归为
-   `bridge-compat-host` 迁移所有权；原生 application composition 尚未建立，不能把当前启动入口误称为最终骨架。
+5. 原生 `application-composition` 已建立，只装配 durable store、DSH kernel、控制台和开放组件列表；运行状态
+   provider 的标识、健康参与度和展示模式也是开放字段。当前 `src/app.ts` 仍通过 `compat-composition` 选择已接管
+   的 compatibility consumer，因此进程 selector 与 runtime config 继续归迁移层；删除 compat 不再需要修改骨架。
+   具体边界见 ADR 0022。
 6. native workflow 的飞书 effect 与任务存储/维护 effect 已实现但未激活；Codex session、任务语义投影和 intake
    provider 仍未实现。两类缺口由机器门禁分别呈现，必须逐 adapter 补齐并回放后才能切换。飞书通知、
    交互卡片、只读联系人候选解析和经 durable approval 的本人代发 adapter 已完成 mock 契约实现；同名联系人

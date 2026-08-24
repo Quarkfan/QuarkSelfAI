@@ -1,5 +1,10 @@
 export interface RuntimeSnapshot {
-  readonly mode: 'control-only' | 'compat'
+  /** Open provider id; the skeleton must not enumerate every runtime implementation. */
+  readonly mode: string
+  /** False for an intentionally absent consumer provider such as control-only diagnostics. */
+  readonly requiredForHealth?: boolean
+  /** Provider-owned display state; avoids teaching the generic console migration names. */
+  readonly operationalMode?: string
   readonly state: 'stopped' | 'starting' | 'ready' | 'degraded' | 'failed'
   readonly pid?: number
   readonly messageReady: boolean
@@ -59,7 +64,10 @@ export interface TakeoverReadinessProvider { inspect(): Promise<TakeoverReadines
 /** Neutral runtime status used when no message consumer feature is mounted. */
 export class ControlOnlyRuntime implements RuntimeStatusProvider {
   snapshot(): RuntimeSnapshot {
-    return { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
+    return {
+      mode: 'control-only', operationalMode: 'migration', requiredForHealth: false,
+      state: 'stopped', messageReady: false, cardReady: false,
+    }
   }
 }
 

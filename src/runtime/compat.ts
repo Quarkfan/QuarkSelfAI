@@ -7,6 +7,7 @@ import { WorkspacePolicy } from '../execution/workspace-policy.js'
 import type {
   RuntimeDiagnostics, RuntimeSnapshot, RuntimeStatusProvider,
 } from '../platform/operations.js'
+import type { ManagedComponent } from '../platform/lifecycle.js'
 
 export type {
   MonitorDiagnostic, RuntimeDiagnostics, RuntimeSnapshot, RuntimeStatusProvider,
@@ -51,6 +52,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
   private resolveFailure!: (error: Error) => void
   private current: RuntimeSnapshot = {
     mode: 'compat',
+    operationalMode: 'accepted-risk-cutover',
     state: 'stopped',
     messageReady: false,
     cardReady: false,
@@ -159,6 +161,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
     this.readiness = new CompatReadinessObserver(requiredEventKeys)
     this.current = {
       mode: 'compat',
+      operationalMode: 'accepted-risk-cutover',
       state: 'starting',
       messageReady: false,
       cardReady: false,
@@ -232,7 +235,10 @@ export class CompatRuntime implements RuntimeStatusProvider {
       this.current = { ...this.current, state: 'degraded', lastError: 'compat runtime did not stop gracefully; SIGKILL was intentionally not used' }
       throw new Error(this.current.lastError)
     }
-    this.current = { mode: 'compat', state: 'stopped', messageReady: false, cardReady: false }
+    this.current = {
+      mode: 'compat', operationalMode: 'accepted-risk-cutover',
+      state: 'stopped', messageReady: false, cardReady: false,
+    }
   }
 
   private async validateWorkspaceBoundary(): Promise<void> {
@@ -244,5 +250,20 @@ export class CompatRuntime implements RuntimeStatusProvider {
       throw new Error('compatibility config must define workspaceRoot')
     }
     await policy.authorizeExisting(document.workspaceRoot)
+  }
+}
+
+/** Migration-only lifecycle contribution; the application skeleton never imports it. */
+export function compatRuntimeComponent(runtime: CompatRuntime): ManagedComponent {
+  return {
+    id: 'bridge-compat',
+    kind: 'migration',
+    start: async () => {
+      await runtime.start()
+      await runtime.waitUntilReady()
+      process.stdout.write('QuarkSelfAI compatibility runtime ready\n')
+    },
+    stop: async () => { await runtime.stop() },
+    waitForFailure: async () => await runtime.waitForFailure(),
   }
 }

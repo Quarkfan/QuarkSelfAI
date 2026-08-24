@@ -114,7 +114,10 @@ test('reports an accepted-risk cutover without falsifying feature parity', async
     runtime: { mode: 'compat', configPath: join(directory, 'compat.json') },
     kernel: { mode: 'off' },
   }
-  const worker: RuntimeSnapshot = { mode: 'compat', state: 'ready', messageReady: true, cardReady: true }
+  const worker: RuntimeSnapshot = {
+    mode: 'compat', operationalMode: 'accepted-risk-cutover',
+    state: 'ready', messageReady: true, cardReady: true,
+  }
   const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadFeatureParity })
   server.listen(0, '127.0.0.1')
   try {

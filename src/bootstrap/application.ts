@@ -1,24 +1,61 @@
 import { once } from 'node:events'
 import type { Server } from 'node:http'
-import type { RuntimeConfig } from '../config/runtime.js'
 import { createAssistantStore } from '../storage/factory.js'
+import type { StorageConfig } from '../storage/types.js'
 import { createConsoleServer } from '../web/server.js'
-import { CompatRuntime } from '../runtime/compat.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import type { ManagedComponent } from '../platform/lifecycle.js'
-import { ControlOnlyRuntime } from '../platform/operations.js'
-import { loadFeatureParity } from '../config/feature-parity.js'
+import {
+  ControlOnlyRuntime, UnconfiguredReadiness,
+  type RuntimeStatusProvider, type TakeoverReadinessProvider,
+} from '../platform/operations.js'
 import { createAssistantApplicationHost, type AssistantApplication } from './host.js'
 
 export type { AssistantApplication } from './host.js'
 
-export async function createAssistantApplication(config: RuntimeConfig): Promise<AssistantApplication> {
+export interface AssistantApplicationConfig {
+  readonly execution: { readonly mode: 'local' | 'remote'; readonly workspaceRoots: readonly string[] }
+  readonly storage: StorageConfig
+  readonly web: {
+    readonly host: string
+    readonly port: number
+    readonly consoleToken?: string
+    readonly secureCookie: boolean
+    readonly dshUrl?: string
+  }
+  readonly controlPlane: { readonly token?: string }
+  readonly kernel:
+    | { readonly mode: 'off' }
+    | {
+        readonly mode: 'dsh'
+        readonly command: string
+        readonly args: readonly string[]
+        readonly cwd: string
+        readonly home: string
+        readonly profile: string
+      }
+}
+
+export interface AssistantApplicationExtensions {
+  readonly runtimeStatus?: RuntimeStatusProvider
+  readonly readiness?: TakeoverReadinessProvider
+  readonly components?: readonly ManagedComponent[]
+}
+
+/**
+ * Native composition root for stable infrastructure. Feature and migration
+ * hosts contribute managed components without becoming dependencies of the
+ * application skeleton.
+ */
+export async function createAssistantApplication(
+  config: AssistantApplicationConfig,
+  extensions: AssistantApplicationExtensions = {},
+): Promise<AssistantApplication> {
   const store = await createAssistantStore(config)
-  const runtime = config.runtime.mode === 'compat'
-    ? new CompatRuntime(config.runtime.configPath, { workspaceRoots: config.execution.workspaceRoots })
-    : new ControlOnlyRuntime()
+  const runtime = extensions.runtimeStatus ?? new ControlOnlyRuntime()
+  const readiness = extensions.readiness ?? new UnconfiguredReadiness()
   const kernel = config.kernel.mode === 'dsh' ? new DshKernelRuntime(config.kernel) : new DisabledKernelRuntime()
-  const server = createConsoleServer(store, config, runtime, kernel, { inspect: loadFeatureParity })
+  const server = createConsoleServer(store, config, runtime, kernel, readiness)
   const components: ManagedComponent[] = [
     {
       id: 'assistant-store',
@@ -40,23 +77,11 @@ export async function createAssistantApplication(config: RuntimeConfig): Promise
     })
   }
   components.push(consoleComponent(server, config, store.kind))
-  if (runtime instanceof CompatRuntime) {
-    components.push({
-      id: 'bridge-compat',
-      kind: 'migration',
-      start: async () => {
-        await runtime.start()
-        await runtime.waitUntilReady()
-        process.stdout.write('QuarkSelfAI compatibility runtime ready\n')
-      },
-      stop: async () => { await runtime.stop() },
-      waitForFailure: async () => await runtime.waitForFailure(),
-    })
-  }
+  components.push(...(extensions.components ?? []))
   return createAssistantApplicationHost(components)
 }
 
-function consoleComponent(server: Server, config: RuntimeConfig, storage: string): ManagedComponent {
+function consoleComponent(server: Server, config: AssistantApplicationConfig, storage: string): ManagedComponent {
   return {
     id: 'control-console',
     kind: 'surface',

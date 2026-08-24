@@ -1,8 +1,8 @@
 import { loadRuntimeConfig } from './config/runtime.js'
-import { createAssistantApplication } from './bootstrap/application.js'
+import { createConfiguredAssistantApplication } from './runtime/compat-composition.js'
 
 const config = loadRuntimeConfig()
-const application = await createAssistantApplication(config)
+const application = await createConfiguredAssistantApplication(config)
 await application.start()
 
 let stopping = false

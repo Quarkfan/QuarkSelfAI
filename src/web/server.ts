@@ -25,7 +25,6 @@ export interface ConsoleConfig {
     readonly dshUrl?: string
   }
   readonly controlPlane: { readonly token?: string }
-  readonly runtime: { readonly mode: 'control-only' | 'compat' }
 }
 
 const contentTypes: Readonly<Record<string, string>> = {
@@ -99,17 +98,18 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
     runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
     loadModuleCatalog(),
   ])
+  const worker = runtimeStatus.snapshot()
   return {
     runtime: {
       version: '0.1.0',
       storage: store.kind,
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
-      mode: parity.nativeCutoverReady
+      mode: worker.operationalMode ?? (parity.nativeCutoverReady
         ? 'native-ready'
         : parity.takeoverReady
           ? 'compatibility-operational'
-        : config.runtime.mode === 'compat' ? 'accepted-risk-cutover' : 'migration',
-      worker: runtimeStatus.snapshot(),
+          : 'migration'),
+      worker,
       kernel: kernelStatus.snapshot(),
       execution: {
         mode: config.execution.mode,
@@ -270,7 +270,7 @@ export function createConsoleServer(
           await store.health()
           const parity = await readiness.inspect()
           const worker = runtimeStatus.snapshot()
-          const workerHealthy = worker.mode === 'control-only' || worker.state === 'ready'
+          const workerHealthy = worker.requiredForHealth === false || worker.state === 'ready'
           const kernel = kernelStatus.snapshot()
           const kernelHealthy = kernel.mode === 'off' || kernel.state === 'ready'
           json(response, workerHealthy && kernelHealthy ? 200 : 503, {
@@ -279,11 +279,11 @@ export function createConsoleServer(
             takeoverReady: parity.takeoverReady,
             nativeCutoverReady: parity.nativeCutoverReady ?? false,
             nativeCutoverBlockers: parity.nativeCutoverBlockers ?? [],
-            operationalMode: parity.nativeCutoverReady
+            operationalMode: worker.operationalMode ?? (parity.nativeCutoverReady
               ? 'native-ready'
               : parity.takeoverReady
                 ? 'compatibility-operational'
-              : config.runtime.mode === 'compat' ? 'accepted-risk-cutover' : 'migration',
+                : 'migration'),
             worker,
             kernel,
           })

@@ -87,7 +87,7 @@ for (const filename of files) {
     if (from.startsWith('src/web/') && startsWithAny(to, ['src/lark/', 'src/blacklake/', 'src/runtime/', 'src/migration/', 'src/config/feature-parity'])) {
       violations.push(`${from} imports feature or migration implementation ${to}`)
     }
-    if (to.startsWith('src/runtime/compat') && from !== 'src/bootstrap/application.ts') {
+    if (to === 'src/runtime/compat.ts' && from !== 'src/runtime/compat-composition.ts') {
       violations.push(`${from} imports compatibility runtime outside the composition root`)
     }
   }
