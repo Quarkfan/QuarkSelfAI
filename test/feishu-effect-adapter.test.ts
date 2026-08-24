@@ -6,9 +6,10 @@ import type { CliOutput, CommandRunner } from '../src/lark/runner.js'
 
 class RecordingRunner implements CommandRunner {
   readonly calls: Array<{ executable: string; args: readonly string[] }> = []
+  response: unknown = { ok: true, identity: 'bot', data: { message_id: 'om_sent', chat_id: 'oc_owner' } }
   async run(executable: string, args: readonly string[]): Promise<CliOutput> {
     this.calls.push({ executable, args })
-    return { exitCode: 0, stderr: '', stdout: JSON.stringify({ ok: true, identity: args.includes('user') ? 'user' : 'bot', data: { message_id: 'om_sent', chat_id: 'oc_owner' } }) }
+    return { exitCode: 0, stderr: '', stdout: JSON.stringify(this.response) }
   }
 }
 
@@ -66,4 +67,22 @@ test('sends approved external messages as the user and preserves formatted conte
   assert.equal(args[args.indexOf('--as') + 1], 'user')
   assert.equal(args[args.indexOf('--user-id') + 1], 'ou_contact')
   assert.equal(args[args.indexOf('--markdown') + 1], '**我是常东旭的 AI 分身。**\n\n请确认进度。')
+})
+
+test('resolves contact candidates read-only without choosing an ambiguous person', async () => {
+  const runner = new RecordingRunner()
+  runner.response = { ok: true, identity: 'user', data: { has_more: false, users: [
+    { open_id: 'ou_1', localized_name: '张三', department: '研发-平台', enterprise_email: 'one@example.test', is_cross_tenant: false },
+    { open_id: 'ou_2', localized_name: '张三', department: '交付', email: 'two@example.test', is_cross_tenant: true },
+  ] } }
+  const adapter = new FeishuWorkflowEffectAdapter({ ownerOpenId: 'ou_owner' }, runner)
+  const output = await adapter.execute(effect('feishu.resolve-contact.v1', { query: '张三' }))
+  assert.deepEqual(output, { hasMore: false, candidates: [
+    { openId: 'ou_1', name: '张三', department: '研发-平台', email: 'one@example.test', external: false },
+    { openId: 'ou_2', name: '张三', department: '交付', email: 'two@example.test', external: true },
+  ] })
+  const args = runner.calls[0]!.args
+  assert.deepEqual(args.slice(0, 2), ['contact', '+search-user'])
+  assert.equal(args[args.indexOf('--as') + 1], 'user')
+  assert.equal(args.includes('--has-chatted'), true)
 })

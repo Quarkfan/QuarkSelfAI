@@ -20,7 +20,33 @@ export class FeishuWorkflowEffectAdapter {
   async execute(effect: ClaimedWorkflowEffect): Promise<Readonly<Record<string, unknown>>> {
     if (effect.kind === ASSISTANT_EFFECTS.notifyOwner || effect.kind === ASSISTANT_EFFECTS.requestInteraction) return await this.sendCard(effect)
     if (effect.kind === LARK_EFFECTS.sendAsUser) return await this.sendAsUser(effect)
+    if (effect.kind === LARK_EFFECTS.resolveContact) return await this.resolveContact(effect)
     throw new Error(`unsupported Feishu workflow effect ${effect.kind}`)
+  }
+
+  private async resolveContact(effect: ClaimedWorkflowEffect) {
+    const openId = optional(effect.payload.openId, 'openId', 300)
+    const query = optional(effect.payload.query, 'query', 50)
+    if (!openId && !query) throw new Error('contact resolution requires openId or query')
+    const envelope = await runJson(this.runner, this.config.executable ?? 'lark-cli', [
+      'contact', '+search-user', ...(openId ? ['--user-ids', openId] : ['--query', query!, '--has-chatted']),
+      '--page-size', openId ? '5' : '20', '--as', 'user',
+    ])
+    const root = object(envelope, 'lark-cli response')
+    if (root.ok !== true) throw new Error('lark-cli response was not successful')
+    const data = object(root.data, 'lark-cli response data')
+    if (!Array.isArray(data.users)) throw new Error('contact search users must be an array')
+    const candidates = data.users.map((value, index) => {
+      const user = object(value, `contact ${index}`)
+      const id = required(user.open_id, `contact ${index} open_id`, 300)
+      const department = optional(user.department, `contact ${index} department`, 500)
+      const email = optional(user.enterprise_email, `contact ${index} enterprise_email`, 500) ?? optional(user.email, `contact ${index} email`, 500)
+      return {
+        openId: id, name: optional(user.localized_name, `contact ${index} name`, 300) ?? id,
+        ...(department ? { department } : {}), ...(email ? { email } : {}), external: user.is_cross_tenant === true,
+      }
+    })
+    return { candidates, hasMore: data.has_more === true }
   }
 
   private async sendCard(effect: ClaimedWorkflowEffect) {
@@ -57,7 +83,7 @@ export const name = 'quark-feishu-workflow-effects'
 export const inject = ['quarkWorkflows']
 export function apply(ctx: Context, config: FeishuWorkflowEffectConfig): void {
   const adapter = new FeishuWorkflowEffectAdapter(config)
-  const effects = [ASSISTANT_EFFECTS.notifyOwner, ASSISTANT_EFFECTS.requestInteraction, LARK_EFFECTS.sendAsUser]
+  const effects = [ASSISTANT_EFFECTS.notifyOwner, ASSISTANT_EFFECTS.requestInteraction, LARK_EFFECTS.sendAsUser, LARK_EFFECTS.resolveContact]
   const disposers = effects.map(kind => ctx.quarkWorkflows.registerEffect(kind, { execute: effect => adapter.execute(effect) }))
   ctx.effect(() => () => { for (const dispose of disposers.reverse()) dispose() }, 'quark Feishu workflow effects')
 }

@@ -68,8 +68,9 @@ workflow 可以暂时存在缺口，但缺失 provider 会进入 `nativeCutoverB
    `bridge-compat-host` 迁移所有权；原生 application composition 尚未建立，不能把当前启动入口误称为最终骨架。
 6. native workflow 当前只实现了内部 `followup.open-outreach` handler；飞书、滴答、Codex session 和 intake
    effect provider 尚未取得状态所有权，现已进入机器切换门禁，必须逐 adapter 补齐后才能切换。飞书通知、
-   交互卡片和经 durable approval 的本人代发 adapter 已完成 mock 契约实现，但默认及 compat 模式均强制禁用，
-   在维护窗口完成真实回放前仍保持 `status=planned`。
+   交互卡片、只读联系人候选解析和经 durable approval 的本人代发 adapter 已完成 mock 契约实现；同名联系人
+   只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持
+   `status=planned`。
 
 `feature-parity` 的业务完成度与模块目录的原生所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
 `feature/compat` 或 `feature/planned`，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
