@@ -10,11 +10,13 @@ import type {
   ApprovalSummary,
   AssistantStore,
   ClaimedAction,
+  ClaimedChannelEvent,
   ClaimedWorkflowEffect,
   CreateWorkflowInput,
   DurableActionInput,
   DurableSignal,
   DurableSignalInput,
+  EventClaimRelease,
   EventSummary,
   MatterSummary,
   OverviewCounts,
@@ -49,6 +51,16 @@ function pgWorkflow(row: Record<string, unknown>): WorkflowInstance {
     revision: Number(row.revision), ...(pgTimestamp(row.wakeAt as string | Date | null) ? { wakeAt: pgTimestamp(row.wakeAt as string | Date | null)! } : {}),
     createdAt: pgTimestamp(row.createdAt as string | Date)!, updatedAt: pgTimestamp(row.updatedAt as string | Date)!,
   }
+}
+
+function pgClaimedEvent(row: Record<string, unknown>): ClaimedChannelEvent {
+  const eventKey = String(row.eventKey)
+  return { id: String(row.id), attempt: Number(row.attempt), event: {
+    kind: eventKey === 'im.message.receive_v1' ? 'message.received' : eventKey === 'card.action.trigger' ? 'card.action' : 'lark.event',
+    source: row.source as NormalizedChannelEvent['source'], eventKey, deduplicationKey: String(row.deduplicationKey),
+    payload: row.payload as Record<string, unknown>, raw: row.raw as Record<string, unknown>,
+    ...(pgTimestamp(row.occurredAt as string | Date | null) ? { occurredAt: pgTimestamp(row.occurredAt as string | Date | null)! } : {}),
+  } }
 }
 
 export interface SqlExecutor {
@@ -152,6 +164,52 @@ export class PgAssistantStore implements AssistantStore {
     const row = result.rows[0]
     if (!row) throw new Error(`event ${event.deduplicationKey} was not persisted or found`)
     return { id: row.id, inserted: row.inserted }
+  }
+
+  async claimNextEvent(consumerName: string, eventKeys: readonly string[], workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedChannelEvent | undefined> {
+    if (!consumerName.trim() || !workerId.trim() || eventKeys.length === 0) throw new Error('event claim requires consumer, worker, and event keys')
+    return await this.transaction(async executor => {
+      const candidate = await executor.query<Record<string, unknown>>(
+        `SELECT e.id, e.event_key AS "eventKey", e.deduplication_key AS "deduplicationKey", e.source, e.payload, e.raw,
+                e.occurred_at AS "occurredAt"
+         FROM assistant_event e LEFT JOIN event_delivery d ON d.consumer_name = $1 AND d.event_id = e.id
+         WHERE e.event_key = ANY($2::text[]) AND (
+           d.event_id IS NULL OR (d.status = 'pending' AND d.available_at <= $3::timestamptz)
+           OR (d.status = 'processing' AND d.lease_expires_at <= $3::timestamptz)
+         ) ORDER BY e.received_at, e.id FOR UPDATE OF e SKIP LOCKED LIMIT 1`, [consumerName, eventKeys, now],
+      )
+      const row = candidate.rows[0]
+      if (!row) return undefined
+      const delivery = await executor.query<{ attempt: number }>(
+        `INSERT INTO event_delivery (consumer_name, event_id, status, attempt, worker_id, lease_expires_at, available_at)
+         VALUES ($1, $2, 'processing', 1, $3, $4::timestamptz, $5::timestamptz)
+         ON CONFLICT (consumer_name, event_id) DO UPDATE SET status = 'processing', attempt = event_delivery.attempt + 1,
+           worker_id = excluded.worker_id, lease_expires_at = excluded.lease_expires_at, updated_at = now()
+         WHERE (event_delivery.status = 'pending' AND event_delivery.available_at <= excluded.available_at)
+            OR (event_delivery.status = 'processing' AND event_delivery.lease_expires_at <= excluded.available_at)
+         RETURNING attempt`, [consumerName, row.id, workerId, leaseExpiresAt, now],
+      )
+      if (!delivery.rows[0]) return undefined
+      return pgClaimedEvent({ ...row, attempt: delivery.rows[0].attempt })
+    })
+  }
+
+  async settleEvent(consumerName: string, eventId: string, workerId: string, deliveredAt: string): Promise<void> {
+    const result = await this.database.query(
+      `UPDATE event_delivery SET status = 'delivered', delivered_at = $4::timestamptz, worker_id = NULL,
+       lease_expires_at = NULL, updated_at = now() WHERE consumer_name = $1 AND event_id = $2 AND status = 'processing' AND worker_id = $3`,
+      [consumerName, eventId, workerId, deliveredAt],
+    )
+    if (result.rowCount !== 1) throw new Error(`event ${eventId} is not claimed by ${workerId}`)
+  }
+
+  async releaseEvent(input: EventClaimRelease): Promise<void> {
+    const result = await this.database.query(
+      `UPDATE event_delivery SET status = $4, available_at = $5::timestamptz, last_error = $6, worker_id = NULL,
+       lease_expires_at = NULL, updated_at = now() WHERE consumer_name = $1 AND event_id = $2 AND status = 'processing' AND worker_id = $3`,
+      [input.consumerName, input.eventId, input.workerId, input.terminal ? 'failed' : 'pending', input.availableAt, input.error.slice(0, 4_096)],
+    )
+    if (result.rowCount !== 1) throw new Error(`event ${input.eventId} is not claimed by ${input.workerId}`)
   }
 
   async appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }> {

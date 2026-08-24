@@ -9,6 +9,21 @@ export interface StoredEvent {
   readonly inserted: boolean
 }
 
+export interface ClaimedChannelEvent {
+  readonly id: string
+  readonly event: NormalizedChannelEvent
+  readonly attempt: number
+}
+
+export interface EventClaimRelease {
+  readonly consumerName: string
+  readonly eventId: string
+  readonly workerId: string
+  readonly error: string
+  readonly availableAt: string
+  readonly terminal: boolean
+}
+
 export interface DurableSignalInput {
   readonly id: string
   readonly kind: string
@@ -173,6 +188,9 @@ export interface AssistantStore {
   health(): Promise<void>
   close(): Promise<void>
   appendEvent(id: string, event: NormalizedChannelEvent): Promise<StoredEvent>
+  claimNextEvent(consumerName: string, eventKeys: readonly string[], workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedChannelEvent | undefined>
+  settleEvent(consumerName: string, eventId: string, workerId: string, deliveredAt: string): Promise<void>
+  releaseEvent(input: EventClaimRelease): Promise<void>
   appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }>
   recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]>
   readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined>

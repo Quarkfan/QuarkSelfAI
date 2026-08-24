@@ -10,11 +10,13 @@ import type {
   ApprovalSummary,
   AssistantStore,
   ClaimedAction,
+  ClaimedChannelEvent,
   ClaimedWorkflowEffect,
   CreateWorkflowInput,
   DurableActionInput,
   DurableSignal,
   DurableSignalInput,
+  EventClaimRelease,
   EventSummary,
   MatterSummary,
   OverviewCounts,
@@ -39,6 +41,22 @@ interface SqlitePolicyEventRow {
   id: string
   source: string
   payload: string
+}
+
+interface SqliteClaimedEventRow extends SqliteEventRow {
+  payload: string
+  raw: string
+  attempt: number
+}
+
+function claimedEvent(row: SqliteClaimedEventRow): ClaimedChannelEvent {
+  const source = JSON.parse(row.source) as NormalizedChannelEvent['source']
+  return { id: row.id, attempt: Number(row.attempt), event: {
+    kind: row.event_key === 'im.message.receive_v1' ? 'message.received' : row.event_key === 'card.action.trigger' ? 'card.action' : 'lark.event',
+    source, eventKey: row.event_key, deduplicationKey: row.deduplication_key,
+    payload: JSON.parse(row.payload) as Record<string, unknown>, raw: JSON.parse(row.raw) as Record<string, unknown>,
+    ...(row.occurred_at ? { occurredAt: row.occurred_at } : {}),
+  } }
 }
 
 function canonicalJson(value: unknown): string {
@@ -114,6 +132,51 @@ export class SqliteAssistantStore implements AssistantStore {
     ).get(event.deduplicationKey) as { id: string } | undefined
     if (!existing) throw new Error(`event ${event.deduplicationKey} was not persisted or found`)
     return { id: existing.id, inserted: false }
+  }
+
+  async claimNextEvent(consumerName: string, eventKeys: readonly string[], workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedChannelEvent | undefined> {
+    if (!consumerName.trim() || !workerId.trim() || eventKeys.length === 0) throw new Error('event claim requires consumer, worker, and event keys')
+    const placeholders = eventKeys.map(() => '?').join(', ')
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const row = this.database.prepare(
+        `SELECT e.id, e.event_key, e.deduplication_key, e.source, e.payload, e.raw, e.occurred_at, e.received_at
+         FROM assistant_event e LEFT JOIN event_delivery d ON d.consumer_name = ? AND d.event_id = e.id
+         WHERE e.event_key IN (${placeholders}) AND (
+           d.event_id IS NULL OR (d.status = 'pending' AND d.available_at <= ?)
+           OR (d.status = 'processing' AND d.lease_expires_at <= ?)
+         ) ORDER BY e.received_at, e.id LIMIT 1`,
+      ).get(consumerName, ...eventKeys, now, now) as Omit<SqliteClaimedEventRow, 'attempt'> | undefined
+      if (!row) { this.database.exec('COMMIT'); return undefined }
+      const changed = this.database.prepare(
+        `INSERT INTO event_delivery (consumer_name, event_id, status, attempt, worker_id, lease_expires_at, available_at)
+         VALUES (?, ?, 'processing', 1, ?, ?, ?)
+         ON CONFLICT (consumer_name, event_id) DO UPDATE SET status = 'processing', attempt = event_delivery.attempt + 1,
+           worker_id = excluded.worker_id, lease_expires_at = excluded.lease_expires_at, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE (event_delivery.status = 'pending' AND event_delivery.available_at <= excluded.available_at)
+            OR (event_delivery.status = 'processing' AND event_delivery.lease_expires_at <= excluded.available_at)`,
+      ).run(consumerName, row.id, workerId, leaseExpiresAt, now)
+      if (changed.changes !== 1) { this.database.exec('ROLLBACK'); return undefined }
+      const delivery = this.database.prepare('SELECT attempt FROM event_delivery WHERE consumer_name = ? AND event_id = ?').get(consumerName, row.id) as { attempt: number }
+      this.database.exec('COMMIT')
+      return claimedEvent({ ...row, attempt: delivery.attempt })
+    } catch (error) { this.database.exec('ROLLBACK'); throw error }
+  }
+
+  async settleEvent(consumerName: string, eventId: string, workerId: string, deliveredAt: string): Promise<void> {
+    const result = this.database.prepare(
+      `UPDATE event_delivery SET status = 'delivered', delivered_at = ?, worker_id = NULL, lease_expires_at = NULL,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE consumer_name = ? AND event_id = ? AND status = 'processing' AND worker_id = ?`,
+    ).run(deliveredAt, consumerName, eventId, workerId)
+    if (result.changes !== 1) throw new Error(`event ${eventId} is not claimed by ${workerId}`)
+  }
+
+  async releaseEvent(input: EventClaimRelease): Promise<void> {
+    const result = this.database.prepare(
+      `UPDATE event_delivery SET status = ?, available_at = ?, last_error = ?, worker_id = NULL, lease_expires_at = NULL,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE consumer_name = ? AND event_id = ? AND status = 'processing' AND worker_id = ?`,
+    ).run(input.terminal ? 'failed' : 'pending', input.availableAt, input.error.slice(0, 4_096), input.consumerName, input.eventId, input.workerId)
+    if (result.changes !== 1) throw new Error(`event ${input.eventId} is not claimed by ${input.workerId}`)
   }
 
   async appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }> {

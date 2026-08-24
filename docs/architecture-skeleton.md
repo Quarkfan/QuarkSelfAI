@@ -15,6 +15,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | 批准绑定、租约、重试、结算 | 选择联系人或撰写回复 |
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
+| Durable event runtime | 入站事件按消费者独立租约、失败重放和结算 | 飞书消息语义或具体业务路由 |
 | Storage port | SQLite/PostgreSQL 一致契约 | 兼容 `state.json` 结构 |
 | Durable state host | DSH 内唯一数据库连接所有者，向 ledger/workflow/feature 提供端口 | 执行动作或解释业务信号 |
 | Policy runtime | 受限 DSL、模拟、版本和激活 | 任意代码执行 |

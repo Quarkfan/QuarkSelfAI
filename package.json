@@ -50,6 +50,10 @@
       "types": "./dist/workflow/plugin.d.ts",
       "import": "./dist/workflow/plugin.js"
     },
+    "./durable-events": {
+      "types": "./dist/events/runtime.d.ts",
+      "import": "./dist/events/runtime.js"
+    },
     "./dida-maintenance": {
       "types": "./dist/task-maintenance/plugin.d.ts",
       "import": "./dist/task-maintenance/plugin.js"
@@ -104,6 +108,7 @@
     "dist/blacklake",
     "dist/collaboration",
     "dist/workflow",
+    "dist/events",
     "dist/task-maintenance",
     "dist/task-system",
     "dist/session-lifecycle",

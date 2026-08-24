@@ -14,6 +14,7 @@
     { "id": "executor-router", "classification": "skeleton", "layer": "provider", "status": "native", "source": "src/execution/router.ts", "dependsOn": ["assistant-contracts", "workspace-boundary", "dsh-runtime"] },
     { "id": "durable-action-ledger", "classification": "skeleton", "layer": "contract", "status": "native", "source": "src/execution/ledger-service.ts", "dependsOn": ["assistant-contracts", "durable-state-host", "executor-router"] },
     { "id": "durable-workflow-runtime", "classification": "skeleton", "layer": "kernel", "status": "native", "source": "src/workflow/runtime.ts", "dependsOn": ["durable-state-host", "lifecycle-host"] },
+    { "id": "durable-event-runtime", "classification": "skeleton", "layer": "kernel", "status": "native", "source": "src/events/runtime.ts", "dependsOn": ["durable-state-host", "lifecycle-host", "assistant-contracts"] },
     { "id": "workflow-effect-contracts", "classification": "skeleton", "layer": "contract", "status": "native", "source": "src/workflow/effects.ts", "dependsOn": [] },
     { "id": "policy-runtime", "classification": "skeleton", "layer": "policy", "status": "native", "source": "src/policy/engine.ts", "dependsOn": ["storage-port"] },
     { "id": "control-console", "classification": "skeleton", "layer": "surface", "status": "native", "source": "src/web/server.ts", "dependsOn": ["storage-port", "policy-runtime", "lifecycle-host"] },

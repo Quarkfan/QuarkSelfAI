@@ -9,11 +9,13 @@ import type {
   ActionClaimRelease,
   AdvanceWorkflowInput,
   ClaimedAction,
+  ClaimedChannelEvent,
   ClaimedWorkflowEffect,
   CreateWorkflowInput,
   DurableActionInput,
   DurableSignal,
   DurableSignalInput,
+  EventClaimRelease,
   PolicyDraftInput,
   WorkflowInstance,
 } from './types.js'
@@ -63,6 +65,16 @@ export class DurableStateService extends Service {
   async appendEvent(event: NormalizedChannelEvent): Promise<{ readonly inserted: boolean }> {
     return await (await this.ready).appendEvent(eventRecordId(event), event)
   }
+
+  async claimNextEvent(consumerName: string, eventKeys: readonly string[], workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedChannelEvent | undefined> {
+    return await (await this.ready).claimNextEvent(consumerName, eventKeys, workerId, now, leaseExpiresAt)
+  }
+
+  async settleEvent(consumerName: string, eventId: string, workerId: string, deliveredAt: string): Promise<void> {
+    await (await this.ready).settleEvent(consumerName, eventId, workerId, deliveredAt)
+  }
+
+  async releaseEvent(input: EventClaimRelease): Promise<void> { await (await this.ready).releaseEvent(input) }
 
   async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {
     await (await this.ready).updateCheckpoint(consumerName, eventKey, cursor)

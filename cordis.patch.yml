@@ -99,6 +99,15 @@
         leaseMs: 120000
         retryDelayMs: 120000
         maxAttempts: 5
+    - id: quark-durable-events
+      name: '@quarkfan/quark-self-ai/durable-events'
+      config:
+        workerId: !!js process.env.QUARK_EVENT_WORKER_ID || ('event-' + process.pid)
+        enabled: true
+        pollIntervalMs: 1000
+        leaseMs: 120000
+        retryDelayMs: 120000
+        maxAttempts: 5
     - id: quark-dida-maintenance
       name: '@quarkfan/quark-self-ai/dida-maintenance'
       # Definitions are ready, but task-system and notification effect handlers
