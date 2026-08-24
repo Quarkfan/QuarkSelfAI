@@ -89,6 +89,16 @@ export class DurableWorkflowRuntime extends Service {
     })).instance
   }
 
+  async ensure(id: string, kind: string, input: Readonly<Record<string, unknown>>, now = new Date()): Promise<WorkflowInstance> {
+    const existing = await this.ctx.quarkState.workflow(id)
+    if (!existing) return await this.start(id, kind, input, now)
+    const definition = this.definition(kind)
+    if (existing.kind !== kind || existing.definitionVersion !== definition.version) {
+      throw new Error(`workflow ${id} already belongs to ${existing.kind}@${existing.definitionVersion}`)
+    }
+    return existing
+  }
+
   async dispatch(instanceId: string, event: WorkflowEvent): Promise<WorkflowInstance> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const instance = await this.ctx.quarkState.workflow(instanceId)
@@ -183,8 +193,30 @@ export class DurableWorkflowRuntime extends Service {
 function validateDecision(decision: WorkflowDecision): WorkflowDecision {
   if (!['running', 'waiting', 'completed', 'failed'].includes(decision.status)) throw new Error(`invalid workflow status ${decision.status}`)
   if (typeof decision.state !== 'object' || decision.state === null || Array.isArray(decision.state)) throw new Error('workflow state must be an object')
+  assertJsonValue(decision.state, 'workflow state')
   if (decision.wakeAt && Number.isNaN(new Date(decision.wakeAt).getTime())) throw new Error('workflow wakeAt must be an ISO timestamp')
   const ids = (decision.effects ?? []).map(effect => effect.id)
   if (new Set(ids).size !== ids.length) throw new Error('workflow effect ids must be unique within a decision')
+  for (const effect of decision.effects ?? []) {
+    if (!effect.id.trim() || !effect.kind.trim()) throw new Error('workflow effects require non-empty id and kind')
+    if (effect.availableAt && Number.isNaN(new Date(effect.availableAt).getTime())) throw new Error(`workflow effect ${effect.id} has invalid availableAt`)
+    assertJsonValue(effect.payload, `workflow effect ${effect.id} payload`)
+  }
   return decision
+}
+
+function assertJsonValue(value: unknown, path: string): void {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error(`${path} contains a non-finite number`)
+    return
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertJsonValue(item, `${path}[${index}]`))
+    return
+  }
+  if (typeof value !== 'object') throw new Error(`${path} contains a non-JSON value`)
+  const prototype = Object.getPrototypeOf(value)
+  if (prototype !== Object.prototype && prototype !== null) throw new Error(`${path} contains a non-plain object`)
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) assertJsonValue(item, `${path}.${key}`)
 }

@@ -99,6 +99,23 @@
         leaseMs: 120000
         retryDelayMs: 120000
         maxAttempts: 5
+    - id: quark-dida-maintenance
+      name: '@quarkfan/quark-self-ai/dida-maintenance'
+      # Definitions are ready, but task-system and notification effect handlers
+      # must cut over first. Never create native instances during compat ownership.
+      disabled: !!js process.env.QUARK_NATIVE_DIDA_MAINTENANCE !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        enabled: true
+        projectId: !!js process.env.DIDA_PROJECT_ID
+        overdueIntervalMs: 1800000
+        overdueRetryMs: 600000
+        failureNotifyThreshold: 3
+        cleanupTimeZone: Asia/Shanghai
+        cleanupHour: 3
+        cleanupPollIntervalMs: 21600000
+        cleanupFailureNotifyThreshold: 3
+        completedRetentionDays: 30
+        cleanupMaxPerRun: 50
     - id: quark-feishu-ingress
       name: '@quarkfan/quark-self-ai/feishu-ingress'
       # This is the prepared native replacement. It must stay disabled while

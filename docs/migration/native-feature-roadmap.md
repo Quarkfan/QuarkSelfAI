@@ -33,6 +33,15 @@
   它不导入、不启用策略、不发送卡片。
 - 尚未迁移状态所有权。真正导入、接入审批卡片和启用 timer 仍是同一个维护窗口操作，不能拆开提前执行。
 
+### dida-maintenance 当前准备状态
+
+- 超期扫描与完成项清理已建成两个 durable workflow definitions；重启后从数据库 wake point 继续，不再依赖
+  compat 私有 timer。
+- 查询、删除和通知被表示为版本化 effect 契约。当前没有注册真实 Dida/飞书 effect handler，也没有创建生产
+  workflow instance，因此不会发生任何外部读取、删除或提醒。
+- 必须在 `message-intake-and-projection` 提供 task-system 与 notification handlers 并取得所有权后，才允许开启
+  `QUARK_NATIVE_DIDA_MAINTENANCE`。
+
 ## 每个单元的统一完成证据
 
 1. native 插件拥有独立 manifest、服务契约、生命周期和架构目录项；

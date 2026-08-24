@@ -50,6 +50,10 @@
       "types": "./dist/workflow/plugin.d.ts",
       "import": "./dist/workflow/plugin.js"
     },
+    "./dida-maintenance": {
+      "types": "./dist/task-maintenance/plugin.d.ts",
+      "import": "./dist/task-maintenance/plugin.js"
+    },
     "./dynamic-plugin-policy": {
       "types": "./dist/runtime/dynamic-plugin-policy.d.ts",
       "import": "./dist/runtime/dynamic-plugin-policy.js"
@@ -80,6 +84,7 @@
     "dist/blacklake",
     "dist/collaboration",
     "dist/workflow",
+    "dist/task-maintenance",
     "migrations",
     "config",
     "web",
@@ -109,6 +114,7 @@
     "audit:legacy-state": "node --import tsx scripts/audit-legacy-state.ts",
     "audit:legacy-handoff": "node --import tsx scripts/audit-legacy-handoff.ts",
     "audit:collaboration-handoff": "node --import tsx scripts/audit-collaboration-handoff.ts",
+    "audit:dida-maintenance-handoff": "node --import tsx scripts/audit-dida-maintenance-handoff.ts",
     "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
     "audit:dida-projections": "node scripts/audit-dida-projections.mjs",
     "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",
