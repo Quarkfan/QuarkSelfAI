@@ -14,6 +14,8 @@
   归属一个模块；只审计已提交资产，不触碰个人未提交的在途文件。
 - `layer` 是源码依赖门禁而非说明标签：contract/kernel/policy 不得向 workflow、adapter、provider 或 surface
   反向依赖；跨层装配只允许放在 operations 或显式 `runtimeDependsOn`。
+- 每个 feature/provider/surface 自己拥有窄配置；不得引入会聚合 Web、存储、通道、执行器和迁移 selector 的
+  全局 `ApplicationConfig`。DSH 配置只属于 `kernel-supervisor`。
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
 - Web 控制台、桌面端或其他人机界面是可替换 surface feature；application skeleton 只提供受监管组件扩展点，
   不得直接创建或依赖具体界面。

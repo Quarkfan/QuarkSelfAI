@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { loadAssistantApplicationConfig } from '../src/bootstrap/config.js'
 import { loadRuntimeConfig } from '../src/config/runtime.js'
 import { loadExecutionConfig } from '../src/execution/config.js'
+import { loadAssistantKernelConfig } from '../src/runtime/kernel-config.js'
 import { loadStorageConfig } from '../src/storage/config.js'
 import { loadConsoleConfig } from '../src/web/config.js'
 
-test('loads a stable local application configuration without migration selectors', () => {
-  const config = loadAssistantApplicationConfig({}, '/srv/quark')
+test('loads stable kernel configuration without feature or migration selectors', () => {
+  const config = loadAssistantKernelConfig({}, '/srv/quark')
   assert.deepEqual(config.kernel, {
     mode: 'dsh',
     command: 'dsh',
@@ -29,7 +29,7 @@ test('loads execution and console features independently from the kernel skeleto
 })
 
 test('allows the DSH kernel to be disabled only as an explicit diagnostic mode', () => {
-  const config = loadAssistantApplicationConfig({ ASSISTANT_KERNEL: 'off' }, '/srv/quark')
+  const config = loadAssistantKernelConfig({ ASSISTANT_KERNEL: 'off' }, '/srv/quark')
   assert.deepEqual(config.kernel, { mode: 'off' })
 })
 

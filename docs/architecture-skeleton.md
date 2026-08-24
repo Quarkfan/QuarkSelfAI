@@ -11,7 +11,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | --- | --- | --- |
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
-| Application composition/host | 加载不含业务 selector 的 DSH kernel 配置；接收已构造的存储端口，装配内核并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 创建 SQLite/PostgreSQL、Web 控制台、枚举 compat、飞书或某个业务功能 |
+| Application composition/host | 接收已构造的存储端口与 kernel 配置，装配内核并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 解析其他模块配置、创建 SQLite/PostgreSQL、Web 控制台、枚举 compat、飞书或某个业务功能 |
 | Module catalog | 模块分类、逐文件源码与运行资产所有权、真实 import 依赖、分层方向和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
@@ -100,8 +100,8 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
    取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。`dsh-runtime` 已指向真实 DSH package，不再把
    整份业务 profile 冒充成 skeleton；当前 profile 独立归 migration，移除 compat 条件后再转为 product feature。
 5. 原生 `application-composition` 已建立，只装配注入的 durable store、DSH kernel 和开放组件工厂；控制台是由外层
-   product composition 显式选择的 surface feature。`bootstrap/config` 只解析 kernel 配置，workspace 与 Web/
-   control-plane 配置分别归执行边界和控制台 feature。运行状态 provider 的标识、
+   product composition 显式选择的 surface feature。kernel、workspace 与 Web/control-plane 配置分别归
+   `kernel-supervisor`、执行边界和控制台 feature，不存在可随意扩张的全局 application config。运行状态 provider 的标识、
    健康参与度和展示模式也是开放字段。当前 `src/app.ts` 仍通过 `compat-composition` 选择已接管的 compatibility
    consumer；`config/runtime` 仅组合稳定配置、存储 provider 配置和 compat selector。删除 compat 不再需要修改
    或搬走骨架配置。具体边界见 ADR 0022、0027。

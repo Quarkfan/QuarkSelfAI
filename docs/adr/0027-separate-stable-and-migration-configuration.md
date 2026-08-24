@@ -11,16 +11,16 @@
 
 ## 决策
 
-1. `src/bootstrap/config.ts` 归 application skeleton，只解析 DSH kernel 的稳定配置；它不认识 surface、channel、
-   数据库实现或 migration selector。
+1. DSH kernel 的稳定配置不认识 surface、channel、数据库实现或 migration selector。最初位于
+   `src/bootstrap/config.ts`；ADR 0034 已进一步把它收窄并移动到 `src/runtime/kernel-config.ts`，归
+   `kernel-supervisor` 所有。
 2. 稳定配置只提供通用 `assistant` profile 默认值，并允许外层 composition 注入 profile 默认值。当前迁移
    composition 显式贡献 `feishu-assistant`，保持现网行为而不把飞书写进骨架。
 3. `src/storage/config.ts` 归 durable-state provider，独立选择 SQLite 或 PostgreSQL。application skeleton 继续
    只接收已经构造的 `AssistantStore`。
 4. `src/config/runtime.ts` 保持 migration ownership，只组合上述两份配置并执行 compat config path、takeover、
    local execution、kernel 和 control-plane 门禁。
-5. 控制台和 application composition 的测试只使用 `AssistantApplicationConfig`，不得依赖迁移期
-   `RuntimeConfig`。
+5. 控制台、kernel 和 application composition 的测试分别使用自身窄配置，不得依赖迁移期 `RuntimeConfig`。
 
 2026-08-24 的后续校正把 local/remote workspace 解析移到 `src/execution/config.ts`，把 Web、认证和 control-plane
 解析移到 `src/web/config.ts`。迁移期 `RuntimeConfig` 只是三份稳定 feature/skeleton 配置与迁移 selector 的组合，

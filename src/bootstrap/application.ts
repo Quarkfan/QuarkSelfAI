@@ -2,11 +2,11 @@ import type { StorageLifecyclePort } from '../storage/types.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import type { ManagedComponent } from '../platform/lifecycle.js'
 import type { KernelStatusProvider } from '../platform/operations.js'
+import type { AssistantKernelConfig } from '../runtime/kernel-config.js'
 import { createAssistantApplicationHost, type AssistantApplication } from './host.js'
-import type { AssistantApplicationConfig } from './config.js'
 
 export type { AssistantApplication } from './host.js'
-export type { AssistantApplicationConfig } from './config.js'
+export type { AssistantKernelConfig } from '../runtime/kernel-config.js'
 
 export interface AssistantApplicationExtensions {
   readonly components?: readonly ManagedComponent[]
@@ -29,7 +29,7 @@ export type AssistantComponentFactory = (context: AssistantComponentFactoryConte
  * application skeleton.
  */
 export async function createAssistantApplication(
-  config: AssistantApplicationConfig,
+  config: AssistantKernelConfig,
   infrastructure: AssistantApplicationInfrastructure,
   extensions: AssistantApplicationExtensions = {},
 ): Promise<AssistantApplication> {

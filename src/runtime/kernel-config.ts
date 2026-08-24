@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-export interface AssistantApplicationConfig {
+export interface AssistantKernelConfig {
   readonly kernel:
     | { readonly mode: 'off' }
     | {
@@ -14,16 +14,16 @@ export interface AssistantApplicationConfig {
       }
 }
 
-export interface AssistantApplicationConfigDefaults {
+export interface AssistantKernelConfigDefaults {
   readonly kernelProfile?: string
 }
 
-/** Stable kernel configuration. Product features and migration selectors compose around this value. */
-export function loadAssistantApplicationConfig(
+/** Stable DSH kernel configuration. Product features and migration selectors compose around this value. */
+export function loadAssistantKernelConfig(
   env: NodeJS.ProcessEnv = process.env,
   cwd = process.cwd(),
-  defaults: AssistantApplicationConfigDefaults = {},
-): AssistantApplicationConfig {
+  defaults: AssistantKernelConfigDefaults = {},
+): AssistantKernelConfig {
   const kernelMode = env.ASSISTANT_KERNEL ?? 'dsh'
   if (kernelMode !== 'dsh' && kernelMode !== 'off') {
     throw new Error(`ASSISTANT_KERNEL must be dsh or off, received ${kernelMode}`)

@@ -115,6 +115,9 @@ for (const filename of files) {
     && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|codex|claude|xiaowei|takeover|nativecutover)\b|常东旭|任永强|张以宁)/i.test(source)) {
     violations.push(`${from} hard-codes a feature or migration identity inside skeleton module ${ownerModule.id}`)
   }
+  if (from.startsWith('src/bootstrap/') && /\b(?:interface|type)\s+[A-Za-z0-9_]*ApplicationConfig\b/.test(source)) {
+    violations.push(`${from} defines an aggregate application config; configuration must stay with the owning module`)
+  }
   if (/\bAssistantStore\b/.test(source) && !startsWithAny(from, [
     'src/storage/types.ts', 'src/storage/factory.ts', 'src/storage/service.ts',
     'src/storage/sqlite.ts', 'src/storage/postgres.ts',

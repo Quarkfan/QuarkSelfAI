@@ -1,11 +1,11 @@
 import { resolve } from 'node:path'
-import { loadAssistantApplicationConfig, type AssistantApplicationConfig } from '../bootstrap/config.js'
 import { loadExecutionConfig } from '../execution/config.js'
+import { loadAssistantKernelConfig, type AssistantKernelConfig } from '../runtime/kernel-config.js'
 import { loadStorageConfig, type StorageConfig } from '../storage/config.js'
 import { loadConsoleConfig, type ConsoleServerConfig } from '../web/config.js'
 
 /** Temporary top-level selector while the compatibility host owns production traffic. */
-export interface RuntimeConfig extends AssistantApplicationConfig, ConsoleServerConfig {
+export interface RuntimeConfig extends AssistantKernelConfig, ConsoleServerConfig {
   readonly storage: StorageConfig
   readonly runtime:
     | { readonly mode: 'control-only' }
@@ -13,7 +13,7 @@ export interface RuntimeConfig extends AssistantApplicationConfig, ConsoleServer
 }
 
 export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): RuntimeConfig {
-  const application = loadAssistantApplicationConfig(env, cwd, { kernelProfile: 'feishu-assistant' })
+  const application = loadAssistantKernelConfig(env, cwd, { kernelProfile: 'feishu-assistant' })
   const execution = loadExecutionConfig(env, cwd)
   const console = loadConsoleConfig(env, execution, application.kernel.mode === 'dsh')
   const runtimeMode = env.ASSISTANT_RUNTIME ?? 'control-only'

@@ -48,7 +48,8 @@ Claude/Codex、具体联系人或 takeover 等功能/迁移身份。该保护不
 隔离成有退出条件的 migration host。
 
 通用 `src/bootstrap/application.ts` 已成为不依赖 migration 的 application composition，通过开放组件列表接收
-功能或迁移贡献；稳定的 Web、DSH、工作区配置位于同属骨架的 `src/bootstrap/config.ts`。当前 `src/app.ts`、
+功能或迁移贡献。该段最初把稳定 Web、DSH、工作区配置共同放在 `src/bootstrap/config.ts`；ADR 0027、0031 和
+0034 已将其纠正为 Web、execution、kernel 各自所有的窄配置。当前 `src/app.ts`、
 `src/config/runtime.ts`、`src/runtime/compat-composition.ts` 和 `src/runtime/compat.ts` 仍认识 compat 启动门禁，
 归 `bridge-compat-host` 所有，但 `config/runtime` 只组合稳定配置、存储 feature 配置与迁移 selector；在原生模块
 取得状态所有权后，只需替换进程 selector 并删除这组迁移代码，不再搬迁 application skeleton 配置。
