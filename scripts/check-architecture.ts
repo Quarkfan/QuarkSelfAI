@@ -37,7 +37,7 @@ for (const unit of migrationUnits) {
 }
 assertAcyclicCutovers(migrationUnits)
 assert.deepEqual([...buildOrders].sort((left, right) => left - right), migrationUnits.map((_, index) => index + 1), 'migration buildOrder values must be contiguous')
-const compatModuleIds = catalog.modules.filter(module => module.classification === 'feature' && module.status === 'compat').map(module => module.id)
+const compatModuleIds = catalog.modules.filter(module => module.classification === 'feature' && module.runtime === 'compat').map(module => module.id)
 assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'migration units must cover every compat feature exactly once')
 
 const files = await sourceFiles(resolve(root, 'src'))
@@ -95,7 +95,7 @@ for (const filename of files) {
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)
 const summary = summarizeModules(catalog)
 const effectCoverage = analyzeEffectCoverage(catalog)
-process.stdout.write(`Architecture verified modules=${catalog.modules.length} skeleton=${summary.skeleton.native} featureNative=${summary.feature.native} featureCompat=${summary.feature.compat} migration=${summary.migration.native} cutoverUnits=${migrationUnits.length} effects=${effectCoverage.provided.length}/${effectCoverage.required.length}\n`)
+process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} cutoverUnits=${migrationUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
 
 async function sourceFiles(directory: string): Promise<string[]> {
   const result: string[] = []

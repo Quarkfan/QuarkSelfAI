@@ -2,7 +2,8 @@
 
 这里的 `status=complete` 只表示当前运行路径具备该业务能力，可能仍由 compatibility provider 承载；它不代表
 DSH-native 所有权已经完成。控制台同时计算 `nativeCutoverReady`：只有所有必需业务能力 complete，且模块目录中
-不存在 `feature/compat` 或 `feature/planned`，才允许把兼容层视为可退出。两个门禁不得互相替代。
+所有 required effect 已实现且 active，并且不存在 `runtime=compat|inactive|shadow` 的 feature，才允许把兼容层
+视为可退出。两个门禁不得互相替代。
 
 机器可读真源是 `config/feature-parity.json`，Web 控制台直接读取它计算 `takeoverReady`。默认情况下，任何
 必要能力为 `partial` 或 `missing` 都会阻断切换；ADR 0004 允许 owner 精确接受当前全部已知证据缺口，

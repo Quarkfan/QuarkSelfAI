@@ -70,11 +70,11 @@ function render(data) {
   const architecture = data.architecture
   const moduleSummary = architecture?.summary
   $('#architecture-summary').textContent = moduleSummary
-    ? `${moduleSummary.skeleton.native} 骨架 · ${moduleSummary.feature.compat} 待原生化`
+    ? `${moduleSummary.classification.skeleton} 骨架 · ${moduleSummary.implementation.ready}/${moduleSummary.total} 已实现 · ${moduleSummary.runtime.compat} 兼容层`
     : '—'
   $('#architecture-table').innerHTML = architecture?.modules?.length
-    ? architecture.modules.map((m) => `<tr><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.status, m.status)}</td><td>${esc(m.hostedBy ?? '原生')}</td></tr>`).join('')
-    : emptyRow('暂无模块目录', 5)
+    ? architecture.modules.map((m) => `<tr><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'active' ? '原生' : '—'))}</td></tr>`).join('')
+    : emptyRow('暂无模块目录', 6)
   if (runtime.conversationUrl) {
     dshUrl = runtime.conversationUrl
     $('#open-dsh').href = dshUrl

@@ -7,12 +7,13 @@
 跨重启 workflow 只描述状态转移，不直接调用飞书、滴答、Codex session 或执行器。每个 workflow 模块必须在
 模块目录的 `requiresEffects` 中声明外部 effect；adapter 模块通过 `providesEffects` 声明唯一 provider。
 
-planned 模块允许保留尚未实现的 provider，以便渐进建设，但缺口必须进入 `nativeCutoverBlockers`。模块标记为
-native 后，所有 required effect 必须存在唯一 provider，否则架构校验失败。重复 provider 同样失败，避免切换时
-双写或同一外部动作由两个 adapter 竞争执行。
+模块允许登记尚未实现的 provider，以便渐进建设，但缺口必须进入 `nativeCutoverBlockers`。运行归属切换为
+active 后，所有 required effect 必须存在唯一 active provider，否则架构校验失败。重复 provider 同样失败，
+避免切换时双写或同一外部动作由两个 adapter 竞争执行。
 
-目录中的 provider 只有 `status=native` 才计入覆盖率；`planned` provider 只表示目标实现已登记，不能提前消除
-切换 blocker。生产 profile 中默认禁用的 adapter 也不得仅因代码存在而宣称完成接管。
+本 ADR 最初使用单一 `status` 表达 provider readiness。该部分已由 ADR 0011 替代：目录现在分别报告
+`implementation` 与 `runtime`。只有 `runtime=active` 的 provider 才能满足 active consumer；已经实现但尚未
+切换的 provider 会计入 implemented coverage，而不会计入 active coverage。
 
 ## 原因
 

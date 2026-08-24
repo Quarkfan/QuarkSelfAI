@@ -1,6 +1,6 @@
 # Compatibility 功能原生化路线
 
-机器真源：`config/native-migration-plan.json`。架构检查要求 11 个 `status=compat` 功能恰好落入一个迁移单元，
+机器真源：`config/native-migration-plan.json`。架构检查要求 11 个 `runtime=compat` 功能恰好落入一个迁移单元，
 不能遗漏，也不能同时出现在两个切换单元中。
 
 ## 为什么不能直接删 bridge-compat

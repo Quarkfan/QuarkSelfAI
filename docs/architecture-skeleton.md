@@ -36,9 +36,10 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 `dependsOn` 中；新增 helper、重复归属、失效路径和未声明跨模块 import 都会阻断 `npm check`。这使分类约束
 覆盖全部源码，而不是只检查少数代表入口。
 
-长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。planned
-workflow 可以暂时存在缺口，但缺失 provider 会进入 `nativeCutoverBlockers`；模块一旦标记 native，任何 effect
-缺口都会直接使目录校验失败。这样“状态机代码写完”和“具备真实外部执行能力”不会再被混为一谈。
+长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。
+`implementation` 单独回答代码是否 ready，`runtime` 单独回答当前是否 inactive、shadow、active 或仍归 compat。
+没有实现的 provider 与已经实现但尚未激活的 provider 会分别进入 `nativeCutoverBlockers`；active workflow 的
+effect provider 必须同样 active。这样“状态机代码写完”和“具备真实外部执行能力”不会再被混为一谈。
 
 ## 功能
 
@@ -51,7 +52,7 @@ workflow 可以暂时存在缺口，但缺失 provider 会进入 `nativeCutoverB
 - Authoring：DSH 会话动态插件创作与长期插件沉淀。
 
 功能可以依赖骨架和其他功能契约，但不能依赖 `bridge-compat`、迁移脚本或旧 JSON 状态。当前仍由兼容宿主
-承载的功能在模块目录中标记为 `status=compat`，这是待迁移事实，不是允许继续耦合的接口。
+承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
 
 ## 迁移层
 
@@ -66,19 +67,20 @@ workflow 可以暂时存在缺口，但缺失 provider 会进入 `nativeCutoverB
 4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
 5. 当前 `app/bootstrap/runtime config` 仍直接组合 compatibility host 和 takeover readiness，因此被明确归为
    `bridge-compat-host` 迁移所有权；原生 application composition 尚未建立，不能把当前启动入口误称为最终骨架。
-6. native workflow 当前只实现了内部 `followup.open-outreach` handler；飞书、滴答、Codex session 和 intake
-   effect provider 尚未取得状态所有权，现已进入机器切换门禁，必须逐 adapter 补齐后才能切换。飞书通知、
+6. native workflow 的飞书 effect 与滴答维护 effect 已实现但未激活；Codex session、任务语义投影和 intake
+   provider 仍未实现。两类缺口由机器门禁分别呈现，必须逐 adapter 补齐并回放后才能切换。飞书通知、
    交互卡片、只读联系人候选解析和经 durable approval 的本人代发 adapter 已完成 mock 契约实现；同名联系人
    只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持
-   `status=planned`。
+   `implementation=ready,runtime=inactive`。
 
 滴答 adapter 已实现超期查询、在白名单清单中核验任务是否完成，以及受限的已完成任务清理。它不会把“查不到
 任务”解释为已完成。清理不是仅凭环境开关获得删除权限：常东旭的长期授权会作为不可变快照进入 workflow state，
 每个 cleanup effect 都携带授权 ID、授权人、时间、来源、项目、最短保留期和单次上限；adapter 在执行任何 CLI
-命令前重新核验范围。当前 adapter 仍是 `planned` 且双重禁用，真实只读/删除回放与维护窗口批准前不会接管。
+命令前重新核验范围。当前 adapter 是 `implementation=ready,runtime=inactive` 且双重禁用，真实只读/删除回放
+与维护窗口批准前不会接管。
 
-`feature-parity` 的业务完成度与模块目录的原生所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
-`feature/compat` 或 `feature/planned`，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
+`feature-parity` 的业务完成度与模块目录的运行所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
+`runtime=compat|inactive|shadow` 的 feature，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
 
 DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-state`。新功能不得把私有 JSON state、
 业务 timer 或状态读写重新塞进 action ledger；跨重启流程必须使用 `quark-durable-workflows`。

@@ -66,9 +66,11 @@ export async function loadFeatureParity(): Promise<FeatureParityReport> {
   ])
   const incomplete = manifest.features.filter((feature) => feature.requiredForTakeover && feature.status !== 'complete')
   const nativeCutoverBlockers = catalog.modules
-    .filter(module => module.classification === 'feature' && module.status !== 'native')
+    .filter(module => module.classification === 'feature' && module.runtime !== 'active')
     .map(module => module.id)
-  nativeCutoverBlockers.push(...analyzeEffectCoverage(catalog).missing.map(effect => `effect-provider:${effect}`))
+  const coverage = analyzeEffectCoverage(catalog)
+  nativeCutoverBlockers.push(...coverage.missingImplementation.map(effect => `effect-implementation:${effect}`))
+  nativeCutoverBlockers.push(...coverage.inactive.map(effect => `effect-inactive:${effect}`))
   nativeCutoverBlockers.sort()
   return {
     ...manifest,
