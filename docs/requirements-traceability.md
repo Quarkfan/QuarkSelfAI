@@ -8,11 +8,11 @@
 
 | 原始能力要求 | 对应能力 | 当前证据 | 状态/剩余门禁 |
 | --- | --- | --- | --- |
-| 守护进程监听飞书，不依赖循环 sleep；崩溃后恢复 | lark-event-adapter, retry-and-alerting, daemon-deployment | 单一实时消费者；非实时来源 30 分钟兜底扫描；本地队列与远程搜索分离；launchd；租约/退避；跨进程隔离故障恢复演练 | complete（服务器部署仍为可选项） |
+| 守护进程监听飞书，不依赖循环 sleep；崩溃后恢复 | lark-event-adapter, retry-and-alerting, daemon-deployment | 单一实时消费者；非实时来源默认 10 分钟持久工作流补偿；本地队列与远程搜索分离；launchd；租约/退避；跨进程隔离故障恢复演练 | complete（服务器部署仍为可选项） |
 | 本人机器人私聊直接理解自然语言并执行，不要求命令枚举 | direct-owner-control | 契约测试；持久 controller/current session；最近六条有界上下文与 reply/root/thread 连贯性提示；控制会话排除于本人参与补偿；调研确认要求精确关联或单一事项完整短句 | complete |
 | 创建、续接指定 Codex 会话；左侧可见；标题唯一；默认 gpt-5.6-sol medium | visible-codex-sessions | app-server 契约；桌面端 projectless 合成任务创建、列表可见、同 task 续接和归档 | complete |
 | 任务完成后归档；自建会话归档七日后强制删除；失败退避 | session-janitor | 生命周期测试；现网 2/2 自动研究会话均 archived+deleted 且累计失败为 0 | complete |
-| @我、他人私聊、特别关注联系人、飞书标记群/会话统一接入 | focus-intake | 明确 @ 实时事件契约；其他来源 30 分钟扫描与 10 分钟重叠恢复；MentionMonitor 幂等契约 | complete |
+| @我、他人私聊、特别关注联系人、飞书标记群/会话统一接入 | focus-intake | 明确 @ 实时事件；默认 10 分钟只读补偿扫描；联系人/私聊/Flag/Feed 特别关注结构化过滤；2 分钟重叠窗口；实时与补偿共享 messageId 幂等键 | complete |
 | 任永强邀请本人入群时视为工作交接，读取上下文并持续关注该群 | focus-intake, context-and-external-guard | 成员加入事件精确 ID 过滤；群列表差分+系统消息兜底；首次基线不回溯；交接群独立低频扫描、幂等与上下文沉淀测试 | implemented：实时事件待在飞书应用后台启用；30 分钟兜底已配置，重启后生效 |
 | 本人主动参与的工作沟通及相关表情回复应被持续跟进 | focus-intake, collaboration-learning | 本人消息低频检索；低信号仅建立三个工作日临时关注；实质消息进入统一语义链路；reaction created/deleted 双实时流、mget 上下文解析、30 分钟新增事件补偿和幂等测试 | implemented：重启后启用实时表情流和低频兜底；高影响动作仍需明确文字批准 |
 | 读取附近上下文与最新会话尾部，避免迟到任务和已回复后再建任务 | focus-intake, context-and-external-guard | stale message 双窗口读取、settle window、低信号清理；现网 41/41 来源有上下文 | complete |

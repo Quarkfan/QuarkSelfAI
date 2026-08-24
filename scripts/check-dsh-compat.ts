@@ -33,6 +33,8 @@ const conversationPlugin = await import(resolve(projectRoot, 'dist/conversation/
 assert.equal(typeof conversationPlugin.apply, 'function', 'DSH conversation effect plugin must expose apply(ctx, config)')
 const contextPlugin = await import(resolve(projectRoot, 'dist/lark/context-effect-plugin.js'))
 assert.equal(typeof contextPlugin.apply, 'function', 'Feishu context effect plugin must expose apply(ctx, config)')
+const discoveryPlugin = await import(resolve(projectRoot, 'dist/lark/discovery-effect-plugin.js'))
+assert.equal(typeof discoveryPlugin.apply, 'function', 'Feishu focus discovery effect plugin must expose apply(ctx, config)')
 const interactionPlugin = await import(resolve(projectRoot, 'dist/intake/interaction-effect-plugin.js'))
 assert.equal(typeof interactionPlugin.apply, 'function', 'intake interaction effect plugin must expose apply(ctx, config)')
 const reasoningPlugin = await import(resolve(projectRoot, 'dist/reasoning/dsh-effect-plugin.js'))
@@ -70,6 +72,8 @@ assert.match(dump, /id: quark-dsh-conversation-effects[\s\S]*name: '@quarkfan\/q
 assert.match(dump, /quark-dsh-conversation-effects[\s\S]*QUARK_NATIVE_CONVERSATION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-feishu-context-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-context-effects'/)
 assert.match(dump, /quark-feishu-context-effects[\s\S]*QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /id: quark-feishu-focus-discovery-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-focus-discovery-effects'/)
+assert.match(dump, /quark-feishu-focus-discovery-effects[\s\S]*QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-intake-interaction-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/intake-interaction-effects'/)
 assert.match(dump, /quark-intake-interaction-effects[\s\S]*QUARK_NATIVE_INTERACTION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-dsh-reasoning-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dsh-reasoning-effects'/)
@@ -94,6 +98,7 @@ const activation = spawn(process.execPath, [
     QUARK_SQLITE_PATH: ledgerPath,
     QUARK_NATIVE_CONVERSATION_EFFECTS: 'true',
     QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS: 'true',
+    QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS: 'true',
     QUARK_NATIVE_INTERACTION_EFFECTS: 'true',
     QUARK_NATIVE_REASONING_EFFECTS: 'true',
     QUARK_NATIVE_DIDA_PROJECTION_EFFECTS: 'true',

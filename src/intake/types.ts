@@ -7,6 +7,9 @@ export const INTAKE_EFFECTS = {
   discoverSignals: 'feishu.discover-focus-signals.v1',
 } as const
 
+/** Adapter-owned event key. Only the bounded Feishu discovery provider emits it. */
+export const FOCUS_DISCOVERY_EVENT_KEY = 'quark.focus.discovered.v1'
+
 export type IntakeRoute = 'owner-command' | 'focus' | 'interaction'
 export type IntakeOutcome = 'ignored' | 'task' | 'notify'
 
@@ -39,7 +42,25 @@ export interface IntakePluginConfig {
   readonly focusConversationIds?: readonly string[]
   readonly delegationInviterId?: string
   readonly discoveryIntervalMs?: number
+  readonly discoveryOverlapMs?: number
+  readonly discoveryRetryMs?: number
+  readonly monitorOwnerParticipation?: boolean
+  readonly monitorFlaggedConversations?: boolean
+  readonly monitorDirectMessages?: boolean
+  readonly monitorMentionBackfill?: boolean
+  readonly focusFeedGroupNames?: readonly string[]
   readonly taskProjection?: TaskProjectionTarget
+}
+
+export interface FocusDiscoverySources {
+  readonly ownerOpenId: string
+  readonly senderIds: readonly string[]
+  readonly conversationIds: readonly string[]
+  readonly includeOwnerParticipation: boolean
+  readonly includeFlaggedConversations: boolean
+  readonly includeDirectMessages: boolean
+  readonly includeMentionBackfill: boolean
+  readonly feedGroupNames: readonly string[]
 }
 
 export interface IntakeContext {

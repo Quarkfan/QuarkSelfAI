@@ -122,6 +122,16 @@
       disabled: !!js process.env.QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
       config:
         executable: lark-cli
+    - id: quark-feishu-focus-discovery-effects
+      name: '@quarkfan/quark-self-ai/feishu-focus-discovery-effects'
+      # Read-only low-frequency searches still share intake ownership. Keep
+      # absent while compatibility polling owns the same Feishu search windows.
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        executable: lark-cli
+        searchPageLimit: 10
+        flagPageLimit: 1000
+        feedPageLimit: 100
     - id: quark-message-intake
       name: '@quarkfan/quark-self-ai/message-intake'
       # The definitions are loadable, but compat remains the sole production
@@ -134,6 +144,13 @@
         focusSenderIds: []
         focusConversationIds: []
         discoveryIntervalMs: 600000
+        discoveryOverlapMs: 120000
+        discoveryRetryMs: 600000
+        monitorOwnerParticipation: true
+        monitorFlaggedConversations: true
+        monitorDirectMessages: true
+        monitorMentionBackfill: true
+        focusFeedGroupNames: [特别关注]
         taskProjection:
           projectId: !!js process.env.DIDA_PROJECT_ID
           authorization:
