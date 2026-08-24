@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "sourceRuntime": "bridge-compat-host",
+  "units": [
+    {
+      "id": "message-intake-and-projection",
+      "modules": ["approval-cards", "dida-projection", "direct-command-workflow", "focus-intake", "owner-engagement", "notification-digest"],
+      "stateOwner": "bridge-state.json",
+      "cutoverBoundary": "Freeze one checkpoint, stop all five compat Feishu streams, import pending message/card/projection state, then start the five native streams exactly once.",
+      "rollback": "Stop every native stream before restoring the frozen compat checkpoint and bridge-compat process.",
+      "requiresMaintenanceWindow": true
+    },
+    {
+      "id": "dida-maintenance",
+      "modules": ["dida-maintenance"],
+      "stateOwner": "bridge-state.json",
+      "cutoverBoundary": "Disable compat overdue and completed-task timers, migrate notification fingerprints and cleanup cursor, then enable the native scheduled plugin.",
+      "rollback": "Disable the native timer before restoring migrated fingerprints and re-enabling compat timers.",
+      "requiresMaintenanceWindow": true
+    },
+    {
+      "id": "delegated-followup",
+      "modules": ["delegated-followup"],
+      "stateOwner": "bridge-state.json",
+      "cutoverBoundary": "Pause compat follow-up polling, migrate open outreach approvals and last workday checkpoint, then enable the native workflow.",
+      "rollback": "Stop native polling, export unresolved approvals back to the frozen compat schema, then resume compat polling.",
+      "requiresMaintenanceWindow": true
+    },
+    {
+      "id": "xiaowei-research",
+      "modules": ["xiaowei-research"],
+      "stateOwner": "bridge-state.json",
+      "cutoverBoundary": "Pause Xiaowei request/reply polling, migrate every pending correlation and approval, then resume through one native channel owner.",
+      "rollback": "Stop native Xiaowei polling and restore only unresolved correlations to compat before resuming it.",
+      "requiresMaintenanceWindow": true
+    },
+    {
+      "id": "session-lifecycle",
+      "modules": ["session-lifecycle"],
+      "stateOwner": "bridge-state.json",
+      "cutoverBoundary": "Pause archive/delete sweeps, migrate session ownership, Dida completion links and retry deadlines, then enable native cleanup.",
+      "rollback": "Stop native cleanup before restoring remaining session records; never replay already-completed deletes.",
+      "requiresMaintenanceWindow": true
+    },
+    {
+      "id": "collaboration-learning",
+      "modules": ["collaboration-learning"],
+      "stateOwner": "bridge-state.json",
+      "cutoverBoundary": "Pause learning evaluation, import privacy-bounded observations and proposal cooldowns, then enable native policy learning.",
+      "rollback": "Disable native evaluation and restore only observations newer than the frozen compat checkpoint by stable sample id.",
+      "requiresMaintenanceWindow": true
+    }
+  ]
+}

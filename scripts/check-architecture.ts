@@ -6,6 +6,26 @@ import { loadModuleCatalog, summarizeModules } from '../src/platform/modules.js'
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
 for (const module of catalog.modules) await access(resolve(root, module.source))
+const migrationPlan = JSON.parse(await readFile(resolve(root, 'config/native-migration-plan.json'), 'utf8')) as {
+  version?: unknown
+  sourceRuntime?: unknown
+  units?: unknown
+}
+assert.equal(migrationPlan.version, 1, 'native migration plan must be version 1')
+assert.equal(migrationPlan.sourceRuntime, 'bridge-compat-host', 'native migration plan must identify the compatibility host')
+assert.ok(Array.isArray(migrationPlan.units), 'native migration plan must contain units')
+const migrationUnits = migrationPlan.units as Array<Record<string, unknown>>
+const migrationModuleIds: string[] = []
+for (const unit of migrationUnits) {
+  assert.equal(typeof unit.id, 'string', 'migration unit id must be a string')
+  assert.ok(Array.isArray(unit.modules) && unit.modules.length > 0 && unit.modules.every(value => typeof value === 'string'), `migration unit ${String(unit.id)} must contain module ids`)
+  assert.equal(typeof unit.cutoverBoundary, 'string', `migration unit ${String(unit.id)} must define its cutover boundary`)
+  assert.equal(typeof unit.rollback, 'string', `migration unit ${String(unit.id)} must define rollback`)
+  assert.equal(unit.requiresMaintenanceWindow, true, `migration unit ${String(unit.id)} must require a maintenance window`)
+  migrationModuleIds.push(...unit.modules as string[])
+}
+const compatModuleIds = catalog.modules.filter(module => module.classification === 'feature' && module.status === 'compat').map(module => module.id)
+assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'migration units must cover every compat feature exactly once')
 
 const files = await sourceFiles(resolve(root, 'src'))
 const violations: string[] = []
@@ -44,7 +64,7 @@ for (const filename of files) {
 }
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)
 const summary = summarizeModules(catalog)
-process.stdout.write(`Architecture verified modules=${catalog.modules.length} skeleton=${summary.skeleton.native} featureNative=${summary.feature.native} featureCompat=${summary.feature.compat} migration=${summary.migration.native}\n`)
+process.stdout.write(`Architecture verified modules=${catalog.modules.length} skeleton=${summary.skeleton.native} featureNative=${summary.feature.native} featureCompat=${summary.feature.compat} migration=${summary.migration.native} cutoverUnits=${migrationUnits.length}\n`)
 
 async function sourceFiles(directory: string): Promise<string[]> {
   const result: string[] = []

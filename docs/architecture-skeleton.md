@@ -69,3 +69,6 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 6. 为功能提供契约测试、运行状态和停用/回滚路径，再加入正式 profile。
 
 可复制的最小模板位于 `templates/feature-plugin/`。
+
+现有 compatibility 功能的逐单元状态迁移、维护窗口和回滚要求见
+[原生化路线](migration/native-feature-roadmap.md)。
