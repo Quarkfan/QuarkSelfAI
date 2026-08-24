@@ -187,6 +187,14 @@
       disabled: !!js process.env.QUARK_NATIVE_FEISHU_INGRESS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
       config:
         startConsumer: true
+    - id: quark-feishu-workflow-effects
+      name: '@quarkfan/quark-self-ai/feishu-workflow-effects'
+      # Contains external writes. Keep absent until the approved maintenance
+      # window has transferred notification and outbound-message ownership.
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        executable: lark-cli
+        ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
     - id: quark-collaboration-learning
       name: '@quarkfan/quark-self-ai/collaboration-learning'
       # Compat still owns observations, proposals and owner-decision state.

@@ -11,6 +11,9 @@ planned 模块允许保留尚未实现的 provider，以便渐进建设，但缺
 native 后，所有 required effect 必须存在唯一 provider，否则架构校验失败。重复 provider 同样失败，避免切换时
 双写或同一外部动作由两个 adapter 竞争执行。
 
+目录中的 provider 只有 `status=native` 才计入覆盖率；`planned` provider 只表示目标实现已登记，不能提前消除
+切换 blocker。生产 profile 中默认禁用的 adapter 也不得仅因代码存在而宣称完成接管。
+
 ## 原因
 
 工作流单元测试只能证明状态机逻辑，不能证明外部动作已经接通。此前多个 native 候选会发出持久 effect，但除了

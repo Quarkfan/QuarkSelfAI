@@ -83,13 +83,13 @@ test('reports planned effect gaps and blocks native consumers without a provider
       { id: 'workflow', classification: 'feature', layer: 'workflow', status: 'planned', source: 'workflow', owns: [], dependsOn: [], requiresEffects: ['task-system.read.v1'] },
     ],
   })
-  assert.deepEqual(analyzeEffectCoverage(planned), { required: ['task-system.read.v1'], provided: [], missing: ['task-system.read.v1'] })
+  assert.deepEqual(analyzeEffectCoverage(planned), { required: ['task-system.read.v1'], declared: [], provided: [], missing: ['task-system.read.v1'] })
   assert.throws(() => validateModuleCatalog({
     version: 1,
     modules: [
       { id: 'workflow', classification: 'feature', layer: 'workflow', status: 'native', source: 'workflow', owns: [], dependsOn: [], requiresEffects: ['task-system.read.v1'] },
     ],
-  }), /native module workflow requires unprovided effect task-system\.read\.v1/)
+  }), /native module workflow requires non-native effect task-system\.read\.v1/)
 })
 
 test('requires each effect to have only one provider', () => {

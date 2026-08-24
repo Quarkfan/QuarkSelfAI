@@ -49,6 +49,8 @@ test('outreach requires exact approval before sending and persists reply synchro
   const sending = definition.reduce(approval.state, event('approved', 'approval.approved', '2026-08-24T00:00:03Z', { approvalId: approval.state.approvalId }))
   assert.equal(sending.effects?.[0]?.kind, LARK_EFFECTS.sendAsUser)
   assert.match(String(sending.effects?.[0]?.payload.content), /我是常东旭的 AI 分身/)
+  assert.equal(sending.effects?.[0]?.payload.approvalId, approval.state.approvalId)
+  assert.equal(sending.effects?.[0]?.payload.approvedAt, '2026-08-24T00:00:03Z')
   const waiting = definition.reduce(sending.state, event('sent', 'effect.delivered', '2026-08-24T00:00:04Z', { effectKind: LARK_EFFECTS.sendAsUser, messageId: 'om_sent', chatId: 'oc_chat' }))
   const updating = definition.reduce(waiting.state, event('reply', 'followup.reply', '2026-08-24T02:00:00Z', { messageId: 'om_reply', content: '今天已完成' }))
   assert.equal(updating.effects?.[0]?.kind, TASK_EFFECTS.recordFollowupReply)

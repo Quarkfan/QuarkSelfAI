@@ -27,6 +27,7 @@ export interface AssistantModuleCatalog {
 
 export interface EffectCoverage {
   readonly required: readonly string[]
+  readonly declared: readonly string[]
   readonly provided: readonly string[]
   readonly missing: readonly string[]
 }
@@ -75,7 +76,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
   }
   const ownership = new Map<string, string>()
-  const effectProviders = new Map<string, string>()
+  const effectProviders = new Map<string, AssistantModuleDescriptor>()
   for (const module of modules) {
     for (const source of module.owns) {
       const existing = ownership.get(source)
@@ -84,13 +85,13 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
     for (const effect of module.providesEffects) {
       const existing = effectProviders.get(effect)
-      if (existing) throw new Error(`effect ${effect} is provided by both ${existing} and ${module.id}`)
-      effectProviders.set(effect, module.id)
+      if (existing) throw new Error(`effect ${effect} is provided by both ${existing.id} and ${module.id}`)
+      effectProviders.set(effect, module)
     }
   }
   for (const module of modules.filter(item => item.status === 'native')) {
     for (const effect of module.requiresEffects) {
-      if (!effectProviders.has(effect)) throw new Error(`native module ${module.id} requires unprovided effect ${effect}`)
+      if (effectProviders.get(effect)?.status !== 'native') throw new Error(`native module ${module.id} requires non-native effect ${effect}`)
     }
   }
   assertAcyclic(modules, byId)
@@ -99,9 +100,10 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
 
 export function analyzeEffectCoverage(catalog: AssistantModuleCatalog): EffectCoverage {
   const required = [...new Set(catalog.modules.flatMap(module => module.requiresEffects))].sort()
-  const provided = [...new Set(catalog.modules.flatMap(module => module.providesEffects))].sort()
+  const declared = [...new Set(catalog.modules.flatMap(module => module.providesEffects))].sort()
+  const provided = [...new Set(catalog.modules.filter(module => module.status === 'native').flatMap(module => module.providesEffects))].sort()
   const providerSet = new Set(provided)
-  return { required, provided, missing: required.filter(effect => !providerSet.has(effect)) }
+  return { required, declared, provided, missing: required.filter(effect => !providerSet.has(effect)) }
 }
 
 export function validateSourceOwnership(catalog: AssistantModuleCatalog, sourceFiles: readonly string[]): void {

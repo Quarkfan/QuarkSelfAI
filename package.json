@@ -74,6 +74,10 @@
       "types": "./dist/lark/effects.d.ts",
       "import": "./dist/lark/effects.js"
     },
+    "./feishu-workflow-effects": {
+      "types": "./dist/lark/effect-plugin.d.ts",
+      "import": "./dist/lark/effect-plugin.js"
+    },
     "./xiaowei-research": {
       "types": "./dist/xiaowei/plugin.d.ts",
       "import": "./dist/xiaowei/plugin.js"

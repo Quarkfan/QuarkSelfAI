@@ -71,7 +71,7 @@ function requestMessage(state: XiaoweiResearchState): string {
 function sendEffect(state: XiaoweiResearchState, now: string) {
   return { id: stable('xiaowei-send', state.requestId, String(state.sequence)), kind: LARK_EFFECTS.sendAsUser, availableAt: now,
     payload: { openId: state.agentOpenId, chatId: state.agentChatId, content: requestMessage(state),
-      idempotencyKey: `xiaowei-request:${state.requestId}` } }
+      approvalId: `xiaowei:${state.requestId}`, approvedAt: state.approvedAt, idempotencyKey: `xiaowei-request:${state.requestId}` } }
 }
 function notifyEffect(state: XiaoweiResearchState, now: string, sequence: number) {
   const key = `xiaowei-result:${state.requestId}:${state.replyMessageId}`

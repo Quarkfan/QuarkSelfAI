@@ -16,6 +16,8 @@ test('Xiaowei workflow requires prior approval and synchronizes a slow reply seq
   assert.equal(sending.wakeAt, null)
   assert.equal(sending.effects?.[0]?.kind, LARK_EFFECTS.sendAsUser)
   assert.match(String(sending.effects?.[0]?.payload.content), /只读排查/)
+  assert.equal(sending.effects?.[0]?.payload.approvalId, `xiaowei:${input.requestId}`)
+  assert.equal(sending.effects?.[0]?.payload.approvedAt, input.approvedAt)
   const waiting = definition().reduce(sending.state, event('sent', 'effect.delivered', '2026-08-24T00:00:03Z', {
     effectKind: LARK_EFFECTS.sendAsUser, messageId: 'om_request',
   }))
