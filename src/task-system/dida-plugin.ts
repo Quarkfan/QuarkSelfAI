@@ -31,10 +31,26 @@ export class DidaTaskEffectAdapter {
     this.allowedProjects = new Set(config.projectIds.map((id, index) => required(id, `projectIds[${index}]`, 300)))
   }
   async execute(effect: ClaimedWorkflowEffect): Promise<Readonly<Record<string, unknown>>> {
+    if (effect.kind === TASK_STORE_EFFECTS.listActive) return await this.listActive(effect)
     if (effect.kind === TASK_STORE_EFFECTS.listOverdue) return await this.listOverdue(effect)
     if (effect.kind === TASK_STORE_EFFECTS.isCompleted) return await this.isCompleted(effect)
     if (effect.kind === TASK_MAINTENANCE_EFFECTS.cleanupCompleted) return await this.cleanupCompleted(effect)
     throw new Error(`unsupported Dida task effect ${effect.kind}`)
+  }
+  private async listActive(effect: ClaimedWorkflowEffect) {
+    const projectId = this.project(effect.payload.projectId)
+    const tasks = rows(await this.json(['task', 'filter', '--projects', projectId, '--status', '0', '--json']))
+      .map((task, index) => ({
+        taskId: required(field(task, 'id', 'taskId'), `task ${index} id`, 300),
+        title: required(task.title, `task ${index} title`, 500),
+        content: typeof task.content === 'string' ? task.content.slice(0, 12_000) : '',
+        priority: number(task.priority, `task ${index} priority`),
+        tags: Array.isArray(task.tags) ? task.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 20) : [],
+        ...(typeof field(task, 'dueDate', 'due_date') === 'string' ? { dueDate: field(task, 'dueDate', 'due_date') as string } : {}),
+        ...(typeof field(task, 'modifiedTime', 'updatedAt', 'updated_at') === 'string' ? { updatedAt: field(task, 'modifiedTime', 'updatedAt', 'updated_at') as string } : {}),
+        ...(typeof task.url === 'string' && task.url ? { url: task.url } : {}),
+      }))
+    return { projectId, tasks }
   }
   private async listOverdue(effect: ClaimedWorkflowEffect) {
     const projectId = this.project(effect.payload.projectId)
@@ -99,7 +115,7 @@ export const name = 'quark-dida-task-effects'
 export const inject = ['quarkWorkflows']
 export function apply(ctx: Context, config: DidaTaskEffectConfig): void {
   const adapter = new DidaTaskEffectAdapter(config)
-  const disposers = [TASK_STORE_EFFECTS.listOverdue, TASK_STORE_EFFECTS.isCompleted, TASK_MAINTENANCE_EFFECTS.cleanupCompleted]
+  const disposers = [TASK_STORE_EFFECTS.listActive, TASK_STORE_EFFECTS.listOverdue, TASK_STORE_EFFECTS.isCompleted, TASK_MAINTENANCE_EFFECTS.cleanupCompleted]
     .map(kind => ctx.quarkWorkflows.registerEffect(kind, { execute: effect => adapter.execute(effect) }))
   ctx.effect(() => () => { for (const dispose of disposers.reverse()) dispose() }, 'quark Dida task effects')
 }

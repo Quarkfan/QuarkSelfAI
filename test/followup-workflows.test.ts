@@ -6,22 +6,27 @@ import { followupOutreachWorkflow } from '../src/followup/outreach-workflow.js'
 import { LARK_EFFECTS } from '../src/lark/effects.js'
 import { TASK_REASONING_EFFECTS } from '../src/task-system/reasoning-effects.js'
 import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.js'
+import { TASK_STORE_EFFECTS } from '../src/task-system/store-effects.js'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 
 const event = (id: string, type: string, occurredAt: string, payload: Record<string, unknown> = {}) => ({ id, type, occurredAt, payload })
 const taskProjection = { projectId: 'followup', authorization: { id: 'followup-projection-v1', grantedBy: 'owner' as const, grantedAt: '2026-08-20T00:00:00+08:00', scope: 'dida.task-projection', revision: 1, source: 'owner-directive', projectId: 'followup' } }
 
 test('workday review distributes updates, reminders, and outreach once per local workday', () => {
-  const definition = followupReviewWorkflow({ timeZone: 'Asia/Shanghai', scheduledHour: 10, pollIntervalMs: 60_000 })
+  const definition = followupReviewWorkflow({ projectId: 'followup', taskProjection, timeZone: 'Asia/Shanghai', scheduledHour: 10, pollIntervalMs: 60_000 })
   const initialized = definition.initialize({}, '2026-08-24T01:59:00Z')
   const early = definition.reduce(initialized.state, event('early', 'timer', '2026-08-24T01:59:00Z'))
   assert.equal(early.effects?.length ?? 0, 0)
-  const evaluating = definition.reduce(early.state, event('due', 'timer', '2026-08-24T02:00:00Z'))
+  const loading = definition.reduce(early.state, event('due', 'timer', '2026-08-24T02:00:00Z'))
+  assert.equal(loading.effects?.[0]?.kind, TASK_STORE_EFFECTS.listActive)
+  const evaluating = definition.reduce(loading.state, event('loaded', 'effect.delivered', '2026-08-24T02:00:01Z', { effectKind: TASK_STORE_EFFECTS.listActive, projectId: 'followup', tasks: [{ taskId: 'task-1', title: '确认进度', content: '等待张三' }] }))
   assert.equal(evaluating.effects?.[0]?.kind, TASK_REASONING_EFFECTS.evaluateFollowups)
-  const distributing = definition.reduce(evaluating.state, event('evaluated', 'effect.delivered', '2026-08-24T02:00:01Z', {
-    effectKind: TASK_REASONING_EFFECTS.evaluateFollowups, updates: [], reminders: [{ taskId: 'task-1', title: '确认进度', urgency: 'medium', reason: '约定时间已到', recommendedAction: '联系负责人' }],
+  const applying = definition.reduce(evaluating.state, event('evaluated', 'effect.delivered', '2026-08-24T02:00:02Z', {
+    effectKind: TASK_REASONING_EFFECTS.evaluateFollowups, updates: [{ taskId: 'task-1', title: '确认进度', summary: '约定日期已到，等待确认', changes: ['更新当前摘要'], reason: '约定时间已到' }], reminders: [{ taskId: 'task-1', title: '确认进度', urgency: 'medium', reason: '约定时间已到', recommendedAction: '联系负责人' }],
     outreachRequests: [{ taskId: 'task-1', title: '确认进度', personName: '张三', question: '进展如何？', reason: '约定时间已到', context: '项目跟进' }],
   }))
+  assert.deepEqual(applying.effects?.map(item => item.kind), [TASK_PROJECTION_EFFECTS.applyFollowupUpdate])
+  const distributing = definition.reduce(applying.state, event('applied', 'effect.delivered', '2026-08-24T02:00:03Z', { effectKind: TASK_PROJECTION_EFFECTS.applyFollowupUpdate, effectId: applying.effects?.[0]?.id, result: { taskId: 'task-1' } }))
   assert.deepEqual(new Set(distributing.effects?.map(item => item.kind)), new Set([ASSISTANT_EFFECTS.notifyOwner, FOLLOWUP_EFFECTS.openOutreach]))
   let current = distributing
   for (const effect of distributing.effects ?? []) current = definition.reduce(current.state, event(`done:${effect.id}`, 'effect.delivered', '2026-08-24T02:00:02Z', { effectKind: effect.kind, effectId: effect.id }))
@@ -31,9 +36,9 @@ test('workday review distributes updates, reminders, and outreach once per local
 })
 
 test('workday evaluation failure can create a fresh durable retry effect', () => {
-  const definition = followupReviewWorkflow({ pollIntervalMs: 60_000 })
+  const definition = followupReviewWorkflow({ projectId: 'followup', taskProjection, pollIntervalMs: 60_000 })
   const first = definition.reduce(definition.initialize({}, '2026-08-24T02:00:00Z').state, event('timer-1', 'timer', '2026-08-24T02:00:00Z'))
-  const failed = definition.reduce(first.state, event('failed', 'effect.failed', '2026-08-24T02:00:01Z', { effectKind: TASK_REASONING_EFFECTS.evaluateFollowups, effectId: first.effects?.[0]?.id }))
+  const failed = definition.reduce(first.state, event('failed', 'effect.failed', '2026-08-24T02:00:01Z', { effectKind: TASK_STORE_EFFECTS.listActive, effectId: first.effects?.[0]?.id }))
   const retry = definition.reduce(failed.state, event('timer-2', 'timer', failed.wakeAt as string))
   assert.notEqual(retry.effects?.[0]?.id, first.effects?.[0]?.id)
 })

@@ -267,6 +267,7 @@
       disabled: !!js process.env.QUARK_NATIVE_FOLLOWUP !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
       config:
         enabled: true
+        projectId: !!js process.env.DIDA_FOLLOWUP_PROJECT_ID
         timeZone: Asia/Shanghai
         scheduledHour: 10
         pollIntervalMs: 3600000

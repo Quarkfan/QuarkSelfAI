@@ -19,5 +19,5 @@
 
 ## 结果
 
-重点消息评估已使用该 provider。后续任务合并、快速摘要和工作日跟进判断可复用同一运行机制，但各自保留独立
-effect kind、prompt 与领域 validator，避免一个巨型分类器成为新的单体核心。
+重点消息评估与工作日跟进判断已使用该 provider；两者保留独立 effect kind、prompt 与领域 validator。跟进模型
+只生成建议，后续授权 projection 才能写入，避免一个巨型分类器或模型工具调用成为新的单体核心。

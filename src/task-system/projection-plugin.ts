@@ -5,6 +5,7 @@ import { validateIntakeDecision } from '../intake/types.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import type {} from '../workflow/runtime.js'
 import { TASK_PROJECTION_EFFECTS } from './projection-effects.js'
+import { validateFollowupUpdate } from '../followup/types.js'
 
 const SCOPE = 'dida.task-projection'
 const URGENCY = { 1: '跟进', 3: '重要', 5: '紧急' } as const
@@ -34,9 +35,29 @@ export class DidaProjectionEffectAdapter {
   async execute(effect: ClaimedWorkflowEffect): Promise<Readonly<Record<string, unknown>>> {
     const projectId = this.authorizedProject(effect)
     if (effect.kind === TASK_PROJECTION_EFFECTS.upsertIntake) return await this.upsertIntake(effect, projectId)
+    if (effect.kind === TASK_PROJECTION_EFFECTS.applyFollowupUpdate) return await this.applyFollowupUpdate(effect, projectId)
     if (effect.kind === TASK_PROJECTION_EFFECTS.recordResearchResult) return await this.appendResult(effect, projectId, '智造湖小维调研结果')
     if (effect.kind === TASK_PROJECTION_EFFECTS.recordFollowupReply) return await this.appendResult(effect, projectId, '联系人跟进回复')
     throw new Error(`unsupported Dida projection effect ${effect.kind}`)
+  }
+
+  private async applyFollowupUpdate(effect: ClaimedWorkflowEffect, projectId: string) {
+    const update = validateFollowupUpdate(effect.payload.update)
+    const task = await this.get(projectId, update.taskId)
+    assertOrdinaryTask(task, projectId)
+    if (Number(task.status) === 2 || task.completedTime) throw new Error('followup projection cannot update a completed task')
+    const marker = `[projection:${required(effect.payload.idempotencyKey, 'projection idempotencyKey', 1_000)}]`
+    if (String(task.content ?? '').includes(marker)) return result(task, 'unchanged', [], update.summary)
+    const content = `${rewriteSummary(String(task.content ?? ''), update.summary)}\n\n### 自动化巡检进展 · ${String(effect.payload.effectiveAt)}\n变化：${update.changes.join('；')}\n原因：${update.reason}\n${marker}`
+    await this.write(['task', 'update', update.taskId, '--id', update.taskId, '--project', projectId,
+      '--title', update.title, '--content', content,
+      ...(update.priority !== undefined ? ['--priority', String(update.priority)] : []),
+      ...(update.tags ? ['--tags', update.tags.join(',')] : []),
+      ...(update.dueDate ? ['--due-date', update.dueDate] : []), '--json'])
+    const verified = await this.get(projectId, update.taskId)
+    assertOrdinaryTask(verified, projectId)
+    if (!String(verified.content ?? '').includes(marker)) throw new Error('followup update is missing projection lineage')
+    return result(verified, 'updated', update.changes, update.summary)
   }
 
   private authorizedProject(effect: ClaimedWorkflowEffect): string {

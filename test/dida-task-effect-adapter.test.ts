@@ -13,6 +13,16 @@ class Runner implements DidaCommandRunner {
 }
 function effect(kind: string, payload: Readonly<Record<string, unknown>>): ClaimedWorkflowEffect { return { id: `effect:${kind}`, instanceId: 'workflow:1', kind, payload, attempt: 1 } }
 
+test('lists a bounded active-task snapshot for followup reasoning without writing', async () => {
+  const runner = new Runner()
+  runner.response = [{ id: 'task-1', title: '等待负责人反馈', content: '负责人张三，约定周一反馈', priority: 1, tags: ['跟进'], modifiedTime: '2026-08-10T00:00:00Z' }]
+  const adapter = new DidaTaskEffectAdapter({ projectIds: ['project-followup'] }, runner)
+  const output = await adapter.execute(effect('task-store.list-active.v1', { projectId: 'project-followup' }))
+  assert.deepEqual(output, { projectId: 'project-followup', tasks: [{ taskId: 'task-1', title: '等待负责人反馈', content: '负责人张三，约定周一反馈', priority: 1, tags: ['跟进'], updatedAt: '2026-08-10T00:00:00Z' }] })
+  assert.equal(runner.calls[0]!.args.includes('0'), true)
+  assert.equal(runner.calls[0]!.args.some(arg => ['create', 'update', 'delete', 'complete'].includes(arg)), false)
+})
+
 test('lists overdue tasks only inside the configured project allowlist', async () => {
   const runner = new Runner()
   runner.response = [{ id: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23T00:00:00Z', priority: 5 }]

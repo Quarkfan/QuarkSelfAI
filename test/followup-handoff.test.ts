@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { applyFollowupHandoff, prepareFollowupHandoff } from '../src/migration/followup-handoff.js'
+const taskProjection = { projectId: 'followup', authorization: { id: 'followup-projection-v1', grantedBy: 'owner' as const, grantedAt: '2026-08-20T00:00:00+08:00', scope: 'dida.task-projection', revision: 1, source: 'owner-directive', projectId: 'followup' } }
 
 test('followup handoff preserves pending approvals and excludes legacy errors', async () => {
   const handoff = prepareFollowupHandoff({ followupLastCheckedDay: '2026-08-21', followupOutreachRequests: [{
     id: 'legacy-request', status: 'pending_approval', taskId: 'task-1', title: '确认进度', personName: '张三', question: '进展如何？', reason: '约定时间已到', context: '项目跟进', attempts: 2, lastError: 'must not migrate', contact: { openId: 'ou_zhang', name: '张三', department: '研发', external: false },
-  }] }, {}, '2026-08-24T00:00:00Z')
+  }] }, { projectId: 'followup', taskProjection }, '2026-08-24T00:00:00Z')
   assert.deepEqual(handoff.counts, { outreach: 1, awaitingContact: 0, awaitingApproval: 1, waitingReply: 0, completed: 0, failures: 2, reviewCheckpoint: 1 })
   assert.equal(handoff.workflows[1]?.id, 'followup-outreach:legacy-request')
   assert.equal(handoff.workflows[1]?.state.approvalId, 'followup:legacy-request:approval:ou_zhang')

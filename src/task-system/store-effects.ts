@@ -6,6 +6,7 @@
  * should be reminded.
  */
 export const TASK_STORE_EFFECTS = {
+  listActive: 'task-store.list-active.v1',
   listOverdue: 'task-store.list-overdue.v1',
   isCompleted: 'task-store.is-completed.v1',
 } as const

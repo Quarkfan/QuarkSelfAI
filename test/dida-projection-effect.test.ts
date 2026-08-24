@@ -87,6 +87,21 @@ test('rewrites the quick summary and appends a followup reply only once', async 
   assert.equal(content.match(/\[projection:reply:om-2\]/g)?.length, 1)
 })
 
+test('applies a reviewed followup patch before it can be reported as maintained', async () => {
+  const runner = new FakeDida()
+  runner.tasks.set('follow-2', { id: 'follow-2', projectId: 'followup', kind: 'TEXT', title: '等待反馈', content: '## 当前摘要\n等待中\n\n## 进展记录', priority: 1, tags: ['跟进'] })
+  const adapter = new DidaProjectionEffectAdapter({ projectIds: ['followup'] }, runner)
+  const effect = projectionEffect(TASK_PROJECTION_EFFECTS.applyFollowupUpdate, 'followup', { idempotencyKey: 'review:2026-08-24:follow-2', update: { taskId: 'follow-2', title: '确认张三反馈进度', summary: '约定日期已到，尚未收到反馈。', changes: ['更新下一步'], reason: '等待期已过', priority: 3, tags: ['重要', '待跟进'] } })
+  const first = await adapter.execute(effect)
+  const second = await adapter.execute(effect)
+  assert.equal((first.result as Record<string, unknown>).action, 'updated')
+  assert.equal((second.result as Record<string, unknown>).action, 'unchanged')
+  const task = runner.tasks.get('follow-2')!
+  assert.equal(task.title, '确认张三反馈进度')
+  assert.equal(task.priority, 3)
+  assert.match(String(task.content), /\[projection:review:2026-08-24:follow-2\]/)
+})
+
 function intakeEffect(): ClaimedWorkflowEffect {
   return projectionEffect(TASK_PROJECTION_EFFECTS.upsertIntake, 'automation', {
     sourceEvent: { deduplicationKey: 'om-1', occurredAt: '2026-08-24T09:00:00Z', source: { messageId: 'om-1', conversationId: 'oc-1' }, payload: { content: '确认客户配额' } },
