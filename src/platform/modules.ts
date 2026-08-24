@@ -22,7 +22,7 @@ export interface AssistantModuleDescriptor {
   /** Current runtime ownership. Only active providers satisfy active consumers. */
   readonly runtime: ModuleRuntime
   readonly source: string
-  /** Exact src/*.ts files owned by this module. New source files must be assigned explicitly. */
+  /** Exact native or compatibility runtime source files owned by this module. */
   readonly owns: readonly string[]
   /** Exact cross-module source imports. Architecture checks reject missing and stale entries. */
   readonly dependsOn: readonly string[]
@@ -226,7 +226,7 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
   const owns = [...new Set(value.owns as string[])]
   if (owns.length !== value.owns.length) throw new Error(`owns for ${id} must not contain duplicates`)
   for (const ownedSource of owns) {
-    if (!/^src\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.ts$/.test(ownedSource)) {
+    if (!/^(?:src\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.ts|packages\/bridge-compat\/src\/(?:[a-z0-9-]+\/)*[a-z0-9-]+\.js)$/.test(ownedSource)) {
       throw new Error(`invalid owned source for ${id}: ${ownedSource}`)
     }
   }

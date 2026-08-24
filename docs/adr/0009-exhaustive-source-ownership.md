@@ -4,7 +4,8 @@
 
 ## 决策
 
-`config/module-catalog.json` 必须为 `src` 下每个 TypeScript 文件指定唯一 owner。`source` 表示模块入口，
+`config/module-catalog.json` 必须为 `src` 下每个 TypeScript 文件以及 `packages/bridge-compat/src` 下每个现网
+JavaScript 文件指定唯一 owner。`source` 表示模块入口，
 `owns` 表示该模块拥有的精确源码文件；入口位于 `src` 时必须同时出现在自身 `owns` 中。
 
 架构检查必须枚举真实源码并拒绝：
@@ -35,4 +36,5 @@
 
 新增源码必须同步更新模块目录。模块调整如果改变 import，必须同时更新 `dependsOn` 或拆除不合理耦合；
 不产生源码 import 的注入与宿主关系按 ADR 0028 写入 `runtimeDependsOn`。
-外部包、配置文件和 compatibility package 仍通过 `source` 登记，但本 ADR 的逐文件覆盖范围只针对 `src/**/*.ts`。
+外部包与配置文件仍通过 `source` 登记。原生 `src/**/*.ts` 同时执行真实 import 双向核对；compatibility package
+只做逐文件 owner 覆盖，因为其内部耦合是待删除的迁移事实，不能为了美化旧代码依赖图而反向污染 feature 边界。

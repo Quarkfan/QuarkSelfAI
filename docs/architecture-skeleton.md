@@ -30,8 +30,9 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 由 channel adapter 规范化后持久化，storage 不允许通过飞书 EventKey 猜测领域类型。
 控制台也只能读取通用状态端口；迁移就绪度、compat 诊断和 DSH 进程状态由 composition root 注入，控制台不得直接读取迁移 manifest 或 runtime 实现。
 
-`module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件必须恰好出现
-一次，模块入口也必须由自身拥有。架构检查会把源码的相对 import 映射回 owner，并要求与 `dependsOn` 双向
+`module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件和
+`packages/bridge-compat/src` 下每个现网 JavaScript 文件必须恰好出现一次，原生模块入口也必须由自身拥有。
+架构检查会把原生源码的相对 import 映射回 owner，并要求与 `dependsOn` 双向
 精确一致；注入、宿主和外部 runtime 关系单独放在 `runtimeDependsOn`。新增 helper、重复归属、失效路径、
 未声明 import 和已失效的声明依赖都会阻断 `npm check`。两类依赖都受 skeleton/feature/migration 方向约束，
 但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的 `plugin.profileId` 与

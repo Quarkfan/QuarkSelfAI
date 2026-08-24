@@ -84,6 +84,15 @@ test('requires every source file to have exactly one explicit module owner', () 
   assert.doesNotThrow(() => validateSourceOwnership(catalog, ['src/domain/contracts.ts']))
   assert.throws(() => validateSourceOwnership(catalog, ['src/domain/contracts.ts', 'src/domain/new-contract.ts']), /unowned source: src\/domain\/new-contract.ts/)
   assert.throws(() => validateSourceOwnership(catalog, []), /owned source does not exist: src\/domain\/contracts.ts/)
+
+  const compatibility = validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'host', classification: 'migration', layer: 'operations', implementation: 'ready', runtime: 'active', source: 'src/host.ts', owns: ['src/host.ts'], dependsOn: [], exitCriteria: 'remove it' },
+      { id: 'legacy-feature', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'compat', source: 'packages/bridge-compat/src/feature.js', owns: ['packages/bridge-compat/src/feature.js'], hostedBy: 'host', dependsOn: [] },
+    ],
+  })
+  assert.doesNotThrow(() => validateSourceOwnership(compatibility, ['src/host.ts', 'packages/bridge-compat/src/feature.js']))
 })
 
 test('rejects duplicate ownership and src entrypoints that are not owned', () => {

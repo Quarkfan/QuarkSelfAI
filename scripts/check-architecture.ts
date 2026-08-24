@@ -90,8 +90,9 @@ assert.deepEqual([...buildOrders].sort((left, right) => left - right), migration
 const compatModuleIds = catalog.modules.filter(module => module.classification === 'feature' && module.runtime === 'compat').map(module => module.id)
 assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'migration units must cover every compat feature exactly once')
 
-const files = await sourceFiles(resolve(root, 'src'))
-validateSourceOwnership(catalog, files.map(filename => relative(root, filename)))
+const files = await sourceFiles(resolve(root, 'src'), '.ts')
+const compatibilityFiles = await sourceFiles(resolve(root, 'packages/bridge-compat/src'), '.js')
+validateSourceOwnership(catalog, [...files, ...compatibilityFiles].map(filename => relative(root, filename)))
 const moduleById = new Map(catalog.modules.map(module => [module.id, module]))
 const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
@@ -168,12 +169,12 @@ const summary = summarizeModules(catalog)
 const effectCoverage = analyzeEffectCoverage(catalog)
 process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} cutoverUnits=${migrationUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
 
-async function sourceFiles(directory: string): Promise<string[]> {
+async function sourceFiles(directory: string, extension: string): Promise<string[]> {
   const result: string[] = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = resolve(directory, entry.name)
-    if (entry.isDirectory()) result.push(...await sourceFiles(path))
-    else if (entry.isFile() && entry.name.endsWith('.ts')) result.push(path)
+    if (entry.isDirectory()) result.push(...await sourceFiles(path, extension))
+    else if (entry.isFile() && entry.name.endsWith(extension)) result.push(path)
   }
   return result
 }
