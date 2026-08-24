@@ -23,6 +23,14 @@
 这里的顺序是风险顺序，不代表自动授权。每个单元都要先完成 native 插件、迁移演练和 dry-run，对应维护窗口
 仍需常东旭明确批准。最后一个单元完成前，`QUARK_NATIVE_FEISHU_INGRESS` 不能在 compat 模式中生效。
 
+### collaboration-learning 当前准备状态
+
+- 原生插件已拆出脱敏观察、注意力分级、稳定模式评估与策略草案事件；compat 模式下强制禁用。
+- 骨架新增通用 append-only signal 与 feature checkpoint，不含任何飞书联系人或协作对象语义。
+- `npm run audit:collaboration-handoff` 只读检查旧样本、owner signals、候选策略和 cooldown，生成内容摘要指纹；
+  它不导入、不启用策略、不发送卡片。
+- 尚未迁移状态所有权。真正导入、接入审批卡片和启用 timer 仍是同一个维护窗口操作，不能拆开提前执行。
+
 ## 每个单元的统一完成证据
 
 1. native 插件拥有独立 manifest、服务契约、生命周期和架构目录项；

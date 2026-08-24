@@ -27,6 +27,16 @@ test('SQLite is a zero-configuration durable default with event idempotency', as
     assert.deepEqual(await store.appendEvent('row-2', event), { id: 'row-1', inserted: false })
     assert.equal((await store.overview()).events, 1)
     assert.equal((await store.recentEvents(10))[0]?.deduplicationKey, 'om-sqlite')
+    const signal = {
+      id: 'signal-1', kind: 'collaboration.observation.v1', occurredAt: '2026-08-22T09:00:00.000Z',
+      scope: { chatId: 'oc-one' }, data: { difference: 'could_batch' },
+    }
+    assert.deepEqual(await store.appendSignal(signal), { inserted: true })
+    assert.deepEqual(await store.appendSignal(signal), { inserted: false })
+    assert.equal((await store.recentSignals(signal.kind, 10))[0]?.data.difference, 'could_batch')
+    await store.writeFeatureCheckpoint('collaboration-learning', 'evaluation', { lastEvaluatedAt: signal.occurredAt })
+    assert.equal((await store.readFeatureCheckpoint('collaboration-learning', 'evaluation'))?.lastEvaluatedAt, signal.occurredAt)
+    await assert.rejects(store.appendSignal({ ...signal, data: { difference: 'possible_miss' } }), /different durable content/)
     const revision = await store.savePolicyDraft({
       id: 'policy-1',
       name: '普通消息进入汇总',

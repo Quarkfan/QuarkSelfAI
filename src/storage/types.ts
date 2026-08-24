@@ -9,6 +9,18 @@ export interface StoredEvent {
   readonly inserted: boolean
 }
 
+export interface DurableSignalInput {
+  readonly id: string
+  readonly kind: string
+  readonly occurredAt: string
+  readonly scope?: Readonly<Record<string, unknown>>
+  readonly data: Readonly<Record<string, unknown>>
+}
+
+export interface DurableSignal extends DurableSignalInput {
+  readonly recordedAt: string
+}
+
 export interface OverviewCounts {
   readonly events: number
   readonly openMatters: number
@@ -107,6 +119,10 @@ export interface AssistantStore {
   health(): Promise<void>
   close(): Promise<void>
   appendEvent(id: string, event: NormalizedChannelEvent): Promise<StoredEvent>
+  appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }>
+  recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]>
+  readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined>
+  writeFeatureCheckpoint(namespace: string, key: string, value: Readonly<Record<string, unknown>>): Promise<void>
   updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void>
   overview(): Promise<OverviewCounts>
   recentEvents(limit: number): Promise<readonly EventSummary[]>

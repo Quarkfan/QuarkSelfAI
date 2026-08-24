@@ -30,6 +30,10 @@
       "types": "./dist/lark/ingress-plugin.d.ts",
       "import": "./dist/lark/ingress-plugin.js"
     },
+    "./collaboration-learning": {
+      "types": "./dist/collaboration/plugin.d.ts",
+      "import": "./dist/collaboration/plugin.js"
+    },
     "./executor-router": {
       "types": "./dist/execution/plugin.d.ts",
       "import": "./dist/execution/plugin.js"
@@ -66,6 +70,7 @@
     "dist/migration",
     "dist/deploy",
     "dist/blacklake",
+    "dist/collaboration",
     "migrations",
     "config",
     "web",
@@ -94,6 +99,7 @@
     "setup:dsh": "node --import tsx scripts/setup-dsh-profile.ts",
     "audit:legacy-state": "node --import tsx scripts/audit-legacy-state.ts",
     "audit:legacy-handoff": "node --import tsx scripts/audit-legacy-handoff.ts",
+    "audit:collaboration-handoff": "node --import tsx scripts/audit-collaboration-handoff.ts",
     "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
     "audit:dida-projections": "node scripts/audit-dida-projections.mjs",
     "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",

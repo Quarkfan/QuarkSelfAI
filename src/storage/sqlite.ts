@@ -10,6 +10,8 @@ import type {
   AssistantStore,
   ClaimedAction,
   DurableActionInput,
+  DurableSignal,
+  DurableSignalInput,
   EventSummary,
   MatterSummary,
   OverviewCounts,
@@ -97,6 +99,54 @@ export class SqliteAssistantStore implements AssistantStore {
     ).get(event.deduplicationKey) as { id: string } | undefined
     if (!existing) throw new Error(`event ${event.deduplicationKey} was not persisted or found`)
     return { id: existing.id, inserted: false }
+  }
+
+  async appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }> {
+    const scope = canonicalJson(input.scope ?? {})
+    const data = canonicalJson(input.data)
+    const result = this.database.prepare(
+      `INSERT INTO assistant_signal (id, kind, occurred_at, scope, data)
+       VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING`,
+    ).run(input.id, input.kind, input.occurredAt, scope, data)
+    if (result.changes === 1) return { inserted: true }
+    const existing = this.database.prepare(
+      'SELECT kind, occurred_at, scope, data FROM assistant_signal WHERE id = ?',
+    ).get(input.id) as { kind: string; occurred_at: string; scope: string; data: string } | undefined
+    if (!existing || existing.kind !== input.kind || existing.occurred_at !== input.occurredAt
+      || existing.scope !== scope || existing.data !== data) {
+      throw new Error(`signal ${input.id} already exists with different durable content`)
+    }
+    return { inserted: false }
+  }
+
+  async recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]> {
+    const rows = this.database.prepare(
+      `SELECT id, kind, occurred_at, scope, data, recorded_at
+       FROM assistant_signal WHERE kind = ? ORDER BY occurred_at DESC LIMIT ?`,
+    ).all(kind, limit) as unknown as Array<Record<string, string>>
+    return rows.map(row => ({
+      id: row.id ?? '',
+      kind: row.kind ?? '',
+      occurredAt: row.occurred_at ?? '',
+      scope: JSON.parse(row.scope ?? '{}') as Record<string, unknown>,
+      data: JSON.parse(row.data ?? '{}') as Record<string, unknown>,
+      recordedAt: row.recorded_at ?? '',
+    }))
+  }
+
+  async readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined> {
+    const row = this.database.prepare(
+      'SELECT value FROM feature_checkpoint WHERE namespace = ? AND key = ?',
+    ).get(namespace, key) as { value: string } | undefined
+    return row ? JSON.parse(row.value) as Record<string, unknown> : undefined
+  }
+
+  async writeFeatureCheckpoint(namespace: string, key: string, value: Readonly<Record<string, unknown>>): Promise<void> {
+    this.database.prepare(
+      `INSERT INTO feature_checkpoint (namespace, key, value) VALUES (?, ?, ?)
+       ON CONFLICT (namespace, key) DO UPDATE SET value = excluded.value,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+    ).run(namespace, key, canonicalJson(value))
   }
 
   async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {

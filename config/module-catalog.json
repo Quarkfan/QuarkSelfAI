@@ -17,6 +17,7 @@
 
     { "id": "feishu-channel", "classification": "feature", "layer": "adapter", "status": "native", "source": "src/lark/service.ts", "dependsOn": ["channel-contract"] },
     { "id": "feishu-native-ingress", "classification": "feature", "layer": "adapter", "status": "planned", "source": "src/lark/ingress-plugin.ts", "dependsOn": ["feishu-channel", "durable-action-ledger"] },
+    { "id": "collaboration-learning-native", "classification": "feature", "layer": "policy", "status": "planned", "source": "src/collaboration/plugin.ts", "dependsOn": ["policy-runtime", "durable-action-ledger"] },
     { "id": "claude-code-provider", "classification": "feature", "layer": "provider", "status": "native", "source": "cordis.patch.yml", "dependsOn": ["dsh-runtime", "executor-router"] },
     { "id": "codex-provider", "classification": "feature", "layer": "provider", "status": "native", "source": "cordis.patch.yml", "dependsOn": ["dsh-runtime", "executor-router"] },
     { "id": "blacklake-reference-routing", "classification": "feature", "layer": "workflow", "status": "native", "source": "src/blacklake/references.ts", "dependsOn": ["durable-action-ledger", "executor-router"] },

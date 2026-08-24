@@ -10,6 +10,8 @@ import type {
   AssistantStore,
   ClaimedAction,
   DurableActionInput,
+  DurableSignal,
+  DurableSignalInput,
   EventSummary,
   MatterSummary,
   OverviewCounts,
@@ -122,6 +124,64 @@ export class PgAssistantStore implements AssistantStore {
     const row = result.rows[0]
     if (!row) throw new Error(`event ${event.deduplicationKey} was not persisted or found`)
     return { id: row.id, inserted: row.inserted }
+  }
+
+  async appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }> {
+    const scope = JSON.stringify(input.scope ?? {})
+    const data = JSON.stringify(input.data)
+    const result = await this.database.query<{ inserted: boolean; matches: boolean }>(
+      `WITH inserted AS (
+         INSERT INTO assistant_signal (id, kind, occurred_at, scope, data)
+         VALUES ($1, $2, $3::timestamptz, $4::jsonb, $5::jsonb)
+         ON CONFLICT (id) DO NOTHING RETURNING true AS inserted
+       )
+       SELECT true AS inserted, true AS matches FROM inserted
+       UNION ALL
+       SELECT false AS inserted,
+         kind = $2 AND occurred_at = $3::timestamptz AND scope = $4::jsonb AND data = $5::jsonb AS matches
+       FROM assistant_signal WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM inserted)
+       LIMIT 1`,
+      [input.id, input.kind, input.occurredAt, scope, data],
+    )
+    const row = result.rows[0]
+    if (!row?.matches) throw new Error(`signal ${input.id} already exists with different durable content`)
+    return { inserted: row.inserted }
+  }
+
+  async recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]> {
+    const result = await this.database.query<{
+      id: string
+      kind: string
+      occurredAt: string | Date
+      scope: Readonly<Record<string, unknown>>
+      data: Readonly<Record<string, unknown>>
+      recordedAt: string | Date
+    }>(
+      `SELECT id, kind, occurred_at AS "occurredAt", scope, data, recorded_at AS "recordedAt"
+       FROM assistant_signal WHERE kind = $1 ORDER BY occurred_at DESC LIMIT $2`,
+      [kind, limit],
+    )
+    return result.rows.map(row => ({
+      ...row,
+      occurredAt: row.occurredAt instanceof Date ? row.occurredAt.toISOString() : row.occurredAt,
+      recordedAt: row.recordedAt instanceof Date ? row.recordedAt.toISOString() : row.recordedAt,
+    }))
+  }
+
+  async readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined> {
+    const result = await this.database.query<{ value: Readonly<Record<string, unknown>> }>(
+      'SELECT value FROM feature_checkpoint WHERE namespace = $1 AND key = $2',
+      [namespace, key],
+    )
+    return result.rows[0]?.value
+  }
+
+  async writeFeatureCheckpoint(namespace: string, key: string, value: Readonly<Record<string, unknown>>): Promise<void> {
+    await this.database.query(
+      `INSERT INTO feature_checkpoint (namespace, key, value) VALUES ($1, $2, $3::jsonb)
+       ON CONFLICT (namespace, key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+      [namespace, key, JSON.stringify(value)],
+    )
   }
 
   async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {

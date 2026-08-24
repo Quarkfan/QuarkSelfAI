@@ -4,7 +4,8 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { PgAssistantStore, createPgPool } from '../storage/postgres.js'
 import { createSqliteStore } from '../storage/sqlite.js'
-import type { AssistantStore, DurableActionInput } from '../storage/types.js'
+import type { AssistantStore, DurableActionInput, DurableSignal, DurableSignalInput, PolicyDraftInput } from '../storage/types.js'
+import type { PolicySample } from '../policy/types.js'
 import { eventRecordId, type NormalizedChannelEvent } from '../domain/contracts.js'
 import { DurableExecutorWorker, type DurableWorkerRun } from './worker.js'
 
@@ -69,6 +70,30 @@ export class ActionLedgerService extends Service {
 
   async appendEvent(event: NormalizedChannelEvent): Promise<{ readonly inserted: boolean }> {
     return await (await this.ready).store.appendEvent(eventRecordId(event), event)
+  }
+
+  async appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }> {
+    return await (await this.ready).store.appendSignal(input)
+  }
+
+  async recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]> {
+    return await (await this.ready).store.recentSignals(kind, limit)
+  }
+
+  async readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined> {
+    return await (await this.ready).store.readFeatureCheckpoint(namespace, key)
+  }
+
+  async writeFeatureCheckpoint(namespace: string, key: string, value: Readonly<Record<string, unknown>>): Promise<void> {
+    await (await this.ready).store.writeFeatureCheckpoint(namespace, key, value)
+  }
+
+  async recentPolicySamples(limit: number): Promise<readonly PolicySample[]> {
+    return await (await this.ready).store.recentPolicySamples(limit)
+  }
+
+  async savePolicyDraft(input: PolicyDraftInput): Promise<number> {
+    return await (await this.ready).store.savePolicyDraft(input)
   }
 
   async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {
