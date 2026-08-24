@@ -14,7 +14,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Application host | 接收组件集合并提供统一启动、停止、失败等待和状态快照 | 决定启用 compat、飞书或某个业务功能 |
 | Module catalog | 模块分类、逐文件源码所有权、真实 import 依赖和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
-| Durable action ledger | 批准绑定、租约、重试、结算 | 选择联系人或撰写回复 |
+| Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
 | Durable event runtime | 入站事件按消费者独立租约、失败重放和结算 | 飞书消息语义或具体业务路由 |
 | Storage port | SQLite/PostgreSQL 一致契约 | 兼容 `state.json` 结构 |
@@ -77,6 +77,8 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
    交互卡片、只读联系人候选解析和经 durable approval 的本人代发 adapter 已完成 mock 契约实现；同名联系人
    只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持
    `implementation=ready,runtime=inactive`。
+7. durable action ledger 已与 agent-bound worker 分离。worker 必须由后续 conversation dispatcher 提供 exact DSH
+   session，当前明确为 `partial/inactive`；队列入账不能冒充执行已开始，也不能借用任意活跃会话。
 
 滴答 adapter 已实现超期查询、在白名单清单中核验任务是否完成，以及受限的已完成任务清理。它不会把“查不到
 任务”解释为已完成。清理不是仅凭环境开关获得删除权限：常东旭的长期授权会作为不可变快照进入 workflow state，

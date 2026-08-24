@@ -89,11 +89,6 @@
         databaseUrl: !!js process.env.DATABASE_URL
     - id: quark-action-ledger
       name: '@quarkfan/quark-self-ai/action-ledger'
-      config:
-        workerId: !!js process.env.QUARK_WORKER_ID || ('local-' + process.pid)
-        leaseMs: 7200000
-        retryDelayMs: 120000
-        maxAttempts: 5
     - id: quark-durable-workflows
       name: '@quarkfan/quark-self-ai/durable-workflows'
       config:
