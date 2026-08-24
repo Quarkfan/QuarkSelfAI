@@ -73,8 +73,10 @@ function render(data) {
   $('#monitor-table').innerHTML = monitorRows(diagnostics?.monitors)
   $('#overview-actions').innerHTML = actionRows(data.actions, 7)
   $('#action-table').innerHTML = actionRows(data.actions)
+  const requiredCapabilities = (runtime.worker.capabilities ?? []).filter((capability) => capability.required)
+  const readyCapabilities = requiredCapabilities.filter((capability) => capability.state === 'ready')
   $('#runtime-stack').innerHTML = [
-    ['飞书消费者', runtime.worker.state, `${runtime.worker.messageReady ? '消息' : '消息未就绪'} / ${runtime.worker.cardReady ? '卡片' : '卡片未就绪'}`],
+    ['业务运行时', runtime.worker.state, requiredCapabilities.length ? `${readyCapabilities.length}/${requiredCapabilities.length} 必要能力就绪` : '未挂载必要能力'],
     ['DSH 内核', runtime.kernel.state, runtime.kernel.profile ?? '未启用'],
     ['数据存储', 'ready', runtime.storage.toUpperCase()],
     ['执行边界', 'ready', `${runtime.execution.mode} · ${runtime.execution.workspaceRootCount} 个工作区`],

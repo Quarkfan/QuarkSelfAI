@@ -10,8 +10,7 @@ test('waits for both compatibility consumers and handles markers split across ch
   let snapshot: RuntimeSnapshot = {
     mode: 'compat',
     state: 'starting',
-    messageReady: false,
-    cardReady: false,
+    capabilities: [],
   }
   snapshot = observer.observe(snapshot, '[event] ready event_key=im.message.re')
   snapshot = observer.observe(snapshot, 'ceive_v1\n[event] ready event_key=card.action.')
@@ -21,10 +20,10 @@ test('waits for both compatibility consumers and handles markers split across ch
     mode: 'compat',
     state: 'ready',
     pid: 321,
-    messageReady: true,
-    cardReady: true,
-    requiredEventKeys: ['im.message.receive_v1', 'card.action.trigger'],
-    readyEventKeys: ['im.message.receive_v1', 'card.action.trigger'],
+    capabilities: [
+      { id: 'channel-event:im.message.receive_v1', required: true, state: 'ready', detail: 'im.message.receive_v1' },
+      { id: 'channel-event:card.action.trigger', required: true, state: 'ready', detail: 'card.action.trigger' },
+    ],
   })
 })
 
@@ -35,13 +34,13 @@ test('includes optional membership and reaction streams in readiness', () => {
   ]
   const observer = new CompatReadinessObserver(keys)
   let snapshot: RuntimeSnapshot = {
-    mode: 'compat', state: 'starting', messageReady: false, cardReady: false,
+    mode: 'compat', state: 'starting', capabilities: [],
   }
   snapshot = observer.observe(snapshot, keys.slice(0, 4).map((key) => `[event] ready event_key=${key}\n`).join(''))
   assert.equal(snapshot.state, 'starting')
   snapshot = observer.observe(snapshot, `[event] ready event_key=${keys[4]}\n`)
   assert.equal(snapshot.state, 'ready')
-  assert.deepEqual(snapshot.readyEventKeys, keys)
+  assert.deepEqual(snapshot.capabilities.filter(capability => capability.state === 'ready').map(capability => capability.detail), keys)
 })
 
 test('surfaces an unexpected ready child exit so the outer daemon can restart it', async () => {

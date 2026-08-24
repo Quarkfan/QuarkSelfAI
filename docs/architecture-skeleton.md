@@ -31,6 +31,9 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 消息协议 envelope 也必须在 channel adapter 内终止：例如飞书 `content` JSON 由飞书 adapter 提取为规范化 `text`，
 policy/storage 骨架不得反向解析通道原始字段；原 envelope 只保留在事件 payload/raw 供审计和向前兼容。
 控制台也只能读取通用状态端口；迁移就绪度、compat 诊断和 DSH 进程状态由 composition root 注入，控制台不得直接读取迁移 manifest 或 runtime 实现。
+运行态也通过开放的 capability 列表表达，不在骨架中预设“消息、卡片或某组 EventKey”。具体 channel provider
+负责给出 capability id、是否必要和当前状态；控制台只聚合必要能力的就绪数量。增加邮件、其他 IM 或非消息型
+runtime 不需要修改 `RuntimeSnapshot`。
 
 `module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件、
 `packages/bridge-compat/src` 下每个现网 JavaScript 文件，以及 `scripts` 下每个 TypeScript/MJS 运维入口必须恰好

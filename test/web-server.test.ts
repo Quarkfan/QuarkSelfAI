@@ -23,7 +23,7 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     web: { host: '127.0.0.1', port: 3210, secureCookie: false },
     controlPlane: { token: 'control-test-token' },
   }
-  let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
+  let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', capabilities: [] }
   const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadNativeCutoverReadiness })
   server.listen(0, '127.0.0.1')
   try {
@@ -87,7 +87,7 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     const evaluation = await evaluationResponse.json() as { evaluation: { effect: { attention?: string }; matches: unknown[] } }
     assert.equal(evaluation.evaluation.effect.attention, 'realtime')
     assert.equal(evaluation.evaluation.matches.length, 1)
-    worker = { mode: 'compat', state: 'failed', messageReady: false, cardReady: false, lastError: 'fixture failure' }
+    worker = { mode: 'compat', state: 'failed', capabilities: [], lastError: 'fixture failure' }
     const unhealthy = await fetch(`http://127.0.0.1:${port}/api/health`)
     assert.equal(unhealthy.status, 503)
   } finally {
@@ -109,7 +109,10 @@ test('reports an accepted-risk cutover without falsifying feature parity', async
   }
   const worker: RuntimeSnapshot = {
     mode: 'compat', operationalMode: 'accepted-risk-cutover',
-    state: 'ready', messageReady: true, cardReady: true,
+    state: 'ready', capabilities: [
+      { id: 'channel-event:message', required: true, state: 'ready' },
+      { id: 'channel-event:interaction', required: true, state: 'ready' },
+    ],
   }
   const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadNativeCutoverReadiness })
   server.listen(0, '127.0.0.1')

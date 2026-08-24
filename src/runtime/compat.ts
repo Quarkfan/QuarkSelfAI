@@ -27,22 +27,28 @@ export class CompatReadinessObserver {
 
   observe(snapshot: RuntimeSnapshot, text: string, pid?: number): RuntimeSnapshot {
     this.tail = `${this.tail}${text}`.slice(-4_096)
-    const messageReady = snapshot.messageReady || this.tail.includes('[event] ready event_key=im.message.receive_v1')
-    const cardReady = snapshot.cardReady || this.tail.includes('[event] ready event_key=card.action.trigger')
+    const previous = new Map(snapshot.capabilities.map(capability => [capability.id, capability.state]))
     const readyEventKeys = this.requiredEventKeys.filter((eventKey) => (
-      snapshot.readyEventKeys?.includes(eventKey)
+      previous.get(eventCapabilityId(eventKey)) === 'ready'
       || this.tail.includes(`[event] ready event_key=${eventKey}`)
     ))
+    const capabilities = this.requiredEventKeys.map((eventKey) => ({
+      id: eventCapabilityId(eventKey),
+      required: true,
+      state: readyEventKeys.includes(eventKey) ? 'ready' as const : 'starting' as const,
+      detail: eventKey,
+    }))
     return {
       ...snapshot,
       state: readyEventKeys.length === this.requiredEventKeys.length ? 'ready' : snapshot.state,
-      messageReady,
-      cardReady,
-      requiredEventKeys: [...this.requiredEventKeys],
-      readyEventKeys,
+      capabilities,
       ...(pid ? { pid } : {}),
     }
   }
+}
+
+function eventCapabilityId(eventKey: string): string {
+  return `channel-event:${eventKey}`
 }
 
 export class CompatRuntime implements RuntimeStatusProvider {
@@ -54,8 +60,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
     mode: 'compat',
     operationalMode: 'accepted-risk-cutover',
     state: 'stopped',
-    messageReady: false,
-    cardReady: false,
+    capabilities: [],
   }
 
   constructor(
@@ -163,10 +168,9 @@ export class CompatRuntime implements RuntimeStatusProvider {
       mode: 'compat',
       operationalMode: 'accepted-risk-cutover',
       state: 'starting',
-      messageReady: false,
-      cardReady: false,
-      requiredEventKeys,
-      readyEventKeys: [],
+      capabilities: requiredEventKeys.map((eventKey) => ({
+        id: eventCapabilityId(eventKey), required: true, state: 'starting', detail: eventKey,
+      })),
       startedAt: new Date().toISOString(),
     }
     const child = spawn(this.processOptions.executable ?? process.execPath, [this.processOptions.entry ?? compatEntry], {
@@ -237,7 +241,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
     }
     this.current = {
       mode: 'compat', operationalMode: 'accepted-risk-cutover',
-      state: 'stopped', messageReady: false, cardReady: false,
+      state: 'stopped', capabilities: [],
     }
   }
 

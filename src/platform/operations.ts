@@ -1,3 +1,11 @@
+export interface RuntimeCapabilityStatus {
+  /** Open capability id owned by the contributing runtime provider. */
+  readonly id: string
+  readonly required: boolean
+  readonly state: 'stopped' | 'starting' | 'ready' | 'degraded' | 'failed'
+  readonly detail?: string
+}
+
 export interface RuntimeSnapshot {
   /** Open provider id; the skeleton must not enumerate every runtime implementation. */
   readonly mode: string
@@ -7,10 +15,8 @@ export interface RuntimeSnapshot {
   readonly operationalMode?: string
   readonly state: 'stopped' | 'starting' | 'ready' | 'degraded' | 'failed'
   readonly pid?: number
-  readonly messageReady: boolean
-  readonly cardReady: boolean
-  readonly requiredEventKeys?: readonly string[]
-  readonly readyEventKeys?: readonly string[]
+  /** Provider-owned capabilities; the skeleton does not enumerate channels or protocols. */
+  readonly capabilities: readonly RuntimeCapabilityStatus[]
   readonly startedAt?: string
   readonly lastError?: string
 }
@@ -73,7 +79,7 @@ export class ControlOnlyRuntime implements RuntimeStatusProvider {
   snapshot(): RuntimeSnapshot {
     return {
       mode: 'control-only', operationalMode: 'control-only', requiredForHealth: false,
-      state: 'stopped', messageReady: false, cardReady: false,
+      state: 'stopped', capabilities: [],
     }
   }
 }
