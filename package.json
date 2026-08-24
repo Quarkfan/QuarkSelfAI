@@ -42,6 +42,10 @@
       "types": "./dist/execution/ledger-plugin.d.ts",
       "import": "./dist/execution/ledger-plugin.js"
     },
+    "./action-worker": {
+      "types": "./dist/execution/worker-plugin.d.ts",
+      "import": "./dist/execution/worker-plugin.js"
+    },
     "./dsh-conversation-effects": {
       "types": "./dist/conversation/dsh-effect-plugin.d.ts",
       "import": "./dist/conversation/dsh-effect-plugin.js"

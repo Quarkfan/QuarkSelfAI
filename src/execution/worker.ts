@@ -13,9 +13,20 @@ export type DurableExecutorStore = Pick<AssistantStore, 'claimNextAction' | 'set
 
 export interface DurableExecutorWorkerConfig {
   readonly workerId: string
+  readonly workspace: string
   readonly leaseMs?: number
   readonly retryDelayMs?: number
   readonly maxAttempts?: number
+}
+
+export interface DurableActionAgentLease {
+  readonly parent: Agent
+  readonly sessionId: string
+  dispose(): Promise<void>
+}
+
+export interface DurableActionAgentHost {
+  acquire(actionId: string, workspace: string, signal: AbortSignal): Promise<DurableActionAgentLease>
 }
 
 export interface DurableWorkerRun {
@@ -42,29 +53,31 @@ export class DurableExecutorWorker {
   constructor(
     private readonly store: DurableExecutorStore,
     private readonly router: DurableExecutorRoute,
+    private readonly agents: DurableActionAgentHost,
     private readonly config: DurableExecutorWorkerConfig,
   ) {
     this.leaseMs = config.leaseMs ?? 2 * 60 * 60 * 1_000
     this.retryDelayMs = config.retryDelayMs ?? 2 * 60 * 1_000
     this.maxAttempts = config.maxAttempts ?? 5
     if (!config.workerId.trim()) throw new Error('durable executor workerId is required')
+    if (!config.workspace.trim()) throw new Error('durable executor workspace is required')
     if (!Number.isSafeInteger(this.leaseMs) || this.leaseMs < 1_000) throw new Error('leaseMs must be an integer of at least 1000')
     if (!Number.isSafeInteger(this.retryDelayMs) || this.retryDelayMs < 0) throw new Error('retryDelayMs must be a non-negative integer')
     if (!Number.isSafeInteger(this.maxAttempts) || this.maxAttempts < 1) throw new Error('maxAttempts must be a positive integer')
   }
 
-  async runOnce(parent: Agent, signal: AbortSignal, now = new Date()): Promise<DurableWorkerRun> {
-    const workspace = parent.session.header.cwd
-    if (!workspace) throw new Error('durable executor parent session must have a workspace')
+  async runOnce(signal: AbortSignal, now = new Date()): Promise<DurableWorkerRun> {
     const claim = await this.store.claimNextAction(
       this.config.workerId,
-      workspace,
+      this.config.workspace,
       now.toISOString(),
       new Date(now.getTime() + this.leaseMs).toISOString(),
     )
     if (!claim) return { status: 'idle' }
+    let lease: DurableActionAgentLease | undefined
     try {
-      const result = await this.router.execute(this.routeRequest(claim, parent), signal)
+      lease = await this.agents.acquire(claim.actionId, this.config.workspace, signal)
+      const result = await this.router.execute(this.routeRequest(claim, lease.parent), signal)
       if (retryableResult(result) && claim.attempt < this.maxAttempts) {
         await this.defer(claim, result.summary, now)
         return { status: 'deferred', actionId: claim.actionId, attempt: claim.attempt, error: result.summary }
@@ -87,6 +100,8 @@ export class DurableExecutorWorker {
         attempt: claim.attempt,
         error: message,
       }
+    } finally {
+      await lease?.dispose()
     }
   }
 

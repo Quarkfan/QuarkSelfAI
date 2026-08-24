@@ -79,10 +79,10 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
    交互卡片、只读联系人候选解析和经 durable approval 的本人代发 adapter 已完成 mock 契约实现；同名联系人
    只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持
    `implementation=ready,runtime=inactive`。
-7. durable action ledger 已与 agent-bound worker 分离。worker 必须由后续 conversation dispatcher 提供 exact DSH
-   session，当前明确为 `partial/inactive`；队列入账不能冒充执行已开始，也不能借用任意活跃会话。本人私聊的
-   直接执行已经改用独立 `assistant.conversation.dispatch.v1`：它可确定性创建或精确续接 DSH 会话，并把结果送回
-   intake workflow；该 adapter 已实现但仍为 inactive，不等于已取得生产会话所有权。
+7. durable action ledger 已与 agent-bound worker 分离。worker 按 action ID 确定性创建/恢复 exact DSH 父会话，
+   按 workspace 独立领取 lease，并通过 Cordis lifecycle interval 恢复基础设施失败；它不会借用任意活跃会话。
+   本人私聊则使用独立 `assistant.conversation.dispatch.v1` 创建或精确续接用户会话并把结果送回 intake workflow。
+   两个 adapter 均已实现但仍为 inactive，代码完成不等于已取得生产执行或会话所有权。
 8. 飞书上下文读取与通知/代发是两个 adapter。只读 adapter 会补齐延迟处理后的最新会话尾部，并把无法证明
    `external=false` 的群标为 `unknown`；任何外发 workflow 都必须把 external/unknown 作为硬阻断。
 9. 交互卡片通过 opaque correlation 精确携带 workflow/effect/approval 归属，回调 adapter 重新验证 owner 后才回投

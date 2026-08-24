@@ -5,7 +5,7 @@ import type { SubagentResult, SubagentRun } from '@deepseek-ai/dsh-subagent'
 import type { ExecutorId, ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
 import { WorkspacePolicy } from './workspace-policy.js'
 
-const INFRASTRUCTURE_FAILURE = /(timeout|timed out|transport|network|connection|socket|websocket|dns|rate.?limit|quota|process-exit|spawn|enoent|unauthorized|authentication|429|502|503|504)/i
+const INFRASTRUCTURE_FAILURE = /(timeout|timed out|transport|network|connection|socket|websocket|dns|rate.?limit|quota|process-exit|spawn|enoent|unauthorized|authentication|abort|cancelled|429|502|503|504)/i
 
 export type RoutedExecutor = ExecutorId
 

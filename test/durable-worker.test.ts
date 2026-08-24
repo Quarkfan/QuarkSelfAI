@@ -6,13 +6,24 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { RoutedExecutorResult } from '../src/execution/router.js'
-import { DurableExecutorWorker, type DurableExecutorRoute } from '../src/execution/worker.js'
+import {
+  DurableExecutorWorker, type DurableActionAgentHost, type DurableExecutorRoute,
+} from '../src/execution/worker.js'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 
 const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
 
 function parent(cwd: string): Agent {
   return { session: { header: { cwd } } } as unknown as Agent
+}
+
+function agents(cwd: string, acquired: string[] = []): DurableActionAgentHost {
+  return {
+    async acquire(actionId) {
+      acquired.push(actionId)
+      return { parent: parent(cwd), sessionId: `session:${actionId}`, async dispose() {} }
+    },
+  }
 }
 
 test('durable worker defers infrastructure failure and resumes the same action once', async () => {
@@ -39,14 +50,16 @@ test('durable worker defers infrastructure failure and resumes the same action o
       },
     ]
     const route: DurableExecutorRoute = { async execute() { return results.shift() as RoutedExecutorResult } }
-    const worker = new DurableExecutorWorker(store, route, {
-      workerId: 'worker-retry', leaseMs: 60_000, retryDelayMs: 120_000, maxAttempts: 3,
+    const acquired: string[] = []
+    const worker = new DurableExecutorWorker(store, route, agents(directory, acquired), {
+      workerId: 'worker-retry', workspace: directory, leaseMs: 60_000, retryDelayMs: 120_000, maxAttempts: 3,
     })
-    assert.equal((await worker.runOnce(parent(directory), new AbortController().signal, new Date('2099-01-01T00:00:00.000Z'))).status, 'deferred')
-    assert.equal((await worker.runOnce(parent(directory), new AbortController().signal, new Date('2099-01-01T00:01:00.000Z'))).status, 'idle')
-    const resumed = await worker.runOnce(parent(directory), new AbortController().signal, new Date('2099-01-01T00:02:00.000Z'))
+    assert.equal((await worker.runOnce(new AbortController().signal, new Date('2099-01-01T00:00:00.000Z'))).status, 'deferred')
+    assert.equal((await worker.runOnce(new AbortController().signal, new Date('2099-01-01T00:01:00.000Z'))).status, 'idle')
+    const resumed = await worker.runOnce(new AbortController().signal, new Date('2099-01-01T00:02:00.000Z'))
     assert.equal(resumed.status, 'completed')
     assert.equal(resumed.attempt, 2)
+    assert.deepEqual(acquired, ['action-retry', 'action-retry'])
     assert.equal((await store.recentActions(10))[0]?.state, 'completed')
   } finally {
     await store.close()
@@ -65,10 +78,34 @@ test('durable worker does not retry a deterministic boundary failure', async () 
       request: { title: 'Fail', prompt: 'read', workspace: directory, mode: 'read-only' },
     })
     const route: DurableExecutorRoute = { async execute() { throw new Error('workspace policy rejected request') } }
-    const worker = new DurableExecutorWorker(store, route, { workerId: 'worker-failed' })
-    const result = await worker.runOnce(parent(directory), new AbortController().signal, new Date('2099-01-01T00:00:00.000Z'))
+    const worker = new DurableExecutorWorker(store, route, agents(directory), { workerId: 'worker-failed', workspace: directory })
+    const result = await worker.runOnce(new AbortController().signal, new Date('2099-01-01T00:00:00.000Z'))
     assert.equal(result.status, 'failed')
     assert.equal((await store.recentActions(10))[0]?.state, 'failed')
+  } finally {
+    await store.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('durable worker releases an action when its exact DSH parent is interrupted', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-durable-worker-abort-'))
+  const store = await createSqliteStore(join(directory, 'assistant.sqlite3'), migrations)
+  try {
+    await store.migrate()
+    await store.enqueueAction({
+      actionId: 'action-abort', matterId: 'matter-abort', matterTitle: 'Abort', matterSummary: 'resume later', intent: 'read',
+      source: { channel: 'feishu', messageId: 'om-abort' },
+      request: { title: 'Abort', prompt: 'read', workspace: directory, mode: 'read-only' },
+    })
+    const route: DurableExecutorRoute = { async execute() { throw new Error('route must not run') } }
+    const interrupted: DurableActionAgentHost = { async acquire() { throw new Error('operation aborted during shutdown') } }
+    const worker = new DurableExecutorWorker(store, route, interrupted, {
+      workerId: 'worker-abort', workspace: directory, retryDelayMs: 60_000,
+    })
+    const result = await worker.runOnce(new AbortController().signal, new Date('2099-01-01T00:00:00.000Z'))
+    assert.equal(result.status, 'deferred')
+    assert.equal((await store.recentActions(10))[0]?.state, 'planned')
   } finally {
     await store.close()
     await rm(directory, { recursive: true, force: true })
