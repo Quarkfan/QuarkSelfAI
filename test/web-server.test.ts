@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
-import type { RuntimeConfig } from '../src/config/runtime.js'
+import type { AssistantApplicationConfig } from '../src/bootstrap/config.js'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 import { createConsoleServer } from '../src/web/server.js'
 import type { RuntimeSnapshot } from '../src/platform/operations.js'
@@ -18,13 +18,10 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
   const directory = await mkdtemp(join(tmpdir(), 'quark-web-'))
   const store = await createSqliteStore(join(directory, 'web.sqlite3'), migrations)
   await store.migrate()
-  const config: RuntimeConfig = {
+  const config: AssistantApplicationConfig = {
     execution: { mode: 'local', workspaceRoots: [directory] },
-    storage: { kind: 'sqlite', path: join(directory, 'web.sqlite3') },
     web: { host: '127.0.0.1', port: 3210, secureCookie: false },
     controlPlane: { token: 'control-test-token' },
-    lark: { executable: 'lark-cli', identity: 'bot' },
-    runtime: { mode: 'control-only' },
     kernel: { mode: 'off' },
   }
   let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
@@ -106,13 +103,10 @@ test('reports an accepted-risk cutover without falsifying feature parity', async
   const directory = await mkdtemp(join(tmpdir(), 'quark-web-cutover-'))
   const store = await createSqliteStore(join(directory, 'web.sqlite3'), migrations)
   await store.migrate()
-  const config: RuntimeConfig = {
+  const config: AssistantApplicationConfig = {
     execution: { mode: 'local', workspaceRoots: [directory] },
-    storage: { kind: 'sqlite', path: join(directory, 'web.sqlite3') },
     web: { host: '127.0.0.1', port: 3210, secureCookie: false },
     controlPlane: { token: 'control-test-token' },
-    lark: { executable: 'lark-cli', identity: 'bot' },
-    runtime: { mode: 'compat', configPath: join(directory, 'compat.json') },
     kernel: { mode: 'off' },
   }
   const worker: RuntimeSnapshot = {

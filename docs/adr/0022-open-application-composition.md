@@ -17,7 +17,8 @@ consumer、远端 worker 或其他 harness 时都必须继续修改这个入口�
 2. 功能或迁移宿主通过 `AssistantApplicationExtensions` 提供运行状态、readiness 和 `ManagedComponent[]`；骨架
    不导入、实例化或分支判断它们。
 3. 当前 `compat-composition` 是唯一允许导入 `CompatRuntime` 的迁移 composition root。进程入口调用它，但
-   核心 application composition 与 native feature 均不知道 compat 的存在。
+   核心 application composition 与 native feature 均不知道 compat 的存在。稳定启动配置进一步由 ADR 0027
+   从 migration selector 中拆出。
 4. `RuntimeSnapshot.mode` 是开放 provider id。是否参与健康判定和面向用户的 operational mode 也由 provider
    声明，控制台不再枚举 `compat`、native 或未来 runtime 名称。
 5. module catalog 和 architecture check 强制上述依赖方向；compat 被移除时只删除迁移 composition 和组件，

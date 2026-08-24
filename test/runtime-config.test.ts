@@ -1,25 +1,28 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { loadAssistantApplicationConfig } from '../src/bootstrap/config.js'
 import { loadRuntimeConfig } from '../src/config/runtime.js'
+import { loadStorageConfig } from '../src/storage/config.js'
 
-test('uses SQLite on loopback by default', () => {
-  const config = loadRuntimeConfig({}, '/srv/quark')
-  assert.deepEqual(config.storage, { kind: 'sqlite', path: '/srv/quark/var/quarkselfai.sqlite3' })
+test('loads a stable local application configuration without migration selectors', () => {
+  const config = loadAssistantApplicationConfig({}, '/srv/quark')
   assert.equal(config.web.host, '127.0.0.1')
   assert.equal(config.web.port, 3210)
   assert.deepEqual(config.execution, { mode: 'local', workspaceRoots: ['/srv/quark'] })
   assert.deepEqual(config.kernel, {
     mode: 'dsh',
     command: 'dsh',
-    args: ['--profile', 'feishu-assistant', '--no-open'],
+    args: ['--profile', 'assistant', '--no-open'],
     cwd: '/srv/quark',
     home: '/srv/quark/var/dsh',
-    profile: 'feishu-assistant',
+    profile: 'assistant',
   })
+  assert.equal('runtime' in config, false)
+  assert.equal('storage' in config, false)
 })
 
 test('allows the DSH kernel to be disabled only as an explicit diagnostic mode', () => {
-  const config = loadRuntimeConfig({ ASSISTANT_KERNEL: 'off' }, '/srv/quark')
+  const config = loadAssistantApplicationConfig({ ASSISTANT_KERNEL: 'off' }, '/srv/quark')
   assert.deepEqual(config.kernel, { mode: 'off' })
 })
 
@@ -34,22 +37,24 @@ test('cannot cut over the compatibility consumer with the DSH kernel disabled', 
 })
 
 test('selects PostgreSQL from configuration', () => {
-  const config = loadRuntimeConfig({
+  const config = loadStorageConfig({
     ASSISTANT_STORAGE: 'postgres',
     DATABASE_URL: 'postgresql://example.invalid/quark',
   })
-  assert.deepEqual(config.storage, {
+  assert.deepEqual(config, {
     kind: 'postgres',
     databaseUrl: 'postgresql://example.invalid/quark',
   })
 })
 
-test('refuses an unauthenticated non-loopback console', () => {
-  assert.throws(() => loadRuntimeConfig({ WEB_HOST: '0.0.0.0' }), /CONSOLE_TOKEN is required/)
+test('keeps SQLite selection inside the replaceable storage provider', () => {
+  assert.deepEqual(loadStorageConfig({}, '/srv/quark'), {
+    kind: 'sqlite', path: '/srv/quark/var/quarkselfai.sqlite3',
+  })
 })
 
-test('rejects an ambiguous Lark identity', () => {
-  assert.throws(() => loadRuntimeConfig({ LARK_IDENTITY: 'auto' }), /LARK_IDENTITY must be user or bot/)
+test('refuses an unauthenticated non-loopback console', () => {
+  assert.throws(() => loadAssistantApplicationConfig({ WEB_HOST: '0.0.0.0' }), /CONSOLE_TOKEN is required/)
 })
 
 test('keeps the compatibility consumer disabled without an explicit takeover confirmation', () => {
@@ -67,6 +72,7 @@ test('resolves a compatibility config only after both startup gates are present'
     CONTROL_PLANE_TOKEN: 'internal-test-token',
   }, '/srv/quark')
   assert.deepEqual(config.runtime, { mode: 'compat', configPath: '/srv/quark/bridge.json' })
+  assert.equal(config.kernel.mode === 'dsh' && config.kernel.profile, 'feishu-assistant')
 })
 
 test('requires an authenticated control plane for the compatibility controller', () => {
@@ -78,7 +84,7 @@ test('requires an authenticated control plane for the compatibility controller',
 })
 
 test('accepts an explicit local workspace allowlist', () => {
-  const config = loadRuntimeConfig({
+  const config = loadAssistantApplicationConfig({
     ASSISTANT_WORKSPACE_ROOTS: '["/Users/edy/BlackLakeWork","/private/tmp/shared"]',
   })
   assert.deepEqual(config.execution, {

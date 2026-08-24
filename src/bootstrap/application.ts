@@ -1,6 +1,6 @@
 import { once } from 'node:events'
 import type { Server } from 'node:http'
-import type { AssistantStore, StorageConfig } from '../storage/types.js'
+import type { AssistantStore } from '../storage/types.js'
 import { createConsoleServer } from '../web/server.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import type { ManagedComponent } from '../platform/lifecycle.js'
@@ -9,31 +9,10 @@ import {
   type OperationalReadinessProvider, type RuntimeStatusProvider,
 } from '../platform/operations.js'
 import { createAssistantApplicationHost, type AssistantApplication } from './host.js'
+import type { AssistantApplicationConfig } from './config.js'
 
 export type { AssistantApplication } from './host.js'
-
-export interface AssistantApplicationConfig {
-  readonly execution: { readonly mode: 'local' | 'remote'; readonly workspaceRoots: readonly string[] }
-  readonly storage: StorageConfig
-  readonly web: {
-    readonly host: string
-    readonly port: number
-    readonly consoleToken?: string
-    readonly secureCookie: boolean
-    readonly dshUrl?: string
-  }
-  readonly controlPlane: { readonly token?: string }
-  readonly kernel:
-    | { readonly mode: 'off' }
-    | {
-        readonly mode: 'dsh'
-        readonly command: string
-        readonly args: readonly string[]
-        readonly cwd: string
-        readonly home: string
-        readonly profile: string
-      }
-}
+export type { AssistantApplicationConfig } from './config.js'
 
 export interface AssistantApplicationExtensions {
   readonly runtimeStatus?: RuntimeStatusProvider

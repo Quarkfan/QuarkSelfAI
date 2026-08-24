@@ -15,6 +15,9 @@ test('classifies every current module as skeleton, feature, or migration', async
   assert.equal(modules.get('sqlite-storage')?.classification, 'feature')
   assert.equal(modules.get('postgres-storage')?.runtime, 'inactive')
   assert.equal(modules.get('application-composition')?.dependsOn.includes('durable-state-host'), false)
+  assert.ok(modules.get('application-composition')?.owns.includes('src/bootstrap/config.ts'))
+  assert.ok(modules.get('durable-state-host')?.owns.includes('src/storage/config.ts'))
+  assert.ok(modules.get('bridge-compat-host')?.owns.includes('src/config/runtime.ts'))
 })
 
 test('prevents the skeleton from depending on a feature', () => {

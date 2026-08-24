@@ -48,9 +48,10 @@ Claude/Codex、具体联系人或 takeover 等功能/迁移身份。该保护不
 隔离成有退出条件的 migration host。
 
 通用 `src/bootstrap/application.ts` 已成为不依赖 migration 的 application composition，通过开放组件列表接收
-功能或迁移贡献。当前 `src/app.ts`、`src/config/runtime.ts`、`src/runtime/compat-composition.ts` 和
-`src/runtime/compat.ts` 仍认识 compat 启动门禁，归 `bridge-compat-host` 所有；在原生模块取得状态所有权后，
-只需替换进程 selector 并删除这组迁移代码，不再修改 application skeleton。
+功能或迁移贡献；稳定的 Web、DSH、工作区配置位于同属骨架的 `src/bootstrap/config.ts`。当前 `src/app.ts`、
+`src/config/runtime.ts`、`src/runtime/compat-composition.ts` 和 `src/runtime/compat.ts` 仍认识 compat 启动门禁，
+归 `bridge-compat-host` 所有，但 `config/runtime` 只组合稳定配置、存储 feature 配置与迁移 selector；在原生模块
+取得状态所有权后，只需替换进程 selector 并删除这组迁移代码，不再搬迁 application skeleton 配置。
 
 把这些消费者和写入点迁入 DSH-native 插件会改变现网核心边界，必须按仓库协作规则另设维护窗口：冻结旧
 checkpoint、逐模块切换、验证单消费者与投影血缘，并保留回滚版本。不能为了目录看起来整齐而直接搬代码。

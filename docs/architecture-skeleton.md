@@ -11,7 +11,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | --- | --- | --- |
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
-| Application composition/host | 接收已构造的存储端口，装配内核、控制台等稳定组件，并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 创建 SQLite/PostgreSQL、枚举 compat、飞书或某个业务功能 |
+| Application composition/host | 加载不含业务 selector 的稳定 Web、DSH、工作区配置；接收已构造的存储端口，装配内核、控制台等稳定组件，并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 创建 SQLite/PostgreSQL、枚举 compat、飞书或某个业务功能 |
 | Module catalog | 模块分类、逐文件源码所有权、真实 import 依赖和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
@@ -76,10 +76,11 @@ SQLite；PostgreSQL 保持 ready/inactive，切换配置不应迫使骨架 impor
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 所有当前本地插件均已具备模块 owner、package export 与 Cordis profile 绑定；剩余问题是这些 native 插件尚未
    取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。
-5. 原生 `application-composition` 已建立，只装配 durable store、DSH kernel、控制台和开放组件列表；运行状态
-   provider 的标识、健康参与度和展示模式也是开放字段。当前 `src/app.ts` 仍通过 `compat-composition` 选择已接管
-   的 compatibility consumer，因此进程 selector 与 runtime config 继续归迁移层；删除 compat 不再需要修改骨架。
-   具体边界见 ADR 0022。
+5. 原生 `application-composition` 已建立，只装配注入的 durable store、DSH kernel、控制台和开放组件列表；
+   `bootstrap/config` 只解析稳定的 Web、kernel、control-plane 和 workspace 配置。运行状态 provider 的标识、
+   健康参与度和展示模式也是开放字段。当前 `src/app.ts` 仍通过 `compat-composition` 选择已接管的 compatibility
+   consumer；`config/runtime` 仅组合稳定配置、存储 provider 配置和 compat selector。删除 compat 不再需要修改
+   或搬走骨架配置。具体边界见 ADR 0022、0027。
 6. native workflow 所需的 21 个 effect 均已有实现，但仍全部未激活；机器门禁把实现覆盖与运行所有权分别呈现，
    必须逐 adapter 完成真实只读/写入回放和状态交接后才能切换。飞书通知、交互卡片、只读联系人候选解析和经
    durable approval 的本人代发 adapter 已完成契约实现；同名联系人
