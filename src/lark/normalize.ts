@@ -13,6 +13,19 @@ function timestamp(value: unknown): string | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
 }
 
+/** Convert Feishu's message-content envelope into the channel-neutral text fact. */
+function messageText(value: unknown): string | undefined {
+  if (isRecord(value)) return text(value.text)
+  const raw = text(value)
+  if (!raw) return undefined
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return isRecord(parsed) ? text(parsed.text) : undefined
+  } catch {
+    return raw
+  }
+}
+
 export function normalizeLarkEvent(eventKey: string, value: unknown): NormalizedChannelEvent {
   if (!isRecord(value)) throw new Error(`event ${eventKey} payload must be an object`)
   const eventId = text(value.event_id)
@@ -38,6 +51,7 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
       kind: 'message.received',
       deduplicationKey: messageId ?? eventId ?? `${eventKey}:${JSON.stringify(value)}`,
       payload: {
+        text: messageText(value.content),
         content: value.content,
         messageType: value.message_type,
         chatType: value.chat_type,

@@ -6,22 +6,10 @@ export interface PolicyEventSampleInput {
   readonly payload: Readonly<Record<string, unknown>>
 }
 
-function messageText(content: unknown): string | undefined {
-  if (typeof content !== 'string' || !content) return undefined
-  try {
-    const parsed = JSON.parse(content) as unknown
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      const text = (parsed as Record<string, unknown>).text
-      if (typeof text === 'string') return text
-    }
-  } catch {
-    return content
-  }
-  return content
-}
-
 export function eventToPolicySample(event: PolicyEventSampleInput): PolicySample {
-  const text = messageText(event.payload.content)
+  const text = typeof event.payload.text === 'string' && event.payload.text.length > 0
+    ? event.payload.text
+    : undefined
   const chatType = typeof event.payload.chatType === 'string' ? event.payload.chatType : undefined
   const external = typeof event.payload.external === 'boolean' ? event.payload.external : undefined
   const chatId = typeof event.source.conversationId === 'string' ? event.source.conversationId : undefined

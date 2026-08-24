@@ -8,7 +8,7 @@ test('normalizes messages and preserves newly introduced fields', () => {
     message_id: 'om-1',
     chat_id: 'oc-1',
     sender_id: 'ou-1',
-    content: 'hello',
+    content: JSON.stringify({ text: 'hello' }),
     timestamp: '1787390310000',
     future_cli_field: { value: 42 },
   }
@@ -16,7 +16,14 @@ test('normalizes messages and preserves newly introduced fields', () => {
   assert.equal(event.kind, 'message.received')
   assert.equal(event.deduplicationKey, 'om-1')
   assert.equal(event.occurredAt, '2026-08-22T09:18:30.000Z')
+  assert.equal(event.payload.text, 'hello')
+  assert.equal(event.payload.content, raw.content)
   assert.deepEqual(event.raw.future_cli_field, { value: 42 })
+})
+
+test('normalizes plain message content without exposing protocol parsing upstream', () => {
+  const event = normalizeLarkEvent('im.message.receive_v1', { message_id: 'om-plain', content: 'plain text' })
+  assert.equal(event.payload.text, 'plain text')
 })
 
 test('passes an unknown event through instead of discarding it', () => {
