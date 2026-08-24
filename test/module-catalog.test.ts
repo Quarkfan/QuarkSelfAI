@@ -124,3 +124,21 @@ test('requires each effect to have only one provider', () => {
     ],
   }), /effect task-system\.read\.v1 is provided by both a and b/)
 })
+
+test('requires plugin profile ids and package exports to have one module owner', () => {
+  const plugin = { profileId: 'shared-plugin', packageExport: './shared-plugin' }
+  assert.throws(() => validateModuleCatalog({
+    version: 2,
+    modules: [
+      { id: 'a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'a', owns: [], dependsOn: [], plugin },
+      { id: 'b', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'b', owns: [], dependsOn: [], plugin: { profileId: 'shared-plugin', packageExport: './other' } },
+    ],
+  }), /plugin profile shared-plugin is owned by both a and b/)
+  assert.throws(() => validateModuleCatalog({
+    version: 2,
+    modules: [
+      { id: 'a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'a', owns: [], dependsOn: [], plugin },
+      { id: 'b', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'b', owns: [], dependsOn: [], plugin: { profileId: 'other-plugin', packageExport: './shared-plugin' } },
+    ],
+  }), /plugin export \.\/shared-plugin is owned by both a and b/)
+})

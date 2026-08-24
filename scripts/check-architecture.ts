@@ -6,6 +6,26 @@ import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateSou
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
 for (const module of catalog.modules) await access(resolve(root, module.source))
+const packageManifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')) as {
+  name?: unknown
+  exports?: unknown
+}
+const packageName = typeof packageManifest.name === 'string' ? packageManifest.name : ''
+assert.ok(packageName, 'package.json must define a package name')
+assert.ok(isRecord(packageManifest.exports), 'package.json must define exports')
+const profilePlugins = cordisPlugins(await readFile(resolve(root, 'cordis.patch.yml'), 'utf8'))
+const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ module, plugin: module.plugin }] : [])
+for (const { module, plugin } of pluginBindings) {
+  assert.ok(plugin.packageExport in packageManifest.exports, `module ${module.id} references missing package export ${plugin.packageExport}`)
+  const expectedPackage = plugin.packageExport === '.' ? packageName : `${packageName}/${plugin.packageExport.slice(2)}`
+  assert.equal(profilePlugins.get(plugin.profileId), expectedPackage, `module ${module.id} plugin binding differs from cordis.patch.yml`)
+}
+const boundProfileIds = new Set(pluginBindings.map(binding => binding.plugin.profileId))
+for (const [profileId, mountedPackage] of profilePlugins) {
+  if (mountedPackage === packageName || mountedPackage.startsWith(`${packageName}/`)) {
+    assert.ok(boundProfileIds.has(profileId), `local Cordis plugin ${profileId} is not owned by a module catalog binding`)
+  }
+}
 const migrationPlan = JSON.parse(await readFile(resolve(root, 'config/native-migration-plan.json'), 'utf8')) as {
   version?: unknown
   sourceRuntime?: unknown
@@ -96,7 +116,7 @@ for (const filename of files) {
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)
 const summary = summarizeModules(catalog)
 const effectCoverage = analyzeEffectCoverage(catalog)
-process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} cutoverUnits=${migrationUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
+process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} cutoverUnits=${migrationUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
 
 async function sourceFiles(directory: string): Promise<string[]> {
   const result: string[] = []
@@ -134,4 +154,28 @@ function startsWithAny(value: string, prefixes: readonly string[]): boolean {
 
 function outside(value: string, allowed: readonly string[]): boolean {
   return value.startsWith('src/') && !startsWithAny(value, allowed)
+}
+
+function cordisPlugins(source: string): Map<string, string> {
+  const result = new Map<string, string>()
+  let currentId: string | undefined
+  for (const line of source.split(/\r?\n/)) {
+    const id = line.match(/^\s*-\s+id:\s*([^\s#]+)\s*(?:#.*)?$/)?.[1]
+    if (id) { currentId = unquote(id); continue }
+    const name = line.match(/^\s+name:\s*([^\s#]+)\s*(?:#.*)?$/)?.[1]
+    if (!name || !currentId) continue
+    const pluginName = unquote(name)
+    assert.ok(!result.has(currentId), `duplicate Cordis plugin id ${currentId}`)
+    result.set(currentId, pluginName)
+    currentId = undefined
+  }
+  return result
+}
+
+function unquote(value: string): string {
+  return value.replace(/^(['"])(.*)\1$/, '$2')
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

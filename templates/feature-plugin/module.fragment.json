@@ -8,5 +8,9 @@
   "owns": ["src/features/feature-id/plugin.ts"],
   "dependsOn": ["assistant-contracts"],
   "requiresEffects": [],
-  "providesEffects": []
+  "providesEffects": [],
+  "plugin": {
+    "profileId": "feature-id",
+    "packageExport": "./feature-id"
+  }
 }

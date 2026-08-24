@@ -34,7 +34,9 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 `module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件必须恰好出现
 一次，模块入口也必须由自身拥有。架构检查会把源码的相对 import 映射回 owner，并要求真实依赖出现在
 `dependsOn` 中；新增 helper、重复归属、失效路径和未声明跨模块 import 都会阻断 `npm check`。这使分类约束
-覆盖全部源码，而不是只检查少数代表入口。
+覆盖全部源码，而不是只检查少数代表入口。可加载插件还必须声明稳定的 `plugin.profileId` 与
+`plugin.packageExport`；检查器会双向核对 Cordis profile 和 `package.json#exports`，防止“代码已实现但未挂载”
+或“profile 中存在无主插件”。
 
 长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。
 `implementation` 单独回答代码是否 ready，`runtime` 单独回答当前是否 inactive、shadow、active 或仍归 compat。
@@ -135,7 +137,7 @@ DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-sta
 ## 新想法如何接入
 
 1. 先回答：换掉当前外部系统后，这个机制是否仍成立？若否，它是 feature。
-2. 在 `config/module-catalog.json` 增加模块、精确 `owns` 文件和真实依赖；`architecture:check` 必须通过。
+2. 在 `config/module-catalog.json` 增加模块、精确 `owns` 文件、真实依赖和插件绑定；`architecture:check` 必须通过。
 3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表。
 4. 外部写入必须创建 durable action/approval；长期等待必须持久化，不靠进程内 `sleep`。
 5. 用 DSH 动态插件验证想法可以，但跨重启能力必须沉淀为仓库插件。

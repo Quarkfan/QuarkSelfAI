@@ -6,6 +6,13 @@ export type ModuleLayer = 'kernel' | 'contract' | 'adapter' | 'provider' | 'poli
 export type ModuleImplementation = 'planned' | 'partial' | 'ready'
 export type ModuleRuntime = 'inactive' | 'shadow' | 'active' | 'compat'
 
+export interface AssistantPluginBinding {
+  /** Stable instance id in the bundled Cordis profile. */
+  readonly profileId: string
+  /** Package export key, for example `.` or `./message-intake`. */
+  readonly packageExport: string
+}
+
 export interface AssistantModuleDescriptor {
   readonly id: string
   readonly classification: ModuleClassification
@@ -20,6 +27,8 @@ export interface AssistantModuleDescriptor {
   readonly dependsOn: readonly string[]
   readonly requiresEffects: readonly string[]
   readonly providesEffects: readonly string[]
+  /** Present only when this module owns a loadable plugin entrypoint. */
+  readonly plugin?: AssistantPluginBinding
   readonly hostedBy?: string
   readonly exitCriteria?: string
 }
@@ -97,6 +106,8 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
   }
   const ownership = new Map<string, string>()
   const effectProviders = new Map<string, AssistantModuleDescriptor>()
+  const pluginProfiles = new Map<string, string>()
+  const pluginExports = new Map<string, string>()
   for (const module of modules) {
     for (const source of module.owns) {
       const existing = ownership.get(source)
@@ -107,6 +118,14 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       const existing = effectProviders.get(effect)
       if (existing) throw new Error(`effect ${effect} is provided by both ${existing.id} and ${module.id}`)
       effectProviders.set(effect, module)
+    }
+    if (module.plugin) {
+      const profileOwner = pluginProfiles.get(module.plugin.profileId)
+      if (profileOwner) throw new Error(`plugin profile ${module.plugin.profileId} is owned by both ${profileOwner} and ${module.id}`)
+      pluginProfiles.set(module.plugin.profileId, module.id)
+      const exportOwner = pluginExports.get(module.plugin.packageExport)
+      if (exportOwner) throw new Error(`plugin export ${module.plugin.packageExport} is owned by both ${exportOwner} and ${module.id}`)
+      pluginExports.set(module.plugin.packageExport, module.id)
     }
   }
   for (const module of modules.filter(item => item.runtime === 'active')) {
@@ -204,9 +223,21 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     dependsOn,
     requiresEffects,
     providesEffects,
+    ...(value.plugin === undefined ? {} : { plugin: parsePlugin(value.plugin, id) }),
     ...(typeof value.hostedBy === 'string' ? { hostedBy: value.hostedBy } : {}),
     ...(typeof value.exitCriteria === 'string' ? { exitCriteria: value.exitCriteria } : {}),
   }
+}
+
+function parsePlugin(value: unknown, moduleId: string): AssistantPluginBinding {
+  if (!isRecord(value)) throw new Error(`plugin for ${moduleId} must be an object`)
+  const keys = Object.keys(value)
+  if (keys.some(key => key !== 'profileId' && key !== 'packageExport')) throw new Error(`plugin for ${moduleId} has unknown fields`)
+  const profileId = string(value.profileId, `plugin profileId for ${moduleId}`)
+  const packageExport = string(value.packageExport, `plugin packageExport for ${moduleId}`)
+  if (!/^[a-z][a-z0-9-]*$/.test(profileId)) throw new Error(`invalid plugin profileId for ${moduleId}: ${profileId}`)
+  if (packageExport !== '.' && !/^\.\/[a-z0-9-]+$/.test(packageExport)) throw new Error(`invalid plugin packageExport for ${moduleId}: ${packageExport}`)
+  return { profileId, packageExport }
 }
 
 function effectList(value: unknown, label: string): string[] {

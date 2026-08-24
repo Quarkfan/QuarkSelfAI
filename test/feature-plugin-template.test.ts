@@ -21,6 +21,7 @@ test('feature template is a valid inactive module-catalog v2 extension', async (
   assert.equal(feature?.implementation, 'ready')
   assert.equal(feature?.runtime, 'inactive')
   assert.deepEqual(feature?.owns, ['src/features/feature-id/plugin.ts'])
+  assert.deepEqual(feature?.plugin, { profileId: 'feature-id', packageExport: './feature-id' })
 })
 
 test('feature template ships a fail-closed Cordis activation gate', async () => {
