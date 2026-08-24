@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "sourceRuntime": "bridge-compat-host",
   "units": [
     {
@@ -67,6 +67,58 @@
       "cutoverBoundary": "Pause learning evaluation, import privacy-bounded observations and proposal cooldowns, then enable native policy learning.",
       "rollback": "Disable native evaluation and restore only observations newer than the frozen compat checkpoint by stable sample id.",
       "requiresMaintenanceWindow": true
+    }
+  ],
+  "exitUnits": [
+    {
+      "id": "promote-native-profile",
+      "modules": ["assistant-profile-composition"],
+      "disposition": "reclassify-feature",
+      "afterCutoverUnits": ["message-intake-and-projection", "dida-maintenance", "delegated-followup", "xiaowei-research", "session-lifecycle", "collaboration-learning"],
+      "afterExitUnits": [],
+      "verification": "Cordis profile contains no ASSISTANT_RUNTIME=compat gate; every mounted local plugin binding and runtime owner passes architecture:check and a supervised restart.",
+      "rollback": "Restore the last compatibility-aware profile before restarting the compatibility host.",
+      "requiresMaintenanceWindow": true
+    },
+    {
+      "id": "retire-compat-host",
+      "modules": ["bridge-compat-host"],
+      "disposition": "remove",
+      "afterCutoverUnits": ["message-intake-and-projection", "dida-maintenance", "delegated-followup", "xiaowei-research", "session-lifecycle", "collaboration-learning"],
+      "afterExitUnits": ["promote-native-profile"],
+      "verification": "No process, profile, source import, runtime dependency, state writer or deployment entry references bridge-compat; one native consumer owns each Feishu stream after restart.",
+      "rollback": "Stop every native consumer, restore the frozen compatibility release and state checkpoint, then start compatibility consumers exactly once.",
+      "requiresMaintenanceWindow": true
+    },
+    {
+      "id": "retire-takeover-readiness",
+      "modules": ["takeover-readiness"],
+      "disposition": "remove",
+      "afterCutoverUnits": ["message-intake-and-projection", "dida-maintenance", "delegated-followup", "xiaowei-research", "session-lifecycle", "collaboration-learning"],
+      "afterExitUnits": ["retire-compat-host"],
+      "verification": "Control surfaces read open OperationalReadinessReport providers and no code or asset reads feature-parity.json.",
+      "rollback": "Restore the adapter and parity asset only together with the compatibility rollback release.",
+      "requiresMaintenanceWindow": false
+    },
+    {
+      "id": "retire-legacy-state-tooling",
+      "modules": ["legacy-state-tooling"],
+      "disposition": "remove",
+      "afterCutoverUnits": ["message-intake-and-projection", "dida-maintenance", "delegated-followup", "xiaowei-research", "session-lifecycle", "collaboration-learning"],
+      "afterExitUnits": ["retire-compat-host"],
+      "verification": "No production read or write path uses compatibility state.json; rollback retention has elapsed and native checkpoints cover every migrated queue.",
+      "rollback": "Keep the frozen content-addressed handoff outside live write paths until the declared rollback retention expires.",
+      "requiresMaintenanceWindow": false
+    },
+    {
+      "id": "retire-takeover-evidence",
+      "modules": ["takeover-evidence"],
+      "disposition": "remove",
+      "afterCutoverUnits": ["message-intake-and-projection", "dida-maintenance", "delegated-followup", "xiaowei-research", "session-lifecycle", "collaboration-learning"],
+      "afterExitUnits": ["retire-takeover-readiness", "retire-legacy-state-tooling"],
+      "verification": "The compatibility host, parity adapter and legacy state tooling are absent; final production replay, rollback drill and architecture audit are stored as release evidence.",
+      "rollback": "Restore this evidence tooling only on the isolated rollback branch; it must not return to the native product runtime.",
+      "requiresMaintenanceWindow": false
     }
   ]
 }

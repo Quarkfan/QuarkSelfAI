@@ -90,6 +90,8 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
 迁移层包括 `bridge-compat-host`、旧状态工具、takeover 证据，以及当前仍带 compat 禁用表达式的
 `assistant-profile-composition`。它可以读取骨架和功能以完成搬迁，但任何
 骨架或功能都不能反向依赖它。每个迁移模块必须有 `exitCriteria`；没有退出条件的“兼容层”就是第二套内核。
+`native-migration-plan.json` 还必须用退出单元逐一覆盖所有 migration 模块，明确删除/转正、前置切换、退出拓扑、
+验证和回滚；自然语言 `exitCriteria` 不能单独证明脚手架可以拔除。
 
 当前最重要的结构缺口：
 

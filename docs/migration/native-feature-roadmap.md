@@ -1,8 +1,11 @@
 # Compatibility 功能原生化路线
 
-机器真源：`config/native-migration-plan.json`。架构检查要求 11 个 `runtime=compat` 功能恰好落入一个迁移单元，
+机器真源：`config/native-migration-plan.json` v3。架构检查要求 11 个 `runtime=compat` 功能恰好落入一个迁移单元，
 不能遗漏，也不能同时出现在两个切换单元中。每个单元还必须显式列出 `targetModules`；原生切换门禁只检查这些
 旧所有者、目标模块和目标模块声明的 effect，不把无关的未来插件或可选 provider 误算为本次迁移阻塞项。
+
+同一计划还要求五个 migration 模块恰好落入五个 `exitUnits`。切换六个业务单元只转移生产所有权；只有 profile
+转正、compat host 删除、临时 readiness/旧状态工具退出、最终接管证据封存后，迁移层才算真正拔除。
 
 ## 为什么不能直接删 bridge-compat
 
@@ -108,3 +111,13 @@
 5. 回滚先停 native，再恢复未完成状态，已完成外部写入不重放；
 6. 观察窗口通过后把替代模块的 `runtime` 从 `inactive/shadow` 改为 `active`，再删除对应的 `runtime=compat`
    描述；迁移宿主退出条件全部满足后才删除代码。`native` 不是合法 runtime 值。
+
+## 五个迁移退出单元
+
+| 顺序 | 退出单元 | 处置 | 关键证明 |
+| --- | --- | --- | --- |
+| 1 | promote-native-profile | 转为 feature | profile 无 compat gate，所有插件绑定和监督重启通过 |
+| 2 | retire-compat-host | 删除 | 无进程、源码、资产或状态写入引用 compat，飞书流仍各有唯一 owner |
+| 3 | retire-takeover-readiness | 删除 | 控制面只读取开放 readiness provider，不再读取 feature parity |
+| 3 | retire-legacy-state-tooling | 删除 | 旧 JSON 无生产读写路径，回滚保留期结束，native checkpoint 完整 |
+| 4 | retire-takeover-evidence | 删除 | 最终回放、回滚演练和架构审计已成为 release evidence |

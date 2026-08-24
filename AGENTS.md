@@ -16,6 +16,8 @@
   反向依赖；跨层装配只允许放在 operations 或显式 `runtimeDependsOn`。
 - 每个 feature/provider/surface 自己拥有窄配置；不得引入会聚合 Web、存储、通道、执行器和迁移 selector 的
   全局 `ApplicationConfig`。DSH 配置只属于 `kernel-supervisor`。
+- 每个 `runtime=compat` 功能必须恰好属于一个 cutover unit，每个 migration 模块必须恰好属于一个 exit unit；
+  没有处置、前置、验证和回滚的自然语言退出说明不能视为可拔除。
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
 - Web 控制台、桌面端或其他人机界面是可替换 surface feature；application skeleton 只提供受监管组件扩展点，
   不得直接创建或依赖具体界面。

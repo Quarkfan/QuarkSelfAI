@@ -70,7 +70,7 @@ export async function loadFeatureParity(): Promise<FeatureParityReport> {
       units: Array<{ modules: string[]; targetModules: string[] }>
     }),
   ])
-  if (migrationPlan.version !== 2 || !Array.isArray(migrationPlan.units)) throw new Error('native migration plan must be version 2')
+  if (migrationPlan.version !== 3 || !Array.isArray(migrationPlan.units)) throw new Error('native migration plan must be version 3')
   const incomplete = manifest.features.filter((feature) => feature.requiredForTakeover && feature.status !== 'complete')
   const migrationModuleIds = new Set(migrationPlan.units.flatMap(unit => [...unit.modules, ...unit.targetModules]))
   const nativeCutoverBlockers = catalog.modules

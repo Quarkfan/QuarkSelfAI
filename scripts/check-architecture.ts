@@ -53,16 +53,22 @@ const migrationPlan = JSON.parse(await readFile(resolve(root, 'config/native-mig
   version?: unknown
   sourceRuntime?: unknown
   units?: unknown
+  exitUnits?: unknown
+  [key: string]: unknown
 }
-assert.equal(migrationPlan.version, 2, 'native migration plan must be version 2')
+assert.deepEqual(Object.keys(migrationPlan).sort(), ['exitUnits', 'sourceRuntime', 'units', 'version'], 'native migration plan has unknown or missing top-level fields')
+assert.equal(migrationPlan.version, 3, 'native migration plan must be version 3')
 assert.equal(migrationPlan.sourceRuntime, 'bridge-compat-host', 'native migration plan must identify the compatibility host')
 assert.ok(Array.isArray(migrationPlan.units), 'native migration plan must contain units')
+assert.ok(Array.isArray(migrationPlan.exitUnits), 'native migration plan must contain exitUnits')
 const migrationUnits = migrationPlan.units as Array<Record<string, unknown>>
+const cutoverFields = ['buildOrder', 'cutoverAfter', 'cutoverBoundary', 'id', 'modules', 'requiresMaintenanceWindow', 'rollback', 'stateOwner', 'targetModules']
 const migrationModuleIds: string[] = []
 const migrationUnitIds = new Set(migrationUnits.map(unit => unit.id))
 assert.equal(migrationUnitIds.size, migrationUnits.length, 'migration unit ids must be unique')
 const buildOrders = new Set<number>()
 for (const unit of migrationUnits) {
+  assert.deepEqual(Object.keys(unit).sort(), cutoverFields, `migration unit ${String(unit.id)} has unknown or missing fields`)
   assert.equal(typeof unit.id, 'string', 'migration unit id must be a string')
   assert.ok(Array.isArray(unit.modules) && unit.modules.length > 0 && unit.modules.every(value => typeof value === 'string'), `migration unit ${String(unit.id)} must contain module ids`)
   assert.ok(Array.isArray(unit.targetModules) && unit.targetModules.length > 0 && unit.targetModules.every(value => typeof value === 'string'), `migration unit ${String(unit.id)} must contain target module ids`)
@@ -90,6 +96,40 @@ assertAcyclicCutovers(migrationUnits)
 assert.deepEqual([...buildOrders].sort((left, right) => left - right), migrationUnits.map((_, index) => index + 1), 'migration buildOrder values must be contiguous')
 const compatModuleIds = catalog.modules.filter(module => module.classification === 'feature' && module.runtime === 'compat').map(module => module.id)
 assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'migration units must cover every compat feature exactly once')
+
+const exitUnits = migrationPlan.exitUnits as Array<Record<string, unknown>>
+const exitFields = ['afterCutoverUnits', 'afterExitUnits', 'disposition', 'id', 'modules', 'requiresMaintenanceWindow', 'rollback', 'verification']
+const exitUnitIds = new Set(exitUnits.map(unit => unit.id))
+assert.equal(exitUnitIds.size, exitUnits.length, 'migration exit unit ids must be unique')
+const exitingMigrationModuleIds: string[] = []
+for (const unit of exitUnits) {
+  assert.deepEqual(Object.keys(unit).sort(), exitFields, `migration exit unit ${String(unit.id)} has unknown or missing fields`)
+  assert.equal(typeof unit.id, 'string', 'migration exit unit id must be a string')
+  assert.ok(Array.isArray(unit.modules) && unit.modules.length > 0 && unit.modules.every(value => typeof value === 'string'), `migration exit unit ${String(unit.id)} must contain module ids`)
+  assert.equal(new Set(unit.modules as string[]).size, (unit.modules as string[]).length, `migration exit unit ${String(unit.id)} modules must be unique`)
+  for (const moduleId of unit.modules as string[]) {
+    const module = catalog.modules.find(item => item.id === moduleId)
+    assert.ok(module, `migration exit unit ${String(unit.id)} references unknown module ${moduleId}`)
+    assert.equal(module.classification, 'migration', `migration exit target ${moduleId} must be a migration module`)
+  }
+  assert.ok(unit.disposition === 'remove' || unit.disposition === 'reclassify-feature', `migration exit unit ${String(unit.id)} has invalid disposition`)
+  assert.ok(Array.isArray(unit.afterCutoverUnits) && unit.afterCutoverUnits.every(value => typeof value === 'string'), `migration exit unit ${String(unit.id)} must define afterCutoverUnits`)
+  for (const dependency of unit.afterCutoverUnits as string[]) {
+    assert.ok(migrationUnitIds.has(dependency), `migration exit unit ${String(unit.id)} has unknown cutover dependency ${dependency}`)
+  }
+  assert.ok(Array.isArray(unit.afterExitUnits) && unit.afterExitUnits.every(value => typeof value === 'string'), `migration exit unit ${String(unit.id)} must define afterExitUnits`)
+  for (const dependency of unit.afterExitUnits as string[]) {
+    assert.ok(exitUnitIds.has(dependency), `migration exit unit ${String(unit.id)} has unknown exit dependency ${dependency}`)
+    assert.notEqual(dependency, unit.id, `migration exit unit ${String(unit.id)} cannot depend on itself`)
+  }
+  assert.ok(typeof unit.verification === 'string' && unit.verification.trim(), `migration exit unit ${String(unit.id)} must define verification`)
+  assert.ok(typeof unit.rollback === 'string' && unit.rollback.trim(), `migration exit unit ${String(unit.id)} must define rollback`)
+  assert.equal(typeof unit.requiresMaintenanceWindow, 'boolean', `migration exit unit ${String(unit.id)} must define requiresMaintenanceWindow`)
+  exitingMigrationModuleIds.push(...unit.modules as string[])
+}
+assertAcyclicExitUnits(exitUnits)
+const catalogMigrationModuleIds = catalog.modules.filter(module => module.classification === 'migration').map(module => module.id)
+assert.deepEqual([...exitingMigrationModuleIds].sort(), [...catalogMigrationModuleIds].sort(), 'migration exit units must cover every migration module exactly once')
 
 const files = await sourceFiles(resolve(root, 'src'), '.ts')
 const compatibilityFiles = await sourceFiles(resolve(root, 'packages/bridge-compat/src'), '.js')
@@ -177,7 +217,7 @@ for (const module of catalog.modules) {
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)
 const summary = summarizeModules(catalog)
 const effectCoverage = analyzeEffectCoverage(catalog)
-process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} assets=${runtimeAssets.length} cutoverUnits=${migrationUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
+process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} assets=${runtimeAssets.length} cutoverUnits=${migrationUnits.length} exitUnits=${exitUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
 
 function trackedRuntimeAssets(projectRoot: string): string[] {
   const paths = [
@@ -205,6 +245,21 @@ function assertAcyclicCutovers(units: readonly Record<string, unknown>[]): void 
   const visited = new Set<string>()
   const visit = (id: string, path: readonly string[]): void => {
     if (visiting.has(id)) throw new Error(`migration cutover cycle: ${[...path, id].join(' -> ')}`)
+    if (visited.has(id)) return
+    visiting.add(id)
+    for (const dependency of dependencies.get(id) ?? []) visit(dependency, [...path, id])
+    visiting.delete(id)
+    visited.add(id)
+  }
+  for (const id of dependencies.keys()) visit(id, [])
+}
+
+function assertAcyclicExitUnits(units: readonly Record<string, unknown>[]): void {
+  const dependencies = new Map(units.map(unit => [String(unit.id), unit.afterExitUnits as string[]]))
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const visit = (id: string, path: readonly string[]): void => {
+    if (visiting.has(id)) throw new Error(`migration exit cycle: ${[...path, id].join(' -> ')}`)
     if (visited.has(id)) return
     visiting.add(id)
     for (const dependency of dependencies.get(id) ?? []) visit(dependency, [...path, id])

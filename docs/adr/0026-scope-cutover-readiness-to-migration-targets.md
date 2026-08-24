@@ -24,5 +24,7 @@
 ## 后果
 
 - 可选数据库、实验插件和后续能力可以保持 inactive，而不阻塞无关的兼容层退出。
+
+ADR 0035 已把该文件升级为 v3；原有 cutover target 语义不变，并新增对所有 migration 模块的退出单元覆盖。
 - 漏列真实替代模块会弱化门禁，因此迁移计划变更必须通过架构检查、评审和对应 workflow/effect 测试。
 - 模块 active 仍受全局依赖与 effect 唯一 provider 校验约束；本 ADR 不允许绕过运行时安全规则。
