@@ -12,7 +12,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
 | Application composition/host | 加载不含业务 selector 的 DSH kernel 配置；接收已构造的存储端口，装配内核并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 创建 SQLite/PostgreSQL、Web 控制台、枚举 compat、飞书或某个业务功能 |
-| Module catalog | 模块分类、逐文件源码所有权、真实 import 依赖和迁移退出条件 | 动态启停业务功能 |
+| Module catalog | 模块分类、逐文件源码与运行资产所有权、真实 import 依赖、分层方向和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
@@ -36,14 +36,18 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 架构检查会把原生源码的相对 import 映射回 owner，并要求与 `dependsOn` 双向
 精确一致；compat 与运维脚本只校验所有权，因为它们分别是待删除迁移代码和允许跨层读取的运维入口。注入、宿主和
 外部 runtime 关系单独放在 `runtimeDependsOn`。同一目录的 `assets` 是非源码运行资产所有权真源。架构检查只枚举
-Git 已跟踪的配置、SQL migration、Web 静态资源、
-部署入口、兼容 schema 和插件模板，因此不会接管个人未提交的界面文件，但任何进入仓库的运行资产都必须明确属于一个
-skeleton、feature 或 migration 模块。资产归属是维护责任，不替代源码 import 依赖。
+Git 已跟踪的配置、SQL migration、Web 静态资源、部署入口、兼容 schema 和插件模板，因此不会接管个人未提交的
+界面文件，但任何进入仓库的运行资产都必须明确属于一个 skeleton、feature 或 migration 模块。资产归属是维护责任，
+不替代源码 import 依赖。
 新增 helper、重复归属、失效路径、未声明 import 和已失效的声明依赖都会阻断 `npm check`。两类依赖都受
-skeleton/feature/migration 方向约束，
-但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的 `plugin.profileId` 与
+skeleton/feature/migration 方向约束，但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的
+`plugin.profileId` 与
 `plugin.packageExport`；检查器会双向核对 Cordis profile 和 `package.json#exports`，防止“代码已实现但未挂载”
 或“profile 中存在无主插件”。
+
+`layer` 也不是展示标签：contract 只能依赖 contract，kernel 只能依赖 contract/kernel，policy 只能依赖
+contract/policy；provider、adapter、workflow、projection 和 surface 只能向各自允许的内层依赖。只有 operations
+允许跨层执行组合、审计和迁移。具体矩阵见 ADR 0033。
 
 长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。
 `implementation` 单独回答代码是否 ready，`runtime` 单独回答当前是否 inactive、shadow、active 或仍归 compat。

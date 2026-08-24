@@ -16,6 +16,7 @@ export interface AssistantPluginBinding {
 export interface AssistantModuleDescriptor {
   readonly id: string
   readonly classification: ModuleClassification
+  /** Source dependency tier. The catalog enforces an inward-only layer matrix. */
   readonly layer: ModuleLayer
   /** Code maturity. This must not be used as a claim about production ownership. */
   readonly implementation: ModuleImplementation
@@ -64,6 +65,17 @@ const classifications = new Set<ModuleClassification>(['skeleton', 'feature', 'm
 const layers = new Set<ModuleLayer>(['kernel', 'contract', 'adapter', 'provider', 'policy', 'workflow', 'projection', 'surface', 'operations'])
 const implementations = new Set<ModuleImplementation>(['planned', 'partial', 'ready'])
 const runtimes = new Set<ModuleRuntime>(['inactive', 'shadow', 'active', 'compat'])
+const sourceDependencyLayers: Readonly<Record<ModuleLayer, ReadonlySet<ModuleLayer>>> = {
+  contract: new Set(['contract']),
+  kernel: new Set(['contract', 'kernel']),
+  policy: new Set(['contract', 'policy']),
+  provider: new Set(['contract', 'kernel', 'policy', 'provider']),
+  adapter: new Set(['contract', 'kernel', 'adapter']),
+  workflow: new Set(['contract', 'kernel', 'policy', 'workflow']),
+  projection: new Set(['contract', 'kernel', 'policy', 'projection']),
+  surface: new Set(['contract', 'kernel', 'policy', 'surface']),
+  operations: new Set(layers),
+}
 const catalogFields = new Set(['version', 'modules'])
 const moduleFields = new Set([
   'id', 'classification', 'layer', 'implementation', 'runtime', 'source', 'owns', 'assets', 'dependsOn',
@@ -95,6 +107,12 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       }
       if (module.classification === 'feature' && dependency.classification === 'migration') {
         throw new Error(`feature module ${module.id} cannot depend on migration module ${dependencyId}`)
+      }
+    }
+    for (const dependencyId of module.dependsOn) {
+      const dependency = byId.get(dependencyId)!
+      if (!sourceDependencyLayers[module.layer].has(dependency.layer)) {
+        throw new Error(`${module.layer} module ${module.id} cannot source-depend on ${dependency.layer} module ${dependencyId}`)
       }
     }
     if (module.runtime === 'compat') {

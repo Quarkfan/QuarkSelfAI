@@ -12,6 +12,8 @@
   插件 `runtime` 必须与 Cordis profile 的 compat 门禁一致。`packages/bridge-compat` 不承接新的长期功能。
 - Git 已跟踪的配置、migration、Web 静态资源、部署入口、兼容 schema 和插件模板必须在模块目录 `assets` 中恰好
   归属一个模块；只审计已提交资产，不触碰个人未提交的在途文件。
+- `layer` 是源码依赖门禁而非说明标签：contract/kernel/policy 不得向 workflow、adapter、provider 或 surface
+  反向依赖；跨层装配只允许放在 operations 或显式 `runtimeDependsOn`。
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
 - Web 控制台、桌面端或其他人机界面是可替换 surface feature；application skeleton 只提供受监管组件扩展点，
   不得直接创建或依赖具体界面。

@@ -42,6 +42,23 @@ test('prevents feature code from acquiring a migration dependency', () => {
   }), /feature module feature-a cannot depend on migration module migration-a/)
 })
 
+test('enforces source layer direction instead of treating layer as documentation', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'workflow-a', classification: 'skeleton', layer: 'workflow', implementation: 'ready', runtime: 'active', source: 'a', owns: [], dependsOn: [] },
+      { id: 'contract-a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'b', owns: [], dependsOn: ['workflow-a'] },
+    ],
+  }), /contract module contract-a cannot source-depend on workflow module workflow-a/)
+  assert.doesNotThrow(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'contract-a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'a', owns: [], dependsOn: [] },
+      { id: 'operations-a', classification: 'migration', layer: 'operations', implementation: 'ready', runtime: 'active', source: 'b', owns: [], dependsOn: ['contract-a'], exitCriteria: 'remove it' },
+    ],
+  }))
+})
+
 test('applies classification boundaries to runtime-only dependencies', () => {
   assert.throws(() => validateModuleCatalog({
     version: 3,
