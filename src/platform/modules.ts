@@ -24,6 +24,8 @@ export interface AssistantModuleDescriptor {
   readonly source: string
   /** Exact native, compatibility, or operational source files owned by this module. */
   readonly owns: readonly string[]
+  /** Exact tracked runtime/configuration assets maintained by this module. */
+  readonly assets: readonly string[]
   /** Exact cross-module source imports. Architecture checks reject missing and stale entries. */
   readonly dependsOn: readonly string[]
   /** Runtime/plugin injection relationships that do not create a source import. */
@@ -64,7 +66,7 @@ const implementations = new Set<ModuleImplementation>(['planned', 'partial', 're
 const runtimes = new Set<ModuleRuntime>(['inactive', 'shadow', 'active', 'compat'])
 const catalogFields = new Set(['version', 'modules'])
 const moduleFields = new Set([
-  'id', 'classification', 'layer', 'implementation', 'runtime', 'source', 'owns', 'dependsOn',
+  'id', 'classification', 'layer', 'implementation', 'runtime', 'source', 'owns', 'assets', 'dependsOn',
   'runtimeDependsOn', 'requiresEffects', 'providesEffects', 'plugin', 'hostedBy', 'exitCriteria',
 ])
 
@@ -121,6 +123,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
   }
   const ownership = new Map<string, string>()
+  const assetOwnership = new Map<string, string>()
   const effectProviders = new Map<string, AssistantModuleDescriptor>()
   const pluginProfiles = new Map<string, string>()
   const pluginExports = new Map<string, string>()
@@ -129,6 +132,11 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       const existing = ownership.get(source)
       if (existing) throw new Error(`source ${source} is owned by both ${existing} and ${module.id}`)
       ownership.set(source, module.id)
+    }
+    for (const asset of module.assets) {
+      const existing = assetOwnership.get(asset)
+      if (existing) throw new Error(`asset ${asset} is owned by both ${existing} and ${module.id}`)
+      assetOwnership.set(asset, module.id)
     }
     for (const effect of module.providesEffects) {
       const existing = effectProviders.get(effect)
@@ -183,6 +191,20 @@ export function validateSourceOwnership(catalog: AssistantModuleCatalog, sourceF
   }
 }
 
+export function validateAssetOwnership(catalog: AssistantModuleCatalog, assetFiles: readonly string[]): void {
+  const expected = new Set(assetFiles)
+  const owned = new Map(catalog.modules.flatMap(module => module.assets.map(asset => [asset, module.id] as const)))
+  const missing = [...expected].filter(asset => !owned.has(asset)).sort()
+  const stale = [...owned.keys()].filter(asset => !expected.has(asset)).sort()
+  if (missing.length || stale.length) {
+    const details = [
+      ...missing.map(asset => `unowned runtime asset: ${asset}`),
+      ...stale.map(asset => `owned runtime asset does not exist or is not tracked: ${asset}`),
+    ]
+    throw new Error(`runtime asset ownership violations:\n${details.join('\n')}`)
+  }
+}
+
 export function summarizeModules(catalog: AssistantModuleCatalog): ModuleSummary {
   const summary: ModuleSummary = {
     total: catalog.modules.length,
@@ -230,6 +252,15 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
       throw new Error(`invalid owned source for ${id}: ${ownedSource}`)
     }
   }
+  if (value.assets !== undefined
+    && (!Array.isArray(value.assets) || value.assets.some(item => typeof item !== 'string'))) {
+    throw new Error(`assets for ${id} must be a string array`)
+  }
+  const assets = [...new Set((value.assets ?? []) as string[])]
+  if (assets.length !== (value.assets ?? []).length) throw new Error(`assets for ${id} must not contain duplicates`)
+  for (const asset of assets) {
+    if (!normalizedProjectPath(asset)) throw new Error(`invalid runtime asset for ${id}: ${asset}`)
+  }
   const dependsOn = [...new Set(value.dependsOn as string[])]
   if (dependsOn.length !== value.dependsOn.length) throw new Error(`dependsOn for ${id} must not contain duplicates`)
   const runtimeDependsOn = [...new Set((value.runtimeDependsOn ?? []) as string[])]
@@ -255,6 +286,7 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     runtime,
     source,
     owns,
+    assets,
     dependsOn,
     runtimeDependsOn,
     requiresEffects,
@@ -263,6 +295,11 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     ...(hostedBy === undefined ? {} : { hostedBy }),
     ...(exitCriteria === undefined ? {} : { exitCriteria }),
   }
+}
+
+function normalizedProjectPath(value: string): boolean {
+  return Boolean(value.trim()) && value === value.trim() && !value.startsWith('/') && !value.includes('\\')
+    && !value.split('/').some(segment => !segment || segment === '.' || segment === '..')
 }
 
 function parsePlugin(value: unknown, moduleId: string): AssistantPluginBinding {

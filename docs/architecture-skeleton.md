@@ -35,8 +35,12 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 出现一次，原生模块入口也必须由自身拥有。
 架构检查会把原生源码的相对 import 映射回 owner，并要求与 `dependsOn` 双向
 精确一致；compat 与运维脚本只校验所有权，因为它们分别是待删除迁移代码和允许跨层读取的运维入口。注入、宿主和
-外部 runtime 关系单独放在 `runtimeDependsOn`。新增 helper、重复归属、失效路径、
-未声明 import 和已失效的声明依赖都会阻断 `npm check`。两类依赖都受 skeleton/feature/migration 方向约束，
+外部 runtime 关系单独放在 `runtimeDependsOn`。同一目录的 `assets` 是非源码运行资产所有权真源。架构检查只枚举
+Git 已跟踪的配置、SQL migration、Web 静态资源、
+部署入口、兼容 schema 和插件模板，因此不会接管个人未提交的界面文件，但任何进入仓库的运行资产都必须明确属于一个
+skeleton、feature 或 migration 模块。资产归属是维护责任，不替代源码 import 依赖。
+新增 helper、重复归属、失效路径、未声明 import 和已失效的声明依赖都会阻断 `npm check`。两类依赖都受
+skeleton/feature/migration 方向约束，
 但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的 `plugin.profileId` 与
 `plugin.packageExport`；检查器会双向核对 Cordis profile 和 `package.json#exports`，防止“代码已实现但未挂载”
 或“profile 中存在无主插件”。

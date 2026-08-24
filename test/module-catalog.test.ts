@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateModuleCatalog, validateSourceOwnership } from '../src/platform/modules.js'
+import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateAssetOwnership, validateModuleCatalog, validateSourceOwnership } from '../src/platform/modules.js'
 
 test('classifies every current module as skeleton, feature, or migration', async () => {
   const catalog = await loadModuleCatalog()
@@ -103,6 +103,28 @@ test('requires every source file to have exactly one explicit module owner', () 
     ],
   })
   assert.doesNotThrow(() => validateSourceOwnership(operations, ['scripts/example.ts', 'scripts/replay.mjs']))
+})
+
+test('requires every tracked runtime asset to have exactly one module owner', () => {
+  const catalog = validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'surface', classification: 'feature', layer: 'surface', implementation: 'ready', runtime: 'active',
+        source: 'src/surface.ts', owns: ['src/surface.ts'], assets: ['web/index.html'], dependsOn: [],
+      },
+    ],
+  })
+  assert.doesNotThrow(() => validateAssetOwnership(catalog, ['web/index.html']))
+  assert.throws(() => validateAssetOwnership(catalog, ['web/index.html', 'web/app.js']), /unowned runtime asset: web\/app\.js/)
+  assert.throws(() => validateAssetOwnership(catalog, []), /owned runtime asset does not exist or is not tracked: web\/index\.html/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'a', classification: 'feature', layer: 'surface', implementation: 'ready', runtime: 'active', source: 'a', owns: [], assets: ['web/index.html'], dependsOn: [] },
+      { id: 'b', classification: 'feature', layer: 'surface', implementation: 'ready', runtime: 'active', source: 'b', owns: [], assets: ['web/index.html'], dependsOn: [] },
+    ],
+  }), /asset web\/index\.html is owned by both a and b/)
 })
 
 test('rejects duplicate ownership and src entrypoints that are not owned', () => {

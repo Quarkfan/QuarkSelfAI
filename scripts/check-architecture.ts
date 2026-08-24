@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
-import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateSourceOwnership } from '../src/platform/modules.js'
+import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
 
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
@@ -97,6 +98,8 @@ const operationalFiles = [
   ...await sourceFiles(resolve(root, 'scripts'), '.mjs'),
 ]
 validateSourceOwnership(catalog, [...files, ...compatibilityFiles, ...operationalFiles].map(filename => relative(root, filename)))
+const runtimeAssets = trackedRuntimeAssets(root)
+validateAssetOwnership(catalog, runtimeAssets)
 const moduleById = new Map(catalog.modules.map(module => [module.id, module]))
 const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
@@ -171,7 +174,17 @@ for (const module of catalog.modules) {
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)
 const summary = summarizeModules(catalog)
 const effectCoverage = analyzeEffectCoverage(catalog)
-process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} cutoverUnits=${migrationUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
+process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} assets=${runtimeAssets.length} cutoverUnits=${migrationUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
+
+function trackedRuntimeAssets(projectRoot: string): string[] {
+  const paths = [
+    '.env.example', 'Dockerfile', 'compose.yaml', 'compose.postgres.yaml', 'cordis.patch.yml',
+    'compat', 'config', 'deploy', 'migrations', 'web', 'templates',
+    'packages/bridge-compat/config.example.json', 'packages/bridge-compat/schemas',
+  ]
+  const output = execFileSync('git', ['ls-files', '-z', '--', ...paths], { cwd: projectRoot, encoding: 'utf8' })
+  return output.split('\0').filter(Boolean).sort()
+}
 
 async function sourceFiles(directory: string, extension: string): Promise<string[]> {
   const result: string[] = []

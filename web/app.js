@@ -32,6 +32,8 @@ function showModule(m) {
     ['实现成熟度', m.implementation],
     ['运行归属', m.runtime],
     ['源码入口', m.source],
+    ['源码文件', m.owns?.join(', ') || '无'],
+    ['运行资产', m.assets?.join(', ') || '无'],
     ['当前宿主', m.hostedBy ?? (m.runtime === 'active' ? '原生' : '—')],
     ['源码依赖', m.dependsOn?.join(', ') || '无'],
     ['运行依赖', m.runtimeDependsOn?.join(', ') || '无'],
@@ -91,7 +93,7 @@ function render(data) {
     ? `${moduleSummary.classification.skeleton} 骨架 · ${moduleSummary.implementation.ready}/${moduleSummary.total} 已实现 · ${moduleSummary.runtime.compat} 兼容层`
     : '—'
   $('#architecture-table').innerHTML = architecture?.modules?.length
-    ? architecture.modules.map((m) => `<tr class="clickable" data-detail="module" data-id="${esc(m.id)}"><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'active' ? '原生' : '—'))}</td><td><small>源码 ${esc(m.dependsOn?.length ?? 0)} · 运行 ${esc(m.runtimeDependsOn?.length ?? 0)}</small></td></tr>`).join('')
+    ? architecture.modules.map((m) => `<tr class="clickable" data-detail="module" data-id="${esc(m.id)}"><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'active' ? '原生' : '—'))}</td><td><small>源码依赖 ${esc(m.dependsOn?.length ?? 0)} · 运行依赖 ${esc(m.runtimeDependsOn?.length ?? 0)} · 资产 ${esc(m.assets?.length ?? 0)}</small></td></tr>`).join('')
     : emptyRow('暂无模块目录', 7)
   if (runtime.conversationUrl) {
     dshUrl = runtime.conversationUrl
