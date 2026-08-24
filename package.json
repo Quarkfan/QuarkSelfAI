@@ -54,6 +54,10 @@
       "types": "./dist/events/runtime.d.ts",
       "import": "./dist/events/runtime.js"
     },
+    "./message-intake": {
+      "types": "./dist/intake/plugin.d.ts",
+      "import": "./dist/intake/plugin.js"
+    },
     "./dida-maintenance": {
       "types": "./dist/task-maintenance/plugin.d.ts",
       "import": "./dist/task-maintenance/plugin.js"
@@ -109,6 +113,7 @@
     "dist/collaboration",
     "dist/workflow",
     "dist/events",
+    "dist/intake",
     "dist/task-maintenance",
     "dist/task-system",
     "dist/session-lifecycle",
@@ -147,6 +152,7 @@
     "audit:session-lifecycle-handoff": "node --import tsx scripts/audit-session-lifecycle-handoff.ts",
     "audit:xiaowei-research-handoff": "node --import tsx scripts/audit-xiaowei-research-handoff.ts",
     "audit:followup-handoff": "node --import tsx scripts/audit-followup-handoff.ts",
+    "audit:message-intake-handoff": "node --import tsx scripts/audit-message-intake-handoff.ts",
     "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
     "audit:dida-projections": "node scripts/audit-dida-projections.mjs",
     "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",

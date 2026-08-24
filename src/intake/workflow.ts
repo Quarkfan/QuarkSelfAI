@@ -1,0 +1,92 @@
+import { createHash } from 'node:crypto'
+import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
+import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
+import { INTAKE_EFFECTS, type IntakeDecision, type IntakeInput, validateIntakeDecision } from './types.js'
+
+type IntakeState = Readonly<Record<string, unknown>> & {
+  readonly stage: 'loading-context' | 'evaluating' | 'projecting' | 'completed' | 'failed'
+  readonly route: IntakeInput['route']
+  readonly sourceEvent: IntakeInput['event']
+  readonly workspace: string
+  readonly pending: readonly string[]
+  readonly decision?: IntakeDecision
+}
+
+export const INTAKE_WORKFLOW_KIND = 'message-intake.v1'
+
+export function messageIntakeWorkflow(): WorkflowDefinition {
+  return {
+    kind: INTAKE_WORKFLOW_KIND,
+    version: 1,
+    initialize(input, now) {
+      const value = input as unknown as IntakeInput
+      if (!value.workspace?.trim() || !value.event?.deduplicationKey || !['owner-command', 'focus', 'interaction'].includes(value.route)) throw new Error('invalid message intake input')
+      if (value.route === 'interaction') {
+        const effectId = effect(value.event, 'interaction')
+        return {
+          status: 'waiting',
+          state: { stage: 'projecting', route: value.route, sourceEvent: value.event, workspace: value.workspace, pending: [effectId] },
+          effects: [{ id: effectId, kind: INTAKE_EFFECTS.applyInteraction, payload: { event: value.event, requireExactOwnerAndCorrelation: true } }],
+        }
+      }
+      const effectId = effect(value.event, 'context')
+      return {
+        status: 'waiting',
+        state: { stage: 'loading-context', route: value.route, sourceEvent: value.event, workspace: value.workspace, pending: [effectId] },
+        effects: [{ id: effectId, kind: INTAKE_EFFECTS.loadContext, payload: { event: value.event, route: value.route, requestedAt: now } }],
+      }
+    },
+    reduce(raw, event) {
+      const state = raw as IntakeState
+      if (event.type === 'effect.failed') return { status: 'failed', state: { ...state, stage: 'failed', failure: event.payload.error }, wakeAt: null }
+      if (event.type !== 'effect.delivered') return { status: state.stage === 'completed' ? 'completed' : 'waiting', state }
+      const effectKind = String(event.payload.effectKind ?? '')
+      if (state.stage === 'loading-context' && effectKind === INTAKE_EFFECTS.loadContext) return afterContext(state, event)
+      if (state.stage === 'evaluating' && effectKind === INTAKE_EFFECTS.evaluateFocus) return afterEvaluation(state, event)
+      if (state.stage === 'projecting') return settleProjection(state, event)
+      return { status: state.stage === 'completed' ? 'completed' : 'waiting', state }
+    },
+  }
+}
+
+function afterContext(state: IntakeState, event: WorkflowEvent): WorkflowDecision {
+  const context = event.payload.context
+  const effectId = effect(state.sourceEvent, state.route === 'owner-command' ? 'delegate' : 'evaluate')
+  if (state.route === 'owner-command') {
+    return {
+      status: 'waiting', state: { ...state, stage: 'projecting', pending: [effectId] },
+      effects: [{ id: effectId, kind: INTAKE_EFFECTS.delegateCommand, payload: { event: state.sourceEvent, context, workspace: state.workspace } }],
+    }
+  }
+  return {
+    status: 'waiting', state: { ...state, stage: 'evaluating', pending: [effectId] },
+    effects: [{ id: effectId, kind: INTAKE_EFFECTS.evaluateFocus, payload: { event: state.sourceEvent, context } }],
+  }
+}
+
+function afterEvaluation(state: IntakeState, event: WorkflowEvent): WorkflowDecision {
+  const decision = validateIntakeDecision(event.payload.decision)
+  if (decision.outcome === 'ignored') return { status: 'completed', state: { ...state, stage: 'completed', pending: [], decision }, wakeAt: null }
+  const effects = []
+  if (decision.outcome === 'task') effects.push({
+    id: effect(state.sourceEvent, 'task'), kind: INTAKE_EFFECTS.projectTask,
+    payload: { sourceEvent: state.sourceEvent, decision, idempotencyKey: `feishu:${state.sourceEvent.source.messageId ?? state.sourceEvent.deduplicationKey}` },
+  })
+  if (decision.notifyOwner) effects.push({
+    id: effect(state.sourceEvent, decision.approvalRequired ? 'approval' : 'notification'),
+    kind: decision.approvalRequired ? ASSISTANT_EFFECTS.requestInteraction : ASSISTANT_EFFECTS.notifyOwner,
+    payload: { sourceEvent: state.sourceEvent, decision, requireExactCorrelation: true, targetOwnerOnly: true },
+  })
+  if (effects.length === 0) return { status: 'completed', state: { ...state, stage: 'completed', pending: [], decision }, wakeAt: null }
+  return { status: 'waiting', state: { ...state, stage: 'projecting', pending: effects.map(item => item.id), decision }, effects }
+}
+
+function settleProjection(state: IntakeState, event: WorkflowEvent): WorkflowDecision {
+  const effectId = String(event.payload.effectId ?? '')
+  const pending = state.pending.filter(id => id !== effectId)
+  return { status: pending.length === 0 ? 'completed' : 'waiting', state: { ...state, stage: pending.length === 0 ? 'completed' : 'projecting', pending }, ...(pending.length === 0 ? { wakeAt: null } : {}) }
+}
+
+function effect(event: IntakeInput['event'], suffix: string): string {
+  return `intake:${createHash('sha256').update(event.deduplicationKey).digest('hex').slice(0, 24)}:${suffix}`
+}

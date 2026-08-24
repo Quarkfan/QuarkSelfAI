@@ -108,6 +108,18 @@
         leaseMs: 120000
         retryDelayMs: 120000
         maxAttempts: 5
+    - id: quark-message-intake
+      name: '@quarkfan/quark-self-ai/message-intake'
+      # The definitions are loadable, but compat remains the sole production
+      # intake/projection owner until a maintenance-window cutover.
+      disabled: !!js process.env.QUARK_NATIVE_MESSAGE_INTAKE !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        enabled: true
+        ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
+        workspace: !!js process.env.QUARK_OWNER_WORKSPACE || '/Users/edy/BlackLakeWork'
+        focusSenderIds: []
+        focusConversationIds: []
+        discoveryIntervalMs: 600000
     - id: quark-dida-maintenance
       name: '@quarkfan/quark-self-ai/dida-maintenance'
       # Definitions are ready, but task-system and notification effect handlers
