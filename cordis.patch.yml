@@ -142,6 +142,19 @@
         retryBaseMs: 120000
         retryMaxMs: 3600000
         failureNotifyThreshold: 3
+    - id: quark-followup
+      name: '@quarkfan/quark-self-ai/followup'
+      # The compatibility host remains the only workday timer, card callback,
+      # contact resolution, and reply consumer until an audited cutover.
+      disabled: !!js process.env.QUARK_NATIVE_FOLLOWUP !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        enabled: true
+        timeZone: Asia/Shanghai
+        scheduledHour: 10
+        pollIntervalMs: 3600000
+        retryBaseMs: 120000
+        retryMaxMs: 21600000
+        failureNotifyThreshold: 1
     - id: quark-feishu-ingress
       name: '@quarkfan/quark-self-ai/feishu-ingress'
       # This is the prepared native replacement. It must stay disabled while

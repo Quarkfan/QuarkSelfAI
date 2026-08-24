@@ -70,6 +70,10 @@
       "types": "./dist/xiaowei/plugin.d.ts",
       "import": "./dist/xiaowei/plugin.js"
     },
+    "./followup": {
+      "types": "./dist/followup/plugin.d.ts",
+      "import": "./dist/followup/plugin.js"
+    },
     "./dynamic-plugin-policy": {
       "types": "./dist/runtime/dynamic-plugin-policy.d.ts",
       "import": "./dist/runtime/dynamic-plugin-policy.js"
@@ -104,6 +108,7 @@
     "dist/task-system",
     "dist/session-lifecycle",
     "dist/xiaowei",
+    "dist/followup",
     "migrations",
     "config",
     "web",
@@ -136,6 +141,7 @@
     "audit:dida-maintenance-handoff": "node --import tsx scripts/audit-dida-maintenance-handoff.ts",
     "audit:session-lifecycle-handoff": "node --import tsx scripts/audit-session-lifecycle-handoff.ts",
     "audit:xiaowei-research-handoff": "node --import tsx scripts/audit-xiaowei-research-handoff.ts",
+    "audit:followup-handoff": "node --import tsx scripts/audit-followup-handoff.ts",
     "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
     "audit:dida-projections": "node scripts/audit-dida-projections.mjs",
     "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",
