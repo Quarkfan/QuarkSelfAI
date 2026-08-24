@@ -1,3 +1,5 @@
+import type { DurableAuthorizationEvidence } from '../domain/authorization.js'
+
 export interface OverdueTask {
   readonly taskId: string
   readonly title: string
@@ -24,4 +26,9 @@ export interface DidaMaintenanceConfig {
   readonly cleanupFailureNotifyThreshold?: number
   readonly completedRetentionDays?: number
   readonly cleanupMaxPerRun?: number
+  readonly cleanupAuthorization?: DurableAuthorizationEvidence & {
+    readonly projectId: string
+    readonly minimumRetentionDays: number
+    readonly maximumDeletesPerRun: number
+  }
 }

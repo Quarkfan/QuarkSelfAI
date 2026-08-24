@@ -42,3 +42,37 @@ test('does not treat a missing task as completed', async () => {
   const adapter = new DidaTaskEffectAdapter({ projectIds: ['project-auto'] }, runner)
   await assert.rejects(adapter.execute(effect('task-system.is-completed.v1', { taskId: 'missing' })), /was not found/)
 })
+
+test('deletes only old completed tasks under exact durable authorization', async () => {
+  const runner = new Runner()
+  runner.response = [
+    { id: 'old-1', title: '旧任务', completedTime: '2026-06-01T00:00:00Z' },
+    { id: 'old-2', title: '另一个旧任务', completedTime: '2026-06-02T00:00:00Z' },
+  ]
+  const adapter = new DidaTaskEffectAdapter({ projectIds: ['project-auto'] }, runner)
+  const authorization = {
+    id: 'owner-policy:dida-cleanup:v1', grantedBy: 'owner', grantedAt: '2026-08-20T00:00:00Z',
+    scope: 'dida.completed-task-cleanup', revision: 1, source: 'owner-directive:periodic-cleanup',
+    projectId: 'project-auto', minimumRetentionDays: 30, maximumDeletesPerRun: 1,
+  }
+  const output = await adapter.execute(effect('task-system.cleanup-completed.v1', {
+    projectId: 'project-auto', cutoff: '2026-07-25T00:00:00Z', effectiveAt: '2026-08-24T00:00:00Z',
+    maxDeletes: 1, authorization,
+  }))
+  assert.deepEqual(output, {
+    deleted: [{ taskId: 'old-1', title: '旧任务', completedAt: '2026-06-01T00:00:00Z' }],
+    authorizationId: 'owner-policy:dida-cleanup:v1',
+  })
+  assert.deepEqual(runner.calls[0]!.args.slice(0, 2), ['task', 'completed'])
+  assert.deepEqual(runner.calls[1]!.args, ['task', 'delete', 'project-auto', 'old-1'])
+})
+
+test('cleanup authorization fails closed before any Dida command', async () => {
+  const runner = new Runner()
+  const adapter = new DidaTaskEffectAdapter({ projectIds: ['project-auto'] }, runner)
+  await assert.rejects(adapter.execute(effect('task-system.cleanup-completed.v1', {
+    projectId: 'project-auto', cutoff: '2026-07-25T00:00:00Z', effectiveAt: '2026-08-24T00:00:00Z', maxDeletes: 1,
+    authorization: { id: 'forged', grantedBy: 'bot', grantedAt: '2026-08-20T00:00:00Z', scope: 'dida.completed-task-cleanup', revision: 1, source: 'test', projectId: 'project-auto', minimumRetentionDays: 30, maximumDeletesPerRun: 1 },
+  })), /granted by the owner/)
+  assert.equal(runner.calls.length, 0)
+})

@@ -72,9 +72,10 @@ workflow 可以暂时存在缺口，但缺失 provider 会进入 `nativeCutoverB
    只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持
    `status=planned`。
 
-滴答 adapter 已先实现两个只读 effect：自动化待办超期查询、在配置白名单清单中核验任务是否完成。它不会把
-“查不到任务”解释为已完成，也不包含 create/update/delete/complete 命令。完成任务定期删除仍被门禁阻断：
-必须先把常东旭的长期清理授权固化为 durable approval 证据并随 cleanup effect 传递，不能仅凭环境开关删除。
+滴答 adapter 已实现超期查询、在白名单清单中核验任务是否完成，以及受限的已完成任务清理。它不会把“查不到
+任务”解释为已完成。清理不是仅凭环境开关获得删除权限：常东旭的长期授权会作为不可变快照进入 workflow state，
+每个 cleanup effect 都携带授权 ID、授权人、时间、来源、项目、最短保留期和单次上限；adapter 在执行任何 CLI
+命令前重新核验范围。当前 adapter 仍是 `planned` 且双重禁用，真实只读/删除回放与维护窗口批准前不会接管。
 
 `feature-parity` 的业务完成度与模块目录的原生所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
 `feature/compat` 或 `feature/planned`，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。

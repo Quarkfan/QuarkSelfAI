@@ -4,7 +4,14 @@ import { completedCleanupWorkflow, overdueWorkflow } from '../src/task-maintenan
 import { TASK_EFFECTS } from '../src/task-system/effects.js'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 
-const config = { projectId: 'project-automation', failureNotifyThreshold: 2 }
+const config = {
+  projectId: 'project-automation', failureNotifyThreshold: 2,
+  cleanupAuthorization: {
+    id: 'owner-policy:dida-cleanup:v1', grantedBy: 'owner' as const, grantedAt: '2026-08-20T00:00:00Z',
+    scope: 'dida.completed-task-cleanup', revision: 1, source: 'owner-directive:periodic-cleanup',
+    projectId: 'project-automation', minimumRetentionDays: 30, maximumDeletesPerRun: 50,
+  },
+}
 
 test('overdue workflow emits stable notifications only when a task fingerprint changes', () => {
   const definition = overdueWorkflow(config)
@@ -66,6 +73,7 @@ test('cleanup workflow runs once per local day and delegates deletion as an effe
   })
   assert.equal(cleaning.effects?.[0]?.kind, TASK_EFFECTS.cleanupCompleted)
   assert.equal(cleaning.effects?.[0]?.payload.projectId, 'project-automation')
+  assert.equal((cleaning.effects?.[0]?.payload.authorization as { id: string }).id, 'owner-policy:dida-cleanup:v1')
   const completed = definition.reduce(cleaning.state, {
     id: 'effect:cleanup:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T04:00:02.000Z',
     payload: { effectKind: TASK_EFFECTS.cleanupCompleted, deleted: [{ taskId: 'old-1', title: '旧任务', completedAt: '2026-06-01T00:00:00Z' }] },
@@ -76,6 +84,12 @@ test('cleanup workflow runs once per local day and delegates deletion as an effe
     id: 'timer:same-day', type: 'timer', occurredAt: '2026-08-24T05:00:00.000Z', payload: {},
   })
   assert.equal(sameDay.effects?.length ?? 0, 0)
+})
+
+test('cleanup workflow rejects missing or wider-than-approved authorization', () => {
+  assert.throws(() => completedCleanupWorkflow({ projectId: 'project-automation' }), /authorization evidence is required/)
+  assert.throws(() => completedCleanupWorkflow({ ...config, completedRetentionDays: 29 }), /authorization scope/)
+  assert.throws(() => completedCleanupWorkflow({ ...config, cleanupMaxPerRun: 51 }), /authorization scope/)
 })
 
 test('maintenance definitions reject malformed effect results instead of advancing state', () => {

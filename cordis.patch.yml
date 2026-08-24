@@ -126,8 +126,8 @@
         discoveryIntervalMs: 600000
     - id: quark-dida-task-effects
       name: '@quarkfan/quark-self-ai/dida-task-effects'
-      # Read-only adapter preparation. Keep disabled until real CLI replay and
-      # state ownership transfer are approved; deletion is intentionally absent.
+      # Adapter preparation. Cleanup is bounded by authorization evidence carried
+      # in durable workflow state. Keep disabled until real replay and cutover.
       disabled: !!js process.env.QUARK_NATIVE_DIDA_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
       config:
         executable: dida
@@ -150,6 +150,16 @@
         cleanupFailureNotifyThreshold: 3
         completedRetentionDays: 30
         cleanupMaxPerRun: 50
+        cleanupAuthorization:
+          id: owner-policy:dida-completed-cleanup:v1
+          grantedBy: owner
+          grantedAt: '2026-08-20T00:00:00+08:00'
+          scope: dida.completed-task-cleanup
+          revision: 1
+          source: owner-directive:periodically-clean-completed-automation-tasks
+          projectId: !!js process.env.DIDA_PROJECT_ID
+          minimumRetentionDays: 30
+          maximumDeletesPerRun: 50
     - id: quark-session-lifecycle
       name: '@quarkfan/quark-self-ai/session-lifecycle'
       # Archive/delete effects are irreversible. Keep the plugin absent until

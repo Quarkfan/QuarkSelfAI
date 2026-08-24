@@ -20,6 +20,12 @@ const handoff = prepareDidaMaintenanceHandoff(JSON.parse(stateBytes), {
   cleanupFailureNotifyThreshold: number(legacyConfig.didaCompletedCleanupFailureNotifyThreshold),
   completedRetentionDays: number(legacyConfig.didaCompletedRetentionDays),
   cleanupMaxPerRun: number(legacyConfig.didaCompletedCleanupMaxPerRun),
+  cleanupAuthorization: {
+    id: 'owner-policy:dida-completed-cleanup:v1', grantedBy: 'owner', grantedAt: '2026-08-20T00:00:00+08:00',
+    scope: 'dida.completed-task-cleanup', revision: 1,
+    source: 'owner-directive:periodically-clean-completed-automation-tasks',
+    projectId: legacyConfig.didaProjectId, minimumRetentionDays: 30, maximumDeletesPerRun: 50,
+  },
 }, stateInfo.mtime.toISOString())
 process.stdout.write(`${JSON.stringify({
   statePath, mode: 'read-only', ...handoff.counts, workflows: handoff.workflows.length,

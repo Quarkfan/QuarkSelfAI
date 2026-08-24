@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import type {} from '../workflow/runtime.js'
 import { TASK_EFFECTS } from './effects.js'
+import { requireAuthorizationEvidence } from '../domain/authorization.js'
 
 export interface DidaTaskEffectConfig {
   readonly executable?: string
@@ -31,6 +32,7 @@ export class DidaTaskEffectAdapter {
   async execute(effect: ClaimedWorkflowEffect): Promise<Readonly<Record<string, unknown>>> {
     if (effect.kind === TASK_EFFECTS.listOverdue) return await this.listOverdue(effect)
     if (effect.kind === TASK_EFFECTS.isCompleted) return await this.isCompleted(effect)
+    if (effect.kind === TASK_EFFECTS.cleanupCompleted) return await this.cleanupCompleted(effect)
     throw new Error(`unsupported Dida task effect ${effect.kind}`)
   }
   private async listOverdue(effect: ClaimedWorkflowEffect) {
@@ -51,11 +53,44 @@ export class DidaTaskEffectAdapter {
     if (!task) throw new Error(`task ${taskId} was not found in an allowed project`)
     return { completed: Number(task.status) === 2 || Boolean(task.completedTime), taskId }
   }
+  private async cleanupCompleted(effect: ClaimedWorkflowEffect) {
+    const projectId = this.project(effect.payload.projectId)
+    const cutoff = timestamp(effect.payload.cutoff, 'cleanup cutoff')
+    const maxDeletes = integer(effect.payload.maxDeletes, 'cleanup maxDeletes')
+    const effectiveAt = timestamp(effect.payload.effectiveAt, 'cleanup effectiveAt')
+    const evidence = requireAuthorizationEvidence(effect.payload.authorization, 'dida.completed-task-cleanup', effectiveAt)
+    const authorization = object(effect.payload.authorization, 'cleanup authorization')
+    if (authorization.projectId !== projectId) throw new Error('cleanup authorization does not cover this project')
+    const minimumRetentionDays = integer(authorization.minimumRetentionDays, 'authorization minimumRetentionDays')
+    const maximumDeletesPerRun = integer(authorization.maximumDeletesPerRun, 'authorization maximumDeletesPerRun')
+    if (maxDeletes > maximumDeletesPerRun) throw new Error('cleanup maxDeletes exceeds authorization')
+    if (new Date(effectiveAt).getTime() - new Date(cutoff).getTime() < minimumRetentionDays * 86_400_000) {
+      throw new Error('cleanup cutoff is newer than the authorized retention period')
+    }
+    const completed = rows(await this.json(['task', 'completed', '--projects', projectId, '--end-date', cutoff, '--json']))
+      .map((task, index) => ({
+        taskId: required(field(task, 'id', 'taskId'), `completed task ${index} id`, 300),
+        title: required(task.title, `completed task ${index} title`, 500),
+        completedAt: timestamp(field(task, 'completedTime', 'completed_at', 'completedAt'), `completed task ${index} completedAt`),
+      }))
+      .filter(task => new Date(task.completedAt).getTime() <= new Date(cutoff).getTime())
+      .slice(0, maxDeletes)
+    const deleted = []
+    for (const task of completed) {
+      await this.command(['task', 'delete', projectId, task.taskId])
+      deleted.push(task)
+    }
+    return { deleted, authorizationId: evidence.id }
+  }
   private project(value: unknown): string { const id = required(value, 'projectId', 300); if (!this.allowedProjects.has(id)) throw new Error(`project ${id} is outside the Dida allowlist`); return id }
   private async json(args: readonly string[]): Promise<unknown> {
+    const output = await this.command(args)
+    return parse(output.stdout)
+  }
+  private async command(args: readonly string[]) {
     const output = await this.runner.run(this.config.executable ?? 'dida', args)
     if (output.exitCode !== 0) throw new Error(`dida exited ${output.exitCode}: ${(output.stderr || output.stdout).trim().slice(-1_000)}`)
-    return parse(output.stdout)
+    return output
   }
 }
 
@@ -63,7 +98,7 @@ export const name = 'quark-dida-task-effects'
 export const inject = ['quarkWorkflows']
 export function apply(ctx: Context, config: DidaTaskEffectConfig): void {
   const adapter = new DidaTaskEffectAdapter(config)
-  const disposers = [TASK_EFFECTS.listOverdue, TASK_EFFECTS.isCompleted]
+  const disposers = [TASK_EFFECTS.listOverdue, TASK_EFFECTS.isCompleted, TASK_EFFECTS.cleanupCompleted]
     .map(kind => ctx.quarkWorkflows.registerEffect(kind, { execute: effect => adapter.execute(effect) }))
   ctx.effect(() => () => { for (const dispose of disposers.reverse()) dispose() }, 'quark Dida task effects')
 }
@@ -74,3 +109,5 @@ function object(value: unknown, label: string): Readonly<Record<string, unknown>
 function field(value: Readonly<Record<string, unknown>>, ...keys: readonly string[]): unknown { for (const key of keys) if (value[key] !== undefined) return value[key]; return undefined }
 function required(value: unknown, label: string, max: number): string { if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} is required`); if (value.length > max) throw new Error(`${label} exceeds ${max} characters`); return value }
 function number(value: unknown, label: string): number { const result = Number(value ?? 0); if (!Number.isFinite(result)) throw new Error(`${label} must be numeric`); return result }
+function integer(value: unknown, label: string): number { const result = number(value, label); if (!Number.isSafeInteger(result) || result < 1) throw new Error(`${label} must be a positive integer`); return result }
+function timestamp(value: unknown, label: string): string { const result = required(value, label, 100); if (Number.isNaN(new Date(result).getTime())) throw new Error(`${label} must be a timestamp`); return result }

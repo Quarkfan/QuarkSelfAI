@@ -3,6 +3,7 @@ import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../wor
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import { TASK_EFFECTS } from '../task-system/effects.js'
 import type { DeletedTask, DidaMaintenanceConfig, OverdueTask } from './types.js'
+import { requireAuthorizationEvidence } from '../domain/authorization.js'
 
 const MINUTE_MS = 60_000
 const DAY_MS = 86_400_000
@@ -31,6 +32,7 @@ interface CleanupState extends Record<string, unknown> {
   readonly retentionDays: number
   readonly maxPerRun: number
   readonly failureThreshold: number
+  readonly authorization: NonNullable<DidaMaintenanceConfig['cleanupAuthorization']>
   readonly phase: 'scheduled' | 'cleaning'
   readonly pendingDay?: string
   readonly lastCompletedDay?: string
@@ -148,13 +150,14 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
   const retentionDays = positiveInteger(config.completedRetentionDays, 30, 'completedRetentionDays')
   const maxPerRun = positiveInteger(config.cleanupMaxPerRun, 50, 'cleanupMaxPerRun')
   const failureThreshold = positiveInteger(config.cleanupFailureNotifyThreshold, 3, 'cleanupFailureNotifyThreshold')
+  const authorization = cleanupAuthorization(config, projectId, retentionDays, maxPerRun)
   // Validate the timezone eagerly.
   localSlot(new Date().toISOString(), timeZone, scheduledHour)
   return {
-    kind: 'dida.completed-cleanup', version: 1,
+    kind: 'dida.completed-cleanup', version: 2,
     initialize(_input, now) {
       const state: CleanupState = {
-        projectId, timeZone, scheduledHour, pollIntervalMs, retentionDays, maxPerRun, failureThreshold, phase: 'scheduled',
+        projectId, timeZone, scheduledHour, pollIntervalMs, retentionDays, maxPerRun, failureThreshold, authorization, phase: 'scheduled',
       }
       return { status: 'waiting', state, wakeAt: now }
     },
@@ -171,7 +174,11 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
           effects: [{
             id: id('dida-completed-cleanup', state.projectId, slot.day), kind: TASK_EFFECTS.cleanupCompleted,
             availableAt: event.occurredAt,
-            payload: { projectId: state.projectId, cutoff: at(event.occurredAt, -state.retentionDays * DAY_MS), maxDeletes: state.maxPerRun },
+            payload: {
+              projectId: state.projectId, cutoff: at(event.occurredAt, -state.retentionDays * DAY_MS), maxDeletes: state.maxPerRun,
+              effectiveAt: event.occurredAt,
+              authorization: state.authorization,
+            },
           }],
         }
       }
@@ -207,6 +214,22 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
       return { status: 'waiting', state, ...(state.phase === 'scheduled' ? { wakeAt: at(event.occurredAt, state.pollIntervalMs) } : {}) }
     },
   }
+}
+
+function cleanupAuthorization(
+  config: DidaMaintenanceConfig,
+  projectId: string,
+  retentionDays: number,
+  maxPerRun: number,
+): NonNullable<DidaMaintenanceConfig['cleanupAuthorization']> {
+  const raw = config.cleanupAuthorization
+  const evidence = requireAuthorizationEvidence(raw, 'dida.completed-task-cleanup', new Date().toISOString())
+  if (!raw || raw.projectId !== projectId) throw new Error('cleanup authorization projectId must match maintenance projectId')
+  const minimumRetentionDays = positiveInteger(raw.minimumRetentionDays, 0, 'authorization minimumRetentionDays')
+  const maximumDeletesPerRun = positiveInteger(raw.maximumDeletesPerRun, 0, 'authorization maximumDeletesPerRun')
+  if (retentionDays < minimumRetentionDays) throw new Error('completedRetentionDays exceeds the cleanup authorization scope')
+  if (maxPerRun > maximumDeletesPerRun) throw new Error('cleanupMaxPerRun exceeds the cleanup authorization scope')
+  return { ...evidence, projectId, minimumRetentionDays, maximumDeletesPerRun }
 }
 
 function parseOverdueTasks(value: unknown): OverdueTask[] {
