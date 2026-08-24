@@ -17,7 +17,8 @@ export interface WorkflowEvent {
 export interface WorkflowDecision {
   readonly status: WorkflowStatus
   readonly state: Readonly<Record<string, unknown>>
-  readonly wakeAt?: string
+  /** undefined preserves the current wake-up, null clears it, and a timestamp reschedules it. */
+  readonly wakeAt?: string | null
   readonly effects?: readonly WorkflowEffectInput[]
 }
 
@@ -112,7 +113,7 @@ export class DurableWorkflowRuntime extends Service {
         return (await this.ctx.quarkState.advanceWorkflow({
           instanceId, expectedRevision: instance.revision, event,
           status: decision.status, state: decision.state,
-          ...(decision.wakeAt ? { wakeAt: decision.wakeAt } : {}),
+          ...('wakeAt' in decision ? { wakeAt: decision.wakeAt } : {}),
           ...(decision.effects ? { effects: decision.effects } : {}),
         })).instance
       } catch (error) {
@@ -194,7 +195,7 @@ function validateDecision(decision: WorkflowDecision): WorkflowDecision {
   if (!['running', 'waiting', 'completed', 'failed'].includes(decision.status)) throw new Error(`invalid workflow status ${decision.status}`)
   if (typeof decision.state !== 'object' || decision.state === null || Array.isArray(decision.state)) throw new Error('workflow state must be an object')
   assertJsonValue(decision.state, 'workflow state')
-  if (decision.wakeAt && Number.isNaN(new Date(decision.wakeAt).getTime())) throw new Error('workflow wakeAt must be an ISO timestamp')
+  if (decision.wakeAt !== undefined && decision.wakeAt !== null && Number.isNaN(new Date(decision.wakeAt).getTime())) throw new Error('workflow wakeAt must be an ISO timestamp')
   const ids = (decision.effects ?? []).map(effect => effect.id)
   if (new Set(ids).size !== ids.length) throw new Error('workflow effect ids must be unique within a decision')
   for (const effect of decision.effects ?? []) {

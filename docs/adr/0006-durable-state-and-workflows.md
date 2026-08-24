@@ -24,7 +24,9 @@
 6. effect 的投递协议与跨功能的 owner notification port 属于骨架；`task-system.*`、`codex-session.*` 等具名
    外部能力属于 feature contract。一个功能可以依赖另一个功能的公开 contract，不得复制或改名冒充自身能力。
 7. workflow reducer 只能用持久状态决定已有实例的节奏；启动配置只初始化新实例，不能在重启后暗改旧实例。
-8. 旧 compat timer 在对应维护窗口之前仍是唯一生产 owner；新增 workflow 表和空 runtime 不构成切换。
+8. `wakeAt` 使用三态更新：省略表示保留既有唤醒点，`null` 表示明确取消，timestamp 表示重新调度。进入外部
+   effect 前必须显式清空旧 timer；附带通知的完成/失败事件不得意外冲掉业务重试或保留期。
+9. 旧 compat timer 在对应维护窗口之前仍是唯一生产 owner；新增 workflow 表和空 runtime 不构成切换。
 
 ## 结果
 

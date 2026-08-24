@@ -227,6 +227,7 @@ export class SqliteAssistantStore implements AssistantStore {
       if (Number(currentRow.revision) !== input.expectedRevision) throw new Error(`workflow ${input.instanceId} revision conflict`)
       const revision = input.expectedRevision + 1
       const state = canonicalJson(input.state)
+      const wakeAt = input.wakeAt === undefined ? currentRow.wake_at ?? null : input.wakeAt
       this.database.prepare(
         `INSERT INTO workflow_event (instance_id, event_id, event_type, occurred_at, payload, processed_revision)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -234,7 +235,7 @@ export class SqliteAssistantStore implements AssistantStore {
       this.database.prepare(
         `UPDATE workflow_instance SET status = ?, state = ?, revision = ?, wake_at = ?,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
-      ).run(input.status, state, revision, input.wakeAt ?? null, input.instanceId)
+      ).run(input.status, state, revision, wakeAt, input.instanceId)
       this.database.prepare(
         `INSERT INTO workflow_transition (instance_id, revision, event_id, from_status, to_status, state)
          VALUES (?, ?, ?, ?, ?, ?)`,

@@ -129,6 +129,19 @@
         deleteAfterDays: 7
         failureNotifyThreshold: 1
         failureNotifyCooldownMs: 86400000
+    - id: quark-xiaowei-research
+      name: '@quarkfan/quark-self-ai/xiaowei-research'
+      # Requests require durable owner approval and one Feishu channel owner.
+      # The native feature stays absent throughout compatibility ownership.
+      disabled: !!js process.env.QUARK_NATIVE_XIAOWEI_RESEARCH !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        enabled: true
+        agentName: 智造湖小维
+        agentOpenId: !!js process.env.XIAOWEI_AGENT_OPEN_ID
+        agentChatId: !!js process.env.XIAOWEI_AGENT_CHAT_ID
+        retryBaseMs: 120000
+        retryMaxMs: 3600000
+        failureNotifyThreshold: 3
     - id: quark-feishu-ingress
       name: '@quarkfan/quark-self-ai/feishu-ingress'
       # This is the prepared native replacement. It must stay disabled while

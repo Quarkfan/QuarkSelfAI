@@ -96,9 +96,11 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
         const scanId = id('dida-overdue-scan', state.projectId, String(event.payload.scheduledAt ?? event.occurredAt))
         return {
           status: 'waiting', state: { ...state, phase: 'scanning' },
+          wakeAt: null,
           effects: [{ id: scanId, kind: TASK_EFFECTS.listOverdue, availableAt: event.occurredAt, payload: { projectId: state.projectId } }],
         }
       }
+      if (['effect.delivered', 'effect.failed'].includes(event.type) && effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) return { status: 'waiting', state }
       if (event.type === 'effect.delivered' && effectKind(event) === TASK_EFFECTS.listOverdue) {
         const tasks = parseOverdueTasks(event.payload.tasks)
         const nextNotified = { ...state.notified }
@@ -165,6 +167,7 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
         }
         return {
           status: 'waiting', state: { ...state, phase: 'cleaning', pendingDay: slot.day },
+          wakeAt: null,
           effects: [{
             id: id('dida-completed-cleanup', state.projectId, slot.day), kind: TASK_EFFECTS.cleanupCompleted,
             availableAt: event.occurredAt,
@@ -172,6 +175,7 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
           }],
         }
       }
+      if (['effect.delivered', 'effect.failed'].includes(event.type) && effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) return { status: 'waiting', state }
       if (event.type === 'effect.delivered' && effectKind(event) === TASK_EFFECTS.cleanupCompleted) {
         const deleted = parseDeletedTasks(event.payload.deleted)
         const effects = []

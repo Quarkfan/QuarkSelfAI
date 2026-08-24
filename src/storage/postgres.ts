@@ -289,11 +289,12 @@ export class PgAssistantStore implements AssistantStore {
          VALUES ($1, $2, $3, $4::timestamptz, $5::jsonb, $6)`,
         [input.instanceId, input.event.id, input.event.type, input.event.occurredAt, JSON.stringify(input.event.payload), revision],
       )
+      const wakeAt = input.wakeAt === undefined ? currentRow.wakeAt ?? null : input.wakeAt
       const updated = await executor.query<Record<string, unknown>>(
         `UPDATE workflow_instance SET status = $2, state = $3::jsonb, revision = $4, wake_at = $5::timestamptz, updated_at = now()
          WHERE id = $1 RETURNING id, kind, definition_version AS "definitionVersion", status, state, revision,
          wake_at AS "wakeAt", created_at AS "createdAt", updated_at AS "updatedAt"`,
-        [input.instanceId, input.status, JSON.stringify(input.state), revision, input.wakeAt ?? null],
+        [input.instanceId, input.status, JSON.stringify(input.state), revision, wakeAt],
       )
       await executor.query(
         `INSERT INTO workflow_transition (instance_id, revision, event_id, from_status, to_status, state)

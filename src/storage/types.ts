@@ -63,7 +63,7 @@ export interface AdvanceWorkflowInput {
   }
   readonly status: WorkflowStatus
   readonly state: Readonly<Record<string, unknown>>
-  readonly wakeAt?: string
+  readonly wakeAt?: string | null
   readonly effects?: readonly WorkflowEffectInput[]
 }
 

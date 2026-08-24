@@ -3,4 +3,5 @@ export const TASK_EFFECTS = {
   listOverdue: 'task-system.list-overdue.v1',
   cleanupCompleted: 'task-system.cleanup-completed.v1',
   isCompleted: 'task-system.is-completed.v1',
+  recordResearchResult: 'task-system.record-research-result.v1',
 } as const

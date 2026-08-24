@@ -116,7 +116,7 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
       if (event.type === 'timer' && state.phase === 'waiting') {
         if (!state.eligible) return { status: 'waiting', state, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
         const next = { ...state, phase: 'inspecting' as const, sequence: state.sequence + 1 }
-        return { status: 'waiting', state: next, effects: [{ id: effectId(next, 'inspect'), kind: SESSION_EFFECTS.inspect,
+        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(next, 'inspect'), kind: SESSION_EFFECTS.inspect,
           availableAt: event.occurredAt, payload: { sessionId: state.sessionId } }] }
       }
       if (event.type === 'effect.delivered' && state.phase === 'inspecting' && effectKind(event) === SESSION_EFFECTS.inspect) {
@@ -130,14 +130,14 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
           return { status: 'waiting', state: { ...withoutFailure(state), phase: 'archived', archivedAt }, wakeAt: at(archivedAt, state.deleteAfterMs) }
         }
         const next = { ...withoutFailure(state), phase: 'checking-task' as const }
-        return { status: 'waiting', state: next, effects: [{ id: effectId(state, 'task-check'), kind: TASK_EFFECTS.isCompleted,
+        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(state, 'task-check'), kind: TASK_EFFECTS.isCompleted,
           availableAt: event.occurredAt, payload: { taskId: state.taskId } }] }
       }
       if (event.type === 'effect.delivered' && state.phase === 'checking-task' && effectKind(event) === TASK_EFFECTS.isCompleted) {
         if (typeof event.payload.completed !== 'boolean') throw new Error('task completion result is invalid')
         if (!event.payload.completed) return { status: 'waiting', state: { ...withoutFailure(state), phase: 'waiting' }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
         const next = { ...withoutFailure(state), phase: 'archiving' as const }
-        return { status: 'waiting', state: next, effects: [{ id: effectId(state, 'archive'), kind: SESSION_EFFECTS.archiveIfNeeded,
+        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(state, 'archive'), kind: SESSION_EFFECTS.archiveIfNeeded,
           availableAt: event.occurredAt, payload: { sessionId: state.sessionId } }] }
       }
       if (event.type === 'effect.delivered' && state.phase === 'archiving' && effectKind(event) === SESSION_EFFECTS.archiveIfNeeded) {
@@ -150,9 +150,10 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
       }
       if (event.type === 'timer' && state.phase === 'archived') {
         const next = { ...state, phase: 'deleting' as const, sequence: state.sequence + 1 }
-        return { status: 'waiting', state: next, effects: [{ id: effectId(next, 'delete'), kind: SESSION_EFFECTS.deleteIfArchived,
+        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(next, 'delete'), kind: SESSION_EFFECTS.deleteIfArchived,
           availableAt: event.occurredAt, payload: { sessionId: state.sessionId } }] }
       }
+      if (['effect.delivered', 'effect.failed'].includes(event.type) && effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) return { status: 'waiting', state }
       if (event.type === 'effect.delivered' && state.phase === 'deleting' && effectKind(event) === SESSION_EFFECTS.deleteIfArchived) {
         const outcome = event.payload.outcome
         if (!['deleted', 'missing', 'not-archived', 'running'].includes(String(outcome))) throw new Error('delete effect outcome is invalid')

@@ -36,6 +36,7 @@ test('workflow storage advances state and effect outbox atomically with idempote
       effects: [{ id: 'effect-2', kind: 'cleanup', payload: { value: 2 }, availableAt: event.occurredAt }],
     })
     assert.equal(advanced.instance.revision, 1)
+    assert.equal(advanced.instance.wakeAt, '2026-08-24T00:00:00.000Z')
     assert.equal((await store.advanceWorkflow({
       instanceId: 'workflow-1', expectedRevision: 0, event, status: 'failed', state: { step: 99 },
     })).advanced, false)
@@ -53,6 +54,27 @@ test('workflow storage advances state and effect outbox atomically with idempote
   } finally {
     await store.close()
     await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('workflow wake-up supports preserve, clear, and reschedule semantics', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-workflow-wake-'))
+  const store = await createSqliteStore(join(directory, 'assistant.sqlite3'), migrations)
+  try {
+    await store.migrate()
+    await store.createWorkflow({ id: 'wake-1', kind: 'test', definitionVersion: 1, status: 'waiting', state: {}, wakeAt: '2026-08-24T01:00:00Z' })
+    const preserved = await store.advanceWorkflow({ instanceId: 'wake-1', expectedRevision: 0,
+      event: { id: 'preserve', type: 'notice', occurredAt: '2026-08-24T00:00:00Z', payload: {} }, status: 'waiting', state: {} })
+    assert.equal(preserved.instance.wakeAt, '2026-08-24T01:00:00Z')
+    const cleared = await store.advanceWorkflow({ instanceId: 'wake-1', expectedRevision: 1,
+      event: { id: 'clear', type: 'timer', occurredAt: '2026-08-24T01:00:00Z', payload: {} }, status: 'waiting', state: {}, wakeAt: null })
+    assert.equal(cleared.instance.wakeAt, undefined)
+    const rescheduled = await store.advanceWorkflow({ instanceId: 'wake-1', expectedRevision: 2,
+      event: { id: 'reschedule', type: 'retry', occurredAt: '2026-08-24T01:00:01Z', payload: {} }, status: 'waiting', state: {},
+      wakeAt: '2026-08-24T02:00:00Z' })
+    assert.equal(rescheduled.instance.wakeAt, '2026-08-24T02:00:00Z')
+  } finally {
+    await store.close(); await rm(directory, { recursive: true, force: true })
   }
 })
 

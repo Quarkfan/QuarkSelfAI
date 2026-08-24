@@ -62,6 +62,14 @@
       "types": "./dist/session-lifecycle/plugin.d.ts",
       "import": "./dist/session-lifecycle/plugin.js"
     },
+    "./feishu-effects": {
+      "types": "./dist/lark/effects.d.ts",
+      "import": "./dist/lark/effects.js"
+    },
+    "./xiaowei-research": {
+      "types": "./dist/xiaowei/plugin.d.ts",
+      "import": "./dist/xiaowei/plugin.js"
+    },
     "./dynamic-plugin-policy": {
       "types": "./dist/runtime/dynamic-plugin-policy.d.ts",
       "import": "./dist/runtime/dynamic-plugin-policy.js"
@@ -95,6 +103,7 @@
     "dist/task-maintenance",
     "dist/task-system",
     "dist/session-lifecycle",
+    "dist/xiaowei",
     "migrations",
     "config",
     "web",
@@ -126,6 +135,7 @@
     "audit:collaboration-handoff": "node --import tsx scripts/audit-collaboration-handoff.ts",
     "audit:dida-maintenance-handoff": "node --import tsx scripts/audit-dida-maintenance-handoff.ts",
     "audit:session-lifecycle-handoff": "node --import tsx scripts/audit-session-lifecycle-handoff.ts",
+    "audit:xiaowei-research-handoff": "node --import tsx scripts/audit-xiaowei-research-handoff.ts",
     "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
     "audit:dida-projections": "node scripts/audit-dida-projections.mjs",
     "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",

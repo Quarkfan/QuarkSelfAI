@@ -51,6 +51,15 @@
 - `npm run audit:session-lifecycle-handoff` 只读生成内容寻址交接，保留重试计数与游标但不迁移错误文本。
   当前没有 effect handler、没有生产 workflow instance，compat 模式下强制禁用。
 
+### xiaowei-research 当前准备状态
+
+- “已批准请求、发送、长时间等待、回复关联、通知、任务回写”已拆成 durable workflow；等待回复时不轮询、不占用
+  模型会话，由 `message-intake-and-projection` 的单一飞书 owner 投递关联事件。
+- `approvedAt` 是创建工作流的必填门禁；重试更换内部 effect id，但外部 idempotency key 保持不变，避免请求、
+  通知或滴答更新重复执行。
+- 旧状态交接保留必要的请求/回复业务材料和 correlation，剔除错误文本；当前仍未导入、未注册 effect handler、
+  未向智造湖小维发送任何消息，compat 模式下强制禁用。
+
 ## 每个单元的统一完成证据
 
 1. native 插件拥有独立 manifest、服务契约、生命周期和架构目录项；
