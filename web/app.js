@@ -24,6 +24,24 @@ function showMonitor(m) {
   $('#detail-dialog').showModal()
 }
 
+function showModule(m) {
+  const plugin = m.plugin ? `${m.plugin.profileId} → ${m.plugin.packageExport}` : '—'
+  showDetail('ARCHITECTURE MODULE', m.id, [
+    ['归属', m.classification],
+    ['层', m.layer],
+    ['实现成熟度', m.implementation],
+    ['运行归属', m.runtime],
+    ['源码入口', m.source],
+    ['当前宿主', m.hostedBy ?? (m.runtime === 'active' ? '原生' : '—')],
+    ['源码依赖', m.dependsOn?.join(', ') || '无'],
+    ['运行依赖', m.runtimeDependsOn?.join(', ') || '无'],
+    ['需要 Effects', m.requiresEffects?.join(', ') || '无'],
+    ['提供 Effects', m.providesEffects?.join(', ') || '无'],
+    ['插件绑定', plugin],
+    ['退出条件', m.exitCriteria ?? '—'],
+  ])
+}
+
 function monitorRows(monitors, compact=false) {
   if (!monitors?.length) return emptyRow('暂无监控数据', compact ? 4 : 7)
   return monitors.map((m) => {
@@ -73,8 +91,8 @@ function render(data) {
     ? `${moduleSummary.classification.skeleton} 骨架 · ${moduleSummary.implementation.ready}/${moduleSummary.total} 已实现 · ${moduleSummary.runtime.compat} 兼容层`
     : '—'
   $('#architecture-table').innerHTML = architecture?.modules?.length
-    ? architecture.modules.map((m) => `<tr><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'active' ? '原生' : '—'))}</td></tr>`).join('')
-    : emptyRow('暂无模块目录', 6)
+    ? architecture.modules.map((m) => `<tr class="clickable" data-detail="module" data-id="${esc(m.id)}"><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'active' ? '原生' : '—'))}</td><td><small>源码 ${esc(m.dependsOn?.length ?? 0)} · 运行 ${esc(m.runtimeDependsOn?.length ?? 0)}</small></td></tr>`).join('')
+    : emptyRow('暂无模块目录', 7)
   if (runtime.conversationUrl) {
     dshUrl = runtime.conversationUrl
     $('#open-dsh').href = dshUrl
@@ -123,7 +141,7 @@ async function refresh() {
 const pageMeta = { overview:['协作总览','飞书、滴答清单与执行通道的统一运行视图'], monitors:['监控中心','检查后台任务的状态、频率与积压'], work:['事项与执行','从事实聚合到可恢复动作'], approvals:['批准台','所有高影响动作等待你的明确确认'], policies:['策略库','把自然语言偏好沉淀为可审计规则'], capabilities:['能力矩阵','查看当前 readiness gate 与实现证据'], conversation:['DSH 会话','在统一控制台使用 DeepSeek Harness'] }
 function switchView(name) { $$('#navigation button').forEach((b)=>b.classList.toggle('active', b.dataset.view===name)); $$('.view').forEach((v)=>v.classList.toggle('active',v.id===`view-${name}`)); const [title,sub]=pageMeta[name]; $('#page-title').textContent=title; $('#page-subtitle').textContent=sub }
 $('#navigation').addEventListener('click',(e)=>{const b=e.target.closest('[data-view]');if(b)switchView(b.dataset.view)})
-document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})
+document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){if(row.dataset.detail==='module'){const item=dashboard.architecture?.modules?.find((x)=>x.id===row.dataset.id);if(item)showModule(item);return}const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})
 document.addEventListener('submit',async(e)=>{if(e.target.id!=='monitor-form')return;e.preventDefault();const form=e.target;const interval=form.elements.interval.disabled?undefined:Number(form.elements.interval.value)*1000;const response=await fetch(`/api/monitors/${encodeURIComponent(form.dataset.id)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({enabled:form.elements.enabled.checked,...interval?{intervalMs:interval}:{}})});const payload=await response.json();if(!response.ok){form.querySelector('.form-error')?.remove();form.insertAdjacentHTML('beforeend',`<p class="form-error">${esc(payload.error??'保存失败')}</p>`);return}$('#detail-dialog').close();$('#health-text').textContent='正在应用配置';setTimeout(refresh,2500)})
 $('#refresh').addEventListener('click',refresh)
 $('#reload-dsh').addEventListener('click',()=>void connectDsh(true))
