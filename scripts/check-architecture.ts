@@ -95,6 +95,12 @@ for (const filename of files) {
     && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|codex|claude|xiaowei|takeover|nativecutover)\b|常东旭|任永强|张以宁)/i.test(source)) {
     violations.push(`${from} hard-codes a feature or migration identity inside skeleton module ${ownerModule.id}`)
   }
+  if (/\bAssistantStore\b/.test(source) && !startsWithAny(from, [
+    'src/storage/types.ts', 'src/storage/factory.ts', 'src/storage/service.ts',
+    'src/storage/sqlite.ts', 'src/storage/postgres.ts',
+  ])) {
+    violations.push(`${from} depends on the aggregate AssistantStore instead of a narrow capability port`)
+  }
   if (from === 'src/execution/router.ts' && /(claude-code|\bcodex\b|dsh-native)/i.test(source)) {
     violations.push(`${from} hard-codes an executor route instead of reading composition config`)
   }

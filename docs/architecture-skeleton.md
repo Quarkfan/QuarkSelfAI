@@ -59,8 +59,13 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
 
 SQLite、PostgreSQL 与 `quark-durable-state` connection host 也属于可替换 infrastructure feature：应用骨架只接收
-`AssistantStore`，DSH 内的 ledger/workflow/event runtime 只依赖 `durable-state-contract`。当前本地部署实际使用
+控制台与生命周期所需的窄存储端口，DSH 内的 ledger/workflow/event runtime 只依赖 `durable-state-contract`。当前本地部署实际使用
 SQLite；PostgreSQL 保持 ready/inactive，切换配置不应迫使骨架 import 具体数据库。
+
+`AssistantStore` 只是 SQLite/PostgreSQL provider 的组合实现契约，不是业务组件可随意依赖的 service locator。
+存储能力按 lifecycle、event journal、signal、feature checkpoint、workflow、action、policy 和 control read model
+拆成窄端口；应用 host、控制台、策略 authoring 和 action worker 只接收实际所需端口。架构检查禁止 provider
+边界之外重新依赖完整 `AssistantStore`，避免未来增加一种“肉”时被迫扩大所有骨架消费者。
 
 任务能力本身也不是一整块：`task-store.*` 是可替换的任务产品读写端口，
 `assistant.task-projection.*` 拥有标题、标签、快速摘要、血缘和合并语义，`assistant.followup.*` 拥有是否提醒或

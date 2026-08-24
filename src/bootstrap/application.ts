@@ -1,6 +1,6 @@
 import { once } from 'node:events'
 import type { Server } from 'node:http'
-import type { AssistantStore } from '../storage/types.js'
+import type { ConsoleStorePort, StorageLifecyclePort } from '../storage/types.js'
 import { createConsoleServer } from '../web/server.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import type { ManagedComponent } from '../platform/lifecycle.js'
@@ -21,7 +21,7 @@ export interface AssistantApplicationExtensions {
 }
 
 export interface AssistantApplicationInfrastructure {
-  readonly store: AssistantStore
+  readonly store: ConsoleStorePort & Pick<StorageLifecyclePort, 'close'>
 }
 
 /**

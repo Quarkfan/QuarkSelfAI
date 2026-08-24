@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { AssistantStore } from '../storage/types.js'
+import type { ConsoleStorePort } from '../storage/types.js'
 import {
   ControlOnlyKernel, ControlOnlyRuntime, UnconfiguredReadiness,
   type KernelStatusProvider, type OperationalReadinessProvider, type RuntimeStatusProvider,
@@ -86,7 +86,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, config: ConsoleConfig) {
+async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, config: ConsoleConfig) {
   const [overview, events, matters, actions, approvals, policies, readiness, diagnostics, moduleCatalog] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
@@ -151,7 +151,7 @@ async function staticFile(pathname: string, response: ServerResponse): Promise<v
 }
 
 export function createConsoleServer(
-  store: AssistantStore,
+  store: ConsoleStorePort,
   config: ConsoleConfig,
   runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
   kernelStatus: KernelStatusProvider = new ControlOnlyKernel(),

@@ -186,19 +186,33 @@ export interface ActionClaimRelease {
   readonly availableAt?: string
 }
 
-export interface AssistantStore {
+/** Connection ownership and process lifecycle. Business components should depend on a narrower port below. */
+export interface StorageLifecyclePort {
   readonly kind: StorageKind
   migrate(): Promise<void>
   health(): Promise<void>
   close(): Promise<void>
+}
+
+export interface EventJournalStorePort {
   appendEvent(id: string, event: NormalizedChannelEvent): Promise<StoredEvent>
   claimNextEvent(consumerName: string, eventKeys: readonly string[], workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedChannelEvent | undefined>
   settleEvent(consumerName: string, eventId: string, workerId: string, deliveredAt: string): Promise<void>
   releaseEvent(input: EventClaimRelease): Promise<void>
+  updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void>
+}
+
+export interface SignalStorePort {
   appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }>
   recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]>
+}
+
+export interface FeatureCheckpointStorePort {
   readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined>
   writeFeatureCheckpoint(namespace: string, key: string, value: Readonly<Record<string, unknown>>): Promise<void>
+}
+
+export interface WorkflowStorePort {
   createWorkflow(input: CreateWorkflowInput): Promise<{ readonly inserted: boolean; readonly instance: WorkflowInstance }>
   workflow(id: string): Promise<WorkflowInstance | undefined>
   dueWorkflows(now: string, limit: number): Promise<readonly WorkflowInstance[]>
@@ -206,19 +220,41 @@ export interface AssistantStore {
   claimNextWorkflowEffect(workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedWorkflowEffect | undefined>
   settleWorkflowEffect(effectId: string, workerId: string, deliveredAt: string): Promise<void>
   releaseWorkflowEffect(effectId: string, workerId: string, error: string, availableAt: string, terminal: boolean): Promise<void>
-  updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void>
+}
+
+export interface ControlReadStorePort {
   overview(): Promise<OverviewCounts>
   recentEvents(limit: number): Promise<readonly EventSummary[]>
-  recentPolicySamples(limit: number): Promise<readonly PolicySample[]>
   recentMatters(limit: number): Promise<readonly MatterSummary[]>
   recentActions(limit: number): Promise<readonly ActionSummary[]>
   pendingApprovals(limit: number): Promise<readonly ApprovalSummary[]>
+}
+
+export interface PolicyStorePort {
+  recentPolicySamples(limit: number): Promise<readonly PolicySample[]>
   savePolicyDraft(input: PolicyDraftInput): Promise<number>
   activatePolicy(id: string, revision: number, approvedAt: string): Promise<void>
   policies(limit: number): Promise<readonly PolicySummary[]>
+}
+
+export interface ActionStorePort {
   enqueueAction(input: DurableActionInput): Promise<{ readonly inserted: boolean }>
   decideApproval(approvalId: string, decision: 'approved' | 'rejected', metadata: Readonly<Record<string, unknown>>, decidedAt: string): Promise<void>
   claimNextAction(workerId: string, workspace: string, now: string, leaseExpiresAt: string): Promise<ClaimedAction | undefined>
   settleAction(actionId: string, workerId: string, result: ExecutorResult): Promise<void>
   releaseActionClaim(input: ActionClaimRelease): Promise<void>
 }
+
+/** Concrete provider aggregate. Consumers must select the smallest capability port they need. */
+export interface AssistantStore extends
+  StorageLifecyclePort,
+  EventJournalStorePort,
+  SignalStorePort,
+  FeatureCheckpointStorePort,
+  WorkflowStorePort,
+  ControlReadStorePort,
+  PolicyStorePort,
+  ActionStorePort {}
+
+export type ConsoleStorePort = Pick<StorageLifecyclePort, 'kind' | 'health'> & ControlReadStorePort & PolicyStorePort
+export type PolicyAuthoringStorePort = Pick<PolicyStorePort, 'savePolicyDraft' | 'activatePolicy'>

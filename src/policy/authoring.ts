@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import type { AssistantStore } from '../storage/types.js'
+import type { PolicyAuthoringStorePort } from '../storage/types.js'
 import { policyRequiresApproval, simulatePolicy, validatePolicy } from './engine.js'
 import type { NaturalLanguagePolicyCompiler, PolicyDocument, PolicySample, PolicySimulation } from './types.js'
 
@@ -27,7 +27,7 @@ export function policyProposalId(sourceText: string, document: PolicyDocument): 
 
 export class PolicyAuthoringService {
   constructor(
-    private readonly store: AssistantStore,
+    private readonly store: PolicyAuthoringStorePort,
     private readonly compiler: NaturalLanguagePolicyCompiler,
   ) {}
 
