@@ -66,6 +66,10 @@
       "types": "./dist/intake/interaction-effect-plugin.d.ts",
       "import": "./dist/intake/interaction-effect-plugin.js"
     },
+    "./dsh-reasoning-effects": {
+      "types": "./dist/reasoning/dsh-effect-plugin.d.ts",
+      "import": "./dist/reasoning/dsh-effect-plugin.js"
+    },
     "./dida-maintenance": {
       "types": "./dist/task-maintenance/plugin.d.ts",
       "import": "./dist/task-maintenance/plugin.js"

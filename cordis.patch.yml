@@ -141,6 +141,16 @@
       disabled: !!js process.env.QUARK_NATIVE_INTERACTION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
       config:
         ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
+    - id: quark-dsh-reasoning-effects
+      name: '@quarkfan/quark-self-ai/dsh-reasoning-effects'
+      # Structured policy reasoning is independent from user-visible DSH
+      # conversations, but must cut over with the native intake owner.
+      disabled: !!js process.env.QUARK_NATIVE_REASONING_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        enabled: true
+        provider: blacklake-deepseek
+        model: deepseek/openai/deepseek-v4-pro
+        maxTokens: 1500
     - id: quark-dida-task-effects
       name: '@quarkfan/quark-self-ai/dida-task-effects'
       # Adapter preparation. Cleanup is bounded by authorization evidence carried

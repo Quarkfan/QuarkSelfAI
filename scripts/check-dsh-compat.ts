@@ -35,6 +35,8 @@ const contextPlugin = await import(resolve(projectRoot, 'dist/lark/context-effec
 assert.equal(typeof contextPlugin.apply, 'function', 'Feishu context effect plugin must expose apply(ctx, config)')
 const interactionPlugin = await import(resolve(projectRoot, 'dist/intake/interaction-effect-plugin.js'))
 assert.equal(typeof interactionPlugin.apply, 'function', 'intake interaction effect plugin must expose apply(ctx, config)')
+const reasoningPlugin = await import(resolve(projectRoot, 'dist/reasoning/dsh-effect-plugin.js'))
+assert.equal(typeof reasoningPlugin.apply, 'function', 'DSH reasoning effect plugin must expose apply(ctx, config)')
 const dynamicPluginPolicy = await import(resolve(projectRoot, 'dist/runtime/dynamic-plugin-policy.js'))
 assert.equal(typeof dynamicPluginPolicy.apply, 'function', 'dynamic plugin approval policy must expose apply(ctx)')
 
@@ -68,6 +70,8 @@ assert.match(dump, /id: quark-feishu-context-effects[\s\S]*name: '@quarkfan\/qua
 assert.match(dump, /quark-feishu-context-effects[\s\S]*QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-intake-interaction-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/intake-interaction-effects'/)
 assert.match(dump, /quark-intake-interaction-effects[\s\S]*QUARK_NATIVE_INTERACTION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /id: quark-dsh-reasoning-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dsh-reasoning-effects'/)
+assert.match(dump, /quark-dsh-reasoning-effects[\s\S]*QUARK_NATIVE_REASONING_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-feishu-ingress[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-ingress'/)
 assert.match(dump, /quark-feishu-ingress[\s\S]*QUARK_NATIVE_FEISHU_INGRESS[\s\S]*ASSISTANT_RUNTIME === 'compat'[\s\S]*startConsumer: true/)
 assert.match(dump, /id: quark-dynamic-plugin-policy[\s\S]*name: '@quarkfan\/quark-self-ai\/dynamic-plugin-policy'/)
@@ -87,6 +91,7 @@ const activation = spawn(process.execPath, [
     QUARK_NATIVE_CONVERSATION_EFFECTS: 'true',
     QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS: 'true',
     QUARK_NATIVE_INTERACTION_EFFECTS: 'true',
+    QUARK_NATIVE_REASONING_EFFECTS: 'true',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })

@@ -84,6 +84,8 @@
   外部群信息只进入内部决策，正式外发仍需精确批准关联。
 - 卡片按钮、选择器和表单现在携带精确 workflow/effect correlation，回调只接受配置 owner，并用入站去重键回投
   durable event。批准卡片送达后 workflow 保持等待；补充输入只记录为 response，不会替代明确批准或拒绝。
+- 重点消息语义判断已接入 JSON-only 的 DSH LLM effect provider；模型输出还要通过领域约束校验，消息中的提示词
+  只作为不可信业务数据。该 provider 不创建侧栏会话，并与本人私聊直办的可见 conversation dispatcher 分离。
 - 非艾特消息的低频发现被定义为 feature effect，默认目标间隔 10 分钟；它不进入通用事件/工作流骨架，也不要求用 sleep
   维持会话。当前没有注册真实飞书/滴答/模型 effect handler，插件在 compat 模式下强制禁用。
 - `npm run audit:message-intake-handoff` 只读盘点消息、卡片、通知、本人参与、表情、标记会话与交接群的队列和游标，

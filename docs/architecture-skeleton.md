@@ -86,6 +86,9 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 9. 交互卡片通过 opaque correlation 精确携带 workflow/effect/approval 归属，回调 adapter 重新验证 owner 后才回投
    durable event。表单输入和业务 choice 的字段名由发卡 workflow 显式声明，骨架不猜测业务含义；输入补充不会被
    推断成批准。该 provider 已实现但仍为 inactive，见 ADR 0016。
+10. 后台语义判断使用独立的结构化 DSH LLM effect provider，不占用可见会话，也不把模型调用藏进 workflow
+    reducer。输入被标为不可信数据，输出必须通过领域 validator；provider/model 与运行开关由 profile 显式注入。
+    重点消息评估已实现，任务与跟进的具体 evaluator 继续作为独立 feature 扩展，见 ADR 0017。
 
 滴答 adapter 已实现超期查询、在白名单清单中核验任务是否完成，以及受限的已完成任务清理。它不会把“查不到
 任务”解释为已完成。清理不是仅凭环境开关获得删除权限：常东旭的长期授权会作为不可变快照进入 workflow state，
