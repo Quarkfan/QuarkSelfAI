@@ -4,44 +4,17 @@ import { readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
+import type {
+  RuntimeDiagnostics, RuntimeSnapshot, RuntimeStatusProvider,
+} from '../platform/operations.js'
+
+export type {
+  MonitorDiagnostic, RuntimeDiagnostics, RuntimeSnapshot, RuntimeStatusProvider,
+} from '../platform/operations.js'
+export { ControlOnlyRuntime } from '../platform/operations.js'
 
 const compatRoot = fileURLToPath(new URL('../../packages/bridge-compat/', import.meta.url))
 const compatEntry = fileURLToPath(new URL('../../packages/bridge-compat/src/index.js', import.meta.url))
-
-export interface RuntimeSnapshot {
-  readonly mode: 'control-only' | 'compat'
-  readonly state: 'stopped' | 'starting' | 'ready' | 'degraded' | 'failed'
-  readonly pid?: number
-  readonly messageReady: boolean
-  readonly cardReady: boolean
-  readonly requiredEventKeys?: readonly string[]
-  readonly readyEventKeys?: readonly string[]
-  readonly startedAt?: string
-  readonly lastError?: string
-}
-
-export interface RuntimeStatusProvider {
-  snapshot(): RuntimeSnapshot
-  diagnostics?(): Promise<RuntimeDiagnostics>
-  updateMonitor?(id: string, input: { enabled?: boolean; intervalMs?: number }): Promise<void>
-}
-
-export interface MonitorDiagnostic {
-  readonly id: string
-  readonly name: string
-  readonly enabled: boolean
-  readonly intervalMs: number | undefined
-  readonly lastRunAt?: string | null
-  readonly nextRunAt?: string | null
-  readonly failure?: string | null
-  readonly pending?: number
-}
-
-export interface RuntimeDiagnostics {
-  readonly monitors: readonly MonitorDiagnostic[]
-  readonly queues: Readonly<Record<string, number>>
-  readonly retention: Readonly<Record<string, number | boolean>>
-}
 
 export class CompatReadinessObserver {
   private tail = ''
@@ -68,12 +41,6 @@ export class CompatReadinessObserver {
       readyEventKeys,
       ...(pid ? { pid } : {}),
     }
-  }
-}
-
-export class ControlOnlyRuntime implements RuntimeStatusProvider {
-  snapshot(): RuntimeSnapshot {
-    return { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
   }
 }
 

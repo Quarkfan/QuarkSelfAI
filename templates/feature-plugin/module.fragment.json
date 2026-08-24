@@ -1,0 +1,8 @@
+{
+  "id": "feature-id",
+  "classification": "feature",
+  "layer": "workflow",
+  "status": "native",
+  "source": "src/features/feature-id/plugin.ts",
+  "dependsOn": ["assistant-contracts"]
+}

@@ -1,0 +1,19 @@
+import type { Context } from '@deepseek-ai/cordis'
+
+export const name = 'feature-id'
+export const inject = ['requiredSkeletonService']
+
+export interface FeatureConfig {
+  readonly enabled?: boolean
+}
+
+export function apply(ctx: Context, config: FeatureConfig = {}): void {
+  if (config.enabled === false) return
+  // Register a Service or lifecycle-owned effects here. Do not start work at module import time.
+  ctx.effect(() => {
+    // mount
+    return () => {
+      // dispose every listener, timer and child process
+    }
+  }, 'feature-id lifecycle')
+}

@@ -18,9 +18,17 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./platform": {
+      "types": "./dist/platform/index.d.ts",
+      "import": "./dist/platform/index.js"
+    },
     "./blacklake": {
       "types": "./dist/blacklake/plugin.d.ts",
       "import": "./dist/blacklake/plugin.js"
+    },
+    "./feishu-ingress": {
+      "types": "./dist/lark/ingress-plugin.d.ts",
+      "import": "./dist/lark/ingress-plugin.js"
     },
     "./executor-router": {
       "types": "./dist/execution/plugin.d.ts",
@@ -45,6 +53,8 @@
     "dist/app.d.ts",
     "dist/app.d.ts.map",
     "dist/app.js.map",
+    "dist/bootstrap",
+    "dist/platform",
     "dist/domain",
     "dist/lark",
     "dist/storage",
@@ -73,8 +83,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "npm run build && npm test",
+    "check": "npm run build && npm run architecture:check && npm test",
     "test": "node --import tsx --test test/*.test.ts && npm test --workspace @quarkfan/bridge-compat",
+    "architecture:check": "node --import tsx scripts/check-architecture.ts",
     "compat:lark": "node --import tsx scripts/check-lark-compat.ts",
     "compat:dsh": "npm run build && node --import tsx scripts/check-dsh-compat.ts",
     "compat:blacklake": "npm run build && node --import tsx scripts/check-blacklake-references.ts",

@@ -5,6 +5,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import { PgAssistantStore, createPgPool } from '../storage/postgres.js'
 import { createSqliteStore } from '../storage/sqlite.js'
 import type { AssistantStore, DurableActionInput } from '../storage/types.js'
+import { eventRecordId, type NormalizedChannelEvent } from '../domain/contracts.js'
 import { DurableExecutorWorker, type DurableWorkerRun } from './worker.js'
 
 const sqliteMigrations = fileURLToPath(new URL('../../migrations/sqlite/', import.meta.url))
@@ -64,6 +65,14 @@ export class ActionLedgerService extends Service {
 
   async enqueue(input: DurableActionInput): Promise<{ readonly inserted: boolean }> {
     return await (await this.ready).store.enqueueAction(input)
+  }
+
+  async appendEvent(event: NormalizedChannelEvent): Promise<{ readonly inserted: boolean }> {
+    return await (await this.ready).store.appendEvent(eventRecordId(event), event)
+  }
+
+  async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {
+    await (await this.ready).store.updateCheckpoint(consumerName, eventKey, cursor)
   }
 
   async decideApproval(approvalId: string, decision: 'approved' | 'rejected', metadata: Readonly<Record<string, unknown>>, decidedAt = new Date().toISOString()): Promise<void> {

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "modules": [
+    { "id": "dsh-runtime", "classification": "skeleton", "layer": "kernel", "status": "native", "source": "cordis.patch.yml", "dependsOn": [] },
+    { "id": "lifecycle-host", "classification": "skeleton", "layer": "kernel", "status": "native", "source": "src/platform/lifecycle.ts", "dependsOn": [] },
+    { "id": "module-catalog", "classification": "skeleton", "layer": "contract", "status": "native", "source": "src/platform/modules.ts", "dependsOn": [] },
+    { "id": "assistant-contracts", "classification": "skeleton", "layer": "contract", "status": "native", "source": "src/domain/contracts.ts", "dependsOn": [] },
+    { "id": "channel-contract", "classification": "skeleton", "layer": "contract", "status": "native", "source": "src/domain/contracts.ts", "dependsOn": ["assistant-contracts"] },
+    { "id": "storage-port", "classification": "skeleton", "layer": "contract", "status": "native", "source": "src/storage/types.ts", "dependsOn": ["assistant-contracts"] },
+    { "id": "sqlite-storage", "classification": "skeleton", "layer": "provider", "status": "native", "source": "src/storage/sqlite.ts", "dependsOn": ["storage-port"] },
+    { "id": "postgres-storage", "classification": "skeleton", "layer": "provider", "status": "native", "source": "src/storage/postgres.ts", "dependsOn": ["storage-port"] },
+    { "id": "workspace-boundary", "classification": "skeleton", "layer": "policy", "status": "native", "source": "src/execution/workspace-policy.ts", "dependsOn": [] },
+    { "id": "executor-router", "classification": "skeleton", "layer": "provider", "status": "native", "source": "src/execution/router.ts", "dependsOn": ["assistant-contracts", "workspace-boundary", "dsh-runtime"] },
+    { "id": "durable-action-ledger", "classification": "skeleton", "layer": "contract", "status": "native", "source": "src/execution/ledger-service.ts", "dependsOn": ["assistant-contracts", "storage-port", "executor-router"] },
+    { "id": "policy-runtime", "classification": "skeleton", "layer": "policy", "status": "native", "source": "src/policy/engine.ts", "dependsOn": ["storage-port"] },
+    { "id": "control-console", "classification": "skeleton", "layer": "surface", "status": "native", "source": "src/web/server.ts", "dependsOn": ["storage-port", "policy-runtime", "lifecycle-host"] },
+
+    { "id": "feishu-channel", "classification": "feature", "layer": "adapter", "status": "native", "source": "src/lark/service.ts", "dependsOn": ["channel-contract"] },
+    { "id": "feishu-native-ingress", "classification": "feature", "layer": "adapter", "status": "planned", "source": "src/lark/ingress-plugin.ts", "dependsOn": ["feishu-channel", "durable-action-ledger"] },
+    { "id": "claude-code-provider", "classification": "feature", "layer": "provider", "status": "native", "source": "cordis.patch.yml", "dependsOn": ["dsh-runtime", "executor-router"] },
+    { "id": "codex-provider", "classification": "feature", "layer": "provider", "status": "native", "source": "cordis.patch.yml", "dependsOn": ["dsh-runtime", "executor-router"] },
+    { "id": "blacklake-reference-routing", "classification": "feature", "layer": "workflow", "status": "native", "source": "src/blacklake/references.ts", "dependsOn": ["durable-action-ledger", "executor-router"] },
+    { "id": "dynamic-plugin-authoring", "classification": "feature", "layer": "workflow", "status": "native", "source": "src/runtime/dynamic-plugin-policy.ts", "dependsOn": ["dsh-runtime"] },
+
+    { "id": "approval-cards", "classification": "feature", "layer": "surface", "status": "compat", "source": "packages/bridge-compat/src/lark-card.js", "hostedBy": "bridge-compat-host", "dependsOn": ["feishu-channel", "durable-action-ledger"] },
+    { "id": "dida-projection", "classification": "feature", "layer": "projection", "status": "compat", "source": "packages/bridge-compat/src/dida-task-creator.js", "hostedBy": "bridge-compat-host", "dependsOn": ["durable-action-ledger", "executor-router"] },
+    { "id": "direct-command-workflow", "classification": "feature", "layer": "workflow", "status": "compat", "source": "packages/bridge-compat/src/bridge.js", "hostedBy": "bridge-compat-host", "dependsOn": ["feishu-channel", "executor-router", "approval-cards"] },
+    { "id": "focus-intake", "classification": "feature", "layer": "workflow", "status": "compat", "source": "packages/bridge-compat/src/mention-monitor.js", "hostedBy": "bridge-compat-host", "dependsOn": ["feishu-channel", "dida-projection", "approval-cards"] },
+    { "id": "owner-engagement", "classification": "feature", "layer": "workflow", "status": "compat", "source": "packages/bridge-compat/src/owner-engagement-monitor.js", "hostedBy": "bridge-compat-host", "dependsOn": ["focus-intake"] },
+    { "id": "dida-maintenance", "classification": "feature", "layer": "workflow", "status": "compat", "source": "packages/bridge-compat/src/dida-overdue-monitor.js", "hostedBy": "bridge-compat-host", "dependsOn": ["dida-projection"] },
+    { "id": "delegated-followup", "classification": "feature", "layer": "workflow", "status": "compat", "source": "packages/bridge-compat/src/weekly-followup-monitor.js", "hostedBy": "bridge-compat-host", "dependsOn": ["dida-projection", "approval-cards", "feishu-channel"] },
+    { "id": "xiaowei-research", "classification": "feature", "layer": "workflow", "status": "compat", "source": "packages/bridge-compat/src/xiaowei-research-channel.js", "hostedBy": "bridge-compat-host", "dependsOn": ["feishu-channel", "approval-cards", "dida-projection"] },
+    { "id": "session-lifecycle", "classification": "feature", "layer": "workflow", "status": "compat", "source": "packages/bridge-compat/src/session-janitor.js", "hostedBy": "bridge-compat-host", "dependsOn": ["direct-command-workflow", "dida-projection"] },
+    { "id": "notification-digest", "classification": "feature", "layer": "projection", "status": "compat", "source": "packages/bridge-compat/src/mention-monitor.js", "hostedBy": "bridge-compat-host", "dependsOn": ["focus-intake", "feishu-channel"] },
+    { "id": "collaboration-learning", "classification": "feature", "layer": "policy", "status": "compat", "source": "packages/bridge-compat/src/collaboration-learning.js", "hostedBy": "bridge-compat-host", "dependsOn": ["policy-runtime", "focus-intake"] },
+
+    { "id": "bridge-compat-host", "classification": "migration", "layer": "operations", "status": "native", "source": "src/runtime/compat.ts", "dependsOn": ["lifecycle-host", "workspace-boundary"], "exitCriteria": "All hosted feature modules run as DSH-native plugins against the durable store." },
+    { "id": "legacy-state-tooling", "classification": "migration", "layer": "operations", "status": "native", "source": "src/migration/state-snapshot.ts", "dependsOn": ["storage-port"], "exitCriteria": "No production read path uses bridge state.json and retention windows have elapsed." },
+    { "id": "takeover-evidence", "classification": "migration", "layer": "operations", "status": "native", "source": "src/migration/compat-preflight.ts", "dependsOn": ["bridge-compat-host", "legacy-state-tooling"], "exitCriteria": "The compatibility host is removed and the DSH-native runtime has a verified rollback release." }
+  ]
+}

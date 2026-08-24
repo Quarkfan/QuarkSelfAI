@@ -1,6 +1,9 @@
 # Feishu Work Assistant 协作规则
 
 - 架构真源见 `docs/architecture.md` 与 `docs/adr/`。
+- 骨架、功能和迁移代码的机器真源为 `config/module-catalog.json`。新能力先登记分类和依赖并通过
+  `npm run architecture:check`：skeleton 不得依赖 feature/migration，feature 不得依赖 migration；迁移模块
+  必须有退出条件。`packages/bridge-compat` 不承接新的长期功能。
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
 - 事件必须保留原始 payload，写操作必须经过 durable action/approval 状态。
 - `QuarkSelfAI` 是唯一现网飞书消费者；`packages/bridge-compat` 是受 DSH 监督的兼容插件，不依赖外部旧仓库。

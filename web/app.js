@@ -67,6 +67,14 @@ function render(data) {
   $('#policy-table').innerHTML = data.policies.length ? data.policies.map((p) => `<tr><td><b>${esc(p.name)}</b></td><td>${esc(p.sourceText)}</td><td>REV ${esc(p.revision)}</td><td>${esc(p.simulation.matchedCount)}/${esc(p.simulation.sampleCount)}</td><td>${status(p.status === 'enabled' ? 'ready' : 'disabled', p.status)}</td></tr>`).join('') : emptyRow('暂无已编译策略', 5)
   $('#capability-summary').textContent = `${parity.completed}/${parity.features.length} 已完成`
   $('#capability-table').innerHTML = parity.features.map((f) => `<tr><td><b>${esc(f.name)}</b></td><td>${esc(f.evidence)}</td><td>${status(f.status, f.status)}</td></tr>`).join('')
+  const architecture = data.architecture
+  const moduleSummary = architecture?.summary
+  $('#architecture-summary').textContent = moduleSummary
+    ? `${moduleSummary.skeleton.native} 骨架 · ${moduleSummary.feature.compat} 待原生化`
+    : '—'
+  $('#architecture-table').innerHTML = architecture?.modules?.length
+    ? architecture.modules.map((m) => `<tr><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.status, m.status)}</td><td>${esc(m.hostedBy ?? '原生')}</td></tr>`).join('')
+    : emptyRow('暂无模块目录', 5)
   if (runtime.conversationUrl) {
     dshUrl = runtime.conversationUrl
     $('#open-dsh').href = dshUrl

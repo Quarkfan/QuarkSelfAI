@@ -50,6 +50,8 @@ assert.match(dump, /id: quark-executor-codex-read[\s\S]*permissionMode: never/)
 assert.match(dump, /id: quark-executor-codex-write[\s\S]*permissionMode: approve-for-me/)
 assert.match(dump, /id: quark-executor-router[\s\S]*name: '@quarkfan\/quark-self-ai\/executor-router'/)
 assert.match(dump, /id: quark-action-ledger[\s\S]*name: '@quarkfan\/quark-self-ai\/action-ledger'/)
+assert.match(dump, /id: quark-feishu-ingress[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-ingress'/)
+assert.match(dump, /quark-feishu-ingress[\s\S]*QUARK_NATIVE_FEISHU_INGRESS[\s\S]*ASSISTANT_RUNTIME === 'compat'[\s\S]*startConsumer: true/)
 assert.match(dump, /id: quark-dynamic-plugin-policy[\s\S]*name: '@quarkfan\/quark-self-ai\/dynamic-plugin-policy'/)
 assert.match(dump, /id: dsh-tool-cordis[\s\S]*name: '@deepseek-ai\/dsh-tool-cordis'/)
 

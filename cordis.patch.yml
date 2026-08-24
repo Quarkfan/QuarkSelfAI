@@ -31,6 +31,9 @@
         requiredEventKeys:
           - im.message.receive_v1
           - card.action.trigger
+          - im.chat.member.user.added_v1
+          - im.message.reaction.created_v1
+          - im.message.reaction.deleted_v1
     - id: blacklake-reference-router
       name: '@quarkfan/quark-self-ai/blacklake'
       disabled: !!js '!process.env.BLACKLAKE_WORKSPACE_ROOT'
@@ -83,6 +86,13 @@
         leaseMs: 7200000
         retryDelayMs: 120000
         maxAttempts: 5
+    - id: quark-feishu-ingress
+      name: '@quarkfan/quark-self-ai/feishu-ingress'
+      # This is the prepared native replacement. It must stay disabled while
+      # bridge-compat owns the production server-side subscriptions.
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_INGRESS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        startConsumer: true
     - id: quark-dynamic-plugin-policy
       name: '@quarkfan/quark-self-ai/dynamic-plugin-policy'
     - id: dsh-tool-cordis

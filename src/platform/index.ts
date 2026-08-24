@@ -1,0 +1,8 @@
+/** Stable extension surface for durable QuarkSelfAI plugins. */
+export type * from '../domain/contracts.js'
+export type * from '../storage/types.js'
+export type * from '../policy/types.js'
+export * from '../execution/workspace-policy.js'
+export * from './lifecycle.js'
+export * from './modules.js'
+export * from './operations.js'

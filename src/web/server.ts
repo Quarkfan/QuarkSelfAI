@@ -6,11 +6,12 @@ import { fileURLToPath } from 'node:url'
 import type { RuntimeConfig } from '../config/runtime.js'
 import { loadFeatureParity } from '../config/feature-parity.js'
 import type { AssistantStore } from '../storage/types.js'
-import { ControlOnlyRuntime, type RuntimeStatusProvider } from '../runtime/compat.js'
+import { ControlOnlyRuntime, type RuntimeStatusProvider } from '../platform/operations.js'
 import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js'
 import { matchesPolicy } from '../policy/engine.js'
 import type { PolicyDocument } from '../policy/types.js'
 import { DisabledKernelRuntime, type KernelStatusProvider } from '../runtime/kernel.js'
+import { loadModuleCatalog, summarizeModules } from '../platform/modules.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
@@ -76,7 +77,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, config: RuntimeConfig) {
-  const [overview, events, matters, actions, approvals, policies, parity, diagnostics] = await Promise.all([
+  const [overview, events, matters, actions, approvals, policies, parity, diagnostics, moduleCatalog] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
     store.recentMatters(12),
@@ -85,6 +86,7 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
     store.policies(20),
     loadFeatureParity(),
     runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
+    loadModuleCatalog(),
   ])
   return {
     runtime: {
@@ -110,6 +112,10 @@ async function dashboard(store: AssistantStore, runtimeStatus: RuntimeStatusProv
     approvals,
     policies,
     parity,
+    architecture: {
+      summary: summarizeModules(moduleCatalog),
+      modules: moduleCatalog.modules,
+    },
     generatedAt: new Date().toISOString(),
   }
 }

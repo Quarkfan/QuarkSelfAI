@@ -19,6 +19,11 @@ export interface NormalizedChannelEvent {
   readonly raw: Readonly<Record<string, unknown>>
 }
 
+/** Stable journal identity shared by every channel ingress implementation. */
+export function eventRecordId(event: NormalizedChannelEvent): string {
+  return `event:${event.source.channel}:${event.deduplicationKey}`
+}
+
 export type ActionState =
   | 'observed'
   | 'settling'

@@ -1,5 +1,9 @@
 # 架构
 
+骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
+`config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md)。本文件描述
+运行链路，不能用来把 compatibility host 误称为长期骨架。
+
 ## 分层
 
 1. **DSH/Cordis 内核**：生命周期、插件装配、session/event、approval、job、持久化。

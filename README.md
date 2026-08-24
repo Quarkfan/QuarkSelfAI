@@ -32,6 +32,7 @@ DSH 的兼容基线固定在 `compat/dsh-baseline.json`，不把整个 Harness �
 ```bash
 npm install
 npm run check
+npm run architecture:check
 npm run compat:lark
 npm run compat:dsh
 npm run compat:blacklake
@@ -90,6 +91,7 @@ npm run register:compat-state
 ## 文档入口
 
 - [总体架构](docs/architecture.md)
+- [骨架、功能与迁移层边界](docs/architecture-skeleton.md)
 - [本地优先个人助手决策](docs/adr/0003-local-first-personal-assistant.md)
 - [已知风险提前接管决策](docs/adr/0004-owner-accepted-early-cutover.md)
 - [本地开发](docs/operations/local-development.md)

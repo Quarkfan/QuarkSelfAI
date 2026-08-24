@@ -15,7 +15,7 @@ declare module '@deepseek-ai/cordis' {
     larkCli: LarkCliService
   }
   interface Events {
-    'feishu/event'(event: NormalizedChannelEvent): void
+    'feishu/event'(event: NormalizedChannelEvent): void | Promise<void>
   }
 }
 
@@ -32,9 +32,7 @@ export class LarkCliService extends Service {
     this.identity = config.identity ?? 'bot'
     this.requiredEventKeys = config.requiredEventKeys ?? ['im.message.receive_v1', 'card.action.trigger']
     this.discovery = new LarkCapabilityDiscovery(runner, this.executable)
-    ctx.effect(() => async () => {
-      await Promise.all([...this.streams.values()].map((stream) => stream.stop()))
-    }, 'feishu-lark-cli streams')
+    ctx.effect(() => async () => { await this.stop() }, 'feishu-lark-cli streams')
   }
 
   inspect(signal?: AbortSignal): Promise<CompatibilityReport> {
@@ -42,6 +40,7 @@ export class LarkCliService extends Service {
   }
 
   async start(signal?: AbortSignal): Promise<CompatibilityReport> {
+    if (this.streams.size > 0) throw new Error('lark-cli event streams are already started')
     const report = await this.inspect(signal)
     if (!report.compatible) {
       throw new Error(`lark-cli is missing required events: ${report.missingEventKeys.join(', ')}`)
@@ -53,9 +52,11 @@ export class LarkCliService extends Service {
           throw new Error(`event ${eventKey} does not support --as ${this.identity}`)
         }
         const stream = new LarkEventStream()
-        await stream.start({ executable: this.executable, identity: this.identity, eventKey }, (event) => {
-          this.ctx.emit('feishu/event', event)
-        }, signal)
+        await stream.start(
+          { executable: this.executable, identity: this.identity, eventKey },
+          async event => { await this.ctx.parallel('feishu/event', event) },
+          signal,
+        )
         this.streams.set(eventKey, stream)
       }
     } catch (error) {
@@ -64,5 +65,11 @@ export class LarkCliService extends Service {
       throw error
     }
     return report
+  }
+
+  async stop(): Promise<void> {
+    const streams = [...this.streams.values()]
+    this.streams.clear()
+    await Promise.all(streams.map(stream => stream.stop()))
   }
 }
