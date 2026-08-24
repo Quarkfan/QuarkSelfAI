@@ -1,13 +1,7 @@
-import { once } from 'node:events'
-import type { Server } from 'node:http'
-import type { ConsoleStorePort, StorageLifecyclePort } from '../storage/types.js'
-import { createConsoleServer } from '../web/server.js'
+import type { StorageLifecyclePort } from '../storage/types.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import type { ManagedComponent } from '../platform/lifecycle.js'
-import {
-  ControlOnlyRuntime, UnconfiguredReadiness,
-  type OperationalReadinessProvider, type RuntimeStatusProvider,
-} from '../platform/operations.js'
+import type { KernelStatusProvider } from '../platform/operations.js'
 import { createAssistantApplicationHost, type AssistantApplication } from './host.js'
 import type { AssistantApplicationConfig } from './config.js'
 
@@ -15,14 +9,19 @@ export type { AssistantApplication } from './host.js'
 export type { AssistantApplicationConfig } from './config.js'
 
 export interface AssistantApplicationExtensions {
-  readonly runtimeStatus?: RuntimeStatusProvider
-  readonly readiness?: OperationalReadinessProvider
   readonly components?: readonly ManagedComponent[]
+  readonly componentFactories?: readonly AssistantComponentFactory[]
 }
 
 export interface AssistantApplicationInfrastructure {
-  readonly store: ConsoleStorePort & Pick<StorageLifecyclePort, 'close'>
+  readonly store: Pick<StorageLifecyclePort, 'kind' | 'health' | 'close'>
 }
+
+export interface AssistantComponentFactoryContext {
+  readonly kernelStatus: KernelStatusProvider
+}
+
+export type AssistantComponentFactory = (context: AssistantComponentFactoryContext) => ManagedComponent
 
 /**
  * Native composition root for stable infrastructure. Feature and migration
@@ -35,10 +34,7 @@ export async function createAssistantApplication(
   extensions: AssistantApplicationExtensions = {},
 ): Promise<AssistantApplication> {
   const store = infrastructure.store
-  const runtime = extensions.runtimeStatus ?? new ControlOnlyRuntime()
-  const readiness = extensions.readiness ?? new UnconfiguredReadiness()
   const kernel = config.kernel.mode === 'dsh' ? new DshKernelRuntime(config.kernel) : new DisabledKernelRuntime()
-  const server = createConsoleServer(store, config, runtime, kernel, readiness)
   const components: ManagedComponent[] = [
     {
       id: 'assistant-store',
@@ -59,24 +55,7 @@ export async function createAssistantApplication(
       waitForFailure: async () => await kernel.waitForFailure(),
     })
   }
-  components.push(consoleComponent(server, config, store.kind))
+  components.push(...(extensions.componentFactories ?? []).map(factory => factory({ kernelStatus: kernel })))
   components.push(...(extensions.components ?? []))
   return createAssistantApplicationHost(components)
-}
-
-function consoleComponent(server: Server, config: AssistantApplicationConfig, storage: string): ManagedComponent {
-  return {
-    id: 'control-console',
-    kind: 'surface',
-    start: async () => {
-      server.listen(config.web.port, config.web.host)
-      await once(server, 'listening')
-      process.stdout.write(`QuarkSelfAI console ready at http://${config.web.host}:${config.web.port} storage=${storage}\n`)
-    },
-    stop: async () => {
-      if (!server.listening) return
-      server.close()
-      await once(server, 'close')
-    },
-  }
 }

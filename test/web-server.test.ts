@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
-import type { AssistantApplicationConfig } from '../src/bootstrap/config.js'
+import type { ConsoleServerConfig } from '../src/web/config.js'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 import { createConsoleServer } from '../src/web/server.js'
 import type { RuntimeSnapshot } from '../src/platform/operations.js'
@@ -18,11 +18,10 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
   const directory = await mkdtemp(join(tmpdir(), 'quark-web-'))
   const store = await createSqliteStore(join(directory, 'web.sqlite3'), migrations)
   await store.migrate()
-  const config: AssistantApplicationConfig = {
+  const config: ConsoleServerConfig = {
     execution: { mode: 'local', workspaceRoots: [directory] },
     web: { host: '127.0.0.1', port: 3210, secureCookie: false },
     controlPlane: { token: 'control-test-token' },
-    kernel: { mode: 'off' },
   }
   let worker: RuntimeSnapshot = { mode: 'control-only', state: 'stopped', messageReady: false, cardReady: false }
   const server = createConsoleServer(store, config, { snapshot: () => worker }, undefined, { inspect: loadNativeCutoverReadiness })
@@ -103,11 +102,10 @@ test('reports an accepted-risk cutover without falsifying feature parity', async
   const directory = await mkdtemp(join(tmpdir(), 'quark-web-cutover-'))
   const store = await createSqliteStore(join(directory, 'web.sqlite3'), migrations)
   await store.migrate()
-  const config: AssistantApplicationConfig = {
+  const config: ConsoleServerConfig = {
     execution: { mode: 'local', workspaceRoots: [directory] },
     web: { host: '127.0.0.1', port: 3210, secureCookie: false },
     controlPlane: { token: 'control-test-token' },
-    kernel: { mode: 'off' },
   }
   const worker: RuntimeSnapshot = {
     mode: 'compat', operationalMode: 'accepted-risk-cutover',

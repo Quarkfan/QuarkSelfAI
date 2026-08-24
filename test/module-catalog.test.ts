@@ -12,6 +12,8 @@ test('classifies every current module as skeleton, feature, or migration', async
   assert.equal(catalog.modules.some(module => module.classification === 'migration' && !module.exitCriteria), false)
   const modules = new Map(catalog.modules.map(module => [module.id, module]))
   assert.equal(modules.get('durable-state-contract')?.classification, 'skeleton')
+  assert.equal(modules.get('control-console')?.classification, 'feature')
+  assert.equal(modules.get('application-composition')?.dependsOn.includes('control-console'), false)
   assert.equal(modules.get('sqlite-storage')?.classification, 'feature')
   assert.equal(modules.get('postgres-storage')?.runtime, 'inactive')
   assert.equal(modules.get('application-composition')?.dependsOn.includes('durable-state-host'), false)

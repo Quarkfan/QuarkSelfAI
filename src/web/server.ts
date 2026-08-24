@@ -12,20 +12,13 @@ import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js
 import { matchesPolicy } from '../policy/engine.js'
 import type { PolicyDocument } from '../policy/types.js'
 import { loadModuleCatalog, summarizeModules } from '../platform/modules.js'
+import type { ConsoleServerConfig } from './config.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
 const sessionCookie = 'quark_console_session'
 
-export interface ConsoleConfig {
-  readonly execution: { readonly mode: 'local' | 'remote'; readonly workspaceRoots: readonly string[] }
-  readonly web: {
-    readonly consoleToken?: string
-    readonly secureCookie: boolean
-    readonly dshUrl?: string
-  }
-  readonly controlPlane: { readonly token?: string }
-}
+export type ConsoleConfig = ConsoleServerConfig
 
 const contentTypes: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',

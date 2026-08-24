@@ -12,8 +12,8 @@ consumer、远端 worker 或其他 harness 时都必须继续修改这个入口�
 
 ## 决策
 
-1. `application-composition` 只装配稳定基础设施：接收已经构造的 durable store，装配受监管 DSH kernel、控制台
-   和生命周期 host；SQLite/PostgreSQL 的选择留在外部 composition/provider。
+1. `application-composition` 只装配稳定基础设施：接收已经构造的 durable store，装配受监管 DSH kernel 和生命周期
+   host；SQLite/PostgreSQL 的选择留在外部 composition/provider，控制台作为 surface feature 贡献组件工厂。
 2. 功能或迁移宿主通过 `AssistantApplicationExtensions` 提供运行状态、readiness 和 `ManagedComponent[]`；骨架
    不导入、实例化或分支判断它们。
 3. 当前 `compat-composition` 是唯一允许导入 `CompatRuntime` 的迁移 composition root。进程入口调用它，但
@@ -23,6 +23,9 @@ consumer、远端 worker 或其他 harness 时都必须继续修改这个入口�
    声明，控制台不再枚举 `compat`、native 或未来 runtime 名称。
 5. module catalog 和 architecture check 强制上述依赖方向；compat 被移除时只删除迁移 composition 和组件，
    不修改应用骨架。
+
+2026-08-24 的后续校正进一步移除了 application skeleton 对 `control-console` 的依赖。应用骨架只把通用
+`KernelStatusProvider` 交给组件工厂；控制台自行组合 store、runtime/readiness、认证配置和 kernel 状态。
 
 ## 结果
 

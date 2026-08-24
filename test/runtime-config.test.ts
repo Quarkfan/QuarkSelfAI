@@ -2,13 +2,12 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { loadAssistantApplicationConfig } from '../src/bootstrap/config.js'
 import { loadRuntimeConfig } from '../src/config/runtime.js'
+import { loadExecutionConfig } from '../src/execution/config.js'
 import { loadStorageConfig } from '../src/storage/config.js'
+import { loadConsoleConfig } from '../src/web/config.js'
 
 test('loads a stable local application configuration without migration selectors', () => {
   const config = loadAssistantApplicationConfig({}, '/srv/quark')
-  assert.equal(config.web.host, '127.0.0.1')
-  assert.equal(config.web.port, 3210)
-  assert.deepEqual(config.execution, { mode: 'local', workspaceRoots: ['/srv/quark'] })
   assert.deepEqual(config.kernel, {
     mode: 'dsh',
     command: 'dsh',
@@ -19,6 +18,14 @@ test('loads a stable local application configuration without migration selectors
   })
   assert.equal('runtime' in config, false)
   assert.equal('storage' in config, false)
+})
+
+test('loads execution and console features independently from the kernel skeleton', () => {
+  const execution = loadExecutionConfig({}, '/srv/quark')
+  const console = loadConsoleConfig({}, execution)
+  assert.deepEqual(execution, { mode: 'local', workspaceRoots: ['/srv/quark'] })
+  assert.equal(console.web.host, '127.0.0.1')
+  assert.equal(console.web.port, 3210)
 })
 
 test('allows the DSH kernel to be disabled only as an explicit diagnostic mode', () => {
@@ -54,7 +61,7 @@ test('keeps SQLite selection inside the replaceable storage provider', () => {
 })
 
 test('refuses an unauthenticated non-loopback console', () => {
-  assert.throws(() => loadAssistantApplicationConfig({ WEB_HOST: '0.0.0.0' }), /CONSOLE_TOKEN is required/)
+  assert.throws(() => loadConsoleConfig({ WEB_HOST: '0.0.0.0' }, { mode: 'local', workspaceRoots: ['/srv/quark'] }), /CONSOLE_TOKEN is required/)
 })
 
 test('keeps the compatibility consumer disabled without an explicit takeover confirmation', () => {
@@ -84,10 +91,10 @@ test('requires an authenticated control plane for the compatibility controller',
 })
 
 test('accepts an explicit local workspace allowlist', () => {
-  const config = loadAssistantApplicationConfig({
+  const config = loadExecutionConfig({
     ASSISTANT_WORKSPACE_ROOTS: '["/Users/edy/BlackLakeWork","/private/tmp/shared"]',
   })
-  assert.deepEqual(config.execution, {
+  assert.deepEqual(config, {
     mode: 'local',
     workspaceRoots: ['/Users/edy/BlackLakeWork', '/private/tmp/shared'],
   })

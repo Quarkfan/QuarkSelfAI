@@ -11,6 +11,8 @@
   `providesEffects`。清单未知字段、越界 `source` 和非法 `hostedBy/exitCriteria/runtime` 组合必须失败关闭。
   插件 `runtime` 必须与 Cordis profile 的 compat 门禁一致。`packages/bridge-compat` 不承接新的长期功能。
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
+- Web 控制台、桌面端或其他人机界面是可替换 surface feature；application skeleton 只提供受监管组件扩展点，
+  不得直接创建或依赖具体界面。
 - 事件必须保留原始 payload，写操作必须经过 durable action/approval 状态。
 - `QuarkSelfAI` 是唯一现网飞书消费者；`packages/bridge-compat` 是受 DSH 监督的兼容插件，不依赖外部旧仓库。
 - 默认只做可回滚的增量建设。任何可能改变 DSH/Cordis 核心边界、修改 LaunchAgent、改变状态写入点、

@@ -3,6 +3,7 @@ import type { RuntimeConfig } from '../config/runtime.js'
 import { loadNativeCutoverReadiness } from '../config/feature-parity.js'
 import { ControlOnlyRuntime } from '../platform/operations.js'
 import { createAssistantStore } from '../storage/factory.js'
+import { createControlConsoleComponent } from '../web/component.js'
 import { CompatRuntime, compatRuntimeComponent } from './compat.js'
 
 /**
@@ -15,11 +16,17 @@ export async function createConfiguredAssistantApplication(config: RuntimeConfig
     ? new CompatRuntime(config.runtime.configPath, { workspaceRoots: config.execution.workspaceRoots })
     : new ControlOnlyRuntime()
   const store = await createAssistantStore(config)
+  const readiness = { inspect: loadNativeCutoverReadiness }
   try {
     return await createAssistantApplication(config, { store }, {
-      runtimeStatus: runtime,
-      readiness: { inspect: loadNativeCutoverReadiness },
       components: runtime instanceof CompatRuntime ? [compatRuntimeComponent(runtime)] : [],
+      componentFactories: [({ kernelStatus }) => createControlConsoleComponent(
+        store,
+        config,
+        runtime,
+        kernelStatus,
+        readiness,
+      )],
     })
   } catch (error) {
     await store.close()
