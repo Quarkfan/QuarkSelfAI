@@ -14,7 +14,9 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Module catalog | 模块分类、依赖和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | 批准绑定、租约、重试、结算 | 选择联系人或撰写回复 |
+| Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
 | Storage port | SQLite/PostgreSQL 一致契约 | 兼容 `state.json` 结构 |
+| Durable state host | DSH 内唯一数据库连接所有者，向 ledger/workflow/feature 提供端口 | 执行动作或解释业务信号 |
 | Policy runtime | 受限 DSL、模拟、版本和激活 | 任意代码执行 |
 | Executor router | Provider 选择、串行兜底、权限边界 | Claude/Codex 的具体协议 |
 | Workspace boundary | 本地路径授权与防逃逸 | 上传或同步文件 |
@@ -45,7 +47,12 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 1. 飞书消费者、业务定时器仍由 `bridge-compat` 自己编排，而非 DSH 插件生命周期。
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
-4. 一部分功能虽已具备测试，却没有独立插件 manifest 和存储契约。
+4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
+
+DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-state`。新功能不得把私有 JSON state、
+业务 timer 或状态读写重新塞进 action ledger；跨重启流程必须使用 `quark-durable-workflows`。
+外层控制面与 DSH 在 SQLite 模式下必须解析到同一个 `SQLITE_PATH`，PostgreSQL 模式下必须使用同一个
+`DATABASE_URL`；不得用 `DSH_HOME` 下的隐式第二数据库制造分叉真源。
 
 ## 迁移顺序
 

@@ -1,21 +1,10 @@
-import { isAbsolute, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import { PgAssistantStore, createPgPool } from '../storage/postgres.js'
-import { createSqliteStore } from '../storage/sqlite.js'
-import type { AssistantStore, DurableActionInput, DurableSignal, DurableSignalInput, PolicyDraftInput } from '../storage/types.js'
-import type { PolicySample } from '../policy/types.js'
-import { eventRecordId, type NormalizedChannelEvent } from '../domain/contracts.js'
+import type { DurableActionInput } from '../storage/types.js'
 import { DurableExecutorWorker, type DurableWorkerRun } from './worker.js'
-
-const sqliteMigrations = fileURLToPath(new URL('../../migrations/sqlite/', import.meta.url))
-const postgresMigrations = fileURLToPath(new URL('../../migrations/', import.meta.url))
+import type {} from '../storage/service.js'
 
 export interface ActionLedgerConfig {
-  readonly storageKind?: 'sqlite' | 'postgres'
-  readonly sqlitePath?: string
-  readonly databaseUrl?: string
   readonly workerId: string
   readonly leaseMs?: number
   readonly retryDelayMs?: number
@@ -28,83 +17,29 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-async function createLedgerStore(config: ActionLedgerConfig): Promise<AssistantStore> {
-  if (config.storageKind === 'postgres') {
-    if (!config.databaseUrl?.trim()) throw new Error('action ledger databaseUrl is required for PostgreSQL')
-    const store = new PgAssistantStore(createPgPool({ connectionString: config.databaseUrl }), postgresMigrations)
-    await store.migrate()
-    return store
-  }
-  if (!config.sqlitePath?.trim() || !isAbsolute(config.sqlitePath)) {
-    throw new Error('action ledger sqlitePath must be an absolute path')
-  }
-  const store = await createSqliteStore(resolve(config.sqlitePath), sqliteMigrations)
-  await store.migrate()
-  return store
-}
-
 export class ActionLedgerService extends Service {
-  private readonly ready: Promise<{ store: AssistantStore; worker: DurableExecutorWorker }>
+  private readonly worker: DurableExecutorWorker
 
   constructor(ctx: Context, config: ActionLedgerConfig) {
     super(ctx, 'quarkActionLedger')
     if (!config.workerId?.trim()) throw new Error('action ledger workerId is required')
-    this.ready = createLedgerStore(config).then((store) => ({
-      store,
-      worker: new DurableExecutorWorker(store, ctx.quarkExecutors, {
-        workerId: config.workerId,
-        ...(config.leaseMs === undefined ? {} : { leaseMs: config.leaseMs }),
-        ...(config.retryDelayMs === undefined ? {} : { retryDelayMs: config.retryDelayMs }),
-        ...(config.maxAttempts === undefined ? {} : { maxAttempts: config.maxAttempts }),
-      }),
-    }))
-    ctx.effect(() => async () => {
-      const value = await this.ready.catch(() => undefined)
-      await value?.store.close()
-    }, 'quark action ledger store')
+    this.worker = new DurableExecutorWorker(ctx.quarkState, ctx.quarkExecutors, {
+      workerId: config.workerId,
+      ...(config.leaseMs === undefined ? {} : { leaseMs: config.leaseMs }),
+      ...(config.retryDelayMs === undefined ? {} : { retryDelayMs: config.retryDelayMs }),
+      ...(config.maxAttempts === undefined ? {} : { maxAttempts: config.maxAttempts }),
+    })
   }
 
   async enqueue(input: DurableActionInput): Promise<{ readonly inserted: boolean }> {
-    return await (await this.ready).store.enqueueAction(input)
-  }
-
-  async appendEvent(event: NormalizedChannelEvent): Promise<{ readonly inserted: boolean }> {
-    return await (await this.ready).store.appendEvent(eventRecordId(event), event)
-  }
-
-  async appendSignal(input: DurableSignalInput): Promise<{ readonly inserted: boolean }> {
-    return await (await this.ready).store.appendSignal(input)
-  }
-
-  async recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]> {
-    return await (await this.ready).store.recentSignals(kind, limit)
-  }
-
-  async readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined> {
-    return await (await this.ready).store.readFeatureCheckpoint(namespace, key)
-  }
-
-  async writeFeatureCheckpoint(namespace: string, key: string, value: Readonly<Record<string, unknown>>): Promise<void> {
-    await (await this.ready).store.writeFeatureCheckpoint(namespace, key, value)
-  }
-
-  async recentPolicySamples(limit: number): Promise<readonly PolicySample[]> {
-    return await (await this.ready).store.recentPolicySamples(limit)
-  }
-
-  async savePolicyDraft(input: PolicyDraftInput): Promise<number> {
-    return await (await this.ready).store.savePolicyDraft(input)
-  }
-
-  async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {
-    await (await this.ready).store.updateCheckpoint(consumerName, eventKey, cursor)
+    return await this.ctx.quarkState.enqueueAction(input)
   }
 
   async decideApproval(approvalId: string, decision: 'approved' | 'rejected', metadata: Readonly<Record<string, unknown>>, decidedAt = new Date().toISOString()): Promise<void> {
-    await (await this.ready).store.decideApproval(approvalId, decision, metadata, decidedAt)
+    await this.ctx.quarkState.decideApproval(approvalId, decision, metadata, decidedAt)
   }
 
   async runOnce(parent: Agent, signal: AbortSignal): Promise<DurableWorkerRun> {
-    return await (await this.ready).worker.runOnce(parent, signal)
+    return await this.worker.runOnce(parent, signal)
   }
 }

@@ -21,6 +21,60 @@ export interface DurableSignal extends DurableSignalInput {
   readonly recordedAt: string
 }
 
+export type WorkflowStatus = 'running' | 'waiting' | 'completed' | 'failed'
+
+export interface WorkflowEffectInput {
+  readonly id: string
+  readonly kind: string
+  readonly payload: Readonly<Record<string, unknown>>
+  readonly availableAt?: string
+}
+
+export interface WorkflowInstance {
+  readonly id: string
+  readonly kind: string
+  readonly definitionVersion: number
+  readonly status: WorkflowStatus
+  readonly state: Readonly<Record<string, unknown>>
+  readonly revision: number
+  readonly wakeAt?: string
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+
+export interface CreateWorkflowInput {
+  readonly id: string
+  readonly kind: string
+  readonly definitionVersion: number
+  readonly status: WorkflowStatus
+  readonly state: Readonly<Record<string, unknown>>
+  readonly wakeAt?: string
+  readonly effects?: readonly WorkflowEffectInput[]
+}
+
+export interface AdvanceWorkflowInput {
+  readonly instanceId: string
+  readonly expectedRevision: number
+  readonly event: {
+    readonly id: string
+    readonly type: string
+    readonly occurredAt: string
+    readonly payload: Readonly<Record<string, unknown>>
+  }
+  readonly status: WorkflowStatus
+  readonly state: Readonly<Record<string, unknown>>
+  readonly wakeAt?: string
+  readonly effects?: readonly WorkflowEffectInput[]
+}
+
+export interface ClaimedWorkflowEffect {
+  readonly id: string
+  readonly instanceId: string
+  readonly kind: string
+  readonly payload: Readonly<Record<string, unknown>>
+  readonly attempt: number
+}
+
 export interface OverviewCounts {
   readonly events: number
   readonly openMatters: number
@@ -123,6 +177,13 @@ export interface AssistantStore {
   recentSignals(kind: string, limit: number): Promise<readonly DurableSignal[]>
   readFeatureCheckpoint(namespace: string, key: string): Promise<Readonly<Record<string, unknown>> | undefined>
   writeFeatureCheckpoint(namespace: string, key: string, value: Readonly<Record<string, unknown>>): Promise<void>
+  createWorkflow(input: CreateWorkflowInput): Promise<{ readonly inserted: boolean; readonly instance: WorkflowInstance }>
+  workflow(id: string): Promise<WorkflowInstance | undefined>
+  dueWorkflows(now: string, limit: number): Promise<readonly WorkflowInstance[]>
+  advanceWorkflow(input: AdvanceWorkflowInput): Promise<{ readonly advanced: boolean; readonly instance: WorkflowInstance }>
+  claimNextWorkflowEffect(workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedWorkflowEffect | undefined>
+  settleWorkflowEffect(effectId: string, workerId: string, deliveredAt: string): Promise<void>
+  releaseWorkflowEffect(effectId: string, workerId: string, error: string, availableAt: string, terminal: boolean): Promise<void>
   updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void>
   overview(): Promise<OverviewCounts>
   recentEvents(limit: number): Promise<readonly EventSummary[]>

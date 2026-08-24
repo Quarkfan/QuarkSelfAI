@@ -5,10 +5,13 @@ import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { eventToPolicySample } from '../policy/samples.js'
 import type {
   ActionClaimRelease,
+  AdvanceWorkflowInput,
   ActionSummary,
   ApprovalSummary,
   AssistantStore,
   ClaimedAction,
+  ClaimedWorkflowEffect,
+  CreateWorkflowInput,
   DurableActionInput,
   DurableSignal,
   DurableSignalInput,
@@ -18,6 +21,8 @@ import type {
   PolicyDraftInput,
   PolicySummary,
   StoredEvent,
+  WorkflowEffectInput,
+  WorkflowInstance,
 } from './types.js'
 import type { ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
 
@@ -43,6 +48,16 @@ function canonicalJson(value: unknown): string {
       .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(',')}}`
   }
   return JSON.stringify(value)
+}
+
+function sqliteWorkflow(row: Record<string, string | number | null>): WorkflowInstance {
+  return {
+    id: String(row.id), kind: String(row.kind), definitionVersion: Number(row.definition_version),
+    status: String(row.status) as WorkflowInstance['status'],
+    state: JSON.parse(String(row.state)) as Record<string, unknown>, revision: Number(row.revision),
+    ...(row.wake_at ? { wakeAt: String(row.wake_at) } : {}),
+    createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+  }
 }
 
 export class SqliteAssistantStore implements AssistantStore {
@@ -147,6 +162,135 @@ export class SqliteAssistantStore implements AssistantStore {
        ON CONFLICT (namespace, key) DO UPDATE SET value = excluded.value,
          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
     ).run(namespace, key, canonicalJson(value))
+  }
+
+  async createWorkflow(input: CreateWorkflowInput): Promise<{ readonly inserted: boolean; readonly instance: WorkflowInstance }> {
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const state = canonicalJson(input.state)
+      const result = this.database.prepare(
+        `INSERT INTO workflow_instance (id, kind, definition_version, status, state, wake_at)
+         VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING`,
+      ).run(input.id, input.kind, input.definitionVersion, input.status, state, input.wakeAt ?? null)
+      const row = this.database.prepare('SELECT * FROM workflow_instance WHERE id = ?').get(input.id) as Record<string, string | number | null> | undefined
+      if (!row) throw new Error(`workflow ${input.id} was not persisted`)
+      if (result.changes === 0 && (row.kind !== input.kind || Number(row.definition_version) !== input.definitionVersion
+        || row.status !== input.status || row.state !== state || (row.wake_at ?? null) !== (input.wakeAt ?? null))) {
+        throw new Error(`workflow ${input.id} already exists with different durable content`)
+      }
+      if (result.changes === 0) {
+        const effects = this.database.prepare(
+          'SELECT id, kind, payload, available_at FROM workflow_effect WHERE instance_id = ? ORDER BY id',
+        ).all(input.id) as unknown as Array<{ id: string; kind: string; payload: string; available_at: string }>
+        const expected = [...(input.effects ?? [])].sort((left, right) => left.id.localeCompare(right.id))
+        const matches = effects.length === expected.length && effects.every((effect, index) => {
+          const wanted = expected[index]
+          return wanted && effect.id === wanted.id && effect.kind === wanted.kind && effect.payload === canonicalJson(wanted.payload)
+            && (wanted.availableAt === undefined || effect.available_at === wanted.availableAt)
+        })
+        if (!matches) throw new Error(`workflow ${input.id} already exists with different durable effects`)
+      }
+      if (result.changes === 1) this.insertWorkflowEffects(input.id, input.effects ?? [])
+      this.database.exec('COMMIT')
+      return { inserted: result.changes === 1, instance: sqliteWorkflow(row) }
+    } catch (error) {
+      this.database.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  async workflow(id: string): Promise<WorkflowInstance | undefined> {
+    const row = this.database.prepare('SELECT * FROM workflow_instance WHERE id = ?').get(id) as Record<string, string | number | null> | undefined
+    return row ? sqliteWorkflow(row) : undefined
+  }
+
+  async dueWorkflows(now: string, limit: number): Promise<readonly WorkflowInstance[]> {
+    const rows = this.database.prepare(
+      `SELECT * FROM workflow_instance WHERE status IN ('running', 'waiting') AND wake_at IS NOT NULL AND wake_at <= ?
+       ORDER BY wake_at, id LIMIT ?`,
+    ).all(now, limit) as unknown as Array<Record<string, string | number | null>>
+    return rows.map(sqliteWorkflow)
+  }
+
+  async advanceWorkflow(input: AdvanceWorkflowInput): Promise<{ readonly advanced: boolean; readonly instance: WorkflowInstance }> {
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const currentRow = this.database.prepare('SELECT * FROM workflow_instance WHERE id = ?').get(input.instanceId) as Record<string, string | number | null> | undefined
+      if (!currentRow) throw new Error(`workflow ${input.instanceId} does not exist`)
+      const duplicate = this.database.prepare(
+        'SELECT 1 FROM workflow_event WHERE instance_id = ? AND event_id = ?',
+      ).get(input.instanceId, input.event.id)
+      if (duplicate) {
+        this.database.exec('COMMIT')
+        return { advanced: false, instance: sqliteWorkflow(currentRow) }
+      }
+      if (Number(currentRow.revision) !== input.expectedRevision) throw new Error(`workflow ${input.instanceId} revision conflict`)
+      const revision = input.expectedRevision + 1
+      const state = canonicalJson(input.state)
+      this.database.prepare(
+        `INSERT INTO workflow_event (instance_id, event_id, event_type, occurred_at, payload, processed_revision)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run(input.instanceId, input.event.id, input.event.type, input.event.occurredAt, canonicalJson(input.event.payload), revision)
+      this.database.prepare(
+        `UPDATE workflow_instance SET status = ?, state = ?, revision = ?, wake_at = ?,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+      ).run(input.status, state, revision, input.wakeAt ?? null, input.instanceId)
+      this.database.prepare(
+        `INSERT INTO workflow_transition (instance_id, revision, event_id, from_status, to_status, state)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run(input.instanceId, revision, input.event.id, String(currentRow.status), input.status, state)
+      this.insertWorkflowEffects(input.instanceId, input.effects ?? [])
+      const updated = this.database.prepare('SELECT * FROM workflow_instance WHERE id = ?').get(input.instanceId) as Record<string, string | number | null>
+      this.database.exec('COMMIT')
+      return { advanced: true, instance: sqliteWorkflow(updated) }
+    } catch (error) {
+      this.database.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  async claimNextWorkflowEffect(workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedWorkflowEffect | undefined> {
+    this.database.exec('BEGIN IMMEDIATE')
+    try {
+      const row = this.database.prepare(
+        `SELECT id, instance_id, kind, payload, attempt FROM workflow_effect
+         WHERE available_at <= ? AND (status = 'pending' OR (status = 'dispatching' AND lease_expires_at <= ?))
+         ORDER BY available_at, created_at LIMIT 1`,
+      ).get(now, now) as { id: string; instance_id: string; kind: string; payload: string; attempt: number } | undefined
+      if (!row) { this.database.exec('COMMIT'); return undefined }
+      const attempt = row.attempt + 1
+      const result = this.database.prepare(
+        `UPDATE workflow_effect SET status = 'dispatching', attempt = ?, lease_owner = ?, lease_expires_at = ?,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?`,
+      ).run(attempt, workerId, leaseExpiresAt, row.id)
+      if (result.changes !== 1) throw new Error(`workflow effect ${row.id} lost its claim race`)
+      this.database.exec('COMMIT')
+      return { id: row.id, instanceId: row.instance_id, kind: row.kind, payload: JSON.parse(row.payload), attempt }
+    } catch (error) { this.database.exec('ROLLBACK'); throw error }
+  }
+
+  async settleWorkflowEffect(effectId: string, workerId: string, deliveredAt: string): Promise<void> {
+    const result = this.database.prepare(
+      `UPDATE workflow_effect SET status = 'delivered', delivered_at = ?, lease_owner = NULL, lease_expires_at = NULL,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'dispatching' AND lease_owner = ?`,
+    ).run(deliveredAt, effectId, workerId)
+    if (result.changes !== 1) throw new Error(`worker ${workerId} does not own workflow effect ${effectId}`)
+  }
+
+  async releaseWorkflowEffect(effectId: string, workerId: string, error: string, availableAt: string, terminal: boolean): Promise<void> {
+    const result = this.database.prepare(
+      `UPDATE workflow_effect SET status = ?, available_at = ?, last_error = ?, lease_owner = NULL, lease_expires_at = NULL,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'dispatching' AND lease_owner = ?`,
+    ).run(terminal ? 'failed' : 'pending', availableAt, error, effectId, workerId)
+    if (result.changes !== 1) throw new Error(`worker ${workerId} does not own workflow effect ${effectId}`)
+  }
+
+  private insertWorkflowEffects(instanceId: string, effects: readonly WorkflowEffectInput[]): void {
+    const statement = this.database.prepare(
+      `INSERT INTO workflow_effect (id, instance_id, kind, payload, available_at)
+       VALUES (?, ?, ?, ?, coalesce(?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')))`,
+    )
+    for (const effect of effects) statement.run(effect.id, instanceId, effect.kind, canonicalJson(effect.payload), effect.availableAt ?? null)
   }
 
   async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {

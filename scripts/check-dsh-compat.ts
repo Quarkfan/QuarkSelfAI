@@ -25,6 +25,10 @@ assert.equal('default' in plugin, false, 'DSH namespace plugin must not expose a
 assert.equal(typeof plugin.apply, 'function', 'DSH namespace plugin must expose apply(ctx, config)')
 const ledgerPlugin = await import(resolve(projectRoot, 'dist/execution/ledger-plugin.js'))
 assert.equal(typeof ledgerPlugin.apply, 'function', 'DSH action ledger plugin must expose apply(ctx, config)')
+const statePlugin = await import(resolve(projectRoot, 'dist/storage/plugin.js'))
+assert.equal(typeof statePlugin.apply, 'function', 'DSH durable state plugin must expose apply(ctx, config)')
+const workflowPlugin = await import(resolve(projectRoot, 'dist/workflow/plugin.js'))
+assert.equal(typeof workflowPlugin.apply, 'function', 'DSH durable workflow plugin must expose apply(ctx, config)')
 const dynamicPluginPolicy = await import(resolve(projectRoot, 'dist/runtime/dynamic-plugin-policy.js'))
 assert.equal(typeof dynamicPluginPolicy.apply, 'function', 'dynamic plugin approval policy must expose apply(ctx)')
 
@@ -49,7 +53,9 @@ assert.doesNotMatch(dump, /quark-dump-secret-sentinel/, 'DSH config dump must no
 assert.match(dump, /id: quark-executor-codex-read[\s\S]*permissionMode: never/)
 assert.match(dump, /id: quark-executor-codex-write[\s\S]*permissionMode: approve-for-me/)
 assert.match(dump, /id: quark-executor-router[\s\S]*name: '@quarkfan\/quark-self-ai\/executor-router'/)
+assert.match(dump, /id: quark-durable-state[\s\S]*name: '@quarkfan\/quark-self-ai\/durable-state'[\s\S]*process\.env\.SQLITE_PATH/)
 assert.match(dump, /id: quark-action-ledger[\s\S]*name: '@quarkfan\/quark-self-ai\/action-ledger'/)
+assert.match(dump, /id: quark-durable-workflows[\s\S]*name: '@quarkfan\/quark-self-ai\/durable-workflows'/)
 assert.match(dump, /id: quark-feishu-ingress[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-ingress'/)
 assert.match(dump, /quark-feishu-ingress[\s\S]*QUARK_NATIVE_FEISHU_INGRESS[\s\S]*ASSISTANT_RUNTIME === 'compat'[\s\S]*startConsumer: true/)
 assert.match(dump, /id: quark-dynamic-plugin-policy[\s\S]*name: '@quarkfan\/quark-self-ai\/dynamic-plugin-policy'/)
@@ -93,8 +99,8 @@ if (startup.kind === 'exit') {
 assert.doesNotMatch(activationOutput, /Cannot find module|ERR_MODULE_NOT_FOUND|failed to (?:load|apply)|uncaught|fatal/i)
 const ledger = new DatabaseSync(ledgerPath, { readOnly: true })
 try {
-  const row = ledger.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'action_execution'").get()
-  assert.ok(row, 'DSH profile did not initialize the durable action ledger')
+  const rows = ledger.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('action_execution', 'workflow_instance', 'workflow_effect')").all()
+  assert.deepEqual(rows.map(row => String(row.name)).sort(), ['action_execution', 'workflow_effect', 'workflow_instance'], 'DSH profile did not initialize the shared durable state schema')
 } finally {
   ledger.close()
 }

@@ -42,6 +42,14 @@
       "types": "./dist/execution/ledger-plugin.d.ts",
       "import": "./dist/execution/ledger-plugin.js"
     },
+    "./durable-state": {
+      "types": "./dist/storage/plugin.d.ts",
+      "import": "./dist/storage/plugin.js"
+    },
+    "./durable-workflows": {
+      "types": "./dist/workflow/plugin.d.ts",
+      "import": "./dist/workflow/plugin.js"
+    },
     "./dynamic-plugin-policy": {
       "types": "./dist/runtime/dynamic-plugin-policy.d.ts",
       "import": "./dist/runtime/dynamic-plugin-policy.js"
@@ -71,6 +79,7 @@
     "dist/deploy",
     "dist/blacklake",
     "dist/collaboration",
+    "dist/workflow",
     "migrations",
     "config",
     "web",

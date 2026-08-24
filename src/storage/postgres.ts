@@ -5,10 +5,13 @@ import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { eventToPolicySample, type PolicyEventSampleInput } from '../policy/samples.js'
 import type {
   ActionClaimRelease,
+  AdvanceWorkflowInput,
   ActionSummary,
   ApprovalSummary,
   AssistantStore,
   ClaimedAction,
+  ClaimedWorkflowEffect,
+  CreateWorkflowInput,
   DurableActionInput,
   DurableSignal,
   DurableSignalInput,
@@ -18,10 +21,35 @@ import type {
   PolicyDraftInput,
   PolicySummary,
   StoredEvent,
+  WorkflowEffectInput,
+  WorkflowInstance,
 } from './types.js'
 import type { ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
 
 const { Pool } = pg
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+function pgTimestamp(value: string | Date | null | undefined): string | undefined {
+  if (!value) return undefined
+  return value instanceof Date ? value.toISOString() : value
+}
+
+function pgWorkflow(row: Record<string, unknown>): WorkflowInstance {
+  return {
+    id: String(row.id), kind: String(row.kind), definitionVersion: Number(row.definitionVersion),
+    status: String(row.status) as WorkflowInstance['status'], state: row.state as Record<string, unknown>,
+    revision: Number(row.revision), ...(pgTimestamp(row.wakeAt as string | Date | null) ? { wakeAt: pgTimestamp(row.wakeAt as string | Date | null)! } : {}),
+    createdAt: pgTimestamp(row.createdAt as string | Date)!, updatedAt: pgTimestamp(row.updatedAt as string | Date)!,
+  }
+}
 
 export interface SqlExecutor {
   query<R extends QueryResultRow = QueryResultRow>(text: string, values?: readonly unknown[]): Promise<QueryResult<R>>
@@ -182,6 +210,148 @@ export class PgAssistantStore implements AssistantStore {
        ON CONFLICT (namespace, key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
       [namespace, key, JSON.stringify(value)],
     )
+  }
+
+  async createWorkflow(input: CreateWorkflowInput): Promise<{ readonly inserted: boolean; readonly instance: WorkflowInstance }> {
+    return await this.transaction(async executor => {
+      const result = await executor.query<Record<string, unknown> & { inserted: boolean }>(
+        `WITH inserted AS (
+           INSERT INTO workflow_instance (id, kind, definition_version, status, state, wake_at)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6::timestamptz)
+           ON CONFLICT (id) DO NOTHING RETURNING *, true AS inserted
+         )
+         SELECT id, kind, definition_version AS "definitionVersion", status, state, revision,
+                wake_at AS "wakeAt", created_at AS "createdAt", updated_at AS "updatedAt", inserted FROM inserted
+         UNION ALL
+         SELECT id, kind, definition_version, status, state, revision, wake_at, created_at, updated_at, false
+         FROM workflow_instance WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM inserted) LIMIT 1`,
+        [input.id, input.kind, input.definitionVersion, input.status, JSON.stringify(input.state), input.wakeAt ?? null],
+      )
+      const row = result.rows[0]
+      if (!row) throw new Error(`workflow ${input.id} was not persisted`)
+      const instance = pgWorkflow(row)
+      if (!row.inserted && (instance.kind !== input.kind || instance.definitionVersion !== input.definitionVersion
+        || instance.status !== input.status || canonicalJson(instance.state) !== canonicalJson(input.state)
+        || (instance.wakeAt ?? null) !== (input.wakeAt ? new Date(input.wakeAt).toISOString() : null))) {
+        throw new Error(`workflow ${input.id} already exists with different durable content`)
+      }
+      if (!row.inserted) {
+        const effects = await executor.query<{ id: string; kind: string; payload: Readonly<Record<string, unknown>>; availableAt: string | Date }>(
+          `SELECT id, kind, payload, available_at AS "availableAt" FROM workflow_effect WHERE instance_id = $1 ORDER BY id`, [input.id],
+        )
+        const expected = [...(input.effects ?? [])].sort((left, right) => left.id.localeCompare(right.id))
+        const matches = effects.rows.length === expected.length && effects.rows.every((effect, index) => {
+          const wanted = expected[index]
+          return wanted && effect.id === wanted.id && effect.kind === wanted.kind && canonicalJson(effect.payload) === canonicalJson(wanted.payload)
+            && (wanted.availableAt === undefined || pgTimestamp(effect.availableAt) === new Date(wanted.availableAt).toISOString())
+        })
+        if (!matches) throw new Error(`workflow ${input.id} already exists with different durable effects`)
+      }
+      if (row.inserted) await this.insertWorkflowEffects(executor, input.id, input.effects ?? [])
+      return { inserted: row.inserted, instance }
+    })
+  }
+
+  async workflow(id: string): Promise<WorkflowInstance | undefined> {
+    const result = await this.database.query<Record<string, unknown>>(
+      `SELECT id, kind, definition_version AS "definitionVersion", status, state, revision,
+              wake_at AS "wakeAt", created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM workflow_instance WHERE id = $1`, [id],
+    )
+    return result.rows[0] ? pgWorkflow(result.rows[0]) : undefined
+  }
+
+  async dueWorkflows(now: string, limit: number): Promise<readonly WorkflowInstance[]> {
+    const result = await this.database.query<Record<string, unknown>>(
+      `SELECT id, kind, definition_version AS "definitionVersion", status, state, revision,
+              wake_at AS "wakeAt", created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM workflow_instance WHERE status IN ('running', 'waiting') AND wake_at IS NOT NULL AND wake_at <= $1::timestamptz
+       ORDER BY wake_at, id LIMIT $2`, [now, limit],
+    )
+    return result.rows.map(pgWorkflow)
+  }
+
+  async advanceWorkflow(input: AdvanceWorkflowInput): Promise<{ readonly advanced: boolean; readonly instance: WorkflowInstance }> {
+    return await this.transaction(async executor => {
+      const currentResult = await executor.query<Record<string, unknown>>(
+        `SELECT id, kind, definition_version AS "definitionVersion", status, state, revision,
+                wake_at AS "wakeAt", created_at AS "createdAt", updated_at AS "updatedAt"
+         FROM workflow_instance WHERE id = $1 FOR UPDATE`, [input.instanceId],
+      )
+      const currentRow = currentResult.rows[0]
+      if (!currentRow) throw new Error(`workflow ${input.instanceId} does not exist`)
+      const duplicate = await executor.query('SELECT 1 FROM workflow_event WHERE instance_id = $1 AND event_id = $2', [input.instanceId, input.event.id])
+      if (duplicate.rows[0]) return { advanced: false, instance: pgWorkflow(currentRow) }
+      if (Number(currentRow.revision) !== input.expectedRevision) throw new Error(`workflow ${input.instanceId} revision conflict`)
+      const revision = input.expectedRevision + 1
+      await executor.query(
+        `INSERT INTO workflow_event (instance_id, event_id, event_type, occurred_at, payload, processed_revision)
+         VALUES ($1, $2, $3, $4::timestamptz, $5::jsonb, $6)`,
+        [input.instanceId, input.event.id, input.event.type, input.event.occurredAt, JSON.stringify(input.event.payload), revision],
+      )
+      const updated = await executor.query<Record<string, unknown>>(
+        `UPDATE workflow_instance SET status = $2, state = $3::jsonb, revision = $4, wake_at = $5::timestamptz, updated_at = now()
+         WHERE id = $1 RETURNING id, kind, definition_version AS "definitionVersion", status, state, revision,
+         wake_at AS "wakeAt", created_at AS "createdAt", updated_at AS "updatedAt"`,
+        [input.instanceId, input.status, JSON.stringify(input.state), revision, input.wakeAt ?? null],
+      )
+      await executor.query(
+        `INSERT INTO workflow_transition (instance_id, revision, event_id, from_status, to_status, state)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [input.instanceId, revision, input.event.id, currentRow.status, input.status, JSON.stringify(input.state)],
+      )
+      await this.insertWorkflowEffects(executor, input.instanceId, input.effects ?? [])
+      return { advanced: true, instance: pgWorkflow(updated.rows[0]!) }
+    })
+  }
+
+  async claimNextWorkflowEffect(workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedWorkflowEffect | undefined> {
+    return await this.transaction(async executor => {
+      const result = await executor.query<{
+        id: string; instanceId: string; kind: string; payload: Readonly<Record<string, unknown>>; attempt: number
+      }>(
+        `WITH candidate AS (
+           SELECT id FROM workflow_effect
+           WHERE available_at <= $1::timestamptz AND (status = 'pending' OR (status = 'dispatching' AND lease_expires_at <= $1::timestamptz))
+           ORDER BY available_at, created_at FOR UPDATE SKIP LOCKED LIMIT 1
+         )
+         UPDATE workflow_effect effect SET status = 'dispatching', attempt = effect.attempt + 1,
+           lease_owner = $2, lease_expires_at = $3::timestamptz, updated_at = now()
+         FROM candidate WHERE effect.id = candidate.id
+         RETURNING effect.id, effect.instance_id AS "instanceId", effect.kind, effect.payload, effect.attempt`,
+        [now, workerId, leaseExpiresAt],
+      )
+      return result.rows[0]
+    })
+  }
+
+  async settleWorkflowEffect(effectId: string, workerId: string, deliveredAt: string): Promise<void> {
+    const result = await this.database.query(
+      `UPDATE workflow_effect SET status = 'delivered', delivered_at = $3::timestamptz,
+       lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+       WHERE id = $1 AND status = 'dispatching' AND lease_owner = $2`, [effectId, workerId, deliveredAt],
+    )
+    if (result.rowCount !== 1) throw new Error(`worker ${workerId} does not own workflow effect ${effectId}`)
+  }
+
+  async releaseWorkflowEffect(effectId: string, workerId: string, error: string, availableAt: string, terminal: boolean): Promise<void> {
+    const result = await this.database.query(
+      `UPDATE workflow_effect SET status = $3, available_at = $4::timestamptz, last_error = $5,
+       lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+       WHERE id = $1 AND status = 'dispatching' AND lease_owner = $2`,
+      [effectId, workerId, terminal ? 'failed' : 'pending', availableAt, error],
+    )
+    if (result.rowCount !== 1) throw new Error(`worker ${workerId} does not own workflow effect ${effectId}`)
+  }
+
+  private async insertWorkflowEffects(executor: SqlExecutor, instanceId: string, effects: readonly WorkflowEffectInput[]): Promise<void> {
+    for (const effect of effects) {
+      await executor.query(
+        `INSERT INTO workflow_effect (id, instance_id, kind, payload, available_at)
+         VALUES ($1, $2, $3, $4::jsonb, coalesce($5::timestamptz, now()))`,
+        [effect.id, instanceId, effect.kind, JSON.stringify(effect.payload), effect.availableAt ?? null],
+      )
+    }
   }
 
   async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {

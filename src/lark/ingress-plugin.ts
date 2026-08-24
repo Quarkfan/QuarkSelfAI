@@ -1,10 +1,10 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
-import type {} from '../execution/ledger-service.js'
+import type {} from '../storage/service.js'
 import type {} from './service.js'
 
 export const name = 'quark-feishu-ingress'
-export const inject = ['larkCli', 'quarkActionLedger']
+export const inject = ['larkCli', 'quarkState']
 
 export interface FeishuIngressConfig {
   /** Starts the single server-side consumer. Keep false until the maintenance-window cutover. */
@@ -17,7 +17,7 @@ export interface FeishuIngressConfig {
  */
 export async function apply(ctx: Context, config: FeishuIngressConfig = {}): Promise<void> {
   ctx.on('feishu/event', async (event: NormalizedChannelEvent) => {
-    await ctx.quarkActionLedger.appendEvent(event)
+    await ctx.quarkState.appendEvent(event)
   })
   if (config.startConsumer !== true) return
   await ctx.larkCli.start()

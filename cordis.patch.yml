@@ -76,14 +76,27 @@
         codexReadProvider: quark-codex-read
         codexWriteProvider: quark-codex-write
         nativeProvider: spawn
+    - id: quark-durable-state
+      name: '@quarkfan/quark-self-ai/durable-state'
+      config:
+        storageKind: !!js process.env.ASSISTANT_STORAGE === 'postgres' ? 'postgres' : 'sqlite'
+        sqlitePath: !!js >-
+          process.env.QUARK_SQLITE_PATH || (process.env.SQLITE_PATH ? (process.env.SQLITE_PATH.startsWith('/') ? process.env.SQLITE_PATH : process.cwd() + '/' + process.env.SQLITE_PATH) : process.env.DSH_HOME + '/quarkselfai.sqlite3')
+        databaseUrl: !!js process.env.DATABASE_URL
     - id: quark-action-ledger
       name: '@quarkfan/quark-self-ai/action-ledger'
       config:
-        storageKind: !!js process.env.ASSISTANT_STORAGE === 'postgres' ? 'postgres' : 'sqlite'
-        sqlitePath: !!js process.env.QUARK_SQLITE_PATH || (process.env.DSH_HOME + '/quarkselfai.sqlite3')
-        databaseUrl: !!js process.env.DATABASE_URL
         workerId: !!js process.env.QUARK_WORKER_ID || ('local-' + process.pid)
         leaseMs: 7200000
+        retryDelayMs: 120000
+        maxAttempts: 5
+    - id: quark-durable-workflows
+      name: '@quarkfan/quark-self-ai/durable-workflows'
+      config:
+        workerId: !!js process.env.QUARK_WORKFLOW_WORKER_ID || ('workflow-' + process.pid)
+        enabled: true
+        pollIntervalMs: 30000
+        leaseMs: 120000
         retryDelayMs: 120000
         maxAttempts: 5
     - id: quark-feishu-ingress

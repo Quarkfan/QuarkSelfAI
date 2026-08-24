@@ -1,7 +1,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import { CollaborationLearningEngine } from './engine.js'
 import type { CollaborationLearningConfig, CollaborationMessage, CollaborationPolicyProposal, CollaborationTaskDecision } from './types.js'
-import type {} from '../execution/ledger-service.js'
+import type {} from '../storage/service.js'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -18,12 +18,12 @@ export class CollaborationLearningService extends Service {
   constructor(ctx: Context, config: CollaborationLearningConfig = {}) {
     super(ctx, 'quarkCollaborationLearning')
     this.engine = new CollaborationLearningEngine({
-      appendSignal: input => ctx.quarkActionLedger.appendSignal(input),
-      recentSignals: (kind, limit) => ctx.quarkActionLedger.recentSignals(kind, limit),
-      readCheckpoint: (namespace, key) => ctx.quarkActionLedger.readFeatureCheckpoint(namespace, key),
-      writeCheckpoint: (namespace, key, value) => ctx.quarkActionLedger.writeFeatureCheckpoint(namespace, key, value),
-      recentPolicySamples: limit => ctx.quarkActionLedger.recentPolicySamples(limit),
-      savePolicyDraft: input => ctx.quarkActionLedger.savePolicyDraft(input),
+      appendSignal: input => ctx.quarkState.appendSignal(input),
+      recentSignals: (kind, limit) => ctx.quarkState.recentSignals(kind, limit),
+      readCheckpoint: (namespace, key) => ctx.quarkState.readFeatureCheckpoint(namespace, key),
+      writeCheckpoint: (namespace, key, value) => ctx.quarkState.writeFeatureCheckpoint(namespace, key, value),
+      recentPolicySamples: limit => ctx.quarkState.recentPolicySamples(limit),
+      savePolicyDraft: input => ctx.quarkState.savePolicyDraft(input),
       publishProposal: proposal => ctx.parallel('collaboration/policy-proposal', proposal),
     }, config)
     if (config.enabled === true) {
@@ -55,7 +55,7 @@ export class CollaborationLearningService extends Service {
 }
 
 export const name = 'quark-collaboration-learning'
-export const inject = ['quarkActionLedger']
+export const inject = ['quarkState']
 
 export function apply(ctx: Context, config: CollaborationLearningConfig = {}): void {
   ctx.plugin(CollaborationLearningService, config)

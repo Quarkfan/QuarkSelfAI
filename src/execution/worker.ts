@@ -1,10 +1,14 @@
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { AssistantStore, ClaimedAction } from '../storage/types.js'
+import type { ActionClaimRelease, AssistantStore, ClaimedAction } from '../storage/types.js'
 import type { RoutedExecutorRequest, RoutedExecutorResult } from './router.js'
 import { isInfrastructureFailure } from './router.js'
 
 export interface DurableExecutorRoute {
   execute(request: RoutedExecutorRequest, signal: AbortSignal): Promise<RoutedExecutorResult>
+}
+
+export type DurableExecutorStore = Pick<AssistantStore, 'claimNextAction' | 'settleAction'> & {
+  releaseActionClaim(input: ActionClaimRelease): Promise<void>
 }
 
 export interface DurableExecutorWorkerConfig {
@@ -36,7 +40,7 @@ export class DurableExecutorWorker {
   private readonly maxAttempts: number
 
   constructor(
-    private readonly store: AssistantStore,
+    private readonly store: DurableExecutorStore,
     private readonly router: DurableExecutorRoute,
     private readonly config: DurableExecutorWorkerConfig,
   ) {
