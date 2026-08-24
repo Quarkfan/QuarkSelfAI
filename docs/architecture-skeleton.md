@@ -83,6 +83,9 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
    intake workflow；该 adapter 已实现但仍为 inactive，不等于已取得生产会话所有权。
 8. 飞书上下文读取与通知/代发是两个 adapter。只读 adapter 会补齐延迟处理后的最新会话尾部，并把无法证明
    `external=false` 的群标为 `unknown`；任何外发 workflow 都必须把 external/unknown 作为硬阻断。
+9. 交互卡片通过 opaque correlation 精确携带 workflow/effect/approval 归属，回调 adapter 重新验证 owner 后才回投
+   durable event。表单输入和业务 choice 的字段名由发卡 workflow 显式声明，骨架不猜测业务含义；输入补充不会被
+   推断成批准。该 provider 已实现但仍为 inactive，见 ADR 0016。
 
 滴答 adapter 已实现超期查询、在白名单清单中核验任务是否完成，以及受限的已完成任务清理。它不会把“查不到
 任务”解释为已完成。清理不是仅凭环境开关获得删除权限：常东旭的长期授权会作为不可变快照进入 workflow state，

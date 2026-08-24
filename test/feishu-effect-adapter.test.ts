@@ -5,6 +5,7 @@ import { FeishuWorkflowEffectAdapter } from '../src/lark/effect-plugin.js'
 import { FeishuContextEffectAdapter } from '../src/lark/context-effect-plugin.js'
 import type { CliOutput, CommandRunner } from '../src/lark/runner.js'
 import { LARK_EFFECTS } from '../src/lark/effects.js'
+import { decodeCardCorrelation } from '../src/lark/card-correlation.js'
 
 class RecordingRunner implements CommandRunner {
   readonly calls: Array<{ executable: string; args: readonly string[] }> = []
@@ -77,8 +78,32 @@ test('builds interaction cards with exact callback correlation and a response fo
     && (element.columns as Array<{ elements?: Array<{ tag?: string }> }>).some(column => column.elements?.some(button => button.tag === 'button')))
   const buttons = actionSet?.columns as Array<{ elements: Array<{ behaviors?: Array<{ value?: Record<string, unknown> }> }> }>
   const callback = buttons?.[0]?.elements[0]?.behaviors?.[0]?.value
-  assert.deepEqual(callback, { effectId: item.id, approvalId: 'approval:42', decision: 'approved' })
+  assert.equal(callback?.decision, 'approved')
+  assert.deepEqual(decodeCardCorrelation(callback?.correlation), {
+    workflowId: item.instanceId, effectId: item.id, approvalId: 'approval:42',
+  })
   assert.equal(card.body.elements.some(element => element.tag === 'form'), true)
+  const form = card.body.elements.find(element => element.tag === 'form')
+  assert.deepEqual(decodeCardCorrelation(form?.name), {
+    workflowId: item.instanceId, effectId: item.id, eventType: 'approval.response', approvalId: 'approval:42', payloadKey: 'response',
+  })
+})
+
+test('choice cards carry business-declared event payload mapping', async () => {
+  const runner = new RecordingRunner()
+  const adapter = new FeishuWorkflowEffectAdapter({ ownerOpenId: 'ou_owner' }, runner)
+  await adapter.execute(effect('assistant.request-interaction.v1', {
+    mode: 'choice', title: '选择联系人', prompt: '请选择', eventType: 'followup.contact-selected', payloadKey: 'openId',
+    options: [{ label: '张三', value: 'ou_zhang' }],
+  }))
+  const args = runner.calls[0]!.args
+  const card = JSON.parse(args[args.indexOf('--content') + 1]!) as { body: { elements: Array<Record<string, unknown>> } }
+  const select = card.body.elements.find(element => element.tag === 'select_static') as { options: Array<{ value: string }> }
+  const callback = JSON.parse(select.options[0]!.value) as { correlation: string; value: string }
+  assert.equal(callback.value, 'ou_zhang')
+  assert.deepEqual(decodeCardCorrelation(callback.correlation), {
+    workflowId: 'workflow:1', effectId: 'effect:assistant.request-interaction.v1', eventType: 'followup.contact-selected', payloadKey: 'openId',
+  })
 })
 
 test('refuses send-as-user without durable approval evidence', async () => {

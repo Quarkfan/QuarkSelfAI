@@ -7,12 +7,13 @@ import { LARK_EFFECTS } from '../lark/effects.js'
 import { INTAKE_EFFECTS, type IntakeDecision, type IntakeInput, validateIntakeDecision } from './types.js'
 
 type IntakeState = Readonly<Record<string, unknown>> & {
-  readonly stage: 'loading-context' | 'evaluating' | 'projecting' | 'reporting' | 'completed' | 'failed'
+  readonly stage: 'loading-context' | 'evaluating' | 'projecting' | 'awaiting-approval' | 'reporting' | 'completed' | 'failed'
   readonly route: IntakeInput['route']
   readonly sourceEvent: IntakeInput['event']
   readonly workspace: string
   readonly pending: readonly string[]
   readonly decision?: IntakeDecision
+  readonly approvalId?: string
 }
 
 export const INTAKE_WORKFLOW_KIND = 'message-intake.v1'
@@ -42,6 +43,8 @@ export function messageIntakeWorkflow(): WorkflowDefinition {
     reduce(raw, event) {
       const state = raw as IntakeState
       if (event.type === 'effect.failed') return { status: 'failed', state: { ...state, stage: 'failed', failure: event.payload.error }, wakeAt: null }
+      if (state.stage === 'awaiting-approval' && event.type === 'approval.response') return recordApprovalResponse(state, event)
+      if (state.stage === 'awaiting-approval' && (event.type === 'approval.approved' || event.type === 'approval.declined')) return finishApproval(state, event)
       if (event.type !== 'effect.delivered') return { status: state.stage === 'completed' ? 'completed' : 'waiting', state }
       const effectKind = String(event.payload.effectKind ?? '')
       if (state.stage === 'loading-context' && effectKind === LARK_EFFECTS.loadMessageContext) return afterContext(state, event)
@@ -95,19 +98,39 @@ function afterEvaluation(state: IntakeState, event: WorkflowEvent): WorkflowDeci
     id: effect(state.sourceEvent, 'task'), kind: TASK_PROJECTION_EFFECTS.upsertIntake,
     payload: { sourceEvent: state.sourceEvent, decision, idempotencyKey: `feishu:${state.sourceEvent.source.messageId ?? state.sourceEvent.deduplicationKey}` },
   })
+  const approvalId = decision.approvalRequired ? effect(state.sourceEvent, 'approval-decision') : undefined
   if (decision.notifyOwner) effects.push({
-    id: effect(state.sourceEvent, decision.approvalRequired ? 'approval' : 'notification'),
+    id: effect(state.sourceEvent, decision.approvalRequired ? 'approval-card' : 'notification'),
     kind: decision.approvalRequired ? ASSISTANT_EFFECTS.requestInteraction : ASSISTANT_EFFECTS.notifyOwner,
-    payload: { sourceEvent: state.sourceEvent, decision, requireExactCorrelation: true, targetOwnerOnly: true },
+    payload: { sourceEvent: state.sourceEvent, decision, ...(approvalId ? { mode: 'approval', approvalId } : {}), requireExactCorrelation: true, targetOwnerOnly: true },
   })
   if (effects.length === 0) return { status: 'completed', state: { ...state, stage: 'completed', pending: [], decision }, wakeAt: null }
-  return { status: 'waiting', state: { ...state, stage: 'projecting', pending: effects.map(item => item.id), decision }, effects }
+  return { status: 'waiting', state: { ...state, stage: 'projecting', pending: effects.map(item => item.id), decision, ...(approvalId ? { approvalId } : {}) }, effects }
 }
 
 function settleProjection(state: IntakeState, event: WorkflowEvent): WorkflowDecision {
   const effectId = String(event.payload.effectId ?? '')
   const pending = state.pending.filter(id => id !== effectId)
-  return { status: pending.length === 0 ? 'completed' : 'waiting', state: { ...state, stage: pending.length === 0 ? 'completed' : 'projecting', pending }, ...(pending.length === 0 ? { wakeAt: null } : {}) }
+  const settledStage = pending.length === 0 ? (state.approvalId ? 'awaiting-approval' : 'completed') : 'projecting'
+  return { status: settledStage === 'completed' ? 'completed' : 'waiting', state: { ...state, stage: settledStage, pending }, ...(pending.length === 0 ? { wakeAt: null } : {}) }
+}
+
+function recordApprovalResponse(state: IntakeState, event: WorkflowEvent): WorkflowDecision {
+  requireApproval(state, event)
+  const response = requiredText(event.payload.response, 'approval response', 1_000)
+  return { status: 'waiting', state: { ...state, approvalResponse: response, approvalResponseAt: event.occurredAt } }
+}
+
+function finishApproval(state: IntakeState, event: WorkflowEvent): WorkflowDecision {
+  requireApproval(state, event)
+  return {
+    status: 'completed', wakeAt: null,
+    state: { ...state, stage: 'completed', approvalDecision: event.type === 'approval.approved' ? 'approved' : 'declined', approvalDecidedAt: event.occurredAt },
+  }
+}
+
+function requireApproval(state: IntakeState, event: WorkflowEvent): void {
+  if (!state.approvalId || event.payload.approvalId !== state.approvalId) throw new Error('intake approval correlation mismatch')
 }
 
 function effect(event: IntakeInput['event'], suffix: string): string {

@@ -62,6 +62,10 @@
       "types": "./dist/intake/plugin.d.ts",
       "import": "./dist/intake/plugin.js"
     },
+    "./intake-interaction-effects": {
+      "types": "./dist/intake/interaction-effect-plugin.d.ts",
+      "import": "./dist/intake/interaction-effect-plugin.js"
+    },
     "./dida-maintenance": {
       "types": "./dist/task-maintenance/plugin.d.ts",
       "import": "./dist/task-maintenance/plugin.js"

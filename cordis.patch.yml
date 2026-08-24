@@ -134,6 +134,13 @@
         focusSenderIds: []
         focusConversationIds: []
         discoveryIntervalMs: 600000
+    - id: quark-intake-interaction-effects
+      name: '@quarkfan/quark-self-ai/intake-interaction-effects'
+      # Card callbacks are consumers too: keep the provider under the same
+      # single-owner cutover gate as native message intake.
+      disabled: !!js process.env.QUARK_NATIVE_INTERACTION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
     - id: quark-dida-task-effects
       name: '@quarkfan/quark-self-ai/dida-task-effects'
       # Adapter preparation. Cleanup is bounded by authorization evidence carried
