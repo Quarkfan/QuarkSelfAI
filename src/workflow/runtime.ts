@@ -5,7 +5,8 @@ import type {
   WorkflowInstance,
   WorkflowStatus,
 } from '../storage/types.js'
-import type {} from '../storage/service-contract.js'
+import type { DurableStatePort } from '../storage/service-contract.js'
+import { DEFAULT_DURABLE_RECOVERY_INTERVAL_MS, DurableWakeScheduler } from '../runtime/wake-scheduler.js'
 
 export interface WorkflowEvent {
   readonly id: string
@@ -43,8 +44,7 @@ export interface WorkflowRuntimeConfig {
   readonly batchSize?: number
 }
 
-export const DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS = 600_000
-const MAX_TIMER_DELAY_MS = 2_147_000_000
+export const DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS = DEFAULT_DURABLE_RECOVERY_INTERVAL_MS
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -53,29 +53,30 @@ declare module '@deepseek-ai/cordis' {
 }
 
 export class DurableWorkflowRuntime extends Service {
+  static inject = ['quarkState']
   private readonly definitions = new Map<string, WorkflowDefinition>()
   private readonly effectHandlers = new Map<string, WorkflowEffectHandler>()
+  private readonly state: DurableStatePort
   private running = false
-  private wakePending = false
-  private draining = false
-  private scheduledTimer: NodeJS.Timeout | undefined
-  private scheduledAt: number | undefined
+  private readonly scheduler: DurableWakeScheduler<{ readonly due: number; readonly effect: 'idle' | 'delivered' | 'deferred' | 'failed' }>
 
   constructor(ctx: Context, private readonly config: WorkflowRuntimeConfig) {
     super(ctx, 'quarkWorkflows')
     if (!config.workerId?.trim()) throw new Error('workflow runtime workerId is required')
+    // Capture the injected port while Cordis dependency tracing is active;
+    // durable timers execute after that construction scope has ended.
+    this.state = ctx.quarkState
+    this.scheduler = new DurableWakeScheduler({
+      enabled: config.enabled === true,
+      recoveryIntervalMs: config.pollIntervalMs ?? DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS,
+      run: () => this.runOnce(),
+      continueAfter: result => result.effect !== 'idle' || result.due >= (config.batchSize ?? 20),
+      onError: error => ctx.logger('quark-workflows').error(error),
+    })
     if (config.enabled === true) {
       ctx.on('quark/workflow-wake', at => this.wake(at))
-      const timer = setInterval(() => this.wake(), config.pollIntervalMs ?? DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS)
-      timer.unref()
-      ctx.effect(() => () => {
-        clearInterval(timer)
-        if (this.scheduledTimer) clearTimeout(this.scheduledTimer)
-        this.scheduledTimer = undefined
-        this.scheduledAt = undefined
-        this.wakePending = false
-      }, 'quark durable workflow recovery timer')
     }
+    ctx.effect(() => () => this.scheduler.dispose(), 'quark durable workflow wake scheduler')
   }
 
   register(definition: WorkflowDefinition): () => void {
@@ -98,32 +99,13 @@ export class DurableWorkflowRuntime extends Service {
 
   /** Schedule the exact durable deadline, or drain immediately when no future time is supplied. */
   wake(at?: string): void {
-    if (this.config.enabled !== true) return
-    const timestamp = at ? new Date(at).getTime() : Date.now()
-    if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
-      this.wakePending = true
-      if (this.draining) return
-      this.draining = true
-      queueMicrotask(() => void this.drain())
-      return
-    }
-    if (this.scheduledAt !== undefined && this.scheduledAt <= timestamp) return
-    if (this.scheduledTimer) clearTimeout(this.scheduledTimer)
-    this.scheduledAt = timestamp
-    const delay = Math.min(timestamp - Date.now(), MAX_TIMER_DELAY_MS)
-    this.scheduledTimer = setTimeout(() => {
-      const target = this.scheduledAt
-      this.scheduledTimer = undefined
-      this.scheduledAt = undefined
-      this.wake(target === undefined ? undefined : new Date(target).toISOString())
-    }, delay)
-    this.scheduledTimer.unref()
+    this.scheduler.wake(at)
   }
 
   async start(id: string, kind: string, input: Readonly<Record<string, unknown>>, now = new Date()): Promise<WorkflowInstance> {
     const definition = this.definition(kind)
     const decision = validateDecision(definition.initialize(input, now.toISOString()))
-    return (await this.ctx.quarkState.createWorkflow({
+    return (await this.state.createWorkflow({
       id, kind, definitionVersion: definition.version, status: decision.status,
       state: decision.state, ...(decision.wakeAt ? { wakeAt: decision.wakeAt } : {}),
       ...(decision.effects ? { effects: decision.effects } : {}),
@@ -131,7 +113,7 @@ export class DurableWorkflowRuntime extends Service {
   }
 
   async ensure(id: string, kind: string, input: Readonly<Record<string, unknown>>, now = new Date()): Promise<WorkflowInstance> {
-    const existing = await this.ctx.quarkState.workflow(id)
+    const existing = await this.state.workflow(id)
     if (!existing) return await this.start(id, kind, input, now)
     const definition = this.definition(kind)
     if (existing.kind !== kind || existing.definitionVersion !== definition.version) {
@@ -142,7 +124,7 @@ export class DurableWorkflowRuntime extends Service {
 
   async dispatch(instanceId: string, event: WorkflowEvent): Promise<WorkflowInstance> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const instance = await this.ctx.quarkState.workflow(instanceId)
+      const instance = await this.state.workflow(instanceId)
       if (!instance) throw new Error(`workflow ${instanceId} does not exist`)
       const definition = this.definition(instance.kind)
       if (definition.version !== instance.definitionVersion) {
@@ -150,7 +132,7 @@ export class DurableWorkflowRuntime extends Service {
       }
       const decision = validateDecision(definition.reduce(instance.state, event))
       try {
-        return (await this.ctx.quarkState.advanceWorkflow({
+        return (await this.state.advanceWorkflow({
           instanceId, expectedRevision: instance.revision, event,
           status: decision.status, state: decision.state,
           ...('wakeAt' in decision ? { wakeAt: decision.wakeAt } : {}),
@@ -168,7 +150,7 @@ export class DurableWorkflowRuntime extends Service {
     this.running = true
     try {
       const timestamp = now.toISOString()
-      const due = await this.ctx.quarkState.dueWorkflows(timestamp, this.config.batchSize ?? 20)
+      const due = await this.state.dueWorkflows(timestamp, this.config.batchSize ?? 20)
       for (const instance of due) {
         const scheduledAt = instance.wakeAt
         if (!scheduledAt) continue
@@ -176,7 +158,7 @@ export class DurableWorkflowRuntime extends Service {
           id: `timer:${scheduledAt}`, type: 'timer', occurredAt: timestamp, payload: { scheduledAt },
         })
       }
-      const effect = await this.ctx.quarkState.claimNextWorkflowEffect(
+      const effect = await this.state.claimNextWorkflowEffect(
         this.config.workerId,
         timestamp,
         new Date(now.getTime() + (this.config.leaseMs ?? 120_000)).toISOString(),
@@ -184,7 +166,7 @@ export class DurableWorkflowRuntime extends Service {
       if (!effect) return { due: due.length, effect: 'idle' }
       const handler = this.effectHandlers.get(effect.kind)
       if (!handler) {
-        await this.ctx.quarkState.releaseWorkflowEffect(effect.id, this.config.workerId, `no handler registered for ${effect.kind}`,
+        await this.state.releaseWorkflowEffect(effect.id, this.config.workerId, `no handler registered for ${effect.kind}`,
           new Date(now.getTime() + (this.config.retryDelayMs ?? 120_000)).toISOString(), false)
         return { due: due.length, effect: 'deferred' }
       }
@@ -198,7 +180,7 @@ export class DurableWorkflowRuntime extends Service {
           id: `effect:${effect.id}:delivered`, type: 'effect.delivered', occurredAt: deliveredAt,
           payload: { ...(output ?? {}), effectId: effect.id, effectKind: effect.kind },
         })
-        await this.ctx.quarkState.settleWorkflowEffect(effect.id, this.config.workerId, deliveredAt)
+        await this.state.settleWorkflowEffect(effect.id, this.config.workerId, deliveredAt)
         return { due: due.length, effect: 'delivered' }
       } catch (error) {
         const terminal = effect.attempt >= (this.config.maxAttempts ?? 5)
@@ -214,7 +196,7 @@ export class DurableWorkflowRuntime extends Service {
             transitionError = dispatchError
           }
         }
-        await this.ctx.quarkState.releaseWorkflowEffect(effect.id, this.config.workerId, message,
+        await this.state.releaseWorkflowEffect(effect.id, this.config.workerId, message,
           new Date(now.getTime() + (this.config.retryDelayMs ?? 120_000)).toISOString(), terminal)
         if (transitionError) throw transitionError
         return { due: due.length, effect: terminal ? 'failed' : 'deferred' }
@@ -228,23 +210,6 @@ export class DurableWorkflowRuntime extends Service {
     const definition = this.definitions.get(kind)
     if (!definition) throw new Error(`workflow definition ${kind} is not registered`)
     return definition
-  }
-
-  private async drain(): Promise<void> {
-    try {
-      let passes = 0
-      while (this.wakePending && passes < 100) {
-        this.wakePending = false
-        const result = await this.runOnce()
-        if (result.effect !== 'idle' || result.due >= (this.config.batchSize ?? 20)) this.wakePending = true
-        passes += 1
-      }
-    } catch (error) {
-      this.ctx.logger('quark-workflows').error(error)
-    } finally {
-      this.draining = false
-      if (this.wakePending) this.wake()
-    }
   }
 }
 

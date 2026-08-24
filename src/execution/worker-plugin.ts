@@ -8,6 +8,7 @@ import {
 } from './worker.js'
 import type {} from '../storage/service-contract.js'
 import type {} from './router.js'
+import { DEFAULT_DURABLE_RECOVERY_INTERVAL_MS, DurableWakeScheduler } from '../runtime/wake-scheduler.js'
 
 declare module '@deepseek-ai/cordis' {
   interface Context { quarkActionWorker: ActionWorkerService }
@@ -19,14 +20,16 @@ declare module '@deepseek-ai/cordis' {
  * this provider derives one exact DSH parent session from the durable action id.
  */
 export class ActionWorkerService extends Service {
+  static inject = ['agents', 'quarkState', 'quarkExecutors']
   private readonly workers: readonly DurableExecutorWorker[]
   private running = false
   private readonly controller = new AbortController()
+  private readonly scheduler: DurableWakeScheduler<readonly DurableWorkerRun[]>
 
   constructor(ctx: Context, config: ActionWorkerConfig) {
     super(ctx, 'quarkActionWorker')
     validateConfig(config)
-    const host = new CordisActionAgentHost(ctx, config)
+    const host = new CordisActionAgentHost(ctx.agents, config)
     this.workers = config.workspaces.map(workspace => new DurableExecutorWorker(
       ctx.quarkState,
       ctx.quarkExecutors,
@@ -39,11 +42,18 @@ export class ActionWorkerService extends Service {
         ...(config.maxAttempts === undefined ? {} : { maxAttempts: config.maxAttempts }),
       },
     ))
+    this.scheduler = new DurableWakeScheduler({
+      enabled: config.enabled === true,
+      recoveryIntervalMs: config.pollIntervalMs ?? DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS,
+      run: () => this.runOnce(),
+      continueAfter: results => results.some(result => result.status !== 'idle'),
+      onError: error => ctx.logger('quark-action-worker').error(error),
+    })
     if (config.enabled === true) {
-      const timer = setInterval(() => void this.runOnce().catch(error => ctx.logger('quark-action-worker').error(error)), config.pollIntervalMs ?? 30_000)
-      timer.unref()
-      ctx.effect(() => () => { clearInterval(timer); this.controller.abort() }, 'quark durable action worker timer')
+      ctx.on('quark/action-wake', at => this.scheduler.wake(at))
+      this.scheduler.wake()
     }
+    ctx.effect(() => () => { this.scheduler.dispose(); this.controller.abort() }, 'quark durable action wake scheduler')
   }
 
   async runOnce(now = new Date()): Promise<readonly DurableWorkerRun[]> {
@@ -68,11 +78,11 @@ export interface ActionWorkerConfig {
 }
 
 class CordisActionAgentHost implements DurableActionAgentHost {
-  constructor(private readonly ctx: Context, private readonly config: ActionWorkerConfig) {}
+  constructor(private readonly agents: Context['agents'], private readonly config: ActionWorkerConfig) {}
 
   async acquire(actionId: string, workspace: string, signal: AbortSignal): Promise<DurableActionAgentLease> {
     const id = SessionId(deterministicUuid(`quark-action:${actionId}`))
-    const live = this.ctx.agents.get(id)
+    const live = this.agents.get(id)
     if (live?.status === 'running') throw new Error(`action session transport is busy: ${id}`)
     let handle: AgentHandle | undefined
     let parent: Agent
@@ -81,7 +91,7 @@ class CordisActionAgentHost implements DurableActionAgentHost {
       handle = await this.resume(id, signal)
       if (handle) parent = handle.agent
       else {
-        handle = await this.ctx.agents.create({
+        handle = await this.agents.create({
           sessionId: id,
           meta: { cwd: workspace },
           agentOptions: {
@@ -101,7 +111,7 @@ class CordisActionAgentHost implements DurableActionAgentHost {
   }
 
   private async resume(id: SessionId, signal: AbortSignal): Promise<AgentHandle | undefined> {
-    try { return await this.ctx.agents.resume({ resumeSessionId: id, signal }) }
+    try { return await this.agents.resume({ resumeSessionId: id, signal }) }
     catch (error) {
       if (/not found|session-not-found|unknown session/i.test(error instanceof Error ? error.message : String(error))) return undefined
       throw error
@@ -111,6 +121,7 @@ class CordisActionAgentHost implements DurableActionAgentHost {
 
 export const name = 'quark-agent-action-worker'
 export const inject = ['agents', 'quarkState', 'quarkExecutors']
+export const DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS = DEFAULT_DURABLE_RECOVERY_INTERVAL_MS
 export function apply(ctx: Context, config: ActionWorkerConfig): void {
   ctx.plugin(ActionWorkerService, config)
 }
@@ -121,7 +132,7 @@ function validateConfig(config: ActionWorkerConfig): void {
     throw new Error('action worker requires at least one workspace')
   }
   if (new Set(config.workspaces).size !== config.workspaces.length) throw new Error('action worker workspaces must be unique')
-  const interval = config.pollIntervalMs ?? 30_000
+  const interval = config.pollIntervalMs ?? DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS
   if (!Number.isSafeInteger(interval) || interval < 1_000) throw new Error('action worker pollIntervalMs must be at least 1000')
 }
 

@@ -98,7 +98,8 @@
         enabled: true
         workerId: !!js process.env.QUARK_ACTION_WORKER_ID || ('action-' + process.pid)
         workspaces: !!js JSON.parse(process.env.ASSISTANT_WORKSPACE_ROOTS || JSON.stringify([process.cwd()]))
-        pollIntervalMs: 30000
+        # Ledger commits wake the worker immediately. This is only crash/restart recovery.
+        pollIntervalMs: 600000
         leaseMs: 7200000
         retryDelayMs: 120000
         maxAttempts: 5

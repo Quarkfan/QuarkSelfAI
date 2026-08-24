@@ -6,6 +6,7 @@ import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateAss
 import { ControlOnlyRuntime } from '../src/platform/operations.js'
 import { DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS } from '../src/events/runtime.js'
 import { DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS } from '../src/workflow/runtime.js'
+import { DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS } from '../src/execution/worker-plugin.js'
 
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
@@ -27,7 +28,8 @@ assert.ok(!/\b(?:messageReady|cardReady|requiredEventKeys|readyEventKeys)\b/.tes
 const profilePlugins = cordisPlugins(profileSource)
 assert.ok(DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS >= 600_000, 'durable event fallback polling must be at least ten minutes')
 assert.ok(DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS >= 600_000, 'durable workflow fallback polling must be at least ten minutes')
-for (const profileId of ['quark-durable-events', 'quark-durable-workflows']) {
+assert.ok(DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS >= 600_000, 'durable action fallback polling must be at least ten minutes')
+for (const profileId of ['quark-agent-action-worker', 'quark-durable-events', 'quark-durable-workflows']) {
   assert.match(profilePlugins.get(profileId)?.block ?? '', /pollIntervalMs:\s*600000\b/, `${profileId} must use ten-minute recovery polling`)
 }
 const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ module, plugin: module.plugin }] : [])

@@ -106,11 +106,14 @@ export class DurableStateService extends Service implements DurableStatePort {
   }
 
   async enqueueAction(input: DurableActionInput): Promise<{ readonly inserted: boolean }> {
-    return await (await this.ready).enqueueAction(input)
+    const result = await (await this.ready).enqueueAction(input)
+    if (result.inserted && !input.approval) this.emitWake('quark/action-wake')
+    return result
   }
 
   async decideApproval(approvalId: string, decision: 'approved' | 'rejected', metadata: Readonly<Record<string, unknown>>, decidedAt: string): Promise<void> {
     await (await this.ready).decideApproval(approvalId, decision, metadata, decidedAt)
+    if (decision === 'approved') this.emitWake('quark/action-wake')
   }
 
   async claimNextAction(workerId: string, workspace: string, now: string, leaseExpiresAt: string): Promise<ClaimedAction | undefined> {
@@ -123,6 +126,7 @@ export class DurableStateService extends Service implements DurableStatePort {
 
   async releaseActionClaim(input: ActionClaimRelease): Promise<void> {
     await (await this.ready).releaseActionClaim(input)
+    if (input.disposition === 'retry') this.emitWake('quark/action-wake', input.availableAt)
   }
 
   async createWorkflow(input: CreateWorkflowInput): Promise<{ readonly inserted: boolean; readonly instance: WorkflowInstance }> {
@@ -170,7 +174,7 @@ export class DurableStateService extends Service implements DurableStatePort {
     if (earliest) this.emitWake('quark/workflow-wake', earliest)
   }
 
-  private emitWake(event: 'quark/workflow-wake', at?: string): void {
+  private emitWake(event: 'quark/workflow-wake' | 'quark/action-wake', at?: string): void {
     void this.ctx.parallel(event, at).catch(error => this.ctx.logger('quark-state').error(error))
   }
 }

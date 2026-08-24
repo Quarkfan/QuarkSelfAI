@@ -29,5 +29,7 @@ declare module '@deepseek-ai/cordis' {
     'quark/event-appended'(eventId: string): void
     /** Earliest durable workflow timer/effect that may now be actionable. */
     'quark/workflow-wake'(at?: string): void
+    /** An approved durable action is ready now, or a retry becomes ready at this time. */
+    'quark/action-wake'(at?: string): void
   }
 }

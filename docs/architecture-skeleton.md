@@ -161,11 +161,17 @@ adapter 将其呈现为 `native-cutover` gate。以后新增发布、凭证或�
 
 DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-state`。新功能不得把私有 JSON state、
 业务 timer 或状态读写重新塞进 action ledger；跨重启流程必须使用 `quark-durable-workflows`。
+事件、workflow 和 action worker 共用骨架级 `durable-wake-scheduler`：它只合并提交提示、保留一个最早精确
+deadline，并以 10 分钟低频扫描恢复进程崩溃或漏提示。业务 feature 不得各自复制 timer/drain/poll 实现。
+调度回调会离开 Cordis 插件依赖追踪作用域，因此 runtime 必须在构造期解析并持有声明过的窄端口，不能在原生
+timer 回调中重新从 `ctx` 动态取 provider。
 新 channel event 成功写入 durable state 后会发布 `quark/event-appended` wake hint，由 durable event runtime 合并唤醒并
 立即清空积压；10 分钟数据库扫描仅用于进程重启、监听器暂未装载或漏唤醒恢复，不再每秒空轮询。adapter 只负责
 append，不直接依赖或手工驱动 inbox runtime。
 workflow create/advance/retry 同样由 durable state 发布最早可执行时间；runtime 对立即 effect 合并 drain，对未来
 `wakeAt` 安排精确 timer。30 秒 workflow 空轮询已移除，10 分钟扫描只补偿重启后丢失的内存 timer。
+action enqueue、批准和 retry release 也由 durable state 发布 `quark/action-wake`；可执行 action 立即 drain，未来
+retry 精确唤醒。原 30 秒 action 空轮询已移除，同样只保留 10 分钟恢复扫描。
 外层控制面与 DSH 在 SQLite 模式下必须解析到同一个 `SQLITE_PATH`，PostgreSQL 模式下必须使用同一个
 `DATABASE_URL`；不得用 `DSH_HOME` 下的隐式第二数据库制造分叉真源。
 
