@@ -14,6 +14,8 @@ export interface AssistantModuleDescriptor {
   /** Exact src/*.ts files owned by this module. New source files must be assigned explicitly. */
   readonly owns: readonly string[]
   readonly dependsOn: readonly string[]
+  readonly requiresEffects: readonly string[]
+  readonly providesEffects: readonly string[]
   readonly hostedBy?: string
   readonly exitCriteria?: string
 }
@@ -21,6 +23,12 @@ export interface AssistantModuleDescriptor {
 export interface AssistantModuleCatalog {
   readonly version: 1
   readonly modules: readonly AssistantModuleDescriptor[]
+}
+
+export interface EffectCoverage {
+  readonly required: readonly string[]
+  readonly provided: readonly string[]
+  readonly missing: readonly string[]
 }
 
 const catalogPath = fileURLToPath(new URL('../../config/module-catalog.json', import.meta.url))
@@ -67,15 +75,33 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
   }
   const ownership = new Map<string, string>()
+  const effectProviders = new Map<string, string>()
   for (const module of modules) {
     for (const source of module.owns) {
       const existing = ownership.get(source)
       if (existing) throw new Error(`source ${source} is owned by both ${existing} and ${module.id}`)
       ownership.set(source, module.id)
     }
+    for (const effect of module.providesEffects) {
+      const existing = effectProviders.get(effect)
+      if (existing) throw new Error(`effect ${effect} is provided by both ${existing} and ${module.id}`)
+      effectProviders.set(effect, module.id)
+    }
+  }
+  for (const module of modules.filter(item => item.status === 'native')) {
+    for (const effect of module.requiresEffects) {
+      if (!effectProviders.has(effect)) throw new Error(`native module ${module.id} requires unprovided effect ${effect}`)
+    }
   }
   assertAcyclic(modules, byId)
   return { version: 1, modules }
+}
+
+export function analyzeEffectCoverage(catalog: AssistantModuleCatalog): EffectCoverage {
+  const required = [...new Set(catalog.modules.flatMap(module => module.requiresEffects))].sort()
+  const provided = [...new Set(catalog.modules.flatMap(module => module.providesEffects))].sort()
+  const providerSet = new Set(provided)
+  return { required, provided, missing: required.filter(effect => !providerSet.has(effect)) }
 }
 
 export function validateSourceOwnership(catalog: AssistantModuleCatalog, sourceFiles: readonly string[]): void {
@@ -126,6 +152,8 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     }
   }
   const dependsOn = [...new Set(value.dependsOn as string[])]
+  const requiresEffects = effectList(value.requiresEffects, `requiresEffects for ${id}`)
+  const providesEffects = effectList(value.providesEffects, `providesEffects for ${id}`)
   if (dependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
   return {
     id,
@@ -135,9 +163,22 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     source: string(value.source, `source for ${id}`),
     owns,
     dependsOn,
+    requiresEffects,
+    providesEffects,
     ...(typeof value.hostedBy === 'string' ? { hostedBy: value.hostedBy } : {}),
     ...(typeof value.exitCriteria === 'string' ? { exitCriteria: value.exitCriteria } : {}),
   }
+}
+
+function effectList(value: unknown, label: string): string[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) throw new Error(`${label} must be a string array`)
+  const result = [...new Set(value as string[])]
+  if (result.length !== value.length) throw new Error(`${label} must not contain duplicates`)
+  for (const effect of result) {
+    if (!/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+\.v[1-9][0-9]*$/.test(effect)) throw new Error(`invalid effect id in ${label}: ${effect}`)
+  }
+  return result
 }
 
 function assertAcyclic(modules: readonly AssistantModuleDescriptor[], byId: ReadonlyMap<string, AssistantModuleDescriptor>): void {

@@ -36,6 +36,10 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 `dependsOn` 中；新增 helper、重复归属、失效路径和未声明跨模块 import 都会阻断 `npm check`。这使分类约束
 覆盖全部源码，而不是只检查少数代表入口。
 
+长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。planned
+workflow 可以暂时存在缺口，但缺失 provider 会进入 `nativeCutoverBlockers`；模块一旦标记 native，任何 effect
+缺口都会直接使目录校验失败。这样“状态机代码写完”和“具备真实外部执行能力”不会再被混为一谈。
+
 ## 功能
 
 功能通过骨架契约接入，可以单独替换、停用和测试：
@@ -62,6 +66,8 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
 5. 当前 `app/bootstrap/runtime config` 仍直接组合 compatibility host 和 takeover readiness，因此被明确归为
    `bridge-compat-host` 迁移所有权；原生 application composition 尚未建立，不能把当前启动入口误称为最终骨架。
+6. native workflow 当前只实现了内部 `followup.open-outreach` handler；飞书、滴答、Codex session 和 intake
+   effect provider 仍缺失，现已进入机器切换门禁，必须逐 adapter 补齐后才能取得状态所有权。
 
 `feature-parity` 的业务完成度与模块目录的原生所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
 `feature/compat` 或 `feature/planned`，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。

@@ -4,7 +4,8 @@
 - 骨架、功能和迁移代码的机器真源为 `config/module-catalog.json`。新能力先登记分类和依赖并通过
   `npm run architecture:check`：skeleton 不得依赖 feature/migration，feature 不得依赖 migration；迁移模块
   必须有退出条件。`src` 下每个 TypeScript 文件必须在 `owns` 中恰好归属一个模块，真实跨模块 import 必须在
-  `dependsOn` 中声明。`packages/bridge-compat` 不承接新的长期功能。
+  `dependsOn` 中声明。长期 workflow 的外部能力必须登记 `requiresEffects`，native 模块不得依赖缺失或重复的
+  `providesEffects`。`packages/bridge-compat` 不承接新的长期功能。
 - 外部 CLI 只能在 adapter 层调用；domain 和 policy 不得拼接命令行参数。
 - 事件必须保留原始 payload，写操作必须经过 durable action/approval 状态。
 - `QuarkSelfAI` 是唯一现网飞书消费者；`packages/bridge-compat` 是受 DSH 监督的兼容插件，不依赖外部旧仓库。

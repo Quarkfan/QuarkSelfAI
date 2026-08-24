@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { loadModuleCatalog } from '../platform/modules.js'
+import { analyzeEffectCoverage, loadModuleCatalog } from '../platform/modules.js'
 
 export type FeatureStatus = 'complete' | 'partial' | 'missing'
 
@@ -68,7 +68,8 @@ export async function loadFeatureParity(): Promise<FeatureParityReport> {
   const nativeCutoverBlockers = catalog.modules
     .filter(module => module.classification === 'feature' && module.status !== 'native')
     .map(module => module.id)
-    .sort()
+  nativeCutoverBlockers.push(...analyzeEffectCoverage(catalog).missing.map(effect => `effect-provider:${effect}`))
+  nativeCutoverBlockers.sort()
   return {
     ...manifest,
     takeoverReady: incomplete.length === 0,

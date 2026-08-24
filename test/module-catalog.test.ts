@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { loadModuleCatalog, summarizeModules, validateModuleCatalog, validateSourceOwnership } from '../src/platform/modules.js'
+import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateModuleCatalog, validateSourceOwnership } from '../src/platform/modules.js'
 
 test('classifies every current module as skeleton, feature, or migration', async () => {
   const catalog = await loadModuleCatalog()
@@ -74,4 +74,30 @@ test('rejects duplicate ownership and src entrypoints that are not owned', () =>
       { id: 'a', classification: 'skeleton', layer: 'contract', status: 'native', source: 'src/domain/a.ts', owns: [], dependsOn: [] },
     ],
   }), /must own its src entrypoint/)
+})
+
+test('reports planned effect gaps and blocks native consumers without a provider', () => {
+  const planned = validateModuleCatalog({
+    version: 1,
+    modules: [
+      { id: 'workflow', classification: 'feature', layer: 'workflow', status: 'planned', source: 'workflow', owns: [], dependsOn: [], requiresEffects: ['task-system.read.v1'] },
+    ],
+  })
+  assert.deepEqual(analyzeEffectCoverage(planned), { required: ['task-system.read.v1'], provided: [], missing: ['task-system.read.v1'] })
+  assert.throws(() => validateModuleCatalog({
+    version: 1,
+    modules: [
+      { id: 'workflow', classification: 'feature', layer: 'workflow', status: 'native', source: 'workflow', owns: [], dependsOn: [], requiresEffects: ['task-system.read.v1'] },
+    ],
+  }), /native module workflow requires unprovided effect task-system\.read\.v1/)
+})
+
+test('requires each effect to have only one provider', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 1,
+    modules: [
+      { id: 'a', classification: 'feature', layer: 'adapter', status: 'planned', source: 'a', owns: [], dependsOn: [], providesEffects: ['task-system.read.v1'] },
+      { id: 'b', classification: 'feature', layer: 'adapter', status: 'planned', source: 'b', owns: [], dependsOn: [], providesEffects: ['task-system.read.v1'] },
+    ],
+  }), /effect task-system\.read\.v1 is provided by both a and b/)
 })

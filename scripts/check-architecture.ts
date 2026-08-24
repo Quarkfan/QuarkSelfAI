@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
-import { loadModuleCatalog, summarizeModules, validateSourceOwnership } from '../src/platform/modules.js'
+import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateSourceOwnership } from '../src/platform/modules.js'
 
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
@@ -92,7 +92,8 @@ for (const filename of files) {
 }
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)
 const summary = summarizeModules(catalog)
-process.stdout.write(`Architecture verified modules=${catalog.modules.length} skeleton=${summary.skeleton.native} featureNative=${summary.feature.native} featureCompat=${summary.feature.compat} migration=${summary.migration.native} cutoverUnits=${migrationUnits.length}\n`)
+const effectCoverage = analyzeEffectCoverage(catalog)
+process.stdout.write(`Architecture verified modules=${catalog.modules.length} skeleton=${summary.skeleton.native} featureNative=${summary.feature.native} featureCompat=${summary.feature.compat} migration=${summary.migration.native} cutoverUnits=${migrationUnits.length} effects=${effectCoverage.provided.length}/${effectCoverage.required.length}\n`)
 
 async function sourceFiles(directory: string): Promise<string[]> {
   const result: string[] = []
