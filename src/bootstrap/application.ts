@@ -1,7 +1,6 @@
 import { once } from 'node:events'
 import type { Server } from 'node:http'
-import { createAssistantStore } from '../storage/factory.js'
-import type { StorageConfig } from '../storage/types.js'
+import type { AssistantStore, StorageConfig } from '../storage/types.js'
 import { createConsoleServer } from '../web/server.js'
 import { DisabledKernelRuntime, DshKernelRuntime } from '../runtime/kernel.js'
 import type { ManagedComponent } from '../platform/lifecycle.js'
@@ -42,6 +41,10 @@ export interface AssistantApplicationExtensions {
   readonly components?: readonly ManagedComponent[]
 }
 
+export interface AssistantApplicationInfrastructure {
+  readonly store: AssistantStore
+}
+
 /**
  * Native composition root for stable infrastructure. Feature and migration
  * hosts contribute managed components without becoming dependencies of the
@@ -49,9 +52,10 @@ export interface AssistantApplicationExtensions {
  */
 export async function createAssistantApplication(
   config: AssistantApplicationConfig,
+  infrastructure: AssistantApplicationInfrastructure,
   extensions: AssistantApplicationExtensions = {},
 ): Promise<AssistantApplication> {
-  const store = await createAssistantStore(config)
+  const store = infrastructure.store
   const runtime = extensions.runtimeStatus ?? new ControlOnlyRuntime()
   const readiness = extensions.readiness ?? new UnconfiguredReadiness()
   const kernel = config.kernel.mode === 'dsh' ? new DshKernelRuntime(config.kernel) : new DisabledKernelRuntime()

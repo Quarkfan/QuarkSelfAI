@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
-import type {} from '../storage/service.js'
+import type {} from '../storage/service-contract.js'
 import type {} from './service.js'
 
 export const name = 'quark-feishu-ingress'

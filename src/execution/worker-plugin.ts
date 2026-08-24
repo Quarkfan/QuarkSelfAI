@@ -6,7 +6,7 @@ import {
   DurableExecutorWorker,
   type DurableActionAgentHost, type DurableActionAgentLease, type DurableWorkerRun,
 } from './worker.js'
-import type {} from '../storage/service.js'
+import type {} from '../storage/service-contract.js'
 import type {} from './router.js'
 
 declare module '@deepseek-ai/cordis' {

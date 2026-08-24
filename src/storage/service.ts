@@ -17,10 +17,12 @@ import type {
   DurableSignalInput,
   EventClaimRelease,
   PolicyDraftInput,
+  StoredEvent,
   WorkflowInstance,
 } from './types.js'
 import type { PolicySample } from '../policy/types.js'
 import type { ExecutorResult } from '../domain/contracts.js'
+import type { DurableStatePort } from './service-contract.js'
 
 const sqliteMigrations = fileURLToPath(new URL('../../migrations/sqlite/', import.meta.url))
 const postgresMigrations = fileURLToPath(new URL('../../migrations/', import.meta.url))
@@ -29,12 +31,6 @@ export interface DurableStateConfig {
   readonly storageKind?: 'sqlite' | 'postgres'
   readonly sqlitePath?: string
   readonly databaseUrl?: string
-}
-
-declare module '@deepseek-ai/cordis' {
-  interface Context {
-    quarkState: DurableStateService
-  }
 }
 
 async function createStateStore(config: DurableStateConfig): Promise<AssistantStore> {
@@ -52,8 +48,8 @@ async function createStateStore(config: DurableStateConfig): Promise<AssistantSt
   return store
 }
 
-/** The single DSH-owned durable state boundary shared by skeleton services. */
-export class DurableStateService extends Service {
+/** The single DSH-owned database connection provider behind the durable-state contract. */
+export class DurableStateService extends Service implements DurableStatePort {
   private readonly ready: Promise<AssistantStore>
 
   constructor(ctx: Context, config: DurableStateConfig) {
@@ -62,7 +58,7 @@ export class DurableStateService extends Service {
     ctx.effect(() => async () => { await (await this.ready.catch(() => undefined))?.close() }, 'quark durable state store')
   }
 
-  async appendEvent(event: NormalizedChannelEvent): Promise<{ readonly inserted: boolean }> {
+  async appendEvent(event: NormalizedChannelEvent): Promise<StoredEvent> {
     return await (await this.ready).appendEvent(eventRecordId(event), event)
   }
 

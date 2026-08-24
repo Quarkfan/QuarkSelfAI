@@ -12,8 +12,9 @@
 
 ## 决策
 
-1. `quark-durable-state` 是 DSH 进程内唯一数据库连接 owner。存储 provider 选择、迁移和关闭都由它负责。
-   它与外层控制面解析到同一个 SQLite 文件或 PostgreSQL 数据库，不允许默认生成 DSH 私有第二真源。
+1. `durable-state-contract` 是骨架端口；`quark-durable-state` 是可替换的 infrastructure provider，也是 DSH 进程内
+   唯一数据库连接 owner。存储 provider 选择、迁移和关闭都由它负责。它与外层控制面解析到同一个 SQLite 文件
+   或 PostgreSQL 数据库，不允许默认生成 DSH 私有第二真源。
 2. action ledger、workflow runtime 和 feature 插件只通过 durable state 端口访问数据库；action ledger 不再代理
    event、policy 或 feature state。
 3. `quark-durable-workflows` 提供版本化状态机、幂等事件、定时唤醒、原子 transition/effect outbox、effect

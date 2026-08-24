@@ -35,9 +35,9 @@ Claude/Codex、具体联系人或 takeover 等功能/迁移身份。该保护不
 
 ## 当前结构判断
 
-- DSH/Cordis、生命周期监管、事件信封、matter/action/approval、存储端口、策略运行时、执行路由、工作区边界、
+- DSH/Cordis、生命周期监管、事件信封、matter/action/approval、存储与 durable-state 端口、策略运行时、执行路由、工作区边界、
   控制面和模块目录属于骨架。
-- 飞书、滴答、BlackLake、智造湖小维、重点关注、任永强入群接手、表情语义、自动跟进、通知汇总、会话清理、
+- SQLite/PostgreSQL connection provider、飞书、滴答、BlackLake、智造湖小维、重点关注、任永强入群接手、表情语义、自动跟进、通知汇总、会话清理、
   Claude/Codex Provider 和动态插件创作属于骨架上生长的功能。
 - `bridge-compat`、旧 JSON 状态读取、影子审计和 takeover preflight 属于迁移代码。
 

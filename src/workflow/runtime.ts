@@ -5,7 +5,7 @@ import type {
   WorkflowInstance,
   WorkflowStatus,
 } from '../storage/types.js'
-import type {} from '../storage/service.js'
+import type {} from '../storage/service-contract.js'
 
 export interface WorkflowEvent {
   readonly id: string

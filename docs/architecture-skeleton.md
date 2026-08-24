@@ -11,14 +11,13 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | --- | --- | --- |
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
-| Application composition/host | 装配存储、内核、控制台等稳定组件，并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 枚举 compat、飞书或某个业务功能 |
+| Application composition/host | 接收已构造的存储端口，装配内核、控制台等稳定组件，并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 创建 SQLite/PostgreSQL、枚举 compat、飞书或某个业务功能 |
 | Module catalog | 模块分类、逐文件源码所有权、真实 import 依赖和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
 | Durable event runtime | 入站事件按消费者独立租约、失败重放和结算 | 飞书消息语义或具体业务路由 |
-| Storage port | SQLite/PostgreSQL 一致契约 | 兼容 `state.json` 结构 |
-| Durable state host | DSH 内唯一数据库连接所有者，向 ledger/workflow/feature 提供端口 | 执行动作或解释业务信号 |
+| Storage port / durable-state contract | 跨数据库的一致数据契约，以及 DSH 插件依赖的稳定 `quarkState` 端口 | 创建具体数据库连接、兼容 `state.json` 结构 |
 | Policy runtime | 受限 DSL、模拟、版本和激活 | 任意代码执行 |
 | Executor router | Provider 选择、串行兜底、权限边界 | Claude/Codex 的具体协议 |
 | Workspace boundary | 本地路径授权与防逃逸 | 上传或同步文件 |
@@ -56,6 +55,10 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 功能可以依赖骨架和其他功能契约，但不能依赖 `bridge-compat`、迁移脚本或旧 JSON 状态。当前仍由兼容宿主
 承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
 
+SQLite、PostgreSQL 与 `quark-durable-state` connection host 也属于可替换 infrastructure feature：应用骨架只接收
+`AssistantStore`，DSH 内的 ledger/workflow/event runtime 只依赖 `durable-state-contract`。当前本地部署实际使用
+SQLite；PostgreSQL 保持 ready/inactive，切换配置不应迫使骨架 import 具体数据库。
+
 任务能力本身也不是一整块：`task-store.*` 是可替换的任务产品读写端口，
 `assistant.task-projection.*` 拥有标题、标签、快速摘要、血缘和合并语义，`assistant.followup.*` 拥有是否提醒或
 联系他人的判断，`task-maintenance.*` 承载经过 owner 授权的清理动作。滴答 adapter 只能提供 store/maintenance，
@@ -71,14 +74,15 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 1. 飞书消费者、业务定时器仍由 `bridge-compat` 自己编排，而非 DSH 插件生命周期。
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
-4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
+4. 所有当前本地插件均已具备模块 owner、package export 与 Cordis profile 绑定；剩余问题是这些 native 插件尚未
+   取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。
 5. 原生 `application-composition` 已建立，只装配 durable store、DSH kernel、控制台和开放组件列表；运行状态
    provider 的标识、健康参与度和展示模式也是开放字段。当前 `src/app.ts` 仍通过 `compat-composition` 选择已接管
    的 compatibility consumer，因此进程 selector 与 runtime config 继续归迁移层；删除 compat 不再需要修改骨架。
    具体边界见 ADR 0022。
-6. native workflow 的飞书 effect 与任务存储/维护 effect 已实现但未激活；Codex session、任务语义投影和 intake
-   provider 仍未实现。两类缺口由机器门禁分别呈现，必须逐 adapter 补齐并回放后才能切换。飞书通知、
-   交互卡片、只读联系人候选解析和经 durable approval 的本人代发 adapter 已完成 mock 契约实现；同名联系人
+6. native workflow 所需的 21 个 effect 均已有实现，但仍全部未激活；机器门禁把实现覆盖与运行所有权分别呈现，
+   必须逐 adapter 完成真实只读/写入回放和状态交接后才能切换。飞书通知、交互卡片、只读联系人候选解析和经
+   durable approval 的本人代发 adapter 已完成契约实现；同名联系人
    只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持
    `implementation=ready,runtime=inactive`。
 7. durable action ledger 已与 agent-bound worker 分离。worker 按 action ID 确定性创建/恢复 exact DSH 父会话，

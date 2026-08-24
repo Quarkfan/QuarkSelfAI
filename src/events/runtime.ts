@@ -1,6 +1,6 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
-import type {} from '../storage/service.js'
+import type {} from '../storage/service-contract.js'
 
 export interface DurableEventConsumer { readonly name: string; readonly eventKeys: readonly string[]; handle(event: NormalizedChannelEvent): Promise<void> }
 export interface DurableEventRuntimeConfig { readonly workerId: string; readonly enabled?: boolean; readonly pollIntervalMs?: number; readonly leaseMs?: number; readonly retryDelayMs?: number; readonly maxAttempts?: number }

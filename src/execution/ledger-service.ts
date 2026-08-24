@@ -1,6 +1,6 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { DurableActionInput } from '../storage/types.js'
-import type {} from '../storage/service.js'
+import type {} from '../storage/service-contract.js'
 
 export interface ActionLedgerConfig {}
 

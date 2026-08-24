@@ -19,8 +19,8 @@
 4. `task-maintenance.*` 表达有明确 owner 授权、保留期和批量上限的生命周期操作。
 
 工作流依赖最窄的能力：会话清理只依赖完成状态查询；超期监控依赖任务查询；消息入口和小维结果依赖语义
-投影；工作日跟进依赖语义评估。滴答适配器目前只提供其真实实现的读取与维护效果。未实现的语义 provider
-继续在模块目录中显示为缺口，不得用一个“大而全”的滴答类伪装成已完成。
+投影；工作日跟进依赖语义评估。滴答存储适配器只提供读取与维护效果；任务投影和 DSH 结构化判断由独立
+provider 实现。三者目前均为 `implementation=ready,runtime=inactive`，不得用一个“大而全”的滴答类重新合并。
 
 ## 骨架与功能边界
 
@@ -30,5 +30,5 @@
 
 ## 兼容性
 
-这些原生 workflow 仍为 `runtime=inactive`，生产 owner 仍是 bridge compat，因此本次重命名不会改变线上消费或
-写入。维护窗口前需实现 projection/reasoning provider、完成状态交接和影子审计，再整体切换对应 effect id。
+这些原生 workflow 与 provider 仍为 `runtime=inactive`，生产 owner 仍是 bridge compat，因此本次分层不会改变
+线上消费或写入。维护窗口前仍需完成真实 provider 回放、状态交接和影子审计，再整体切换对应 effect id。

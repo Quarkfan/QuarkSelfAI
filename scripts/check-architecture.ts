@@ -94,7 +94,7 @@ for (const filename of files) {
       violations.push(`${from} imports ${to}; platform skeleton must not depend on implementation layers`)
     }
     if (from === 'src/platform/index.ts' && outside(to, [
-      'src/platform/', 'src/domain/contracts', 'src/domain/authorization', 'src/storage/types', 'src/policy/types', 'src/execution/workspace-policy',
+      'src/platform/', 'src/domain/contracts', 'src/domain/authorization', 'src/storage/types', 'src/storage/service-contract', 'src/policy/types', 'src/execution/workspace-policy',
     ])) {
       violations.push(`${from} exports non-contract implementation ${to}`)
     }

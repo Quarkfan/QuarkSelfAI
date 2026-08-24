@@ -50,7 +50,8 @@
 - Codex 状态检查、滴答完成检查、归档、删除和通知均为版本化 effect。删除 adapter 必须再次确认精确 UUID、
   会话未运行且仍处于归档状态；`missing` 只做幂等对账，`not-archived` 不删除。
 - `npm run audit:session-lifecycle-handoff` 只读生成内容寻址交接，保留重试计数与游标但不迁移错误文本。
-  当前没有 effect handler、没有生产 workflow instance，compat 模式下强制禁用。
+  Codex session、滴答完成查询和通知 effect 均已有 provider，但全部保持 inactive；当前没有生产 workflow
+  instance，compat 模式下强制禁用。
 
 ### xiaowei-research 当前准备状态
 
@@ -58,8 +59,8 @@
   模型会话，由 `message-intake-and-projection` 的单一飞书 owner 投递关联事件。
 - `approvedAt` 是创建工作流的必填门禁；重试更换内部 effect id，但外部 idempotency key 保持不变，避免请求、
   通知或滴答更新重复执行。
-- 旧状态交接保留必要的请求/回复业务材料和 correlation，剔除错误文本；当前仍未导入、未注册 effect handler、
-  未向智造湖小维发送任何消息，compat 模式下强制禁用。
+- 旧状态交接保留必要的请求/回复业务材料和 correlation，剔除错误文本；共享飞书/通知/任务投影 effect 已有
+  provider，但当前仍未导入或激活，也未向智造湖小维发送任何消息，compat 模式下强制禁用。
 
 ### delegated-followup 当前准备状态
 
@@ -70,8 +71,8 @@
   `feishu.send-as-user` effect。发送正文固定声明“我是常东旭的 AI 分身”。
 - 多联系人选择、补充搜索、发送、长时间等待回复、任务写回和结果通知均有明确状态；等待回复不依赖轮询 timer，
   由底层单一飞书消费者关联并投递事件。
-- 交接保留旧卡片 requestId，保证维护窗口后未处理卡片仍可关联；当前未导入、未注册外部 handler，compat
-  模式下强制禁用。
+- 交接保留旧卡片 requestId，保证维护窗口后未处理卡片仍可关联；外部 effect provider 已实现但当前未导入或
+  激活，compat 模式下强制禁用。
 
 ### message-intake-and-projection 当前准备状态
 
@@ -99,7 +100,7 @@
 
 ## 每个单元的统一完成证据
 
-1. native 插件拥有独立 manifest、服务契约、生命周期和架构目录项；
+1. native 插件拥有唯一模块 owner、package export、Cordis profile 绑定、服务契约和生命周期；
 2. 旧状态到 durable store 的内容寻址迁移可重复执行且不会覆盖新状态；
 3. 影子比较无语义差异、无重复外部写入；
 4. 切换前冻结 checkpoint，切换后证明只有一个 timer/consumer owner；

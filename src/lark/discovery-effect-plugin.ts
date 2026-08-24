@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { FOCUS_DISCOVERY_EVENT_KEY, INTAKE_EFFECTS, type FocusDiscoverySources } from '../intake/types.js'
-import type {} from '../storage/service.js'
+import type {} from '../storage/service-contract.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import type {} from '../workflow/runtime.js'
 import { isRecord } from './json.js'

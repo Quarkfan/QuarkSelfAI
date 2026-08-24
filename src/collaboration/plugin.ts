@@ -1,7 +1,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import { CollaborationLearningEngine } from './engine.js'
 import type { CollaborationLearningConfig, CollaborationMessage, CollaborationPolicyProposal, CollaborationTaskDecision } from './types.js'
-import type {} from '../storage/service.js'
+import type {} from '../storage/service-contract.js'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
