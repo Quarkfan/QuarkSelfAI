@@ -79,6 +79,11 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 命令前重新核验范围。当前 adapter 是 `implementation=ready,runtime=inactive` 且双重禁用，真实只读/删除回放
 与维护窗口批准前不会接管。
 
+Codex session adapter 已实现 UUID 限制、只读状态核验、归档后复核、`delete --force <UUID>`、七天保留期和
+长期授权门禁，但 Codex SQLite 不包含“当前是否仍在执行”的权威字段。adapter 因此明确标记为
+`implementation=partial,runtime=inactive`，inspect 返回 unknown 时 workflow 只会延期，不会尝试归档。补上
+DSH/Codex app-server activity probe 并完成真实只读回放前，不得把该模块提升为 ready。
+
 `feature-parity` 的业务完成度与模块目录的运行所有权是两个门禁：compat 功能可以业务上 complete，但只要仍有
 `runtime=compat|inactive|shadow` 的 feature，`nativeCutoverReady` 就必须为 false，不能据此删除 compatibility host。
 

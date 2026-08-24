@@ -61,7 +61,7 @@ export function prepareSessionLifecycleHandoff(legacyRoot: unknown, config: Sess
     if (archivedAt) archivedCount += 1
     if (deletedAt) deletedCount += 1
     const initialized = definition.initialize({ sessionId: item.sessionId, taskId: item.taskId,
-      eligible: !waitingIds.has(item.sessionId), createdAt }, frozenAt)
+      eligible: !waitingIds.has(item.sessionId), createdAt, managedBy: 'quarkselfai-auto-research' }, frozenAt)
     const base = initialized.state as SessionLifecycleState
     const operation = archivedAt ? 'delete' as const : 'archive' as const
     const failures = count(archivedAt ? item.deleteFailureCount : item.archiveFailureCount, `research session ${index} failure count`)

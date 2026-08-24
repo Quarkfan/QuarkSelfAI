@@ -10,6 +10,11 @@ const config = JSON.parse(configBytes) as Record<string, unknown>
 const handoff = prepareSessionLifecycleHandoff(JSON.parse(stateBytes), {
   pollIntervalMs: numeric(config.sessionCleanupIntervalMs), retryBaseMs: numeric(config.sessionRetryBaseMs),
   retryMaxMs: numeric(config.sessionRetryMaxMs), deleteAfterDays: numeric(config.sessionDeleteAfterDays),
+  authorization: {
+    id: 'owner-policy:codex-auto-research-session-lifecycle:v1', grantedBy: 'owner', grantedAt: '2026-08-20T00:00:00+08:00',
+    scope: 'codex.auto-research-session-lifecycle', revision: 1,
+    source: 'owner-directive:archive-completed-and-delete-after-one-week', minimumArchivedDays: 7,
+  },
 }, stateInfo.mtime.toISOString())
 process.stdout.write(`${JSON.stringify({ statePath, mode: 'read-only', ...handoff.counts, workflows: handoff.workflows.length, digest: handoff.digest }, null, 2)}\n`)
 

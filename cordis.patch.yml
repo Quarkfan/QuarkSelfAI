@@ -160,6 +160,16 @@
           projectId: !!js process.env.DIDA_PROJECT_ID
           minimumRetentionDays: 30
           maximumDeletesPerRun: 50
+    - id: quark-codex-session-effects
+      name: '@quarkfan/quark-self-ai/codex-session-effects'
+      # Read-only inspection plus owner-authorized archive/delete. Keep absent
+      # until compat session ownership is frozen and exact workflows migrate.
+      disabled: !!js process.env.QUARK_NATIVE_CODEX_SESSION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        executable: codex
+        stateDatabase: !!js >-
+          process.env.CODEX_STATE_DB || ((process.env.CODEX_HOME || (process.env.HOME + '/.codex')) + '/state_5.sqlite')
+        workspace: !!js process.env.QUARK_OWNER_WORKSPACE || '/Users/edy/BlackLakeWork'
     - id: quark-session-lifecycle
       name: '@quarkfan/quark-self-ai/session-lifecycle'
       # Archive/delete effects are irreversible. Keep the plugin absent until
@@ -173,6 +183,14 @@
         deleteAfterDays: 7
         failureNotifyThreshold: 1
         failureNotifyCooldownMs: 86400000
+        authorization:
+          id: owner-policy:codex-auto-research-session-lifecycle:v1
+          grantedBy: owner
+          grantedAt: '2026-08-20T00:00:00+08:00'
+          scope: codex.auto-research-session-lifecycle
+          revision: 1
+          source: owner-directive:archive-completed-and-delete-after-one-week
+          minimumArchivedDays: 7
     - id: quark-xiaowei-research
       name: '@quarkfan/quark-self-ai/xiaowei-research'
       # Requests require durable owner approval and one Feishu channel owner.

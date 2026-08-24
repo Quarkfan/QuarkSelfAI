@@ -74,6 +74,10 @@
       "types": "./dist/session-lifecycle/plugin.d.ts",
       "import": "./dist/session-lifecycle/plugin.js"
     },
+    "./codex-session-effects": {
+      "types": "./dist/session-lifecycle/codex-effect-plugin.d.ts",
+      "import": "./dist/session-lifecycle/codex-effect-plugin.js"
+    },
     "./feishu-effects": {
       "types": "./dist/lark/effects.d.ts",
       "import": "./dist/lark/effects.js"

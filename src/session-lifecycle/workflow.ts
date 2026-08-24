@@ -3,6 +3,7 @@ import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../wor
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import { TASK_EFFECTS } from '../task-system/effects.js'
 import { SESSION_EFFECTS, type SessionLifecycleConfig, type TrackResearchSessionInput } from './types.js'
+import { requireAuthorizationEvidence } from '../domain/authorization.js'
 
 const HOUR_MS = 3_600_000
 const DAY_MS = 86_400_000
@@ -29,6 +30,8 @@ export interface SessionLifecycleState extends Record<string, unknown> {
   readonly deleteAfterMs: number
   readonly failureThreshold: number
   readonly failureNotifyCooldownMs: number
+  readonly authorization: NonNullable<SessionLifecycleConfig['authorization']>
+  readonly managedBy: TrackResearchSessionInput['managedBy']
   readonly createdAt?: string
   readonly archivedAt?: string
   readonly deletedAt?: string
@@ -93,17 +96,19 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
   const deleteAfterDays = integer(config.deleteAfterDays, 7, 'deleteAfterDays')
   const failureThreshold = integer(config.failureNotifyThreshold, 1, 'failureNotifyThreshold')
   const failureNotifyCooldownMs = integer(config.failureNotifyCooldownMs, DAY_MS, 'failureNotifyCooldownMs', HOUR_MS)
+  const authorization = lifecycleAuthorization(config, deleteAfterDays)
   return {
-    kind: 'codex.session-lifecycle', version: 1,
+    kind: 'codex.session-lifecycle', version: 2,
     initialize(rawInput, now) {
       const input = rawInput as unknown as TrackResearchSessionInput
       if (typeof input.sessionId !== 'string' || !UUID.test(input.sessionId)) throw new Error('sessionId must be an exact UUID')
       if (typeof input.taskId !== 'string' || !input.taskId.trim()) throw new Error('taskId must be a non-empty string')
+      if (input.managedBy !== 'quarkselfai-auto-research') throw new Error('session must be owned by QuarkSelfAI auto research')
       const createdAt = input.createdAt === undefined ? now : timestamp(input.createdAt, 'createdAt')
       const state: SessionLifecycleState = {
         sessionId: input.sessionId, taskId: input.taskId, eligible: input.eligible !== false, phase: 'waiting', sequence: 0,
         pollIntervalMs, retryBaseMs, retryMaxMs, deleteAfterMs: deleteAfterDays * DAY_MS,
-        failureThreshold, failureNotifyCooldownMs, createdAt,
+        failureThreshold, failureNotifyCooldownMs, authorization, managedBy: input.managedBy, createdAt,
       }
       return { status: 'waiting', state, wakeAt: now }
     },
@@ -123,8 +128,10 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
         const exists = event.payload.exists
         const archived = event.payload.archived
         const running = event.payload.running
-        if (typeof exists !== 'boolean' || typeof archived !== 'boolean' || typeof running !== 'boolean') throw new Error('session inspect result is invalid')
-        if (running) return { status: 'waiting', state: { ...withoutFailure(state), phase: 'waiting' }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
+        if (typeof exists !== 'boolean' || typeof archived !== 'boolean'
+          || (running !== true && running !== false && running !== 'unknown')) throw new Error('session inspect result is invalid')
+        if (!exists) return { status: 'completed', state: { ...withoutFailure(state), phase: 'completed', deletedAt: event.occurredAt }, wakeAt: null }
+        if (running !== false) return { status: 'waiting', state: { ...withoutFailure(state), phase: 'waiting' }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
         if (exists && archived) {
           const archivedAt = event.occurredAt
           return { status: 'waiting', state: { ...withoutFailure(state), phase: 'archived', archivedAt }, wakeAt: at(archivedAt, state.deleteAfterMs) }
@@ -138,7 +145,7 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
         if (!event.payload.completed) return { status: 'waiting', state: { ...withoutFailure(state), phase: 'waiting' }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
         const next = { ...withoutFailure(state), phase: 'archiving' as const }
         return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(state, 'archive'), kind: SESSION_EFFECTS.archiveIfNeeded,
-          availableAt: event.occurredAt, payload: { sessionId: state.sessionId } }] }
+          availableAt: event.occurredAt, payload: { sessionId: state.sessionId, managedBy: state.managedBy, effectiveAt: event.occurredAt, authorization: state.authorization } }] }
       }
       if (event.type === 'effect.delivered' && state.phase === 'archiving' && effectKind(event) === SESSION_EFFECTS.archiveIfNeeded) {
         const archivedAt = timestamp(event.payload.archivedAt, 'archive effect archivedAt')
@@ -151,7 +158,8 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
       if (event.type === 'timer' && state.phase === 'archived') {
         const next = { ...state, phase: 'deleting' as const, sequence: state.sequence + 1 }
         return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(next, 'delete'), kind: SESSION_EFFECTS.deleteIfArchived,
-          availableAt: event.occurredAt, payload: { sessionId: state.sessionId } }] }
+          availableAt: event.occurredAt, payload: { sessionId: state.sessionId, managedBy: state.managedBy, archivedAt: state.archivedAt,
+            effectiveAt: event.occurredAt, authorization: state.authorization } }] }
       }
       if (['effect.delivered', 'effect.failed'].includes(event.type) && effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) return { status: 'waiting', state }
       if (event.type === 'effect.delivered' && state.phase === 'deleting' && effectKind(event) === SESSION_EFFECTS.deleteIfArchived) {
@@ -170,6 +178,15 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
         ...(['waiting', 'archived'].includes(state.phase) ? { wakeAt: at(event.occurredAt, state.pollIntervalMs) } : {}) }
     },
   }
+}
+
+function lifecycleAuthorization(config: SessionLifecycleConfig, deleteAfterDays: number): NonNullable<SessionLifecycleConfig['authorization']> {
+  const raw = config.authorization
+  const evidence = requireAuthorizationEvidence(raw, 'codex.auto-research-session-lifecycle', new Date().toISOString())
+  if (!raw) throw new Error('session lifecycle authorization is required')
+  const minimumArchivedDays = integer(raw.minimumArchivedDays, 0, 'authorization minimumArchivedDays')
+  if (deleteAfterDays < minimumArchivedDays) throw new Error('deleteAfterDays exceeds the session lifecycle authorization scope')
+  return { ...evidence, minimumArchivedDays }
 }
 
 function operationFor(kind: string | undefined, phase: Phase): Operation | undefined {
