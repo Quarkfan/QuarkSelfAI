@@ -2,16 +2,50 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { ClaimedWorkflowEffect } from '../src/storage/types.js'
 import { FeishuWorkflowEffectAdapter } from '../src/lark/effect-plugin.js'
+import { FeishuContextEffectAdapter } from '../src/lark/context-effect-plugin.js'
 import type { CliOutput, CommandRunner } from '../src/lark/runner.js'
+import { LARK_EFFECTS } from '../src/lark/effects.js'
 
 class RecordingRunner implements CommandRunner {
   readonly calls: Array<{ executable: string; args: readonly string[] }> = []
   response: unknown = { ok: true, identity: 'bot', data: { message_id: 'om_sent', chat_id: 'oc_owner' } }
+  handler?: (args: readonly string[]) => unknown
   async run(executable: string, args: readonly string[]): Promise<CliOutput> {
     this.calls.push({ executable, args })
-    return { exitCode: 0, stderr: '', stdout: JSON.stringify(this.response) }
+    return { exitCode: 0, stderr: '', stdout: JSON.stringify(this.handler?.(args) ?? this.response) }
   }
 }
+
+test('loads bounded direct-message context read-only for the intake workflow', async () => {
+  const runner = new RecordingRunner()
+  runner.handler = () => ({ ok: true, data: { messages: [
+    { message_id: 'om_1', sender_id: 'ou_owner', sender_name: '常东旭', create_time: '2026-08-24T00:00:00Z', content: '先检查配置', message_type: 'text' },
+  ] } })
+  const adapter = new FeishuContextEffectAdapter({}, runner)
+  const output = await adapter.execute(effect(LARK_EFFECTS.loadMessageContext, {
+    requestedAt: '2099-08-24T00:00:00Z',
+    event: { occurredAt: '2099-08-24T00:00:00Z', source: { conversationId: 'oc_owner' }, payload: { chatType: 'p2p' } },
+  }))
+  assert.deepEqual(output, { context: { externalGroup: false, relationship: 'direct-message', messages: [
+    { messageId: 'om_1', senderId: 'ou_owner', senderName: '常东旭', createdAt: '2026-08-24T00:00:00Z', content: '先检查配置', messageType: 'text' },
+  ] } })
+  assert.deepEqual(runner.calls[0]?.args.slice(0, 2), ['im', '+chat-messages-list'])
+  assert.equal(runner.calls[0]?.args.includes('--no-reactions'), true)
+})
+
+test('fails closed to unknown when group metadata does not prove external status', async () => {
+  const runner = new RecordingRunner()
+  runner.handler = args => args.includes('+chat-messages-list')
+    ? { ok: true, data: { messages: [] } }
+    : { ok: true, data: { name: '群聊但没有外部标识' } }
+  const adapter = new FeishuContextEffectAdapter({}, runner)
+  const output = await adapter.execute(effect(LARK_EFFECTS.loadMessageContext, {
+    requestedAt: '2099-08-24T00:00:00Z',
+    event: { occurredAt: '2099-08-24T00:00:00Z', source: { conversationId: 'oc_group' }, payload: { chatType: 'group' } },
+  }))
+  assert.equal((output.context as Record<string, unknown>).externalGroup, 'unknown')
+  assert.deepEqual(runner.calls[1]?.args.slice(0, 3), ['im', 'chats', 'get'])
+})
 
 function effect(kind: string, payload: Readonly<Record<string, unknown>>): ClaimedWorkflowEffect {
   return { id: `effect:${kind}`, instanceId: 'workflow:1', kind, payload, attempt: 1 }

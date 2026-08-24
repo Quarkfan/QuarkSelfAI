@@ -90,6 +90,10 @@
       "types": "./dist/lark/effect-plugin.d.ts",
       "import": "./dist/lark/effect-plugin.js"
     },
+    "./feishu-context-effects": {
+      "types": "./dist/lark/context-effect-plugin.d.ts",
+      "import": "./dist/lark/context-effect-plugin.js"
+    },
     "./xiaowei-research": {
       "types": "./dist/xiaowei/plugin.d.ts",
       "import": "./dist/xiaowei/plugin.js"

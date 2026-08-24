@@ -75,6 +75,8 @@
 
 - 飞书入站先写 durable journal，再由按消费者独立游标的 inbox runtime 创建 durable intake workflow；处理器崩溃不会形成
   “已经收消息但没有形成事项”的不可恢复窗口。
+- 上下文读取由独立只读 effect adapter 完成：目标消息附近窗口与延迟处理后的最新尾部合并去重；群属性只有明确
+  `external=false` 才视为内部群，缺失或读取失败保持 unknown 并阻断后续外发。
 - 常东旭的机器人私聊不做枚举意图分类：补齐最近会话上下文后，通过 durable conversation effect 把原始自然语言
   整体交给一个确定性新建或精确续接的 DSH 会话；完成结果再由同一 intake workflow 回传。其他关注消息才进入
   可演进的上下文评估。固定关注 ID 只是低成本候选过滤器，不是最终业务规则。

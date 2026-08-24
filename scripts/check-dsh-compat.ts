@@ -31,6 +31,8 @@ const workflowPlugin = await import(resolve(projectRoot, 'dist/workflow/plugin.j
 assert.equal(typeof workflowPlugin.apply, 'function', 'DSH durable workflow plugin must expose apply(ctx, config)')
 const conversationPlugin = await import(resolve(projectRoot, 'dist/conversation/dsh-effect-plugin.js'))
 assert.equal(typeof conversationPlugin.apply, 'function', 'DSH conversation effect plugin must expose apply(ctx, config)')
+const contextPlugin = await import(resolve(projectRoot, 'dist/lark/context-effect-plugin.js'))
+assert.equal(typeof contextPlugin.apply, 'function', 'Feishu context effect plugin must expose apply(ctx, config)')
 const dynamicPluginPolicy = await import(resolve(projectRoot, 'dist/runtime/dynamic-plugin-policy.js'))
 assert.equal(typeof dynamicPluginPolicy.apply, 'function', 'dynamic plugin approval policy must expose apply(ctx)')
 
@@ -60,6 +62,8 @@ assert.match(dump, /id: quark-action-ledger[\s\S]*name: '@quarkfan\/quark-self-a
 assert.match(dump, /id: quark-durable-workflows[\s\S]*name: '@quarkfan\/quark-self-ai\/durable-workflows'/)
 assert.match(dump, /id: quark-dsh-conversation-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dsh-conversation-effects'/)
 assert.match(dump, /quark-dsh-conversation-effects[\s\S]*QUARK_NATIVE_CONVERSATION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /id: quark-feishu-context-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-context-effects'/)
+assert.match(dump, /quark-feishu-context-effects[\s\S]*QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
 assert.match(dump, /id: quark-feishu-ingress[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-ingress'/)
 assert.match(dump, /quark-feishu-ingress[\s\S]*QUARK_NATIVE_FEISHU_INGRESS[\s\S]*ASSISTANT_RUNTIME === 'compat'[\s\S]*startConsumer: true/)
 assert.match(dump, /id: quark-dynamic-plugin-policy[\s\S]*name: '@quarkfan\/quark-self-ai\/dynamic-plugin-policy'/)
@@ -77,6 +81,7 @@ const activation = spawn(process.execPath, [
     ASSISTANT_WORKSPACE_ROOTS: JSON.stringify([projectRoot]),
     QUARK_SQLITE_PATH: ledgerPath,
     QUARK_NATIVE_CONVERSATION_EFFECTS: 'true',
+    QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS: 'true',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })

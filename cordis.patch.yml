@@ -115,6 +115,13 @@
       config:
         enabled: true
         titlePrefix: 飞书直办
+    - id: quark-feishu-context-effects
+      name: '@quarkfan/quark-self-ai/feishu-context-effects'
+      # Read-only, but it must share the same intake ownership window so the
+      # compatibility host and native workflow do not duplicate API traffic.
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      config:
+        executable: lark-cli
     - id: quark-message-intake
       name: '@quarkfan/quark-self-ai/message-intake'
       # The definitions are loadable, but compat remains the sole production

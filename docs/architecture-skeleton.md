@@ -81,6 +81,8 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
    session，当前明确为 `partial/inactive`；队列入账不能冒充执行已开始，也不能借用任意活跃会话。本人私聊的
    直接执行已经改用独立 `assistant.conversation.dispatch.v1`：它可确定性创建或精确续接 DSH 会话，并把结果送回
    intake workflow；该 adapter 已实现但仍为 inactive，不等于已取得生产会话所有权。
+8. 飞书上下文读取与通知/代发是两个 adapter。只读 adapter 会补齐延迟处理后的最新会话尾部，并把无法证明
+   `external=false` 的群标为 `unknown`；任何外发 workflow 都必须把 external/unknown 作为硬阻断。
 
 滴答 adapter 已实现超期查询、在白名单清单中核验任务是否完成，以及受限的已完成任务清理。它不会把“查不到
 任务”解释为已完成。清理不是仅凭环境开关获得删除权限：常东旭的长期授权会作为不可变快照进入 workflow state，

@@ -1,7 +1,6 @@
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 
 export const INTAKE_EFFECTS = {
-  loadContext: 'assistant.intake.load-context.v1',
   evaluateFocus: 'assistant.intake.evaluate-focus.v1',
   applyInteraction: 'assistant.intake.apply-interaction.v1',
   discoverSignals: 'feishu.discover-focus-signals.v1',

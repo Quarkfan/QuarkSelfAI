@@ -3,6 +3,7 @@ import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../wor
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import { TASK_PROJECTION_EFFECTS } from '../task-system/projection-effects.js'
 import { CONVERSATION_EFFECTS } from '../conversation/types.js'
+import { LARK_EFFECTS } from '../lark/effects.js'
 import { INTAKE_EFFECTS, type IntakeDecision, type IntakeInput, validateIntakeDecision } from './types.js'
 
 type IntakeState = Readonly<Record<string, unknown>> & {
@@ -35,7 +36,7 @@ export function messageIntakeWorkflow(): WorkflowDefinition {
       return {
         status: 'waiting',
         state: { stage: 'loading-context', route: value.route, sourceEvent: value.event, workspace: value.workspace, pending: [effectId] },
-        effects: [{ id: effectId, kind: INTAKE_EFFECTS.loadContext, payload: { event: value.event, route: value.route, requestedAt: now } }],
+        effects: [{ id: effectId, kind: LARK_EFFECTS.loadMessageContext, payload: { event: value.event, route: value.route, requestedAt: now } }],
       }
     },
     reduce(raw, event) {
@@ -43,7 +44,7 @@ export function messageIntakeWorkflow(): WorkflowDefinition {
       if (event.type === 'effect.failed') return { status: 'failed', state: { ...state, stage: 'failed', failure: event.payload.error }, wakeAt: null }
       if (event.type !== 'effect.delivered') return { status: state.stage === 'completed' ? 'completed' : 'waiting', state }
       const effectKind = String(event.payload.effectKind ?? '')
-      if (state.stage === 'loading-context' && effectKind === INTAKE_EFFECTS.loadContext) return afterContext(state, event)
+      if (state.stage === 'loading-context' && effectKind === LARK_EFFECTS.loadMessageContext) return afterContext(state, event)
       if (state.stage === 'evaluating' && effectKind === INTAKE_EFFECTS.evaluateFocus) return afterEvaluation(state, event)
       if (state.stage === 'projecting' && state.route === 'owner-command' && effectKind === CONVERSATION_EFFECTS.dispatch) return afterDelegation(state, event)
       if (state.stage === 'projecting' || state.stage === 'reporting') return settleProjection(state, event)
