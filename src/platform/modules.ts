@@ -24,7 +24,10 @@ export interface AssistantModuleDescriptor {
   readonly source: string
   /** Exact src/*.ts files owned by this module. New source files must be assigned explicitly. */
   readonly owns: readonly string[]
+  /** Exact cross-module source imports. Architecture checks reject missing and stale entries. */
   readonly dependsOn: readonly string[]
+  /** Runtime/plugin injection relationships that do not create a source import. */
+  readonly runtimeDependsOn: readonly string[]
   readonly requiresEffects: readonly string[]
   readonly providesEffects: readonly string[]
   /** Present only when this module owns a loadable plugin entrypoint. */
@@ -34,7 +37,7 @@ export interface AssistantModuleDescriptor {
 }
 
 export interface AssistantModuleCatalog {
-  readonly version: 2
+  readonly version: 3
   readonly modules: readonly AssistantModuleDescriptor[]
 }
 
@@ -65,8 +68,8 @@ export async function loadModuleCatalog(path = catalogPath): Promise<AssistantMo
 }
 
 export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
-  if (!isRecord(value) || value.version !== 2 || !Array.isArray(value.modules)) {
-    throw new Error('module catalog must be a version 2 object with a modules array')
+  if (!isRecord(value) || value.version !== 3 || !Array.isArray(value.modules)) {
+    throw new Error('module catalog must be a version 3 object with a modules array')
   }
   const modules = value.modules.map(parseModule)
   const byId = new Map<string, AssistantModuleDescriptor>()
@@ -75,7 +78,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     byId.set(module.id, module)
   }
   for (const module of modules) {
-    for (const dependencyId of module.dependsOn) {
+    for (const dependencyId of [...module.dependsOn, ...module.runtimeDependsOn]) {
       const dependency = byId.get(dependencyId)
       if (!dependency) throw new Error(`module ${module.id} depends on unknown module ${dependencyId}`)
       if (module.classification === 'skeleton' && dependency.classification !== 'skeleton') {
@@ -134,7 +137,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
   }
   assertAcyclic(modules, byId)
-  return { version: 2, modules }
+  return { version: 3, modules }
 }
 
 export function analyzeEffectCoverage(catalog: AssistantModuleCatalog): EffectCoverage {
@@ -198,6 +201,10 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
   if (!Array.isArray(value.dependsOn) || value.dependsOn.some(item => typeof item !== 'string')) {
     throw new Error(`dependsOn for ${id} must be a string array`)
   }
+  if (value.runtimeDependsOn !== undefined
+    && (!Array.isArray(value.runtimeDependsOn) || value.runtimeDependsOn.some(item => typeof item !== 'string'))) {
+    throw new Error(`runtimeDependsOn for ${id} must be a string array`)
+  }
   if (!Array.isArray(value.owns) || value.owns.some(item => typeof item !== 'string')) {
     throw new Error(`owns for ${id} must be a string array`)
   }
@@ -209,9 +216,15 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     }
   }
   const dependsOn = [...new Set(value.dependsOn as string[])]
+  if (dependsOn.length !== value.dependsOn.length) throw new Error(`dependsOn for ${id} must not contain duplicates`)
+  const runtimeDependsOn = [...new Set((value.runtimeDependsOn ?? []) as string[])]
+  if (runtimeDependsOn.length !== (value.runtimeDependsOn ?? []).length) throw new Error(`runtimeDependsOn for ${id} must not contain duplicates`)
+  const overlappingDependencies = dependsOn.filter(dependency => runtimeDependsOn.includes(dependency))
+  if (overlappingDependencies.length) throw new Error(`module ${id} declares both source and runtime dependency on ${overlappingDependencies.join(', ')}`)
   const requiresEffects = effectList(value.requiresEffects, `requiresEffects for ${id}`)
   const providesEffects = effectList(value.providesEffects, `providesEffects for ${id}`)
   if (dependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
+  if (runtimeDependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
   return {
     id,
     classification,
@@ -221,6 +234,7 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     source: string(value.source, `source for ${id}`),
     owns,
     dependsOn,
+    runtimeDependsOn,
     requiresEffects,
     providesEffects,
     ...(value.plugin === undefined ? {} : { plugin: parsePlugin(value.plugin, id) }),
@@ -259,7 +273,7 @@ function assertAcyclic(modules: readonly AssistantModuleDescriptor[], byId: Read
     if (visited.has(id)) return
     visiting.add(id)
     const module = byId.get(id)
-    for (const dependency of module?.dependsOn ?? []) visit(dependency, [...path, id])
+    for (const dependency of [...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? [])]) visit(dependency, [...path, id])
     visiting.delete(id)
     visited.add(id)
   }

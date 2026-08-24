@@ -12,7 +12,7 @@
 - 未归属或重复归属的文件；
 - 已删除但仍留在清单中的路径；
 - 未由自身拥有的模块入口；
-- 源码存在跨模块相对 import，但 owner 未在 `dependsOn` 中声明；
+- 源码存在跨模块相对 import，但 owner 未在 `dependsOn` 中声明，或 `dependsOn` 保留了已经不存在的 import；
 - 由上述真实依赖形成的 skeleton -> feature/migration、feature -> migration 或循环依赖。
 
 目录前缀和 glob 不作为 owner，以保证新增 helper 文件必须经过一次明确的架构判断。
@@ -33,5 +33,6 @@
 
 ## 后果
 
-新增源码必须同步更新模块目录。模块调整如果改变 import，必须同时更新 `dependsOn` 或拆除不合理耦合。
+新增源码必须同步更新模块目录。模块调整如果改变 import，必须同时更新 `dependsOn` 或拆除不合理耦合；
+不产生源码 import 的注入与宿主关系按 ADR 0028 写入 `runtimeDependsOn`。
 外部包、配置文件和 compatibility package 仍通过 `source` 登记，但本 ADR 的逐文件覆盖范围只针对 `src/**/*.ts`。

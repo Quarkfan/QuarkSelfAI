@@ -31,9 +31,10 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 控制台也只能读取通用状态端口；迁移就绪度、compat 诊断和 DSH 进程状态由 composition root 注入，控制台不得直接读取迁移 manifest 或 runtime 实现。
 
 `module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件必须恰好出现
-一次，模块入口也必须由自身拥有。架构检查会把源码的相对 import 映射回 owner，并要求真实依赖出现在
-`dependsOn` 中；新增 helper、重复归属、失效路径和未声明跨模块 import 都会阻断 `npm check`。这使分类约束
-覆盖全部源码，而不是只检查少数代表入口。可加载插件还必须声明稳定的 `plugin.profileId` 与
+一次，模块入口也必须由自身拥有。架构检查会把源码的相对 import 映射回 owner，并要求与 `dependsOn` 双向
+精确一致；注入、宿主和外部 runtime 关系单独放在 `runtimeDependsOn`。新增 helper、重复归属、失效路径、
+未声明 import 和已失效的声明依赖都会阻断 `npm check`。两类依赖都受 skeleton/feature/migration 方向约束，
+但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的 `plugin.profileId` 与
 `plugin.packageExport`；检查器会双向核对 Cordis profile 和 `package.json#exports`，防止“代码已实现但未挂载”
 或“profile 中存在无主插件”。
 
@@ -51,6 +52,8 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 - Workflow：本人私聊直办、重点消息、交接群、自动跟进、小维调研、BlackLake 路由、协作学习。
 - Executor Provider：Claude Code、Codex、DSH native，以及未来其他 harness。
 - Authoring：DSH 会话动态插件创作与长期插件沉淀。
+- Product composition：选择具体 channel、provider、workflow 和 adapter 的 Cordis profile；它是可替换的产品装配，
+  不是 DSH 内核。
 
 功能可以依赖骨架和其他功能契约，但不能依赖 `bridge-compat`、迁移脚本或旧 JSON 状态。当前仍由兼容宿主
 承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
@@ -66,7 +69,8 @@ SQLite；PostgreSQL 保持 ready/inactive，切换配置不应迫使骨架 impor
 
 ## 迁移层
 
-迁移层包括 `bridge-compat-host`、旧状态工具和 takeover 证据。它可以读取骨架和功能以完成搬迁，但任何
+迁移层包括 `bridge-compat-host`、旧状态工具、takeover 证据，以及当前仍带 compat 禁用表达式的
+`assistant-profile-composition`。它可以读取骨架和功能以完成搬迁，但任何
 骨架或功能都不能反向依赖它。每个迁移模块必须有 `exitCriteria`；没有退出条件的“兼容层”就是第二套内核。
 
 当前最重要的结构缺口：
@@ -75,7 +79,8 @@ SQLite；PostgreSQL 保持 ready/inactive，切换配置不应迫使骨架 impor
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 所有当前本地插件均已具备模块 owner、package export 与 Cordis profile 绑定；剩余问题是这些 native 插件尚未
-   取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。
+   取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。`dsh-runtime` 已指向真实 DSH package，不再把
+   整份业务 profile 冒充成 skeleton；当前 profile 独立归 migration，移除 compat 条件后再转为 product feature。
 5. 原生 `application-composition` 已建立，只装配注入的 durable store、DSH kernel、控制台和开放组件列表；
    `bootstrap/config` 只解析稳定的 Web、kernel、control-plane 和 workspace 配置。运行状态 provider 的标识、
    健康参与度和展示模式也是开放字段。当前 `src/app.ts` 仍通过 `compat-composition` 选择已接管的 compatibility

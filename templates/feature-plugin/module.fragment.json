@@ -6,7 +6,8 @@
   "runtime": "inactive",
   "source": "src/features/feature-id/plugin.ts",
   "owns": ["src/features/feature-id/plugin.ts"],
-  "dependsOn": ["assistant-contracts"],
+  "dependsOn": [],
+  "runtimeDependsOn": ["dsh-runtime"],
   "requiresEffects": [],
   "providesEffects": [],
   "plugin": {

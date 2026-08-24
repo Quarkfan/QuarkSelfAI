@@ -13,7 +13,8 @@ const packageManifest = JSON.parse(await readFile(resolve(root, 'package.json'),
 const packageName = typeof packageManifest.name === 'string' ? packageManifest.name : ''
 assert.ok(packageName, 'package.json must define a package name')
 assert.ok(isRecord(packageManifest.exports), 'package.json must define exports')
-const profilePlugins = cordisPlugins(await readFile(resolve(root, 'cordis.patch.yml'), 'utf8'))
+const profileSource = await readFile(resolve(root, 'cordis.patch.yml'), 'utf8')
+const profilePlugins = cordisPlugins(profileSource)
 const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ module, plugin: module.plugin }] : [])
 for (const { module, plugin } of pluginBindings) {
   assert.ok(plugin.packageExport in packageManifest.exports, `module ${module.id} references missing package export ${plugin.packageExport}`)
@@ -25,6 +26,15 @@ for (const [profileId, mountedPackage] of profilePlugins) {
   if (mountedPackage === packageName || mountedPackage.startsWith(`${packageName}/`)) {
     assert.ok(boundProfileIds.has(profileId), `local Cordis plugin ${profileId} is not owned by a module catalog binding`)
   }
+}
+const profileCompositions = catalog.modules.filter(module => module.source === 'cordis.patch.yml')
+assert.equal(profileCompositions.length, 1, 'the bundled Cordis profile must have exactly one catalog owner')
+const profileComposition = profileCompositions[0]!
+const compatibilityAwareProfile = /ASSISTANT_RUNTIME[^\n]*compat/.test(profileSource)
+assert.equal(profileComposition.classification, compatibilityAwareProfile ? 'migration' : 'feature', 'Cordis profile classification must reflect compatibility awareness')
+assert.ok(profileComposition.runtimeDependsOn.includes('dsh-runtime'), 'the Cordis profile composition must depend on the DSH runtime')
+for (const { module } of pluginBindings) {
+  assert.ok(profileComposition.runtimeDependsOn.includes(module.id), `Cordis profile composition does not declare plugin module ${module.id}`)
 }
 const migrationPlan = JSON.parse(await readFile(resolve(root, 'config/native-migration-plan.json'), 'utf8')) as {
   version?: unknown
@@ -72,12 +82,15 @@ const files = await sourceFiles(resolve(root, 'src'))
 validateSourceOwnership(catalog, files.map(filename => relative(root, filename)))
 const moduleById = new Map(catalog.modules.map(module => [module.id, module]))
 const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
+const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
+const dshSourceModules = new Set<string>()
 const violations: string[] = []
 for (const filename of files) {
   const source = await readFile(filename, 'utf8')
   const from = relative(root, filename)
   const owner = ownerBySource.get(from)
   const ownerModule = moduleById.get(owner ?? '')
+  if (owner && /@deepseek-ai\/(?:cordis|dsh-)/.test(source)) dshSourceModules.add(owner)
   if (ownerModule?.classification === 'skeleton'
     && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|codex|claude|xiaowei|takeover|nativecutover)\b|常东旭|任永强|张以宁)/i.test(source)) {
     violations.push(`${from} hard-codes a feature or migration identity inside skeleton module ${ownerModule.id}`)
@@ -95,6 +108,7 @@ for (const filename of files) {
     const to = relative(root, target)
     const fromOwner = ownerBySource.get(from)
     const toOwner = ownerBySource.get(to)
+    if (fromOwner && toOwner && fromOwner !== toOwner) actualDependencies.get(fromOwner)?.add(toOwner)
     if (fromOwner && toOwner && fromOwner !== toOwner && !moduleById.get(fromOwner)?.dependsOn.includes(toOwner)) {
       violations.push(`${from} (${fromOwner}) imports ${to} (${toOwner}) without declaring the module dependency`)
     }
@@ -119,6 +133,16 @@ for (const filename of files) {
     if (to === 'src/runtime/compat.ts' && from !== 'src/runtime/compat-composition.ts') {
       violations.push(`${from} imports compatibility runtime outside the composition root`)
     }
+  }
+}
+for (const module of catalog.modules) {
+  const actual = [...(actualDependencies.get(module.id) ?? [])].sort()
+  const declared = [...module.dependsOn].sort()
+  if (JSON.stringify(actual) !== JSON.stringify(declared)) {
+    violations.push(`module ${module.id} source dependencies differ: declared=[${declared.join(',')}] actual=[${actual.join(',')}]`)
+  }
+  if (dshSourceModules.has(module.id) && module.id !== 'dsh-runtime' && !module.runtimeDependsOn.includes('dsh-runtime')) {
+    violations.push(`module ${module.id} imports the DSH/Cordis runtime without runtimeDependsOn=dsh-runtime`)
   }
 }
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)

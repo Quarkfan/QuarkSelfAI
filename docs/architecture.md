@@ -23,6 +23,10 @@ DSH 会话显式启用官方 `@deepseek-ai/dsh-tool-cordis`，因此模型可以
 `cordis_stop` 不阻塞，作为随时可用的紧急回滚路径。需要跨重启保留的能力仍必须转成仓库内普通插件，走构建、
 测试和发布流程。
 
+DSH/Cordis package 和生命周期能力属于骨架；装配本产品全部插件的 `cordis.patch.yml` 不属于内核。当前 profile
+仍含 compatibility-aware 禁用表达式，因此作为 `assistant-profile-composition` 明确归入迁移层。架构检查要求它
+声明每个本地插件模块，并在移除 compat 条件后才能重新归类为长期 product feature。
+
 DSH Loader 从包根的 named `apply(ctx, config)` 装配 `LarkCliService`。包根不提供 default export，避免
 Loader 将 namespace 折叠后丢失插件元数据。该入口只注册 capability，不自动调用 `start()`；现网消费者
 是否启动仍由独立运行时门禁决定。
