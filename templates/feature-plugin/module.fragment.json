@@ -2,7 +2,11 @@
   "id": "feature-id",
   "classification": "feature",
   "layer": "workflow",
-  "status": "native",
+  "implementation": "ready",
+  "runtime": "inactive",
   "source": "src/features/feature-id/plugin.ts",
-  "dependsOn": ["assistant-contracts"]
+  "owns": ["src/features/feature-id/plugin.ts"],
+  "dependsOn": ["assistant-contracts"],
+  "requiresEffects": [],
+  "providesEffects": []
 }

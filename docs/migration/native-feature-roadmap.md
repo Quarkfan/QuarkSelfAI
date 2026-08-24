@@ -104,4 +104,5 @@
 3. 影子比较无语义差异、无重复外部写入；
 4. 切换前冻结 checkpoint，切换后证明只有一个 timer/consumer owner；
 5. 回滚先停 native，再恢复未完成状态，已完成外部写入不重放；
-6. 观察窗口通过后把模块从 `compat` 改为 `native`；迁移宿主退出条件全部满足后才删除代码。
+6. 观察窗口通过后把替代模块的 `runtime` 从 `inactive/shadow` 改为 `active`，再删除对应的 `runtime=compat`
+   描述；迁移宿主退出条件全部满足后才删除代码。`native` 不是合法 runtime 值。
