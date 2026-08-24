@@ -4,7 +4,8 @@ import { FOLLOWUP_EFFECTS } from '../src/followup/types.js'
 import { followupReviewWorkflow } from '../src/followup/review-workflow.js'
 import { followupOutreachWorkflow } from '../src/followup/outreach-workflow.js'
 import { LARK_EFFECTS } from '../src/lark/effects.js'
-import { TASK_EFFECTS } from '../src/task-system/effects.js'
+import { TASK_REASONING_EFFECTS } from '../src/task-system/reasoning-effects.js'
+import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.js'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 
 const event = (id: string, type: string, occurredAt: string, payload: Record<string, unknown> = {}) => ({ id, type, occurredAt, payload })
@@ -15,9 +16,9 @@ test('workday review distributes updates, reminders, and outreach once per local
   const early = definition.reduce(initialized.state, event('early', 'timer', '2026-08-24T01:59:00Z'))
   assert.equal(early.effects?.length ?? 0, 0)
   const evaluating = definition.reduce(early.state, event('due', 'timer', '2026-08-24T02:00:00Z'))
-  assert.equal(evaluating.effects?.[0]?.kind, TASK_EFFECTS.evaluateFollowups)
+  assert.equal(evaluating.effects?.[0]?.kind, TASK_REASONING_EFFECTS.evaluateFollowups)
   const distributing = definition.reduce(evaluating.state, event('evaluated', 'effect.delivered', '2026-08-24T02:00:01Z', {
-    effectKind: TASK_EFFECTS.evaluateFollowups, updates: [], reminders: [{ taskId: 'task-1', title: '确认进度', urgency: 'medium', reason: '约定时间已到', recommendedAction: '联系负责人' }],
+    effectKind: TASK_REASONING_EFFECTS.evaluateFollowups, updates: [], reminders: [{ taskId: 'task-1', title: '确认进度', urgency: 'medium', reason: '约定时间已到', recommendedAction: '联系负责人' }],
     outreachRequests: [{ taskId: 'task-1', title: '确认进度', personName: '张三', question: '进展如何？', reason: '约定时间已到', context: '项目跟进' }],
   }))
   assert.deepEqual(new Set(distributing.effects?.map(item => item.kind)), new Set([ASSISTANT_EFFECTS.notifyOwner, FOLLOWUP_EFFECTS.openOutreach]))
@@ -31,7 +32,7 @@ test('workday review distributes updates, reminders, and outreach once per local
 test('workday evaluation failure can create a fresh durable retry effect', () => {
   const definition = followupReviewWorkflow({ pollIntervalMs: 60_000 })
   const first = definition.reduce(definition.initialize({}, '2026-08-24T02:00:00Z').state, event('timer-1', 'timer', '2026-08-24T02:00:00Z'))
-  const failed = definition.reduce(first.state, event('failed', 'effect.failed', '2026-08-24T02:00:01Z', { effectKind: TASK_EFFECTS.evaluateFollowups, effectId: first.effects?.[0]?.id }))
+  const failed = definition.reduce(first.state, event('failed', 'effect.failed', '2026-08-24T02:00:01Z', { effectKind: TASK_REASONING_EFFECTS.evaluateFollowups, effectId: first.effects?.[0]?.id }))
   const retry = definition.reduce(failed.state, event('timer-2', 'timer', failed.wakeAt as string))
   assert.notEqual(retry.effects?.[0]?.id, first.effects?.[0]?.id)
 })
@@ -53,8 +54,8 @@ test('outreach requires exact approval before sending and persists reply synchro
   assert.equal(sending.effects?.[0]?.payload.approvedAt, '2026-08-24T00:00:03Z')
   const waiting = definition.reduce(sending.state, event('sent', 'effect.delivered', '2026-08-24T00:00:04Z', { effectKind: LARK_EFFECTS.sendAsUser, messageId: 'om_sent', chatId: 'oc_chat' }))
   const updating = definition.reduce(waiting.state, event('reply', 'followup.reply', '2026-08-24T02:00:00Z', { messageId: 'om_reply', content: '今天已完成' }))
-  assert.equal(updating.effects?.[0]?.kind, TASK_EFFECTS.recordFollowupReply)
-  const notifying = definition.reduce(updating.state, event('updated', 'effect.delivered', '2026-08-24T02:00:01Z', { effectKind: TASK_EFFECTS.recordFollowupReply, result: { title: '确认进度', changes: ['追加回复'], summary: '已完成' } }))
+  assert.equal(updating.effects?.[0]?.kind, TASK_PROJECTION_EFFECTS.recordFollowupReply)
+  const notifying = definition.reduce(updating.state, event('updated', 'effect.delivered', '2026-08-24T02:00:01Z', { effectKind: TASK_PROJECTION_EFFECTS.recordFollowupReply, result: { title: '确认进度', changes: ['追加回复'], summary: '已完成' } }))
   assert.equal(notifying.effects?.[0]?.kind, ASSISTANT_EFFECTS.notifyOwner)
   const completed = definition.reduce(notifying.state, event('notified', 'effect.delivered', '2026-08-24T02:00:02Z', { effectKind: ASSISTANT_EFFECTS.notifyOwner, effectId: notifying.effects?.[0]?.id }))
   assert.equal(completed.status, 'completed')

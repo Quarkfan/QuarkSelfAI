@@ -17,19 +17,19 @@ test('lists overdue tasks only inside the configured project allowlist', async (
   const runner = new Runner()
   runner.response = [{ id: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23T00:00:00Z', priority: 5 }]
   const adapter = new DidaTaskEffectAdapter({ executable: 'dida-next', projectIds: ['project-auto'] }, runner)
-  const output = await adapter.execute(effect('task-system.list-overdue.v1', { projectId: 'project-auto' }))
+  const output = await adapter.execute(effect('task-store.list-overdue.v1', { projectId: 'project-auto' }))
   assert.deepEqual(output, { tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23T00:00:00Z', priority: 5 }] })
   assert.equal(runner.calls[0]!.executable, 'dida-next')
   assert.deepEqual(runner.calls[0]!.args.slice(0, 2), ['task', 'filter'])
   assert.equal(runner.calls[0]!.args.includes('delete'), false)
-  await assert.rejects(adapter.execute(effect('task-system.list-overdue.v1', { projectId: 'project-other' })), /outside the Dida allowlist/)
+  await assert.rejects(adapter.execute(effect('task-store.list-overdue.v1', { projectId: 'project-other' })), /outside the Dida allowlist/)
 })
 
 test('checks task completion across allowed projects without writing', async () => {
   const runner = new Runner()
   runner.response = { tasks: [{ id: 'task-1', title: '调研问题', status: 2, completedTime: '2026-08-20T00:00:00Z' }] }
   const adapter = new DidaTaskEffectAdapter({ projectIds: ['project-auto', 'project-followup'] }, runner)
-  const output = await adapter.execute(effect('task-system.is-completed.v1', { taskId: 'task-1' }))
+  const output = await adapter.execute(effect('task-store.is-completed.v1', { taskId: 'task-1' }))
   assert.deepEqual(output, { completed: true, taskId: 'task-1' })
   assert.equal(runner.calls[0]!.args.includes('--status'), true)
   assert.equal(runner.calls[0]!.args.includes('0,2'), true)
@@ -40,7 +40,7 @@ test('does not treat a missing task as completed', async () => {
   const runner = new Runner()
   runner.response = []
   const adapter = new DidaTaskEffectAdapter({ projectIds: ['project-auto'] }, runner)
-  await assert.rejects(adapter.execute(effect('task-system.is-completed.v1', { taskId: 'missing' })), /was not found/)
+  await assert.rejects(adapter.execute(effect('task-store.is-completed.v1', { taskId: 'missing' })), /was not found/)
 })
 
 test('deletes only old completed tasks under exact durable authorization', async () => {
@@ -55,7 +55,7 @@ test('deletes only old completed tasks under exact durable authorization', async
     scope: 'dida.completed-task-cleanup', revision: 1, source: 'owner-directive:periodic-cleanup',
     projectId: 'project-auto', minimumRetentionDays: 30, maximumDeletesPerRun: 1,
   }
-  const output = await adapter.execute(effect('task-system.cleanup-completed.v1', {
+  const output = await adapter.execute(effect('task-maintenance.cleanup-completed.v1', {
     projectId: 'project-auto', cutoff: '2026-07-25T00:00:00Z', effectiveAt: '2026-08-24T00:00:00Z',
     maxDeletes: 1, authorization,
   }))
@@ -70,7 +70,7 @@ test('deletes only old completed tasks under exact durable authorization', async
 test('cleanup authorization fails closed before any Dida command', async () => {
   const runner = new Runner()
   const adapter = new DidaTaskEffectAdapter({ projectIds: ['project-auto'] }, runner)
-  await assert.rejects(adapter.execute(effect('task-system.cleanup-completed.v1', {
+  await assert.rejects(adapter.execute(effect('task-maintenance.cleanup-completed.v1', {
     projectId: 'project-auto', cutoff: '2026-07-25T00:00:00Z', effectiveAt: '2026-08-24T00:00:00Z', maxDeletes: 1,
     authorization: { id: 'forged', grantedBy: 'bot', grantedAt: '2026-08-20T00:00:00Z', scope: 'dida.completed-task-cleanup', revision: 1, source: 'test', projectId: 'project-auto', minimumRetentionDays: 30, maximumDeletesPerRun: 1 },
   })), /granted by the owner/)

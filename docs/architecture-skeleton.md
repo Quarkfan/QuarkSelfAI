@@ -54,6 +54,11 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 功能可以依赖骨架和其他功能契约，但不能依赖 `bridge-compat`、迁移脚本或旧 JSON 状态。当前仍由兼容宿主
 承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
 
+任务能力本身也不是一整块：`task-store.*` 是可替换的任务产品读写端口，
+`assistant.task-projection.*` 拥有标题、标签、快速摘要、血缘和合并语义，`assistant.followup.*` 拥有是否提醒或
+联系他人的判断，`task-maintenance.*` 承载经过 owner 授权的清理动作。滴答 adapter 只能提供 store/maintenance，
+不能因为它最终写入任务，就顺带拥有助手的语义判断。具体边界见 ADR 0012。
+
 ## 迁移层
 
 迁移层包括 `bridge-compat-host`、旧状态工具和 takeover 证据。它可以读取骨架和功能以完成搬迁，但任何
@@ -67,7 +72,7 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 4. 一部分功能虽已具备测试，却没有独立插件 manifest；其长期等待仍需迁入 durable workflow definition。
 5. 当前 `app/bootstrap/runtime config` 仍直接组合 compatibility host 和 takeover readiness，因此被明确归为
    `bridge-compat-host` 迁移所有权；原生 application composition 尚未建立，不能把当前启动入口误称为最终骨架。
-6. native workflow 的飞书 effect 与滴答维护 effect 已实现但未激活；Codex session、任务语义投影和 intake
+6. native workflow 的飞书 effect 与任务存储/维护 effect 已实现但未激活；Codex session、任务语义投影和 intake
    provider 仍未实现。两类缺口由机器门禁分别呈现，必须逐 adapter 补齐并回放后才能切换。飞书通知、
    交互卡片、只读联系人候选解析和经 durable approval 的本人代发 adapter 已完成 mock 契约实现；同名联系人
    只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 import { SESSION_EFFECTS } from '../src/session-lifecycle/types.js'
-import { TASK_EFFECTS } from '../src/task-system/effects.js'
+import { TASK_STORE_EFFECTS } from '../src/task-system/store-effects.js'
 import { sessionLifecycleWorkflow } from '../src/session-lifecycle/workflow.js'
 
 const sessionId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -21,9 +21,9 @@ test('session lifecycle archives only after task completion and deletes only thr
   const checking = definition.reduce(inspecting.state, event('inspect:1', 'effect.delivered', '2026-08-01T00:00:02Z', {
     effectKind: SESSION_EFFECTS.inspect, exists: true, archived: false, running: false,
   }))
-  assert.equal(checking.effects?.[0]?.kind, TASK_EFFECTS.isCompleted)
+  assert.equal(checking.effects?.[0]?.kind, TASK_STORE_EFFECTS.isCompleted)
   const archiving = definition.reduce(checking.state, event('task:1', 'effect.delivered', '2026-08-01T00:00:03Z', {
-    effectKind: TASK_EFFECTS.isCompleted, completed: true,
+    effectKind: TASK_STORE_EFFECTS.isCompleted, completed: true,
   }))
   assert.equal(archiving.effects?.[0]?.kind, SESSION_EFFECTS.archiveIfNeeded)
   assert.equal(archiving.effects?.[0]?.payload.managedBy, 'quarkselfai-auto-research')

@@ -19,4 +19,5 @@ export async function apply(ctx: Context, config: DidaMaintenanceConfig): Promis
 
 export * from './types.js'
 export * from './workflows.js'
-export { TASK_EFFECTS } from '../task-system/effects.js'
+export { TASK_STORE_EFFECTS } from '../task-system/store-effects.js'
+export { TASK_MAINTENANCE_EFFECTS } from '../task-system/maintenance-effects.js'

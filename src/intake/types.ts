@@ -5,7 +5,6 @@ export const INTAKE_EFFECTS = {
   evaluateFocus: 'assistant.intake.evaluate-focus.v1',
   delegateCommand: 'assistant.intake.delegate-command.v1',
   applyInteraction: 'assistant.intake.apply-interaction.v1',
-  projectTask: 'task-system.upsert-from-intake.v1',
   discoverSignals: 'feishu.discover-focus-signals.v1',
 } as const
 

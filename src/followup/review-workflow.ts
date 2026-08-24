@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { TASK_EFFECTS } from '../task-system/effects.js'
+import { TASK_REASONING_EFFECTS } from '../task-system/reasoning-effects.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
 import { FOLLOWUP_EFFECTS, type FollowupOutreachInput, type FollowupReminder, type FollowupReviewConfig, type FollowupUpdate } from './types.js'
@@ -34,9 +34,9 @@ export function followupReviewWorkflow(config: FollowupReviewConfig = {}): Workf
         const current = slot(event.occurredAt, state.timeZone, state.scheduledHour)
         if (!current.due || state.lastCompletedDay === current.day) return { status: 'waiting', state, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
         const next = { ...state, phase: 'evaluating' as const, sequence: state.sequence + 1 }
-        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: stable('followup-evaluate', current.day, String(next.sequence)), kind: TASK_EFFECTS.evaluateFollowups, availableAt: event.occurredAt, payload: { day: current.day, timeZone: state.timeZone } }] }
+        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: stable('followup-evaluate', current.day, String(next.sequence)), kind: TASK_REASONING_EFFECTS.evaluateFollowups, availableAt: event.occurredAt, payload: { day: current.day, timeZone: state.timeZone } }] }
       }
-      if (event.type === 'effect.delivered' && state.phase === 'evaluating' && kind(event) === TASK_EFFECTS.evaluateFollowups) {
+      if (event.type === 'effect.delivered' && state.phase === 'evaluating' && kind(event) === TASK_REASONING_EFFECTS.evaluateFollowups) {
         const current = slot(event.occurredAt, state.timeZone, state.scheduledHour); const foundUpdates = updates(event.payload.updates); const foundReminders = reminders(event.payload.reminders); const foundOutreach = outreaches(event.payload.outreachRequests)
         const effects = []
         if (foundUpdates.length) { const id = stable('followup-updates', current.day); effects.push({ id, kind: ASSISTANT_EFFECTS.notifyOwner, availableAt: event.occurredAt, payload: { title: `已维护 ${foundUpdates.length} 项自动化跟进任务`, body: foundUpdates.map((x, i) => `${i + 1}. ${x.title}\n变更：${x.changes.join('；')}\n原因：${x.reason}${x.url ? `\n${x.url}` : ''}`).join('\n\n'), idempotencyKey: id } }) }
@@ -51,7 +51,7 @@ export function followupReviewWorkflow(config: FollowupReviewConfig = {}): Workf
         const current = slot(event.occurredAt, state.timeZone, state.scheduledHour)
         return { status: 'waiting', state: { ...state, phase: 'scheduled', lastCompletedDay: current.day, pending }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
       }
-      if (event.type === 'effect.failed' && state.phase === 'evaluating' && kind(event) === TASK_EFFECTS.evaluateFollowups) return { status: 'waiting', state: { ...state, phase: 'scheduled' }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
+      if (event.type === 'effect.failed' && state.phase === 'evaluating' && kind(event) === TASK_REASONING_EFFECTS.evaluateFollowups) return { status: 'waiting', state: { ...state, phase: 'scheduled' }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
       return { status: 'waiting', state }
     } }
 }

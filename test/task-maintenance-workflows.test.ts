@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { completedCleanupWorkflow, overdueWorkflow } from '../src/task-maintenance/workflows.js'
-import { TASK_EFFECTS } from '../src/task-system/effects.js'
+import { TASK_STORE_EFFECTS } from '../src/task-system/store-effects.js'
+import { TASK_MAINTENANCE_EFFECTS } from '../src/task-system/maintenance-effects.js'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 
 const config = {
@@ -19,10 +20,10 @@ test('overdue workflow emits stable notifications only when a task fingerprint c
   const scanning = definition.reduce(initialized.state, {
     id: 'timer:one', type: 'timer', occurredAt: '2026-08-24T00:00:01.000Z', payload: { scheduledAt: '2026-08-24T00:00:00.000Z' },
   })
-  assert.equal(scanning.effects?.[0]?.kind, TASK_EFFECTS.listOverdue)
+  assert.equal(scanning.effects?.[0]?.kind, TASK_STORE_EFFECTS.listOverdue)
   const first = definition.reduce(scanning.state, {
     id: 'effect:scan:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:02.000Z',
-    payload: { effectKind: TASK_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 5 }] },
+    payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 5 }] },
   })
   assert.equal(first.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length, 1)
   const nextScan = definition.reduce(first.state, {
@@ -30,7 +31,7 @@ test('overdue workflow emits stable notifications only when a task fingerprint c
   })
   const unchanged = definition.reduce(nextScan.state, {
     id: 'effect:scan-two:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T00:30:03.000Z',
-    payload: { effectKind: TASK_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 5 }] },
+    payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 5 }] },
   })
   assert.equal(unchanged.effects?.length, 0)
   const changedScan = definition.reduce(unchanged.state, {
@@ -38,7 +39,7 @@ test('overdue workflow emits stable notifications only when a task fingerprint c
   })
   const changed = definition.reduce(changedScan.state, {
     id: 'effect:scan-three:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T01:00:04.000Z',
-    payload: { effectKind: TASK_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 3 }] },
+    payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 3 }] },
   })
   assert.equal(changed.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length, 1)
   assert.notEqual(changed.effects?.[0]?.id, first.effects?.[0]?.id)
@@ -49,17 +50,17 @@ test('overdue workflow persists failure debounce and emits one recovery notice',
   const initialized = definition.initialize({}, '2026-08-24T00:00:00.000Z')
   const scanOne = definition.reduce(initialized.state, { id: 'timer:1', type: 'timer', occurredAt: '2026-08-24T00:00:01.000Z', payload: {} })
   const failureOne = definition.reduce(scanOne.state, {
-    id: 'effect:1:failed', type: 'effect.failed', occurredAt: '2026-08-24T00:10:00.000Z', payload: { effectKind: TASK_EFFECTS.listOverdue },
+    id: 'effect:1:failed', type: 'effect.failed', occurredAt: '2026-08-24T00:10:00.000Z', payload: { effectKind: TASK_STORE_EFFECTS.listOverdue },
   })
   assert.equal(failureOne.effects?.length ?? 0, 0)
   const scanTwo = definition.reduce(failureOne.state, { id: 'timer:2', type: 'timer', occurredAt: '2026-08-24T00:20:00.000Z', payload: {} })
   const failureTwo = definition.reduce(scanTwo.state, {
-    id: 'effect:2:failed', type: 'effect.failed', occurredAt: '2026-08-24T00:30:00.000Z', payload: { effectKind: TASK_EFFECTS.listOverdue },
+    id: 'effect:2:failed', type: 'effect.failed', occurredAt: '2026-08-24T00:30:00.000Z', payload: { effectKind: TASK_STORE_EFFECTS.listOverdue },
   })
   assert.equal(failureTwo.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length, 1)
   const scanThree = definition.reduce(failureTwo.state, { id: 'timer:3', type: 'timer', occurredAt: '2026-08-24T00:40:00.000Z', payload: {} })
   const recovered = definition.reduce(scanThree.state, {
-    id: 'effect:3:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T00:40:01.000Z', payload: { effectKind: TASK_EFFECTS.listOverdue, tasks: [] },
+    id: 'effect:3:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T00:40:01.000Z', payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [] },
   })
   assert.equal(recovered.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length, 1)
   assert.equal('failure' in recovered.state, false)
@@ -71,12 +72,12 @@ test('cleanup workflow runs once per local day and delegates deletion as an effe
   const cleaning = definition.reduce(initialized.state, {
     id: 'timer:cleanup', type: 'timer', occurredAt: '2026-08-24T04:00:01.000Z', payload: {},
   })
-  assert.equal(cleaning.effects?.[0]?.kind, TASK_EFFECTS.cleanupCompleted)
+  assert.equal(cleaning.effects?.[0]?.kind, TASK_MAINTENANCE_EFFECTS.cleanupCompleted)
   assert.equal(cleaning.effects?.[0]?.payload.projectId, 'project-automation')
   assert.equal((cleaning.effects?.[0]?.payload.authorization as { id: string }).id, 'owner-policy:dida-cleanup:v1')
   const completed = definition.reduce(cleaning.state, {
     id: 'effect:cleanup:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T04:00:02.000Z',
-    payload: { effectKind: TASK_EFFECTS.cleanupCompleted, deleted: [{ taskId: 'old-1', title: '旧任务', completedAt: '2026-06-01T00:00:00Z' }] },
+    payload: { effectKind: TASK_MAINTENANCE_EFFECTS.cleanupCompleted, deleted: [{ taskId: 'old-1', title: '旧任务', completedAt: '2026-06-01T00:00:00Z' }] },
   })
   assert.equal(completed.state.lastCompletedDay, '2026-08-24')
   assert.equal(completed.effects?.[0]?.kind, ASSISTANT_EFFECTS.notifyOwner)
@@ -98,6 +99,6 @@ test('maintenance definitions reject malformed effect results instead of advanci
     id: 'timer', type: 'timer', occurredAt: '2026-08-24T00:00:01Z', payload: {},
   })
   assert.throws(() => definition.reduce(scanning.state, {
-    id: 'bad', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:02Z', payload: { effectKind: TASK_EFFECTS.listOverdue, tasks: [{ title: 'missing id' }] },
+    id: 'bad', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:02Z', payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ title: 'missing id' }] },
   }), /invalid overdue task/)
 })

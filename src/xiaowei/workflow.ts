@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { LARK_EFFECTS } from '../lark/effects.js'
-import { TASK_EFFECTS } from '../task-system/effects.js'
+import { TASK_PROJECTION_EFFECTS } from '../task-system/projection-effects.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
 import type { XiaoweiResearchConfig, XiaoweiResearchInput } from './types.js'
@@ -82,7 +82,7 @@ function notifyEffect(state: XiaoweiResearchState, now: string, sequence: number
 }
 function taskEffect(state: XiaoweiResearchState, now: string, sequence: number) {
   const key = `xiaowei-task-result:${state.requestId}:${state.replyMessageId}`
-  return { id: stable('xiaowei-task-update', key, String(sequence)), kind: TASK_EFFECTS.recordResearchResult, availableAt: now,
+  return { id: stable('xiaowei-task-update', key, String(sequence)), kind: TASK_PROJECTION_EFFECTS.recordResearchResult, availableAt: now,
     payload: { taskId: state.taskId, requestId: state.requestId, title: state.title, result: state.replyContent,
       replyMessageId: state.replyMessageId, ...(state.replyUrl ? { replyUrl: state.replyUrl } : {}), idempotencyKey: key } }
 }
@@ -148,7 +148,7 @@ export function xiaoweiResearchWorkflow(config: XiaoweiResearchConfig): Workflow
         if (effectIdFrom(event)?.startsWith('xiaowei-failure-notify:')) return { status: 'waiting', state }
         let next = withoutFailure(state) as XiaoweiResearchState
         if (effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) next = { ...next, ownerNotified: true }
-        else if (effectKind(event) === TASK_EFFECTS.recordResearchResult) next = { ...next, taskUpdated: true }
+        else if (effectKind(event) === TASK_PROJECTION_EFFECTS.recordResearchResult) next = { ...next, taskUpdated: true }
         else return { status: 'waiting', state }
         if (next.ownerNotified && next.taskUpdated) return { status: 'completed', state: { ...next, phase: 'completed', completedAt: event.occurredAt } }
         return { status: 'waiting', state: next, wakeAt: null, effects: pendingSyncEffects(next, event.occurredAt) }
@@ -161,7 +161,7 @@ export function xiaoweiResearchWorkflow(config: XiaoweiResearchConfig): Workflow
         if (effectIdFrom(event)?.startsWith('xiaowei-failure-notify:')) return { status: 'waiting', state }
         if (state.phase === 'sending' && effectKind(event) === LARK_EFFECTS.sendAsUser) return retry(state, 'send', event)
         if (state.phase === 'syncing' && effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) return retry(state, 'notify', event)
-        if (state.phase === 'syncing' && effectKind(event) === TASK_EFFECTS.recordResearchResult) return retry(state, 'task-update', event)
+        if (state.phase === 'syncing' && effectKind(event) === TASK_PROJECTION_EFFECTS.recordResearchResult) return retry(state, 'task-update', event)
       }
       if (event.type === 'effect.delivered' && effectIdFrom(event)?.startsWith('xiaowei-failure-notify:')) return { status: 'waiting', state }
       return { status: state.phase === 'completed' ? 'completed' : 'waiting', state }

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
-import { TASK_EFFECTS } from '../task-system/effects.js'
+import { TASK_STORE_EFFECTS } from '../task-system/store-effects.js'
 import { SESSION_EFFECTS, type SessionLifecycleConfig, type TrackResearchSessionInput } from './types.js'
 import { requireAuthorizationEvidence } from '../domain/authorization.js'
 
@@ -137,10 +137,10 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
           return { status: 'waiting', state: { ...withoutFailure(state), phase: 'archived', archivedAt }, wakeAt: at(archivedAt, state.deleteAfterMs) }
         }
         const next = { ...withoutFailure(state), phase: 'checking-task' as const }
-        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(state, 'task-check'), kind: TASK_EFFECTS.isCompleted,
+        return { status: 'waiting', state: next, wakeAt: null, effects: [{ id: effectId(state, 'task-check'), kind: TASK_STORE_EFFECTS.isCompleted,
           availableAt: event.occurredAt, payload: { taskId: state.taskId } }] }
       }
-      if (event.type === 'effect.delivered' && state.phase === 'checking-task' && effectKind(event) === TASK_EFFECTS.isCompleted) {
+      if (event.type === 'effect.delivered' && state.phase === 'checking-task' && effectKind(event) === TASK_STORE_EFFECTS.isCompleted) {
         if (typeof event.payload.completed !== 'boolean') throw new Error('task completion result is invalid')
         if (!event.payload.completed) return { status: 'waiting', state: { ...withoutFailure(state), phase: 'waiting' }, wakeAt: at(event.occurredAt, state.pollIntervalMs) }
         const next = { ...withoutFailure(state), phase: 'archiving' as const }
@@ -191,7 +191,7 @@ function lifecycleAuthorization(config: SessionLifecycleConfig, deleteAfterDays:
 
 function operationFor(kind: string | undefined, phase: Phase): Operation | undefined {
   if (kind === SESSION_EFFECTS.inspect && phase === 'inspecting') return 'inspect'
-  if (kind === TASK_EFFECTS.isCompleted && phase === 'checking-task') return 'task-check'
+  if (kind === TASK_STORE_EFFECTS.isCompleted && phase === 'checking-task') return 'task-check'
   if (kind === SESSION_EFFECTS.archiveIfNeeded && phase === 'archiving') return 'archive'
   if (kind === SESSION_EFFECTS.deleteIfArchived && phase === 'deleting') return 'delete'
   return undefined

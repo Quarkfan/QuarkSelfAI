@@ -3,6 +3,7 @@ import test from 'node:test'
 import { messageIntakeWorkflow } from '../src/intake/workflow.js'
 import { INTAKE_EFFECTS } from '../src/intake/types.js'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
+import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.js'
 
 const message = { kind: 'message.received' as const, source: { channel: 'feishu' as const, messageId: 'om-1', conversationId: 'oc-1', senderId: 'owner' }, eventKey: 'im.message.receive_v1', deduplicationKey: 'om-1', payload: { content: '帮我检查一下', chatType: 'p2p' }, raw: {} }
 
@@ -20,9 +21,9 @@ test('focus intake projects task and approval card exactly once through durable 
   const initial = workflow.initialize({ route: 'focus', event: message, workspace: '/workspace' }, '2026-08-24T00:00:00Z')
   const evaluating = workflow.reduce(initial.state, { id: 'context', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:01Z', payload: { effectKind: INTAKE_EFFECTS.loadContext, effectId: initial.effects![0]!.id, context: { messages: [], externalGroup: true } } })
   const projecting = workflow.reduce(evaluating.state, { id: 'decision', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:02Z', payload: { effectKind: INTAKE_EFFECTS.evaluateFocus, effectId: evaluating.effects![0]!.id, decision: { outcome: 'task', summary: '需要批准配额', materialChange: true, notifyOwner: true, approvalRequired: true, title: '确认配额', priority: 3, tags: ['待批准'], researchDecision: 'skip' } } })
-  assert.deepEqual(projecting.effects?.map(item => item.kind), [INTAKE_EFFECTS.projectTask, ASSISTANT_EFFECTS.requestInteraction])
+  assert.deepEqual(projecting.effects?.map(item => item.kind), [TASK_PROJECTION_EFFECTS.upsertIntake, ASSISTANT_EFFECTS.requestInteraction])
   assert.equal(projecting.status, 'waiting')
-  const first = workflow.reduce(projecting.state, { id: 'task', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:03Z', payload: { effectKind: INTAKE_EFFECTS.projectTask, effectId: projecting.effects![0]!.id } })
+  const first = workflow.reduce(projecting.state, { id: 'task', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:03Z', payload: { effectKind: TASK_PROJECTION_EFFECTS.upsertIntake, effectId: projecting.effects![0]!.id } })
   assert.equal(first.status, 'waiting')
   const done = workflow.reduce(first.state, { id: 'card', type: 'effect.delivered', occurredAt: '2026-08-24T00:00:04Z', payload: { effectKind: ASSISTANT_EFFECTS.requestInteraction, effectId: projecting.effects![1]!.id } })
   assert.equal(done.status, 'completed')

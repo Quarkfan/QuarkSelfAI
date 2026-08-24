@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { LARK_EFFECTS } from '../src/lark/effects.js'
-import { TASK_EFFECTS } from '../src/task-system/effects.js'
+import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.js'
 import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 import { xiaoweiResearchWorkflow } from '../src/xiaowei/workflow.js'
 
@@ -29,9 +29,9 @@ test('Xiaowei workflow requires prior approval and synchronizes a slow reply seq
   const notified = definition().reduce(syncing.state, event('notified', 'effect.delivered', '2026-08-24T02:00:01Z', {
     effectKind: ASSISTANT_EFFECTS.notifyOwner, effectId: syncing.effects?.[0]?.id,
   }))
-  assert.deepEqual(notified.effects?.map(effect => effect.kind), [TASK_EFFECTS.recordResearchResult])
+  assert.deepEqual(notified.effects?.map(effect => effect.kind), [TASK_PROJECTION_EFFECTS.recordResearchResult])
   const completed = definition().reduce(notified.state, event('task-updated', 'effect.delivered', '2026-08-24T02:00:02Z', {
-    effectKind: TASK_EFFECTS.recordResearchResult, effectId: notified.effects?.[0]?.id,
+    effectKind: TASK_PROJECTION_EFFECTS.recordResearchResult, effectId: notified.effects?.[0]?.id,
   }))
   assert.equal(completed.status, 'completed')
 })

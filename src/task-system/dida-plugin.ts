@@ -2,7 +2,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import { execFile } from 'node:child_process'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import type {} from '../workflow/runtime.js'
-import { TASK_EFFECTS } from './effects.js'
+import { TASK_STORE_EFFECTS } from './store-effects.js'
+import { TASK_MAINTENANCE_EFFECTS } from './maintenance-effects.js'
 import { requireAuthorizationEvidence } from '../domain/authorization.js'
 
 export interface DidaTaskEffectConfig {
@@ -30,9 +31,9 @@ export class DidaTaskEffectAdapter {
     this.allowedProjects = new Set(config.projectIds.map((id, index) => required(id, `projectIds[${index}]`, 300)))
   }
   async execute(effect: ClaimedWorkflowEffect): Promise<Readonly<Record<string, unknown>>> {
-    if (effect.kind === TASK_EFFECTS.listOverdue) return await this.listOverdue(effect)
-    if (effect.kind === TASK_EFFECTS.isCompleted) return await this.isCompleted(effect)
-    if (effect.kind === TASK_EFFECTS.cleanupCompleted) return await this.cleanupCompleted(effect)
+    if (effect.kind === TASK_STORE_EFFECTS.listOverdue) return await this.listOverdue(effect)
+    if (effect.kind === TASK_STORE_EFFECTS.isCompleted) return await this.isCompleted(effect)
+    if (effect.kind === TASK_MAINTENANCE_EFFECTS.cleanupCompleted) return await this.cleanupCompleted(effect)
     throw new Error(`unsupported Dida task effect ${effect.kind}`)
   }
   private async listOverdue(effect: ClaimedWorkflowEffect) {
@@ -98,7 +99,7 @@ export const name = 'quark-dida-task-effects'
 export const inject = ['quarkWorkflows']
 export function apply(ctx: Context, config: DidaTaskEffectConfig): void {
   const adapter = new DidaTaskEffectAdapter(config)
-  const disposers = [TASK_EFFECTS.listOverdue, TASK_EFFECTS.isCompleted, TASK_EFFECTS.cleanupCompleted]
+  const disposers = [TASK_STORE_EFFECTS.listOverdue, TASK_STORE_EFFECTS.isCompleted, TASK_MAINTENANCE_EFFECTS.cleanupCompleted]
     .map(kind => ctx.quarkWorkflows.registerEffect(kind, { execute: effect => adapter.execute(effect) }))
   ctx.effect(() => () => { for (const dispose of disposers.reverse()) dispose() }, 'quark Dida task effects')
 }

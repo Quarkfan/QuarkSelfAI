@@ -37,8 +37,9 @@
 
 - 超期扫描与完成项清理已建成两个 durable workflow definitions；重启后从数据库 wake point 继续，不再依赖
   compat 私有 timer。
-- 查询、删除和通知被表示为版本化 effect 契约。当前没有注册真实 Dida/飞书 effect handler，也没有创建生产
-  workflow instance，因此不会发生任何外部读取、删除或提醒。
+- 查询、删除和通知被表示为版本化 effect 契约。任务查询使用 `task-store.*`，清理使用带 owner 授权的
+  `task-maintenance.*`；滴答只实现存储适配，不拥有提醒和语义判断。当前没有创建生产 workflow instance，
+  因此不会发生任何外部读取、删除或提醒。
 - 必须在 `message-intake-and-projection` 提供 task-system 与 notification handlers 并取得所有权后，才允许开启
   `QUARK_NATIVE_DIDA_MAINTENANCE`。
 
@@ -76,7 +77,7 @@
   “已经收消息但没有形成事项”的不可恢复窗口。
 - 常东旭的机器人私聊不做枚举意图分类：补齐最近会话上下文后，把原始自然语言整体委托给执行通道；其他关注消息才进入
   可演进的上下文评估。固定关注 ID 只是低成本候选过滤器，不是最终业务规则。
-- 滴答 upsert、通知卡片、交互批准和指令委托都是带稳定幂等键的 effect 契约。未变化事项强制静默，待批准事项强制通知，
+- 任务 upsert 通过 `assistant.task-projection.*` 表达，通知卡片、交互批准和指令委托都是带稳定幂等键的 effect 契约。未变化事项强制静默，待批准事项强制通知，
   外部群信息只进入内部决策，正式外发仍需精确批准关联。
 - 非艾特消息的低频发现被定义为 feature effect，默认目标间隔 10 分钟；它不进入通用事件/工作流骨架，也不要求用 sleep
   维持会话。当前没有注册真实飞书/滴答/模型 effect handler，插件在 compat 模式下强制禁用。

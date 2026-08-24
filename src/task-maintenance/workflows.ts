@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
-import { TASK_EFFECTS } from '../task-system/effects.js'
+import { TASK_STORE_EFFECTS } from '../task-system/store-effects.js'
+import { TASK_MAINTENANCE_EFFECTS } from '../task-system/maintenance-effects.js'
 import type { DeletedTask, DidaMaintenanceConfig, OverdueTask } from './types.js'
 import { requireAuthorizationEvidence } from '../domain/authorization.js'
 
@@ -99,11 +100,11 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
         return {
           status: 'waiting', state: { ...state, phase: 'scanning' },
           wakeAt: null,
-          effects: [{ id: scanId, kind: TASK_EFFECTS.listOverdue, availableAt: event.occurredAt, payload: { projectId: state.projectId } }],
+          effects: [{ id: scanId, kind: TASK_STORE_EFFECTS.listOverdue, availableAt: event.occurredAt, payload: { projectId: state.projectId } }],
         }
       }
       if (['effect.delivered', 'effect.failed'].includes(event.type) && effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) return { status: 'waiting', state }
-      if (event.type === 'effect.delivered' && effectKind(event) === TASK_EFFECTS.listOverdue) {
+      if (event.type === 'effect.delivered' && effectKind(event) === TASK_STORE_EFFECTS.listOverdue) {
         const tasks = parseOverdueTasks(event.payload.tasks)
         const nextNotified = { ...state.notified }
         const effects = []
@@ -125,7 +126,7 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
           wakeAt: at(event.occurredAt, state.intervalMs), effects,
         }
       }
-      if (event.type === 'effect.failed' && effectKind(event) === TASK_EFFECTS.listOverdue) {
+      if (event.type === 'effect.failed' && effectKind(event) === TASK_STORE_EFFECTS.listOverdue) {
         const nextFailure = failure(state.failure, event.occurredAt)
         const shouldNotify = !nextFailure.notified && nextFailure.count >= state.failureThreshold
         return {
@@ -172,7 +173,7 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
           status: 'waiting', state: { ...state, phase: 'cleaning', pendingDay: slot.day },
           wakeAt: null,
           effects: [{
-            id: id('dida-completed-cleanup', state.projectId, slot.day), kind: TASK_EFFECTS.cleanupCompleted,
+            id: id('dida-completed-cleanup', state.projectId, slot.day), kind: TASK_MAINTENANCE_EFFECTS.cleanupCompleted,
             availableAt: event.occurredAt,
             payload: {
               projectId: state.projectId, cutoff: at(event.occurredAt, -state.retentionDays * DAY_MS), maxDeletes: state.maxPerRun,
@@ -183,7 +184,7 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
         }
       }
       if (['effect.delivered', 'effect.failed'].includes(event.type) && effectKind(event) === ASSISTANT_EFFECTS.notifyOwner) return { status: 'waiting', state }
-      if (event.type === 'effect.delivered' && effectKind(event) === TASK_EFFECTS.cleanupCompleted) {
+      if (event.type === 'effect.delivered' && effectKind(event) === TASK_MAINTENANCE_EFFECTS.cleanupCompleted) {
         const deleted = parseDeletedTasks(event.payload.deleted)
         const effects = []
         if (deleted.length) {
@@ -199,7 +200,7 @@ export function completedCleanupWorkflow(config: DidaMaintenanceConfig): Workflo
           wakeAt: at(event.occurredAt, state.pollIntervalMs), effects,
         }
       }
-      if (event.type === 'effect.failed' && effectKind(event) === TASK_EFFECTS.cleanupCompleted) {
+      if (event.type === 'effect.failed' && effectKind(event) === TASK_MAINTENANCE_EFFECTS.cleanupCompleted) {
         const nextFailure = failure(state.failure, event.occurredAt)
         const shouldNotify = !nextFailure.notified && nextFailure.count >= state.failureThreshold
         const { pendingDay: _pendingDay, ...withoutPending } = state

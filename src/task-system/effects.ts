@@ -1,9 +1,5 @@
-/** Stable task-system capabilities supplied by a TickTick, Feishu Task, or other adapter. */
-export const TASK_EFFECTS = {
-  listOverdue: 'task-system.list-overdue.v1',
-  cleanupCompleted: 'task-system.cleanup-completed.v1',
-  isCompleted: 'task-system.is-completed.v1',
-  recordResearchResult: 'task-system.record-research-result.v1',
-  evaluateFollowups: 'task-system.evaluate-followups.v1',
-  recordFollowupReply: 'task-system.record-followup-reply.v1',
-} as const
+/** Public facade. Separate namespaces keep storage, semantics and policy apart. */
+export { TASK_STORE_EFFECTS } from './store-effects.js'
+export { TASK_PROJECTION_EFFECTS } from './projection-effects.js'
+export { TASK_MAINTENANCE_EFFECTS } from './maintenance-effects.js'
+export { TASK_REASONING_EFFECTS } from './reasoning-effects.js'

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
+import { TASK_PROJECTION_EFFECTS } from '../task-system/projection-effects.js'
 import { INTAKE_EFFECTS, type IntakeDecision, type IntakeInput, validateIntakeDecision } from './types.js'
 
 type IntakeState = Readonly<Record<string, unknown>> & {
@@ -69,7 +70,7 @@ function afterEvaluation(state: IntakeState, event: WorkflowEvent): WorkflowDeci
   if (decision.outcome === 'ignored') return { status: 'completed', state: { ...state, stage: 'completed', pending: [], decision }, wakeAt: null }
   const effects = []
   if (decision.outcome === 'task') effects.push({
-    id: effect(state.sourceEvent, 'task'), kind: INTAKE_EFFECTS.projectTask,
+    id: effect(state.sourceEvent, 'task'), kind: TASK_PROJECTION_EFFECTS.upsertIntake,
     payload: { sourceEvent: state.sourceEvent, decision, idempotencyKey: `feishu:${state.sourceEvent.source.messageId ?? state.sourceEvent.deduplicationKey}` },
   })
   if (decision.notifyOwner) effects.push({
