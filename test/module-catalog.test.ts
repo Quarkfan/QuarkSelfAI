@@ -93,6 +93,14 @@ test('requires every source file to have exactly one explicit module owner', () 
     ],
   })
   assert.doesNotThrow(() => validateSourceOwnership(compatibility, ['src/host.ts', 'packages/bridge-compat/src/feature.js']))
+
+  const operations = validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'operations', classification: 'feature', layer: 'operations', implementation: 'ready', runtime: 'active', source: 'scripts/example.ts', owns: ['scripts/example.ts', 'scripts/replay.mjs'], dependsOn: [] },
+    ],
+  })
+  assert.doesNotThrow(() => validateSourceOwnership(operations, ['scripts/example.ts', 'scripts/replay.mjs']))
 })
 
 test('rejects duplicate ownership and src entrypoints that are not owned', () => {

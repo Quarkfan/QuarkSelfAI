@@ -92,7 +92,11 @@ assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'm
 
 const files = await sourceFiles(resolve(root, 'src'), '.ts')
 const compatibilityFiles = await sourceFiles(resolve(root, 'packages/bridge-compat/src'), '.js')
-validateSourceOwnership(catalog, [...files, ...compatibilityFiles].map(filename => relative(root, filename)))
+const operationalFiles = [
+  ...await sourceFiles(resolve(root, 'scripts'), '.ts'),
+  ...await sourceFiles(resolve(root, 'scripts'), '.mjs'),
+]
+validateSourceOwnership(catalog, [...files, ...compatibilityFiles, ...operationalFiles].map(filename => relative(root, filename)))
 const moduleById = new Map(catalog.modules.map(module => [module.id, module]))
 const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))

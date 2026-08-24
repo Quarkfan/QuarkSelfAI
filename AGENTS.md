@@ -3,7 +3,8 @@
 - 架构真源见 `docs/architecture.md` 与 `docs/adr/`。
 - 骨架、功能和迁移代码的机器真源为 `config/module-catalog.json`。新能力先登记分类和依赖并通过
   `npm run architecture:check`：skeleton 不得依赖 feature/migration，feature 不得依赖 migration；迁移模块
-  必须有退出条件。`src` 下每个 TypeScript 文件和 `packages/bridge-compat/src` 下每个现网 JavaScript 文件
+  必须有退出条件。`src` 下每个 TypeScript 文件、`packages/bridge-compat/src` 下每个现网 JavaScript 文件和
+  `scripts` 下每个 TypeScript/MJS 运维入口
   必须在 `owns` 中恰好归属一个模块；原生真实跨模块 import 必须在
   `dependsOn` 中精确声明且不得保留过期项；没有相对 import 的注入、宿主和外部 runtime 关系放在
   `runtimeDependsOn`。长期 workflow 的外部能力必须登记 `requiresEffects`，native 模块不得依赖缺失或重复的
