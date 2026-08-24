@@ -16,14 +16,27 @@ assert.equal(migrationPlan.sourceRuntime, 'bridge-compat-host', 'native migratio
 assert.ok(Array.isArray(migrationPlan.units), 'native migration plan must contain units')
 const migrationUnits = migrationPlan.units as Array<Record<string, unknown>>
 const migrationModuleIds: string[] = []
+const migrationUnitIds = new Set(migrationUnits.map(unit => unit.id))
+assert.equal(migrationUnitIds.size, migrationUnits.length, 'migration unit ids must be unique')
+const buildOrders = new Set<number>()
 for (const unit of migrationUnits) {
   assert.equal(typeof unit.id, 'string', 'migration unit id must be a string')
   assert.ok(Array.isArray(unit.modules) && unit.modules.length > 0 && unit.modules.every(value => typeof value === 'string'), `migration unit ${String(unit.id)} must contain module ids`)
   assert.equal(typeof unit.cutoverBoundary, 'string', `migration unit ${String(unit.id)} must define its cutover boundary`)
   assert.equal(typeof unit.rollback, 'string', `migration unit ${String(unit.id)} must define rollback`)
   assert.equal(unit.requiresMaintenanceWindow, true, `migration unit ${String(unit.id)} must require a maintenance window`)
+  assert.ok(Number.isSafeInteger(unit.buildOrder) && Number(unit.buildOrder) > 0, `migration unit ${String(unit.id)} must define a positive buildOrder`)
+  assert.ok(!buildOrders.has(Number(unit.buildOrder)), `migration buildOrder ${String(unit.buildOrder)} must be unique`)
+  buildOrders.add(Number(unit.buildOrder))
+  assert.ok(Array.isArray(unit.cutoverAfter) && unit.cutoverAfter.every(value => typeof value === 'string'), `migration unit ${String(unit.id)} must define cutoverAfter`)
+  for (const dependency of unit.cutoverAfter as string[]) {
+    assert.ok(migrationUnitIds.has(dependency), `migration unit ${String(unit.id)} has unknown cutover dependency ${dependency}`)
+    assert.notEqual(dependency, unit.id, `migration unit ${String(unit.id)} cannot cut over after itself`)
+  }
   migrationModuleIds.push(...unit.modules as string[])
 }
+assertAcyclicCutovers(migrationUnits)
+assert.deepEqual([...buildOrders].sort((left, right) => left - right), migrationUnits.map((_, index) => index + 1), 'migration buildOrder values must be contiguous')
 const compatModuleIds = catalog.modules.filter(module => module.classification === 'feature' && module.status === 'compat').map(module => module.id)
 assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'migration units must cover every compat feature exactly once')
 
@@ -74,6 +87,21 @@ async function sourceFiles(directory: string): Promise<string[]> {
     else if (entry.isFile() && entry.name.endsWith('.ts')) result.push(path)
   }
   return result
+}
+
+function assertAcyclicCutovers(units: readonly Record<string, unknown>[]): void {
+  const dependencies = new Map(units.map(unit => [String(unit.id), unit.cutoverAfter as string[]]))
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const visit = (id: string, path: readonly string[]): void => {
+    if (visiting.has(id)) throw new Error(`migration cutover cycle: ${[...path, id].join(' -> ')}`)
+    if (visited.has(id)) return
+    visiting.add(id)
+    for (const dependency of dependencies.get(id) ?? []) visit(dependency, [...path, id])
+    visiting.delete(id)
+    visited.add(id)
+  }
+  for (const id of dependencies.keys()) visit(id, [])
 }
 
 function relativeImports(source: string): string[] {

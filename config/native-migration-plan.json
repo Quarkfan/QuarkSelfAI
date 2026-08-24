@@ -4,6 +4,8 @@
   "units": [
     {
       "id": "message-intake-and-projection",
+      "buildOrder": 6,
+      "cutoverAfter": [],
       "modules": ["approval-cards", "dida-projection", "direct-command-workflow", "focus-intake", "owner-engagement", "notification-digest"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Freeze one checkpoint, stop all five compat Feishu streams, import pending message/card/projection state, then start the five native streams exactly once.",
@@ -12,6 +14,8 @@
     },
     {
       "id": "dida-maintenance",
+      "buildOrder": 2,
+      "cutoverAfter": ["message-intake-and-projection"],
       "modules": ["dida-maintenance"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Disable compat overdue and completed-task timers, migrate notification fingerprints and cleanup cursor, then enable the native scheduled plugin.",
@@ -20,6 +24,8 @@
     },
     {
       "id": "delegated-followup",
+      "buildOrder": 5,
+      "cutoverAfter": ["message-intake-and-projection"],
       "modules": ["delegated-followup"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Pause compat follow-up polling, migrate open outreach approvals and last workday checkpoint, then enable the native workflow.",
@@ -28,6 +34,8 @@
     },
     {
       "id": "xiaowei-research",
+      "buildOrder": 4,
+      "cutoverAfter": ["message-intake-and-projection"],
       "modules": ["xiaowei-research"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Pause Xiaowei request/reply polling, migrate every pending correlation and approval, then resume through one native channel owner.",
@@ -36,6 +44,8 @@
     },
     {
       "id": "session-lifecycle",
+      "buildOrder": 3,
+      "cutoverAfter": ["message-intake-and-projection"],
       "modules": ["session-lifecycle"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Pause archive/delete sweeps, migrate session ownership, Dida completion links and retry deadlines, then enable native cleanup.",
@@ -44,6 +54,8 @@
     },
     {
       "id": "collaboration-learning",
+      "buildOrder": 1,
+      "cutoverAfter": ["message-intake-and-projection"],
       "modules": ["collaboration-learning"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Pause learning evaluation, import privacy-bounded observations and proposal cooldowns, then enable native policy learning.",

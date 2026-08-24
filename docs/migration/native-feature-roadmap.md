@@ -9,19 +9,21 @@
 样本。直接移动文件会造成双消费、漏处理、重复任务或重复外联。正确迁移单位是“状态所有权 + 消费者所有权”，
 不是源文件目录。
 
-## 六个切换单元
+## 六个迁移单元
 
-| 顺序 | 单元 | 模块 | 关键边界 |
-| --- | --- | --- | --- |
-| 1 | collaboration-learning | 1 | 无业务写入，先验证 durable 样本与 cooldown 导入 |
-| 2 | dida-maintenance | 1 | timer、超期指纹和完成清理 cursor 只能有一个 owner |
-| 3 | session-lifecycle | 1 | 归档/删除不可重放，必须记录已经完成的外部动作 |
-| 4 | xiaowei-research | 1 | 请求批准与慢回复 correlation 原子迁移 |
-| 5 | delegated-followup | 1 | 待外联批准、工作日 checkpoint 和联系人结果原子迁移 |
-| 6 | message-intake-and-projection | 6 | 五条飞书流、卡片回调、消息幂等和滴答投影最后整体切换 |
+| 构建顺序 | 单元 | 模块 | 生产切换前置 | 关键边界 |
+| --- | --- | --- | --- | --- |
+| 1 | collaboration-learning | 1 | message-intake-and-projection | 无业务写入，先验证 durable 样本与 cooldown 导入 |
+| 2 | dida-maintenance | 1 | message-intake-and-projection | timer、超期指纹和完成清理 cursor 只能有一个 owner |
+| 3 | session-lifecycle | 1 | message-intake-and-projection | 归档/删除不可重放，必须记录已经完成的外部动作 |
+| 4 | xiaowei-research | 1 | message-intake-and-projection | 请求批准与慢回复 correlation 原子迁移 |
+| 5 | delegated-followup | 1 | message-intake-and-projection | 待外联批准、工作日 checkpoint 和联系人结果原子迁移 |
+| 6 | message-intake-and-projection | 6 | 无 | 五条飞书流、卡片回调、消息幂等和滴答投影整体切换 |
 
-这里的顺序是风险顺序，不代表自动授权。每个单元都要先完成 native 插件、迁移演练和 dry-run，对应维护窗口
-仍需常东旭明确批准。最后一个单元完成前，`QUARK_NATIVE_FEISHU_INGRESS` 不能在 compat 模式中生效。
+构建顺序按“先写低耦合功能、最后补齐底层通道”安排，便于提前测试；它绝不是生产切换顺序。生产切换必须按
+`cutoverAfter` 拓扑执行：`message-intake-and-projection` 先取得底层通道和投影所有权，其余五个单元才可逐个
+切换。每个单元都要完成 native 插件、迁移演练和 dry-run，对应维护窗口仍需常东旭明确批准。
+`QUARK_NATIVE_FEISHU_INGRESS` 不能因为上层插件已经写好而提前在 compat 模式中生效。
 
 ### collaboration-learning 当前准备状态
 
