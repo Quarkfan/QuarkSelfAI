@@ -24,4 +24,8 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     quarkState: DurableStatePort
   }
+  interface Events {
+    /** Emitted only after a new normalized event is durable; consumers use it as a wake hint. */
+    'quark/event-appended'(eventId: string): void
+  }
 }

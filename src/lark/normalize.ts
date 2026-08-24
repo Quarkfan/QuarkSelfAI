@@ -14,7 +14,7 @@ function timestamp(value: unknown): string | undefined {
 }
 
 /** Convert Feishu's message-content envelope into the channel-neutral text fact. */
-function messageText(value: unknown): string | undefined {
+export function normalizeLarkMessageText(value: unknown): string | undefined {
   if (isRecord(value)) return text(value.text)
   const raw = text(value)
   if (!raw) return undefined
@@ -51,7 +51,7 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
       kind: 'message.received',
       deduplicationKey: messageId ?? eventId ?? `${eventKey}:${JSON.stringify(value)}`,
       payload: {
-        text: messageText(value.content),
+        text: normalizeLarkMessageText(value.content),
         content: value.content,
         messageType: value.message_type,
         chatType: value.chat_type,

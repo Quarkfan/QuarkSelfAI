@@ -116,7 +116,8 @@
       config:
         workerId: !!js process.env.QUARK_EVENT_WORKER_ID || ('event-' + process.pid)
         enabled: true
-        pollIntervalMs: 1000
+        # Event writes wake the inbox in-process. This is only crash/restart recovery.
+        pollIntervalMs: 600000
         leaseMs: 120000
         retryDelayMs: 120000
         maxAttempts: 5

@@ -5,6 +5,7 @@ import type {} from '../storage/service-contract.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import type {} from '../workflow/runtime.js'
 import { isRecord } from './json.js'
+import { normalizeLarkMessageText } from './normalize.js'
 import { ProcessCommandRunner, runJson, type CommandRunner } from './runner.js'
 
 export interface FeishuFocusDiscoveryEffectConfig {
@@ -205,6 +206,7 @@ function normalizeDiscoveredMessage(message: Readonly<Record<string, unknown>>, 
     eventKey: FOCUS_DISCOVERY_EVENT_KEY,
     deduplicationKey: messageId,
     payload: {
+      text: normalizeLarkMessageText(message.content),
       content: message.content,
       messageType: message.msg_type ?? message.message_type ?? message.messageType,
       chatType,

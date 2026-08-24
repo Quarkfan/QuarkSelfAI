@@ -59,7 +59,12 @@ export class DurableStateService extends Service implements DurableStatePort {
   }
 
   async appendEvent(event: NormalizedChannelEvent): Promise<StoredEvent> {
-    return await (await this.ready).appendEvent(eventRecordId(event), event)
+    const result = await (await this.ready).appendEvent(eventRecordId(event), event)
+    if (result.inserted) {
+      void this.ctx.parallel('quark/event-appended', result.id)
+        .catch(error => this.ctx.logger('quark-state').error(error))
+    }
+    return result
   }
 
   async claimNextEvent(consumerName: string, eventKeys: readonly string[], workerId: string, now: string, leaseExpiresAt: string): Promise<ClaimedChannelEvent | undefined> {

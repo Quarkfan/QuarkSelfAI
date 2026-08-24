@@ -161,6 +161,9 @@ adapter 将其呈现为 `native-cutover` gate。以后新增发布、凭证或�
 
 DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-state`。新功能不得把私有 JSON state、
 业务 timer 或状态读写重新塞进 action ledger；跨重启流程必须使用 `quark-durable-workflows`。
+新 channel event 成功写入 durable state 后会发布 `quark/event-appended` wake hint，由 durable event runtime 合并唤醒并
+立即清空积压；10 分钟数据库扫描仅用于进程重启、监听器暂未装载或漏唤醒恢复，不再每秒空轮询。adapter 只负责
+append，不直接依赖或手工驱动 inbox runtime。
 外层控制面与 DSH 在 SQLite 模式下必须解析到同一个 `SQLITE_PATH`，PostgreSQL 模式下必须使用同一个
 `DATABASE_URL`；不得用 `DSH_HOME` 下的隐式第二数据库制造分叉真源。
 

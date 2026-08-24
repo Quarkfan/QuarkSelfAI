@@ -35,6 +35,7 @@ test('discovers configured people, flags and Feishu focus groups into one idempo
   assert.deepEqual(events.map(event => event.source.messageId).sort(), ['om_flag', 'om_sender', 'om_star'])
   const flagged = events.find(event => event.source.messageId === 'om_flag')!
   assert.deepEqual(flagged.payload.discoveryReasons, ['flagged-conversation', 'flagged-message'])
+  assert.equal(flagged.payload.text, '标记事项')
   assert.equal(events.every(event => event.eventKey === 'quark.focus.discovered.v1'), true)
   const readCommands = new Set(['+flag-list', '+feed-group-list', '+feed-group-list-item', '+messages-search'])
   assert.equal(runner.calls.every(args => readCommands.has(args[1]!)), true)

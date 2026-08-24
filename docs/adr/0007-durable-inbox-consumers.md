@@ -16,6 +16,8 @@ Channel ingress 已能把规范化事件幂等写入 `assistant_event`，但仅�
 3. handler 必须以事件稳定 ID 幂等创建 action、workflow 或 projection；进程可能在 handler 成功但 delivery 结算前崩溃。
 4. 消费者是 feature，租约与重放机制是 skeleton。骨架不理解飞书 @、联系人、表情或滴答任务。
 5. compat 切换前 native ingress 和业务 consumer 均保持禁用；空 runtime 与新表不构成消费者所有权切换。
+6. 新事件成功落库后由 durable state 发布 wake hint；runtime 合并唤醒并 drain backlog。10 分钟扫描只恢复重启或
+   漏唤醒，不作为正常消息延迟机制。详细调度边界见 ADR 0039。
 
 ## 结果
 
