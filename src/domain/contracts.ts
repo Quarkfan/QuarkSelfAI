@@ -1,4 +1,3 @@
-export type AssistantIdentity = 'user' | 'bot'
 export type ExecutorId = string
 import type { SourceRef } from './channel.js'
 export { eventRecordId } from './channel.js'

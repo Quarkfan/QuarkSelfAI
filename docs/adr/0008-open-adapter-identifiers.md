@@ -12,6 +12,9 @@
 把功能扩展变成内核发布。开放标识仍由具体 adapter 在注册时验证，安全边界由 workspace、approval、lease 和
 idempotency 提供，不依赖 provider 名字。
 
+同理，`user/bot` 是 lark-cli 的认证模式，只能定义在飞书 adapter 内，不得作为通用 Assistant identity 从平台
+入口导出。其他 channel 可以拥有自己的认证模式，而无需扩充骨架枚举。
+
 ## 兼容与迁移
 
 - `007_open_adapter_ids.sql` 删除历史 executor CHECK，并保留全部 action/execution 数据。

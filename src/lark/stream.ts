@@ -1,11 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { createInterface } from 'node:readline'
-import type { AssistantIdentity, NormalizedChannelEvent } from '../domain/contracts.js'
+import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { normalizeLarkEvent } from './normalize.js'
+import type { LarkIdentity } from './types.js'
 
 export interface EventStreamOptions {
   readonly executable?: string
-  readonly identity: AssistantIdentity
+  readonly identity: LarkIdentity
   readonly eventKey: string
   readonly readyTimeoutMs?: number
 }

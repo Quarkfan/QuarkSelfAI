@@ -1,12 +1,13 @@
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { AssistantIdentity, NormalizedChannelEvent } from '../domain/contracts.js'
+import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { LarkCapabilityDiscovery, type CompatibilityReport } from './capabilities.js'
 import { ProcessCommandRunner, type CommandRunner } from './runner.js'
 import { LarkEventStream } from './stream.js'
+import type { LarkIdentity } from './types.js'
 
 export interface LarkCliConfig {
   readonly executable?: string
-  readonly identity?: AssistantIdentity
+  readonly identity?: LarkIdentity
   readonly requiredEventKeys?: readonly string[]
 }
 
@@ -21,7 +22,7 @@ declare module '@deepseek-ai/cordis' {
 
 export class LarkCliService extends Service {
   private readonly executable: string
-  private readonly identity: AssistantIdentity
+  private readonly identity: LarkIdentity
   private readonly requiredEventKeys: readonly string[]
   private readonly discovery: LarkCapabilityDiscovery
   private readonly streams = new Map<string, LarkEventStream>()
