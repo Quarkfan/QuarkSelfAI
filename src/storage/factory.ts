@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url'
 import { createPgPool, PgAssistantStore } from './postgres.js'
 import { createSqliteStore } from './sqlite.js'
-import type { AssistantStore, StorageConfig } from './types.js'
+import type { StorageConfig } from './config.js'
+import type { AssistantStore } from './types.js'
 
 const sqliteMigrations = fileURLToPath(new URL('../../migrations/sqlite/', import.meta.url))
 const postgresMigrations = fileURLToPath(new URL('../../migrations/', import.meta.url))

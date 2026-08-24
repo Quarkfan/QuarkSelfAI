@@ -2,7 +2,7 @@
 export type * from '../domain/contracts.js'
 export type * from '../domain/authorization.js'
 export { requireAuthorizationEvidence } from '../domain/authorization.js'
-export type * from '../storage/types.js'
+export type * from '../storage/ports.js'
 export type * from '../storage/service-contract.js'
 export type * from '../policy/types.js'
 export * from '../execution/workspace-policy.js'

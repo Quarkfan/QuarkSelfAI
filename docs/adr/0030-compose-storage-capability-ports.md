@@ -13,6 +13,8 @@
   `FeatureCheckpointStorePort`、`WorkflowStorePort`、`ActionStorePort`、`PolicyStorePort` 和
   `ControlReadStorePort`。
 - `AssistantStore` 仅作为具体数据库 provider 必须完整实现的组合契约。
+- 具体 `StorageConfig` 归 provider 功能层；骨架只把 `kind` 视为开放 provider 标识，不枚举数据库产品。
+- 公共 `platform` 入口只导出 `storage/ports` 的有意扩展面，不整包导出 provider 内部类型。
 - 应用 host、控制台、policy authoring、worker 和其他消费者必须声明最小能力端口，不得依赖组合契约。
 - `DurableStatePort` 由 DSH 所需的持久化能力组合而成，但不暴露数据库 migration、close 或控制台读模型。
 - 架构检查禁止 storage provider 边界之外引用 `AssistantStore`。

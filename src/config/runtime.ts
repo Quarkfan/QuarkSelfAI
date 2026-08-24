@@ -1,7 +1,6 @@
 import { resolve } from 'node:path'
 import { loadAssistantApplicationConfig, type AssistantApplicationConfig } from '../bootstrap/config.js'
-import { loadStorageConfig } from '../storage/config.js'
-import type { StorageConfig } from '../storage/types.js'
+import { loadStorageConfig, type StorageConfig } from '../storage/config.js'
 
 /** Temporary top-level selector while the compatibility host owns production traffic. */
 export interface RuntimeConfig extends AssistantApplicationConfig {

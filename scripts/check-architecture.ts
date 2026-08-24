@@ -14,6 +14,10 @@ const packageName = typeof packageManifest.name === 'string' ? packageManifest.n
 assert.ok(packageName, 'package.json must define a package name')
 assert.ok(isRecord(packageManifest.exports), 'package.json must define exports')
 const profileSource = await readFile(resolve(root, 'cordis.patch.yml'), 'utf8')
+const platformApiSource = await readFile(resolve(root, 'src/platform/index.ts'), 'utf8')
+const storagePortsSource = await readFile(resolve(root, 'src/storage/ports.ts'), 'utf8')
+assert.ok(!platformApiSource.includes("export type * from '../storage/types.js'"), 'platform API must export the intentional storage port surface')
+assert.ok(!/\b(?:AssistantStore|StorageConfig)\b/.test(storagePortsSource), 'public storage ports must not expose provider aggregate or configuration')
 const profilePlugins = cordisPlugins(profileSource)
 const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ module, plugin: module.plugin }] : [])
 for (const { module, plugin } of pluginBindings) {
@@ -122,7 +126,7 @@ for (const filename of files) {
       violations.push(`${from} imports ${to}; platform skeleton must not depend on implementation layers`)
     }
     if (from === 'src/platform/index.ts' && outside(to, [
-      'src/platform/', 'src/domain/contracts', 'src/domain/authorization', 'src/storage/types', 'src/storage/service-contract', 'src/policy/types', 'src/execution/workspace-policy',
+      'src/platform/', 'src/domain/contracts', 'src/domain/authorization', 'src/storage/types', 'src/storage/ports', 'src/storage/service-contract', 'src/policy/types', 'src/execution/workspace-policy',
     ])) {
       violations.push(`${from} exports non-contract implementation ${to}`)
     }

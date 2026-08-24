@@ -2,11 +2,6 @@ import type { ExecutorRequest, ExecutorResult, NormalizedChannelEvent, SourceRef
 import type { PolicyDocument, PolicySimulation } from '../policy/types.js'
 import type { PolicySample } from '../policy/types.js'
 
-export type StorageKind = 'sqlite' | 'postgres'
-export type StorageConfig =
-  | { readonly kind: 'sqlite'; readonly path: string }
-  | { readonly kind: 'postgres'; readonly databaseUrl: string }
-
 export interface StoredEvent {
   readonly id: string
   readonly inserted: boolean
@@ -188,7 +183,8 @@ export interface ActionClaimRelease {
 
 /** Connection ownership and process lifecycle. Business components should depend on a narrower port below. */
 export interface StorageLifecyclePort {
-  readonly kind: StorageKind
+  /** Open provider identifier; the skeleton must not enumerate database products. */
+  readonly kind: string
   migrate(): Promise<void>
   health(): Promise<void>
   close(): Promise<void>

@@ -1,7 +1,10 @@
 import { resolve } from 'node:path'
-import type { StorageConfig, StorageKind } from './types.js'
 
-function storageKind(value: string | undefined): StorageKind {
+export type StorageConfig =
+  | { readonly kind: 'sqlite'; readonly path: string }
+  | { readonly kind: 'postgres'; readonly databaseUrl: string }
+
+function storageKind(value: string | undefined): StorageConfig['kind'] {
   if (!value || value === 'sqlite') return 'sqlite'
   if (value === 'postgres' || value === 'pg') return 'postgres'
   throw new Error(`ASSISTANT_STORAGE must be sqlite or postgres, received ${value}`)
