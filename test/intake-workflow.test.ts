@@ -7,7 +7,7 @@ import { TASK_PROJECTION_EFFECTS } from '../src/task-system/projection-effects.j
 import { CONVERSATION_EFFECTS } from '../src/conversation/types.js'
 import { LARK_EFFECTS } from '../src/lark/effects.js'
 
-const message = { kind: 'message.received' as const, source: { channel: 'feishu' as const, messageId: 'om-1', conversationId: 'oc-1', senderId: 'owner' }, eventKey: 'im.message.receive_v1', deduplicationKey: 'om-1', payload: { content: '帮我检查一下', chatType: 'p2p' }, raw: {} }
+const message = { kind: 'message.received' as const, source: { channel: 'feishu' as const, resourceId: 'om-1', containerId: 'oc-1', actorId: 'owner' }, eventKey: 'im.message.receive_v1', deduplicationKey: 'om-1', payload: { content: '帮我检查一下', chatType: 'p2p' }, raw: {} }
 const taskProjection = { projectId: 'automation', authorization: { id: 'task-projection-v1', grantedBy: 'owner' as const, grantedAt: '2026-08-20T00:00:00+08:00', scope: 'dida.task-projection', revision: 1, source: 'owner-directive', projectId: 'automation' } }
 
 test('owner DM bypasses enum classification and delegates with loaded conversation context', () => {

@@ -14,7 +14,7 @@ test('persists the normalized event with its stable deduplication key', async ()
   const store = new PgAssistantStore(database)
   const result = await store.appendEvent('evt-row', {
     kind: 'message.received',
-    source: { channel: 'feishu', messageId: 'om-1' },
+    source: { channel: 'feishu', resourceId: 'om-1' },
     eventKey: 'im.message.receive_v1',
     deduplicationKey: 'om-1',
     payload: { content: 'hello' },

@@ -17,7 +17,7 @@ test('SQLite is a zero-configuration durable default with event idempotency', as
     await store.migrate()
     const event = {
       kind: 'message.received' as const,
-      source: { channel: 'feishu' as const, messageId: 'om-sqlite' },
+      source: { channel: 'feishu' as const, resourceId: 'om-sqlite' },
       eventKey: 'im.message.receive_v1',
       deduplicationKey: 'om-sqlite',
       payload: { content: 'hello' },
@@ -121,7 +121,7 @@ test('SQLite durable action claims survive expiry and reject stale workers', asy
       matterTitle: 'Read local fixture',
       matterSummary: 'Read-only local action',
       intent: 'inspect a local fixture',
-      source: { channel: 'feishu' as const, messageId: 'om-read' },
+      source: { channel: 'feishu' as const, resourceId: 'om-read' },
       request: {
         title: 'Read local fixture',
         prompt: 'read the fixture',
@@ -175,7 +175,7 @@ test('SQLite does not claim a write action until its exact approval is durable',
       matterTitle: 'Approved local write',
       matterSummary: 'Waiting for owner',
       intent: 'write an approved local fixture',
-      source: { channel: 'feishu', messageId: 'om-write' },
+      source: { channel: 'feishu', resourceId: 'om-write' },
       request: { title: 'Approved local write', prompt: 'write the fixture', workspace: directory, mode: 'workspace-write' },
       approval: { id: 'approval-write', prompt: 'Allow this exact fixture write?' },
     })
@@ -199,7 +199,7 @@ test('SQLite also honors an explicit approval gate on read-only research', async
     await store.enqueueAction({
       actionId: 'action-confirmed-research', matterId: 'matter-confirmed-research',
       matterTitle: 'Confirmed research', matterSummary: 'Wait for the owner', intent: 'research',
-      source: { channel: 'feishu', messageId: 'om-confirmed-research' },
+      source: { channel: 'feishu', resourceId: 'om-confirmed-research' },
       request: { title: 'Confirmed research', prompt: 'inspect synthetic evidence', workspace: directory, mode: 'read-only' },
       approval: { id: 'approval-confirmed-research', prompt: 'Start this exact read-only research?' },
     })

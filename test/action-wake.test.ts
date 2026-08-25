@@ -16,7 +16,7 @@ const action = (id: string, workspace: string, approval?: { readonly id: string;
   matterTitle: id,
   matterSummary: id,
   intent: 'read',
-  source: { channel: 'feishu' as const, messageId: `message-${id}` },
+  source: { channel: 'feishu' as const, resourceId: `message-${id}` },
   request: { title: id, prompt: id, workspace, mode: approval ? 'write-with-approval' as const : 'read-only' as const },
   ...(approval ? { approval } : {}),
 })

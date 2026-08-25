@@ -66,7 +66,7 @@ test('routes a confirmed BlackLake investigation into the durable ledger without
     const result = await ctx.blacklakeReferences.planResearch({
       actionId: 'blacklake-confirm-action', matterId: 'blacklake-confirm-matter',
       title: 'Synthetic BlackLake investigation', summary: 'Synthetic evidence only',
-      source: { channel: 'feishu', messageId: 'om-synthetic-blacklake' }, workspace: root,
+      source: { channel: 'feishu', resourceId: 'om-synthetic-blacklake' }, workspace: root,
       candidate: {
         blacklakeRelated: true,
         recommendedSkills: ['blacklake-reference-router', 'virtual-employee-operation-chain'],

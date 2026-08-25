@@ -100,7 +100,7 @@ function afterEvaluation(state: IntakeState, event: WorkflowEvent): WorkflowDeci
     if (!state.taskProjection) throw new Error('task intake requires projection target and authorization')
     effects.push({
       id: effect(state.sourceEvent, 'task'), kind: TASK_PROJECTION_EFFECTS.upsertIntake,
-      payload: { sourceEvent: state.sourceEvent, decision, ...state.taskProjection, effectiveAt: event.occurredAt, idempotencyKey: `feishu:${state.sourceEvent.source.messageId ?? state.sourceEvent.deduplicationKey}` },
+      payload: { sourceEvent: state.sourceEvent, decision, ...state.taskProjection, effectiveAt: event.occurredAt, idempotencyKey: `feishu:${state.sourceEvent.source.resourceId ?? state.sourceEvent.deduplicationKey}` },
     })
   }
   const approvalId = decision.approvalRequired ? effect(state.sourceEvent, 'approval-decision') : undefined

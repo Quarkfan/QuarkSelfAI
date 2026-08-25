@@ -254,7 +254,7 @@ const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const dshSourceModules = new Set<string>()
 const injectedRuntimeRequirements = new Map<string, Set<string>>()
-const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover)\b|常东旭|任永强|张以宁/gi
+const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:conversationId|messageId|senderId)\b|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover)\b|常东旭|任永强|张以宁/gi
 const violations: string[] = []
 for (const module of catalog.modules.filter(item => item.layer === 'contract')) {
   for (const filename of module.owns) {
@@ -276,6 +276,9 @@ for (const filename of files) {
   if (ownerModule?.classification === 'skeleton') {
     const productTerms = [...new Set([...source.matchAll(forbiddenSkeletonSemantics)].map(match => match[0]!.toLowerCase()))]
     if (productTerms.length) violations.push(`${from} puts product semantics in the skeleton: ${productTerms.join(', ')}`)
+  }
+  if (from === 'src/platform/lifecycle.ts' && /readonly\s+kind:\s*['"]/.test(source)) {
+    violations.push(`${from} closes the component category vocabulary; lifecycle kinds must stay provider-owned strings`)
   }
   if (ownerModule?.classification === 'feature') {
     const required = injectedRuntimeRequirements.get(ownerModule.id) ?? new Set<string>()

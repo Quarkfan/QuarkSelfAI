@@ -63,3 +63,9 @@ test('rejects duplicate component ids before side effects start', () => {
     component('same', []), component('same', []),
   ]), /duplicate managed component id/)
 })
+
+test('accepts provider-owned component categories but rejects an empty category', () => {
+  const custom = { ...component('custom', []), kind: 'future-channel-supervisor' }
+  assert.equal(new LifecycleSupervisor([custom]).snapshot()[0]?.kind, 'future-channel-supervisor')
+  assert.throws(() => new LifecycleSupervisor([{ ...custom, kind: '' }]), /kind cannot be empty/)
+})

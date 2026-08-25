@@ -75,7 +75,7 @@ export class DidaProjectionEffectAdapter {
     if (decision.outcome !== 'task') throw new Error('intake projection requires a task decision')
     const sourceEvent = object(effect.payload.sourceEvent, 'projection source event')
     const source = object(sourceEvent.source, 'projection source')
-    const messageId = required(source.messageId ?? sourceEvent.deduplicationKey, 'projection source messageId', 500)
+    const messageId = required(source.resourceId ?? sourceEvent.deduplicationKey, 'projection source resourceId', 500)
     const marker = `[feishu:${messageId}]`
     const explicit = decision.existingTaskId ? await this.get(projectId, decision.existingTaskId) : undefined
     const matches = explicit ? [explicit] : await this.search(projectId, marker)

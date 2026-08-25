@@ -25,7 +25,7 @@ test('loads bounded direct-message context read-only for the intake workflow', a
   const adapter = new FeishuContextEffectAdapter({}, runner)
   const output = await adapter.execute(effect(LARK_EFFECTS.loadMessageContext, {
     requestedAt: '2099-08-24T00:00:00Z',
-    event: { occurredAt: '2099-08-24T00:00:00Z', source: { conversationId: 'oc_owner' }, payload: { chatType: 'p2p' } },
+    event: { occurredAt: '2099-08-24T00:00:00Z', source: { containerId: 'oc_owner' }, payload: { chatType: 'p2p' } },
   }))
   assert.deepEqual(output, { context: { externalGroup: false, relationship: 'direct-message', messages: [
     { messageId: 'om_1', senderId: 'ou_owner', senderName: '常东旭', createdAt: '2026-08-24T00:00:00Z', content: '先检查配置', messageType: 'text' },
@@ -42,7 +42,7 @@ test('fails closed to unknown when group metadata does not prove external status
   const adapter = new FeishuContextEffectAdapter({}, runner)
   const output = await adapter.execute(effect(LARK_EFFECTS.loadMessageContext, {
     requestedAt: '2099-08-24T00:00:00Z',
-    event: { occurredAt: '2099-08-24T00:00:00Z', source: { conversationId: 'oc_group' }, payload: { chatType: 'group' } },
+    event: { occurredAt: '2099-08-24T00:00:00Z', source: { containerId: 'oc_group' }, payload: { chatType: 'group' } },
   }))
   assert.equal((output.context as Record<string, unknown>).externalGroup, 'unknown')
   assert.deepEqual(runner.calls[1]?.args.slice(0, 3), ['im', 'chats', 'get'])

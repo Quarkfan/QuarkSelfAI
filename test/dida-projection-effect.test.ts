@@ -104,7 +104,7 @@ test('applies a reviewed followup patch before it can be reported as maintained'
 
 function intakeEffect(): ClaimedWorkflowEffect {
   return projectionEffect(TASK_PROJECTION_EFFECTS.upsertIntake, 'automation', {
-    sourceEvent: { deduplicationKey: 'om-1', occurredAt: '2026-08-24T09:00:00Z', source: { messageId: 'om-1', conversationId: 'oc-1' }, payload: { content: '确认客户配额' } },
+    sourceEvent: { deduplicationKey: 'om-1', occurredAt: '2026-08-24T09:00:00Z', source: { resourceId: 'om-1', containerId: 'oc-1' }, payload: { content: '确认客户配额' } },
     decision: { outcome: 'task', summary: '客户调用量即将超限，需要批准是否增加配额。', materialChange: true, notifyOwner: true, approvalRequired: true, title: '确认客户 API 配额', priority: 5, tags: ['关键事项', '客户'] },
   })
 }

@@ -14,7 +14,7 @@ export class FeishuContextEffectAdapter {
     const event = object(effect.payload.event, 'context source event')
     const source = object(event.source, 'context source')
     const payload = object(event.payload, 'context event payload')
-    const chatId = required(source.conversationId, 'context conversationId', 300)
+    const chatId = required(source.containerId, 'context containerId', 300)
     const targetAt = time(event.occurredAt, effect.payload.requestedAt)
     const nearby = await this.chatMessages(chatId, new Date(targetAt.getTime() - 30 * 60_000), new Date(targetAt.getTime() + 30 * 60_000), 'asc')
     const latest = Date.now() > targetAt.getTime() + 30 * 60_000 ? await this.chatMessages(chatId, targetAt, new Date(), 'desc') : []

@@ -201,7 +201,7 @@ function normalizeDiscoveredMessage(message: Readonly<Record<string, unknown>>, 
   const chatType = optionalText(message.chat_type ?? message.chatType, 30)
   return {
     kind: 'message.received',
-    source: { channel: 'feishu', conversationId: chatId, messageId, ...(senderId ? { senderId } : {}) },
+    source: { channel: 'feishu', containerId: chatId, resourceId: messageId, ...(senderId ? { actorId: senderId } : {}) },
     ...(occurredAt ? { occurredAt } : {}),
     eventKey: FOCUS_DISCOVERY_EVENT_KEY,
     deduplicationKey: messageId,

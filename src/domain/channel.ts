@@ -4,10 +4,12 @@ export type ChannelEventKind = string
 
 export interface SourceRef {
   readonly channel: ChannelId
-  readonly conversationId?: string
-  readonly messageId?: string
+  /** Provider-neutral resource identity, for example a message, calendar event or document revision. */
+  readonly resourceId?: string
+  /** Optional containing scope, for example a chat, calendar or document. */
+  readonly containerId?: string
   readonly eventId?: string
-  readonly senderId?: string
+  readonly actorId?: string
 }
 
 export interface NormalizedChannelEvent {

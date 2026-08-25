@@ -32,6 +32,10 @@ contract、policy、adapter 或 provider 必须归 feature，而不是以通用�
 由 channel adapter 规范化后持久化，storage 不允许通过飞书 EventKey 猜测领域类型。
 消息协议 envelope 也必须在 channel adapter 内终止：例如飞书 `content` JSON 由飞书 adapter 提取为规范化 `text`，
 policy/storage 骨架不得反向解析通道原始字段；原 envelope 只保留在事件 payload/raw 供审计和向前兼容。
+通用 `SourceRef` 只使用 `resourceId/containerId/actorId/eventId`；`messageId/conversationId/senderId` 属于 IM adapter
+词汇，必须在通道边界完成映射。这样日历事件、文档 revision 或其他资源不需要伪装成消息才能进入 durable event。
+Lifecycle 的 component `kind` 同样是 provider 自报的开放字符串；骨架只做排序、回滚和状态展示，不枚举 migration
+或未来功能类型。
 控制台也只能读取通用状态端口；迁移就绪度、compat 诊断和 DSH 进程状态由 composition root 注入，控制台不得直接读取迁移 manifest 或 runtime 实现。
 运行态也通过开放的 capability 列表表达，不在骨架中预设“消息、卡片或某组 EventKey”。规范化 event `kind` 同样是
 adapter/feature 拥有的开放字符串；骨架不枚举消息、卡片、日历或邮件种类，消费者按自己声明的 event key/kind 订阅。具体 channel provider

@@ -10,7 +10,7 @@ import { createSqliteStore } from '../src/storage/sqlite.js'
 import { fileURLToPath } from 'node:url'
 
 const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
-const event = (id: string) => ({ kind: 'message.received' as const, source: { channel: 'feishu' as const, messageId: id }, eventKey: 'im.message.receive_v1', deduplicationKey: id, payload: { content: id }, raw: { message_id: id } })
+const event = (id: string) => ({ kind: 'message.received' as const, source: { channel: 'feishu' as const, resourceId: id }, eventKey: 'im.message.receive_v1', deduplicationKey: id, payload: { content: id }, raw: { message_id: id } })
 
 test('uses a ten-minute poll only as missed-wake recovery', () => {
   assert.equal(DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS, 600_000)

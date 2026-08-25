@@ -41,6 +41,10 @@ Claude/Codex、具体联系人或 takeover 等功能/迁移身份。该保护不
   Claude/Codex Provider 和动态插件创作属于骨架上生长的功能。
 - `bridge-compat`、旧 JSON 状态读取、影子审计和 takeover preflight 属于迁移代码。
 
+事件信封的 source 只保留 provider-neutral 的资源、容器、actor 与 event identity；消息、会话和发送者字段由具体
+channel adapter 映射。Lifecycle component kind 也保持开放，不能因为当前存在 migration host 就把 migration 写进
+骨架枚举。
+
 ## 当前不理想但暂不暗切的边界
 
 `bridge-compat` 仍在 DSH 外侧拥有飞书消费者、定时器和 `state.json`，父进程同时监管它和 DSH。这与最终的

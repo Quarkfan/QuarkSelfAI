@@ -39,7 +39,7 @@ export class DshConversationEffectAdapter {
     const workspace = required(effect.payload.workspace, 'conversation workspace', 2_000)
     const content = required(payload.content, 'conversation content', 30_000)
     const targetSessionId = optional(effect.payload.targetSessionId, 'targetSessionId', 300)
-    const requestId = required(source.messageId ?? event.deduplicationKey ?? effect.id, 'conversation request id', 500)
+    const requestId = required(source.resourceId ?? event.deduplicationKey ?? effect.id, 'conversation request id', 500)
     const title = uniqueTitle(this.config.titlePrefix ?? '飞书直办', content, requestId)
     const context = Array.isArray(effect.payload.context) ? effect.payload.context : effect.payload.context === undefined ? [] : [effect.payload.context]
     const prompt = buildPrompt(content, context, requestId)

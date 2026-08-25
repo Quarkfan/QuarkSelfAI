@@ -12,8 +12,8 @@ export function eventToPolicySample(event: PolicyEventSampleInput): PolicySample
     : undefined
   const chatType = typeof event.payload.chatType === 'string' ? event.payload.chatType : undefined
   const external = typeof event.payload.external === 'boolean' ? event.payload.external : undefined
-  const chatId = typeof event.source.conversationId === 'string' ? event.source.conversationId : undefined
-  const senderId = typeof event.source.senderId === 'string' ? event.source.senderId : undefined
+  const chatId = typeof event.source.containerId === 'string' ? event.source.containerId : undefined
+  const senderId = typeof event.source.actorId === 'string' ? event.source.actorId : undefined
   const urgency = typeof event.payload.urgency === 'string' ? event.payload.urgency : undefined
   return {
     id: event.id,

@@ -88,13 +88,13 @@ export class IntakeService extends Service {
     await this.start(event, route)
   }
   private route(event: NormalizedChannelEvent): IntakeRoute | undefined {
-    const owner = event.source.senderId === this.config.ownerOpenId
+    const owner = event.source.actorId === this.config.ownerOpenId
     if (owner && event.payload.chatType === 'p2p') return 'owner-command'
     if (owner || event.payload.chatType === 'p2p') return 'focus'
     const mentions = Array.isArray(event.payload.mentions) ? event.payload.mentions : []
     const mentioned = mentions.some(item => isRecord(item) && mentionIds(item).includes(this.config.ownerOpenId))
-    const focusedSender = event.source.senderId !== undefined && (this.config.focusSenderIds ?? []).includes(event.source.senderId)
-    const focusedConversation = event.source.conversationId !== undefined && (this.config.focusConversationIds ?? []).includes(event.source.conversationId)
+    const focusedSender = event.source.actorId !== undefined && (this.config.focusSenderIds ?? []).includes(event.source.actorId)
+    const focusedConversation = event.source.containerId !== undefined && (this.config.focusConversationIds ?? []).includes(event.source.containerId)
     const trustedDiscovery = event.eventKey === FOCUS_DISCOVERY_EVENT_KEY
     return mentioned || focusedSender || focusedConversation || trustedDiscovery ? 'focus' : undefined
   }

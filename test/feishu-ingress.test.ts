@@ -6,7 +6,7 @@ import { apply } from '../src/lark/ingress-plugin.js'
 
 const event: NormalizedChannelEvent = {
   kind: 'message.received',
-  source: { channel: 'feishu', eventId: 'evt-1', messageId: 'om-1' },
+  source: { channel: 'feishu', eventId: 'evt-1', resourceId: 'om-1' },
   eventKey: 'im.message.receive_v1',
   deduplicationKey: 'im.message.receive_v1:evt-1',
   payload: { text: 'normalized' },

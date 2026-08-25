@@ -5,7 +5,7 @@ import { eventToPolicySample } from '../src/collaboration/policy-samples.js'
 test('policy samples consume only channel-neutral text', () => {
   const sample = eventToPolicySample({
     id: 'event:one',
-    source: { conversationId: 'conversation:one', senderId: 'person:one' },
+    source: { containerId: 'conversation:one', actorId: 'person:one' },
     payload: { text: '明天完成', chatType: 'group', content: JSON.stringify({ text: 'wrong protocol value' }) },
   })
   assert.deepEqual(sample.facts, {

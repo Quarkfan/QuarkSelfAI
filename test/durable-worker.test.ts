@@ -33,7 +33,7 @@ test('durable worker defers infrastructure failure and resumes the same action o
     await store.migrate()
     await store.enqueueAction({
       actionId: 'action-retry', matterId: 'matter-retry', matterTitle: 'Retry', matterSummary: 'retry once', intent: 'read',
-      source: { channel: 'feishu', messageId: 'om-retry' },
+      source: { channel: 'feishu', resourceId: 'om-retry' },
       request: { title: 'Retry', prompt: 'read', workspace: directory, mode: 'read-only' },
     })
     const results: RoutedExecutorResult[] = [
@@ -74,7 +74,7 @@ test('durable worker does not retry a deterministic boundary failure', async () 
     await store.migrate()
     await store.enqueueAction({
       actionId: 'action-failed', matterId: 'matter-failed', matterTitle: 'Fail', matterSummary: 'fail once', intent: 'read',
-      source: { channel: 'feishu', messageId: 'om-failed' },
+      source: { channel: 'feishu', resourceId: 'om-failed' },
       request: { title: 'Fail', prompt: 'read', workspace: directory, mode: 'read-only' },
     })
     const route: DurableExecutorRoute = { async execute() { throw new Error('workspace policy rejected request') } }
@@ -95,7 +95,7 @@ test('durable worker releases an action when its exact DSH parent is interrupted
     await store.migrate()
     await store.enqueueAction({
       actionId: 'action-abort', matterId: 'matter-abort', matterTitle: 'Abort', matterSummary: 'resume later', intent: 'read',
-      source: { channel: 'feishu', messageId: 'om-abort' },
+      source: { channel: 'feishu', resourceId: 'om-abort' },
       request: { title: 'Abort', prompt: 'read', workspace: directory, mode: 'read-only' },
     })
     const route: DurableExecutorRoute = { async execute() { throw new Error('route must not run') } }

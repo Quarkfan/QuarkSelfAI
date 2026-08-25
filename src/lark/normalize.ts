@@ -36,10 +36,10 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
   const common = {
     source: {
       channel: 'feishu' as const,
-      ...(conversationId ? { conversationId } : {}),
-      ...(messageId ? { messageId } : {}),
+      ...(conversationId ? { containerId: conversationId } : {}),
+      ...(messageId ? { resourceId: messageId } : {}),
       ...(eventId ? { eventId } : {}),
-      ...(senderId ? { senderId } : {}),
+      ...(senderId ? { actorId: senderId } : {}),
     },
     ...(occurredAt ? { occurredAt } : {}),
     eventKey,

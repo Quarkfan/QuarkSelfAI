@@ -16,6 +16,9 @@ test('normalizes messages and preserves newly introduced fields', () => {
   assert.equal(event.kind, 'message.received')
   assert.equal(event.deduplicationKey, 'om-1')
   assert.equal(event.occurredAt, '2026-08-22T09:18:30.000Z')
+  assert.deepEqual(event.source, {
+    channel: 'feishu', containerId: 'oc-1', resourceId: 'om-1', eventId: 'evt-1', actorId: 'ou-1',
+  })
   assert.equal(event.payload.text, 'hello')
   assert.equal(event.payload.content, raw.content)
   assert.deepEqual(event.raw.future_cli_field, { value: 42 })
@@ -31,4 +34,5 @@ test('passes an unknown event through instead of discarding it', () => {
   assert.equal(event.kind, 'channel.event')
   assert.equal(event.deduplicationKey, 'evt-new')
   assert.equal(event.payload.value, true)
+  assert.deepEqual(event.source, { channel: 'feishu', eventId: 'evt-new' })
 })

@@ -10,7 +10,7 @@ function effect(overrides: Readonly<Record<string, unknown>> = {}): ClaimedWorkf
     payload: {
       workspace: '/workspace',
       event: {
-        deduplicationKey: 'om-1', source: { channel: 'feishu', messageId: 'om-1' },
+        deduplicationKey: 'om-1', source: { channel: 'feishu', resourceId: 'om-1' },
         payload: { content: '结合上文检查健康状态' },
       },
       context: { messages: [{ sender: 'owner', text: '只读检查' }], externalGroup: false },

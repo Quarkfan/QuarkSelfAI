@@ -2,7 +2,8 @@ export type ComponentState = 'idle' | 'starting' | 'ready' | 'stopping' | 'stopp
 
 export interface ManagedComponent {
   readonly id: string
-  readonly kind: 'infrastructure' | 'kernel' | 'surface' | 'migration'
+  /** Open provider-owned category; the lifecycle host never branches on product or migration types. */
+  readonly kind: string
   readonly critical?: boolean
   start(): Promise<void>
   stop(): Promise<void>
@@ -39,6 +40,7 @@ export class LifecycleSupervisor {
     const ids = new Set<string>()
     for (const component of components) {
       if (!component.id.trim()) throw new Error('managed component id cannot be empty')
+      if (!component.kind.trim()) throw new Error(`managed component ${component.id} kind cannot be empty`)
       if (ids.has(component.id)) throw new Error(`duplicate managed component id: ${component.id}`)
       ids.add(component.id)
       this.statuses.set(component.id, { id: component.id, kind: component.kind, state: 'idle' })
