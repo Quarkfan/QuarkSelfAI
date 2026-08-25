@@ -146,6 +146,9 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       && (module.implementation !== 'ready' || (module.layer === 'contract' ? module.runtime !== 'static' : module.runtime !== 'active'))) {
       throw new Error(`skeleton module ${module.id} must be ready and its executable runtime must be active`)
     }
+    if (module.classification === 'skeleton' && (module.requiresEffects.length > 0 || module.providesEffects.length > 0)) {
+      throw new Error(`skeleton module ${module.id} cannot own product workflow effects`)
+    }
     if (module.classification === 'migration' && !module.exitCriteria?.trim()) {
       throw new Error(`migration module ${module.id} must define exitCriteria`)
     }
@@ -210,8 +213,17 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     for (const service of module.requiresServices) {
       const provider = serviceProviders.get(service)
       if (!provider) throw new Error(`module ${module.id} requires unprovided service ${service}`)
+      if (module.classification !== 'migration' && provider.classification === 'migration') {
+        throw new Error(`${module.classification} module ${module.id} cannot require service ${service} from migration module ${provider.id}`)
+      }
       if (provider.owns.length > 0 && module.runtimeDependsOn.includes(provider.id)) {
         throw new Error(`module ${module.id} duplicates service provider ${provider.id} in runtimeDependsOn`)
+      }
+    }
+    for (const effect of module.requiresEffects) {
+      const provider = effectProviders.get(effect)
+      if (provider && module.classification !== 'migration' && provider.classification === 'migration') {
+        throw new Error(`${module.classification} module ${module.id} cannot require effect ${effect} from migration module ${provider.id}`)
       }
     }
   }

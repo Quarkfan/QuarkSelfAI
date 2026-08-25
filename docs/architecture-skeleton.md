@@ -96,6 +96,7 @@ contract/policy；provider、adapter、workflow、projection 和 surface 只能�
 产品运行模式。
 
 长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。
+effect 是产品行为，skeleton 不得 require 或 provide；骨架只提供 durable effect/outbox 机制与通用契约。
 `implementation` 单独回答代码是否 ready，`runtime` 单独回答当前是否 inactive、shadow、active 或仍归 compat。
 纯 `contract` 没有进程、消费者或状态 owner，必须标记为 `runtime=static`，不能用 active/inactive 暗示它在运行或
 尚未运行，也不得声明 `runtimeDependsOn`；纯 TypeScript host augmentation 不等于运行时注入。只有可执行模块才进入
@@ -105,6 +106,8 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 readiness 会像 service 一样沿 required effect 的唯一 provider 递归展开；workflow 不需要也不得通过手写具体 adapter
 模块关系来证明 effect 可用。跨模块 effect provider 边参与运行依赖环检测；模块内部以纯处理器实现并自供的 effect
 不形成自环。
+service/effect provider 的派生边同样服从 migration 单向边界：任何 skeleton/feature 都不能依赖 migration provider。
+临时实现必须由迁移层主动调用长期能力，而不能伪装成 capability 被长期模块反向消费。
 
 ## 功能
 

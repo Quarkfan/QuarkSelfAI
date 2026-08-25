@@ -422,6 +422,44 @@ test('rejects runtime cycles formed through effect providers', () => {
   }))
 })
 
+test('keeps product effects and migration capabilities out of the skeleton', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'kernel', classification: 'skeleton', layer: 'kernel', implementation: 'ready', runtime: 'active',
+        source: 'kernel', owns: [], dependsOn: [], providesEffects: ['product.effect.v1'],
+      },
+    ],
+  }), /skeleton module kernel cannot own product workflow effects/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'temporary', classification: 'migration', layer: 'operations', implementation: 'ready', runtime: 'active',
+        source: 'temporary', owns: [], dependsOn: [], providesServices: ['temporaryPort'], exitCriteria: 'remove provider',
+      },
+      {
+        id: 'feature', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'active',
+        source: 'feature', owns: [], dependsOn: [], requiresServices: ['temporaryPort'],
+      },
+    ],
+  }), /feature module feature cannot require service temporaryPort from migration module temporary/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'temporary', classification: 'migration', layer: 'operations', implementation: 'ready', runtime: 'active',
+        source: 'temporary', owns: [], dependsOn: [], providesEffects: ['temporary.effect.v1'], exitCriteria: 'remove provider',
+      },
+      {
+        id: 'feature', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'active',
+        source: 'feature', owns: [], dependsOn: [], requiresEffects: ['temporary.effect.v1'],
+      },
+    ],
+  }), /feature module feature cannot require effect temporary.effect.v1 from migration module temporary/)
+})
+
 test('requires plugin profile ids and package exports to have one module owner', () => {
   const plugin = { profileId: 'shared-plugin', packageExport: './shared-plugin' }
   assert.throws(() => validateModuleCatalog({
