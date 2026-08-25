@@ -36,6 +36,7 @@ JavaScript 文件，以及 `scripts` 下每个 TypeScript/MJS 运维入口指定
 
 新增源码必须同步更新模块目录。模块调整如果改变 import，必须同时更新 `dependsOn` 或拆除不合理耦合；
 不产生源码 import 的注入与宿主关系按 ADR 0028 写入 `runtimeDependsOn`。
-外部包与配置文件仍通过 `source` 登记。原生 `src/**/*.ts` 同时执行真实 import 双向核对；compatibility package
-和 `scripts/*.{ts,mjs}` 只做逐文件 owner 覆盖。前者的内部耦合是待删除的迁移事实；后者是跨层读取、验证和迁移的
-运维入口。二者都不能为了美化依赖图而反向污染稳定 feature 边界，但新增文件必须先明确归属，不能成为架构旁路。
+外部包与配置文件仍通过 `source` 登记。原生 `src/**/*.ts` 与 `scripts/*.{ts,mjs}` 同时执行真实 import 双向核对；
+compatibility package 只做逐文件 owner 覆盖，其内部耦合是待删除的迁移事实。operations 脚本虽然允许跨层读取、验证
+和迁移，但必须声明真实 `dependsOn`；如果脚本使稳定 policy/workflow 模块反向依赖 provider，就应拆成独立 operations
+能力，不能把运维便利变成骨架暗门。

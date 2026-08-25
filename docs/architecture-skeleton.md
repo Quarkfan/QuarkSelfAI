@@ -43,8 +43,9 @@ runtime 不需要修改 `RuntimeSnapshot`。
 不需要修改骨架 contract。`module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件、
 `packages/bridge-compat/src` 下每个现网 JavaScript 文件，以及 `scripts` 下每个 TypeScript/MJS 运维入口必须恰好
 出现一次，原生模块入口也必须由自身拥有。
-架构检查会把原生源码的相对 import 映射回 owner，并要求与 `dependsOn` 双向
-精确一致；compat 与运维脚本只校验所有权，因为它们分别是待删除迁移代码和允许跨层读取的运维入口。注入、宿主和
+架构检查会把原生源码和运维脚本的相对 import 映射回 owner，并要求与 `dependsOn` 双向
+精确一致；compat package 内部仍只校验所有权，因为它是待删除的迁移代码。operations 可以合法跨层读取，但每条依赖仍必须
+如实进入目录，防止脚本成为绕过骨架边界的暗门。注入、宿主和
 外部 live provider 关系单独放在 `runtimeDependsOn`；只有 operations composition 可以用 `mounts` 表达“装入配置但
 尚未取得运行所有权”。active consumer 的每个 `runtimeDependsOn` 必须已经 active/static，mounts 则允许预装
 inactive/shadow 模块。同一目录的 `assets` 是非源码运行资产所有权真源。架构检查只枚举

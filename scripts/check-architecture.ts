@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
 import { analyzeEffectCoverage, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
@@ -316,7 +317,7 @@ for (const filename of files) {
     violations.push(`${from} invokes child_process outside an adapter or supervised runtime boundary`)
   }
   for (const specifier of relativeImports(source)) {
-    const target = resolve(dirname(filename), specifier).replace(/\.js$/, '.ts')
+    const target = resolveRelativeSource(filename, specifier)
     const to = relative(root, target)
     const fromOwner = ownerBySource.get(from)
     const toOwner = ownerBySource.get(to)
@@ -349,6 +350,19 @@ for (const filename of files) {
     }
     if (to === 'src/runtime/compat.ts' && from !== 'src/runtime/compat-composition.ts') {
       violations.push(`${from} imports compatibility runtime outside the composition root`)
+    }
+  }
+}
+for (const filename of operationalFiles) {
+  const source = await readFile(filename, 'utf8')
+  const from = relative(root, filename)
+  const fromOwner = ownerBySource.get(from)
+  for (const specifier of relativeImports(source)) {
+    const to = relative(root, resolveRelativeSource(filename, specifier))
+    const toOwner = ownerBySource.get(to)
+    if (fromOwner && toOwner && fromOwner !== toOwner) actualDependencies.get(fromOwner)?.add(toOwner)
+    if (fromOwner && toOwner && fromOwner !== toOwner && !moduleById.get(fromOwner)?.dependsOn.includes(toOwner)) {
+      violations.push(`${from} (${fromOwner}) imports ${to} (${toOwner}) without declaring the module dependency`)
     }
   }
 }
@@ -428,6 +442,13 @@ function assertAcyclicExitUnits(units: readonly Record<string, unknown>[]): void
 function relativeImports(source: string): string[] {
   return [...source.matchAll(/(?:import|export)\s+(?:type\s+)?(?:[^'";]+?\s+from\s+)?['"](\.[^'"]+)['"]/g)]
     .flatMap(match => match[1] ? [match[1]] : [])
+}
+
+function resolveRelativeSource(filename: string, specifier: string): string {
+  const target = resolve(dirname(filename), specifier)
+  if (existsSync(target)) return target
+  const typescriptTarget = target.replace(/\.js$/, '.ts')
+  return existsSync(typescriptTarget) ? typescriptTarget : target
 }
 
 function startsWithAny(value: string, prefixes: readonly string[]): boolean {
