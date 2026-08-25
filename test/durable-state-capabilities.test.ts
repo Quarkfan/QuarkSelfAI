@@ -12,6 +12,7 @@ test('durable state host exposes narrow frozen capabilities instead of one aggre
   try {
     await ctx.plugin(DurableStateService, { sqlitePath: join(directory, 'state.sqlite3') })
     assert.equal(ctx.get('quarkState'), undefined)
+    assert.equal(ctx.get('quarkStateHost'), undefined)
     assert.deepEqual(Object.keys(ctx.quarkEventAppendState), ['appendEvent'])
     assert.deepEqual(Object.keys(ctx.quarkEventConsumerState).sort(), [
       'claimNextEvent', 'releaseEvent', 'settleEvent', 'updateCheckpoint',

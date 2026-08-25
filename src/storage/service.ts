@@ -1,6 +1,6 @@
 import { isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Context, Service } from '@deepseek-ai/cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { eventRecordId, type NormalizedChannelEvent } from '../domain/contracts.js'
 import { PgAssistantStore, createPgPool } from './postgres.js'
 import { createSqliteStore } from './sqlite.js'
@@ -60,7 +60,7 @@ async function createStateStore(config: DurableStateConfig): Promise<AssistantSt
 }
 
 /** The single database connection host behind separately injected capability ports. */
-export class DurableStateService extends Service implements
+class DurableStateHost implements
   DurableEventAppendStatePort,
   DurableEventConsumerStatePort,
   DurableEventQueryStatePort,
@@ -73,8 +73,7 @@ export class DurableStateService extends Service implements
   DurablePolicyStatePort {
   private readonly ready: Promise<AssistantStore>
 
-  constructor(ctx: Context, config: DurableStateConfig) {
-    super(ctx, 'quarkStateHost')
+  constructor(private readonly ctx: Context, config: DurableStateConfig) {
     this.ready = createStateStore(config)
     ctx.provide('quarkEventAppendState', Object.freeze({ appendEvent: this.appendEvent.bind(this) }))
     ctx.provide('quarkEventConsumerState', Object.freeze({
@@ -230,4 +229,9 @@ export class DurableStateService extends Service implements
   private emitWake(event: 'quark/event-wake' | 'quark/workflow-wake' | 'quark/action-wake', at?: string): void {
     void this.ctx.parallel(event, at).catch(error => this.ctx.logger('quark-state').error(error))
   }
+}
+
+/** Cordis plugin entry that keeps the aggregate host inside its closure. */
+export function DurableStateService(ctx: Context, config: DurableStateConfig): void {
+  new DurableStateHost(ctx, config)
 }
