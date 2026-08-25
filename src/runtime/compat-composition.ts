@@ -1,7 +1,7 @@
 import { createAssistantApplication, type AssistantApplication } from '../bootstrap/application.js'
 import type { RuntimeConfig } from '../config/runtime.js'
 import { loadNativeCutoverReadiness } from '../config/feature-parity.js'
-import { ControlOnlyRuntime } from '../platform/operations.js'
+import { ControlOnlyRuntime } from '../platform/defaults.js'
 import { createAssistantStore } from '../storage/factory.js'
 import { createControlConsoleComponent } from '../web/component.js'
 import { FileModuleCatalogProvider } from '../catalog/file-provider.js'

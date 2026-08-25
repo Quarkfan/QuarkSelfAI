@@ -45,11 +45,6 @@ export interface ModuleCatalogProvider {
   load(): Promise<AssistantModuleCatalog>
 }
 
-/** Neutral catalog for hosts that intentionally do not mount a product composition. */
-export class EmptyModuleCatalogProvider implements ModuleCatalogProvider {
-  async load(): Promise<AssistantModuleCatalog> { return { version: 3, modules: [] } }
-}
-
 export interface EffectCoverage {
   readonly required: readonly string[]
   readonly declared: readonly string[]

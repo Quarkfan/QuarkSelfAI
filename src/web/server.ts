@@ -5,14 +5,14 @@ import { extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ConsoleStorePort } from '../storage/types.js'
 import {
-  ControlOnlyKernel, ControlOnlyRuntime, UnconfiguredReadiness,
   type KernelStatusProvider, type OperationalReadinessProvider, type RuntimeStatusProvider,
 } from '../platform/operations.js'
+import { ControlOnlyKernel, ControlOnlyRuntime, EmptyModuleCatalogProvider, UnconfiguredReadiness } from '../platform/defaults.js'
 import { PolicyAuthoringService, policyProposalId } from '../collaboration/policy-authoring.js'
 import { matchesPolicy } from '../policy/engine.js'
 import type { AssistantPolicyDocument } from '../collaboration/policy-model.js'
 import { eventToPolicySample } from '../collaboration/policy-samples.js'
-import { EmptyModuleCatalogProvider, summarizeModules, type ModuleCatalogProvider } from '../platform/modules.js'
+import { summarizeModules, type ModuleCatalogProvider } from '../platform/modules.js'
 import type { ConsoleServerConfig } from './config.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))

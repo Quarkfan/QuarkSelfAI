@@ -4,7 +4,7 @@ import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
 import { analyzeEffectCoverage, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
 import { loadModuleCatalog } from '../src/catalog/file-provider.js'
-import { ControlOnlyRuntime } from '../src/platform/operations.js'
+import { ControlOnlyRuntime } from '../src/platform/defaults.js'
 import { loadProductCompositionManifest, productModuleIds } from '../src/product/manifest.js'
 import { DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS } from '../src/events/runtime.js'
 import { DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS } from '../src/workflow/runtime.js'
@@ -247,6 +247,14 @@ const dshSourceModules = new Set<string>()
 const injectedRuntimeRequirements = new Map<string, Set<string>>()
 const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover)\b|常东旭|任永强|张以宁/gi
 const violations: string[] = []
+for (const module of catalog.modules.filter(item => item.layer === 'contract')) {
+  for (const filename of module.owns) {
+    const source = await readFile(resolve(root, filename), 'utf8')
+    if (/\b(?:export\s+)?class\s+[A-Za-z_$][\w$]*/.test(source)) {
+      violations.push(`contract module ${module.id} declares a class implementation in ${filename}`)
+    }
+  }
+}
 for (const filename of files) {
   const source = await readFile(filename, 'utf8')
   const from = relative(root, filename)

@@ -12,7 +12,7 @@ import type { ManagedComponent } from '../platform/lifecycle.js'
 export type {
   MonitorDiagnostic, RuntimeDiagnostics, RuntimeSnapshot, RuntimeStatusProvider,
 } from '../platform/operations.js'
-export { ControlOnlyRuntime } from '../platform/operations.js'
+export { ControlOnlyRuntime } from '../platform/defaults.js'
 
 const compatRoot = fileURLToPath(new URL('../../packages/bridge-compat/', import.meta.url))
 const compatEntry = fileURLToPath(new URL('../../packages/bridge-compat/src/index.js', import.meta.url))

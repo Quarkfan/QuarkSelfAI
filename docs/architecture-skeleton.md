@@ -66,7 +66,8 @@ contract/policy；provider、adapter、workflow、projection 和 surface 只能�
 允许跨层执行组合、审计和迁移。具体矩阵见 ADR 0033。
 
 `contract` 还必须保持行为纯净：可以声明类型、端口、事件和校验函数，但不能实现 Cordis `Service` 或插件
-`apply`。例如 durable action ledger 虽然只依赖稳定存储端口，仍负责入队和审批写入，因此属于 kernel，不能用
+`apply`，也不能声明 class provider。空 catalog、control-only runtime/kernel 和未配置 readiness 等中立实现统一
+属于 `neutral-default-providers` 骨架模块；契约文件只保留接口。例如 durable action ledger 虽然只依赖稳定存储端口，仍负责入队和审批写入，因此属于 kernel，不能用
 `contract` 标签伪装实现。骨架的空实现同样必须保持中立；control-only 状态不能默认带有 migration、compat 或某个
 产品运行模式。
 

@@ -73,26 +73,3 @@ export interface OperationalReadinessReport {
 }
 
 export interface OperationalReadinessProvider { inspect(): Promise<OperationalReadinessReport> }
-
-/** Neutral runtime status used when no message consumer feature is mounted. */
-export class ControlOnlyRuntime implements RuntimeStatusProvider {
-  snapshot(): RuntimeSnapshot {
-    return {
-      mode: 'control-only', operationalMode: 'control-only', requiredForHealth: false,
-      state: 'stopped', capabilities: [],
-    }
-  }
-}
-
-export class ControlOnlyKernel implements KernelStatusProvider {
-  snapshot(): KernelSnapshot { return { mode: 'off', state: 'stopped' } }
-}
-
-export class UnconfiguredReadiness implements OperationalReadinessProvider {
-  async inspect(): Promise<OperationalReadinessReport> {
-    return {
-      id: 'unconfigured', source: 'unconfigured', state: 'unknown', items: [],
-      blockers: ['readiness-provider-unconfigured'], summary: {},
-    }
-  }
-}
