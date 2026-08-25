@@ -61,8 +61,7 @@ export class DurableStateService extends Service implements DurableStatePort {
   async appendEvent(event: NormalizedChannelEvent): Promise<StoredEvent> {
     const result = await (await this.ready).appendEvent(eventRecordId(event), event)
     if (result.inserted) {
-      void this.ctx.parallel('quark/event-appended', result.id)
-        .catch(error => this.ctx.logger('quark-state').error(error))
+      this.emitWake('quark/event-wake')
     }
     return result
   }
@@ -75,7 +74,10 @@ export class DurableStateService extends Service implements DurableStatePort {
     await (await this.ready).settleEvent(consumerName, eventId, workerId, deliveredAt)
   }
 
-  async releaseEvent(input: EventClaimRelease): Promise<void> { await (await this.ready).releaseEvent(input) }
+  async releaseEvent(input: EventClaimRelease): Promise<void> {
+    await (await this.ready).releaseEvent(input)
+    if (!input.terminal) this.emitWake('quark/event-wake', input.availableAt)
+  }
 
   async updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void> {
     await (await this.ready).updateCheckpoint(consumerName, eventKey, cursor)
@@ -178,7 +180,7 @@ export class DurableStateService extends Service implements DurableStatePort {
     if (earliest) this.emitWake('quark/workflow-wake', earliest)
   }
 
-  private emitWake(event: 'quark/workflow-wake' | 'quark/action-wake', at?: string): void {
+  private emitWake(event: 'quark/event-wake' | 'quark/workflow-wake' | 'quark/action-wake', at?: string): void {
     void this.ctx.parallel(event, at).catch(error => this.ctx.logger('quark-state').error(error))
   }
 }

@@ -168,9 +168,9 @@ timer 回调中重新从 `ctx` 动态取 provider。
 这条边界适用于所有长生命周期 service 和 adapter，而不只 timer：durable effect、agent 完成回调、stream、工具
 回调等都只能使用构造期捕获的 `state/workflows/agents/llm/ledger` 等窄端口。模块级 `inject` 不能替代嵌套
 `Service` class 自己的 `static inject`；架构检查同时禁止延迟 `this.ctx.<injected-service>` 和漏声明 class inject。
-新 channel event 成功写入 durable state 后会发布 `quark/event-appended` wake hint，由 durable event runtime 合并唤醒并
-立即清空积压；10 分钟数据库扫描仅用于进程重启、监听器暂未装载或漏唤醒恢复，不再每秒空轮询。adapter 只负责
-append，不直接依赖或手工驱动 inbox runtime。
+新 channel event 成功写入 durable state 后会发布 `quark/event-wake`，失败 delivery 释放时按 `availableAt` 发布同一
+hint；durable event runtime 对新事件立即 drain，对 retry 安排精确 timer。10 分钟数据库扫描仅用于进程重启、
+监听器暂未装载或漏唤醒恢复，不再每秒空轮询。adapter 只负责 append，不直接依赖或手工驱动 inbox runtime。
 workflow create/advance/retry 同样由 durable state 发布最早可执行时间；runtime 对立即 effect 合并 drain，对未来
 `wakeAt` 安排精确 timer。30 秒 workflow 空轮询已移除，10 分钟扫描只补偿重启后丢失的内存 timer。
 action enqueue、批准和 retry release 也由 durable state 发布 `quark/action-wake`；可执行 action 立即 drain，未来

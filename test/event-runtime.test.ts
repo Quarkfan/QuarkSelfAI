@@ -65,3 +65,27 @@ test('durable append wakes event consumers instead of waiting for recovery polli
     }
   } finally { await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }) }
 })
+
+test('failed event delivery wakes again at its exact retry deadline', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-event-retry-wake-')); const ctx = new Context()
+  try {
+    await ctx.plugin(DurableStateService, { sqlitePath: join(directory, 'state.sqlite3') })
+    await ctx.plugin(DurableEventRuntime, { workerId: 'retry-wake-worker', enabled: true, pollIntervalMs: 600_000, retryDelayMs: 30, maxAttempts: 3 })
+    let attempts = 0
+    let completed!: () => void
+    const handled = new Promise<void>(resolve => { completed = resolve })
+    ctx.quarkEvents.register({
+      name: 'retry-intake', eventKeys: ['im.message.receive_v1'],
+      async handle() { attempts += 1; if (attempts === 1) throw new Error('temporary'); completed() },
+    })
+    await ctx.quarkState.appendEvent(event('om-retry-wake'))
+    let timeout: NodeJS.Timeout | undefined
+    try {
+      await Promise.race([
+        handled,
+        new Promise<never>((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('event retry wake timed out')), 1_000) }),
+      ])
+    } finally { if (timeout) clearTimeout(timeout) }
+    assert.equal(attempts, 2)
+  } finally { await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }) }
+})

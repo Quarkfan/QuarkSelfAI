@@ -12,7 +12,8 @@ inbox 的调度实现。
 
 ## 决策
 
-- durable state 仅在新 normalized event 成功落库后发布 `quark/event-appended`；重复幂等写入不发布；
+- durable state 仅在新 normalized event 成功落库后发布即时 `quark/event-wake`；重复幂等写入不发布；
+- delivery 非终态释放时按 `availableAt` 发布同一 wake，runtime 为 retry 保留精确 timer，不把业务退避误当作恢复扫描；
 - wake listener 失败只记录诊断，不反转已经提交的 append 结果；10 分钟恢复扫描仍能重新发现该事件；
 - durable event runtime 监听该事件并用 coalesced wake drain backlog，一次唤醒最多连续执行 100 轮后让出事件循环；
 - consumer 注册时也触发 wake，覆盖“事件早于 consumer 装载”的同进程窗口；

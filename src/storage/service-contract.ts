@@ -25,8 +25,8 @@ declare module '@deepseek-ai/cordis' {
     quarkState: DurableStatePort
   }
   interface Events {
-    /** Emitted only after a new normalized event is durable; consumers use it as a wake hint. */
-    'quark/event-appended'(eventId: string): void
+    /** A new durable event is ready now, or a failed delivery becomes ready at this time. */
+    'quark/event-wake'(at?: string): void
     /** Earliest durable workflow timer/effect that may now be actionable. */
     'quark/workflow-wake'(at?: string): void
     /** An approved durable action is ready now, or a retry becomes ready at this time. */

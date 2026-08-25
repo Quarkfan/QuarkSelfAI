@@ -29,7 +29,7 @@ export class DurableEventRuntime extends Service {
       onError: error => ctx.logger('quark-events').error(error),
     })
     if (config.enabled === true) {
-      ctx.on('quark/event-appended', () => this.wake())
+      ctx.on('quark/event-wake', at => this.wake(at))
     }
     ctx.effect(() => () => this.scheduler.dispose(), 'quark durable event wake scheduler')
   }
@@ -41,8 +41,8 @@ export class DurableEventRuntime extends Service {
     return () => this.consumers.delete(consumer.name)
   }
   /** Coalesced in-process wake-up; the long poll interval only recovers missed wake-ups after restart. */
-  wake(): void {
-    this.scheduler.wake()
+  wake(at?: string): void {
+    this.scheduler.wake(at)
   }
   async runOnce(now = new Date()): Promise<{ readonly claimed: number; readonly delivered: number; readonly failed: number }> {
     if (this.running) return { claimed: 0, delivered: 0, failed: 0 }
