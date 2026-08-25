@@ -51,7 +51,8 @@ ASSISTANT_WORKSPACE_ROOTS=["/Users/your-name/BlackLakeWork","/Users/your-name/Do
 `npm run setup:dsh` 在 `var/dsh` 初始化；脚本会先核验 DSH 版本和 commit，再把本项目以 link 方式加入
 `feishu-assistant` 并写入 compatibility-only overlay，不会修改同级 DSH checkout。长期原生 profile 使用
 `node --import tsx scripts/setup-native-dsh-profile.ts` 初始化为 `feishu-assistant-native`；该入口写入空的
-profile-owned patch，只加载本项目长期 bundle。两个 profile 不得指向同一个名字。
+profile-owned patch，只加载本项目长期 bundle。自定义原生名称只能通过 `DSH_NATIVE_PROFILE` 提供，且不能等于
+兼容入口的 `feishu-assistant`；环境中的 `DSH_PROFILE` 不会改变原生安装目标。
 
 ## 在 DSH 会话里创建临时插件
 

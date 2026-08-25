@@ -7,7 +7,9 @@ const exec = promisify(execFile)
 
 export interface DshProfileSetupDefaults {
   readonly profile: string
+  readonly profileEnvironment?: string
   readonly profilePatch?: string
+  readonly forbiddenProfiles?: readonly string[]
 }
 
 export interface DshProfileSetupOptions {
@@ -24,8 +26,12 @@ export function resolveDshProfileSetup(
   env: NodeJS.ProcessEnv = process.env,
   cwd = process.cwd(),
 ): DshProfileSetupOptions {
-  const profile = env.DSH_PROFILE?.trim() || defaults.profile.trim()
+  const profileEnvironment = defaults.profileEnvironment ?? 'DSH_PROFILE'
+  const profile = env[profileEnvironment]?.trim() || defaults.profile.trim()
   if (!profile) throw new Error('DSH profile name is required')
+  if (defaults.forbiddenProfiles?.includes(profile)) {
+    throw new Error(`DSH profile ${profile} is reserved for a different runtime`)
+  }
   return {
     projectRoot: cwd,
     checkout: resolve(cwd, env.DSH_CHECKOUT?.trim() || '../deepseek-harness'),

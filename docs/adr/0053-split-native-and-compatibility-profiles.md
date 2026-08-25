@@ -17,7 +17,8 @@ Accepted
    所有尚未切换的 native plugin owner，不复制插件配置或激活规则。
 3. 通用 profile 安装器只负责 `config/dsh-baseline.json` 版本基线、bundle 列表与指定 patch；兼容和原生入口分别
    贡献 profile 名及 overlay，长期版本真源不得放回 `compat/`。
-4. 兼容入口保持 `feishu-assistant`，原生入口默认 `feishu-assistant-native`。两者使用不同目录，禁止隐式复用。
+4. 兼容入口保持 `feishu-assistant` 并使用 `DSH_PROFILE`，原生入口默认 `feishu-assistant-native` 且只接受
+   `DSH_NATIVE_PROFILE`。两者使用不同目录，原生入口与安装器都拒绝隐式复用旧 profile。
 5. 架构校验要求长期 bundle 不含 migration selector，overlay 精确等于所有 inactive feature plugin，且产品 manifest
    显式包含 `native-product-profile`。
 

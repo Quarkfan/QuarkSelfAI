@@ -12,9 +12,18 @@ test('profile setup keeps compatibility and native composition explicit', () => 
   assert.equal(compatibility.profile, 'feishu-assistant')
   assert.equal(compatibility.profilePatch, resolve(cwd, 'compat/cordis.compat.patch.yml'))
 
-  const native = resolveDshProfileSetup({ profile: 'feishu-assistant-native' }, {}, cwd)
+  const native = resolveDshProfileSetup({
+    profile: 'feishu-assistant-native',
+    profileEnvironment: 'DSH_NATIVE_PROFILE',
+    forbiddenProfiles: ['feishu-assistant'],
+  }, { DSH_PROFILE: 'feishu-assistant' }, cwd)
   assert.equal(native.profile, 'feishu-assistant-native')
   assert.equal(native.profilePatch, undefined)
+  assert.throws(() => resolveDshProfileSetup({
+    profile: 'feishu-assistant-native',
+    profileEnvironment: 'DSH_NATIVE_PROFILE',
+    forbiddenProfiles: ['feishu-assistant'],
+  }, { DSH_NATIVE_PROFILE: 'feishu-assistant' }, cwd), /reserved for a different runtime/)
 })
 
 test('profile setup accepts deployment paths without changing the profile contract', () => {

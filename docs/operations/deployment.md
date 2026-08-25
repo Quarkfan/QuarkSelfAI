@@ -17,7 +17,8 @@ PostgreSQL 和 systemd 是未来服务器部署的兼容形态，不代表默认
 直接挂载到服务器。
 
 兼容期进程启动并监管 `feishu-assistant` DSH profile，它在长期 bundle 上叠加 compatibility-only overlay；
-原生产品入口固定默认 `feishu-assistant-native`，不得复用旧 profile。内核退出会使父守护进程失败退出，交给
+原生产品入口固定默认 `feishu-assistant-native`，只接受独立的 `DSH_NATIVE_PROFILE` 覆盖并拒绝复用旧 profile；
+兼容期遗留的 `DSH_PROFILE` 不会覆盖原生选择。内核退出会使父守护进程失败退出，交给
 launchd、systemd 或容器 restart policy 退避恢复。`ASSISTANT_KERNEL=off` 只允许用于测试/诊断，不满足生产接管门禁。
 
 ## 容器部署

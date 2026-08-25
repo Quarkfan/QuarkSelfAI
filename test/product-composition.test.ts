@@ -50,6 +50,7 @@ test('native product entry fails closed on mode, activation gates, and inactive 
   const configuration = Object.fromEntries(manifest.requiredConfiguration.map(name => [name, '/configured']))
   const environment = { ...activation, ...configuration, ASSISTANT_RUNTIME: 'native', ASSISTANT_KERNEL: 'dsh' }
   assert.throws(() => loadNativeProductConfig(manifest, { ...environment, ASSISTANT_RUNTIME: 'compat' }), /requires ASSISTANT_RUNTIME=native/)
+  assert.throws(() => loadNativeProductConfig(manifest, { ...environment, DSH_NATIVE_PROFILE: 'feishu-assistant' }), /cannot reuse the compatibility DSH profile/)
   assert.throws(() => loadNativeProductConfig(manifest, { ...environment, QUARK_NATIVE_MESSAGE_INTAKE: 'false' }), /activation is incomplete: QUARK_NATIVE_MESSAGE_INTAKE/)
   assert.throws(() => loadNativeProductConfig(manifest, { ...environment, DIDA_PROJECT_ID: '' }), /configuration is incomplete: DIDA_PROJECT_ID/)
   const config = loadNativeProductConfig(manifest, environment)
