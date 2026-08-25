@@ -3,9 +3,9 @@ import { join } from 'node:path'
 import { inspectCompatibilityConfig } from '../src/migration/compat-preflight.js'
 import { prepareCompatibilityHandoff } from '../src/migration/compat-handoff.js'
 
-const [legacyConfigPath, legacyStatePath, destinationRoot] = process.argv.slice(2).filter((argument) => argument !== '--')
-if (!legacyConfigPath || !legacyStatePath || !destinationRoot) {
-  process.stderr.write('Usage: npm run prepare:compat-handoff -- /absolute/config.json /absolute/state.json /absolute/staging-root\n')
+const [legacyConfigPath, legacyStatePath, legacyDidaDirectory, destinationRoot] = process.argv.slice(2).filter((argument) => argument !== '--')
+if (!legacyConfigPath || !legacyStatePath || !legacyDidaDirectory || !destinationRoot) {
+  process.stderr.write('Usage: npm run prepare:compat-handoff -- /absolute/config.json /absolute/state.json /absolute/var/dida /absolute/staging-root\n')
   process.exitCode = 2
 } else {
   const inspection = await inspectCompatibilityConfig(legacyConfigPath, {
@@ -18,6 +18,7 @@ if (!legacyConfigPath || !legacyStatePath || !destinationRoot) {
   const result = await prepareCompatibilityHandoff({
     legacyConfigPath,
     legacyStatePath,
+    legacyDidaDirectory,
     destinationRoot,
     home: homedir(),
     ...(process.env.PATH === undefined ? {} : { path: process.env.PATH }),

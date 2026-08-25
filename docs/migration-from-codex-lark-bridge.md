@@ -57,11 +57,14 @@ npm run audit:legacy-handoff -- /absolute/state.json --strict
 npm run prepare:compat-handoff -- \
   /absolute/legacy/config.json \
   /absolute/legacy/var/state.json \
+  /absolute/legacy/var/dida \
   /absolute/quark/var/handoff
 ```
 
-生成配置会固定 `varDir`、滴答凭证路径以及 lark/dida/Claude/Codex 的当前绝对可执行路径。准备器不修改
-源文件、不打印 token，并在返回前执行 handoff state、CLI 和滴答凭证权限预检。相同输入复用同一目录，
+生成配置会固定 `varDir`、滴答凭证路径以及 lark/dida/Claude/Codex 的当前绝对可执行路径；交接目录同时包含
+完整 `dida` 审计输入和逐文件哈希、修改时间清单，删除旧目录后仍能严格重跑投影血缘。准备器不修改
+源文件、不打印 token，并在返回前执行 handoff state、CLI 和滴答凭证权限预检。状态、配置或任一审计文件变化
+都会生成新的内容寻址目录；相同输入复用同一目录，
 任何同名异内容文件都会失败；正式切换必须在冻结旧消费者后重新运行，不能使用早先 rehearsal 的旧快照。
 
 随后以生成的 `configPath` 执行：
