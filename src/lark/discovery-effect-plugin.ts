@@ -4,7 +4,7 @@ import { FOCUS_DISCOVERY_EVENT_KEY, INTAKE_EFFECTS, type FocusDiscoverySources }
 import type {} from '../storage/service-contract.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import type {} from '../workflow/contracts.js'
-import { isRecord } from './json.js'
+import { definedRecord, isRecord } from './json.js'
 import { normalizeLarkMessageText } from './normalize.js'
 import { ProcessCommandRunner, runJson, type CommandRunner } from './runner.js'
 
@@ -205,7 +205,7 @@ function normalizeDiscoveredMessage(message: Readonly<Record<string, unknown>>, 
     ...(occurredAt ? { occurredAt } : {}),
     eventKey: FOCUS_DISCOVERY_EVENT_KEY,
     deduplicationKey: messageId,
-    payload: {
+    payload: definedRecord({
       text: normalizeLarkMessageText(message.content),
       content: message.content,
       messageType: message.msg_type ?? message.message_type ?? message.messageType,
@@ -215,7 +215,7 @@ function normalizeDiscoveredMessage(message: Readonly<Record<string, unknown>>, 
       rootId: message.root_id ?? message.rootId,
       chatName: message.chat_name ?? message.chatName,
       discoveryReasons: reasons,
-    },
+    }),
     raw: { message, discovery: { reasons } },
   }
 }

@@ -21,6 +21,7 @@ test('normalizes messages and preserves newly introduced fields', () => {
   })
   assert.equal(event.payload.text, 'hello')
   assert.equal(event.payload.content, raw.content)
+  assert.equal(Object.values(event.payload).some(value => value === undefined), false)
   assert.deepEqual(event.raw.future_cli_field, { value: 42 })
 })
 

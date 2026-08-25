@@ -19,3 +19,8 @@ export function parseJsonDocument(output: string): unknown {
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
+
+/** Remove absent protocol fields before crossing the durable JSON envelope boundary. */
+export function definedRecord(value: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined))
+}

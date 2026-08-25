@@ -1,5 +1,5 @@
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
-import { isRecord } from './json.js'
+import { definedRecord, isRecord } from './json.js'
 
 function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined
@@ -50,7 +50,7 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
       ...common,
       kind: 'message.received',
       deduplicationKey: messageId ?? eventId ?? `${eventKey}:${JSON.stringify(value)}`,
-      payload: {
+      payload: definedRecord({
         text: normalizeLarkMessageText(value.content),
         content: value.content,
         messageType: value.message_type,
@@ -59,7 +59,7 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
         replyTo: value.reply_to,
         rootId: value.root_id,
         threadId: value.thread_id,
-      },
+      }),
     }
   }
   if (eventKey === 'card.action.trigger') {
@@ -67,7 +67,7 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
       ...common,
       kind: 'card.action',
       deduplicationKey: eventId ?? `${messageId ?? 'card'}:${String(value.action_name ?? value.action_tag ?? '')}`,
-      payload: {
+      payload: definedRecord({
         operatorId: value.operator_id,
         actionName: value.action_name,
         actionTag: value.action_tag,
@@ -75,7 +75,7 @@ export function normalizeLarkEvent(eventKey: string, value: unknown): Normalized
         formValue: value.form_value,
         inputValue: value.input_value,
         token: value.token,
-      },
+      }),
     }
   }
   return {

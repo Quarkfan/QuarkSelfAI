@@ -34,6 +34,8 @@ contract、policy、adapter 或 provider 必须归 feature，而不是以通用�
 policy/storage 骨架不得反向解析通道原始字段；原 envelope 只保留在事件 payload/raw 供审计和向前兼容。
 通用 `SourceRef` 只使用 `resourceId/containerId/actorId/eventId`；`messageId/conversationId/senderId` 属于 IM adapter
 词汇，必须在通道边界完成映射。这样日历事件、文档 revision 或其他资源不需要伪装成消息才能进入 durable event。
+通用 channel contract 还会在生成 journal id 前验证非空 identity、时间戳和完整 JSON 可重放性；adapter 必须删除
+`undefined` 等协议缺省值，不能依赖数据库序列化时静默改写 envelope。
 Lifecycle 的 component `kind` 同样是 provider 自报的开放字符串；骨架只做排序、回滚和状态展示，不枚举 migration
 或未来功能类型。
 Authorization 骨架只校验调用方声明的 scope、grantor、时间和 revision，不内置“owner 才能批准”。当前个人助手的
