@@ -319,7 +319,7 @@ for (const filename of files) {
   }
   if (/from\s+['"]node:child_process['"]/.test(source)
     && ownerModule?.layer !== 'adapter'
-    && !startsWithAny(from, ['src/runtime/kernel', 'src/runtime/compat'])) {
+    && !['kernel-supervisor', 'bridge-compat-host'].includes(ownerModule?.id ?? '')) {
     violations.push(`${from} invokes child_process outside an adapter or supervised runtime boundary`)
   }
   for (const specifier of relativeImports(source)) {

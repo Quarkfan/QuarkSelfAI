@@ -4,6 +4,7 @@ import { readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
+import { terminateChildGracefully } from './child-process.js'
 import type {
   RuntimeDiagnostics, RuntimeSnapshot, RuntimeStatusProvider,
 } from '../platform/operations.js'
@@ -231,10 +232,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
     const child = this.child
     if (!child || child.exitCode !== null) return
     this.child = undefined
-    child.kill('SIGTERM')
-    const exited = once(child, 'exit').then(() => true)
-    const timedOut = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 15_000))
-    if (!await Promise.race([exited, timedOut])) {
+    if (!await terminateChildGracefully(child, 15_000)) {
       this.child = child
       this.current = { ...this.current, state: 'degraded', lastError: 'compat runtime did not stop gracefully; SIGKILL was intentionally not used' }
       throw new Error(this.current.lastError)

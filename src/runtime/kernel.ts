@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { once } from 'node:events'
 import type { KernelSnapshot, KernelStatusProvider } from '../platform/operations.js'
+import { terminateChildGracefully } from './child-process.js'
 
 export type { KernelSnapshot, KernelStatusProvider } from '../platform/operations.js'
 
@@ -73,10 +74,7 @@ export class DshKernelRuntime implements KernelStatusProvider {
     const child = this.child
     if (!child || child.exitCode !== null) return
     this.child = undefined
-    child.kill('SIGTERM')
-    const exited = once(child, 'exit').then(() => true)
-    const timedOut = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 15_000))
-    if (!await Promise.race([exited, timedOut])) {
+    if (!await terminateChildGracefully(child, 15_000)) {
       this.child = child
       this.current = { ...this.current, state: 'degraded', lastError: 'DSH kernel did not stop gracefully; SIGKILL was intentionally not used' }
       throw new Error(this.current.lastError)
