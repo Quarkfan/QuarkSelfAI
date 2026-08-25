@@ -102,6 +102,9 @@ contract/policy；provider、adapter、workflow、projection 和 surface 只能�
 active/inactive/shadow/compat 的所有权判断。
 没有实现的 provider 与已经实现但尚未激活的 provider 会分别进入 `nativeCutoverBlockers`；active workflow 的
 effect provider 必须同样 active。这样“状态机代码写完”和“具备真实外部执行能力”不会再被混为一谈。
+readiness 会像 service 一样沿 required effect 的唯一 provider 递归展开；workflow 不需要也不得通过手写具体 adapter
+模块关系来证明 effect 可用。跨模块 effect provider 边参与运行依赖环检测；模块内部以纯处理器实现并自供的 effect
+不形成自环。
 
 ## 功能
 

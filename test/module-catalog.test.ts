@@ -397,6 +397,31 @@ test('rejects duplicated concrete provider dependencies for required services', 
   }), /module consumer duplicates service provider provider in runtimeDependsOn/)
 })
 
+test('rejects runtime cycles formed through effect providers', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'adapter-a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive',
+        source: 'a', owns: [], dependsOn: [], requiresEffects: ['effect.b.v1'], providesEffects: ['effect.a.v1'],
+      },
+      {
+        id: 'adapter-b', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive',
+        source: 'b', owns: [], dependsOn: [], requiresEffects: ['effect.a.v1'], providesEffects: ['effect.b.v1'],
+      },
+    ],
+  }), /module dependency cycle: adapter-a -> adapter-b -> adapter-a/)
+  assert.doesNotThrow(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'contained', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'inactive',
+        source: 'contained', owns: [], dependsOn: [], requiresEffects: ['effect.local.v1'], providesEffects: ['effect.local.v1'],
+      },
+    ],
+  }))
+})
+
 test('requires plugin profile ids and package exports to have one module owner', () => {
   const plugin = { profileId: 'shared-plugin', packageExport: './shared-plugin' }
   assert.throws(() => validateModuleCatalog({

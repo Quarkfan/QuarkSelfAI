@@ -215,7 +215,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       }
     }
   }
-  assertAcyclic(modules, byId, serviceProviders)
+  assertAcyclic(modules, byId, serviceProviders, effectProviders)
   return { version: 3, modules }
 }
 
@@ -413,6 +413,7 @@ function assertAcyclic(
   modules: readonly AssistantModuleDescriptor[],
   byId: ReadonlyMap<string, AssistantModuleDescriptor>,
   serviceProviders: ReadonlyMap<string, AssistantModuleDescriptor>,
+  effectProviders: ReadonlyMap<string, AssistantModuleDescriptor>,
 ): void {
   const visiting = new Set<string>()
   const visited = new Set<string>()
@@ -422,8 +423,14 @@ function assertAcyclic(
     visiting.add(id)
     const module = byId.get(id)
     const serviceDependencies = module?.requiresServices.map(service => serviceProviders.get(service)!.id) ?? []
+    const effectDependencies = module?.requiresEffects
+      .flatMap(effect => {
+        const provider = effectProviders.get(effect)?.id
+        return provider && provider !== id ? [provider] : []
+      }) ?? []
     for (const dependency of [
-      ...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []), ...serviceDependencies,
+      ...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []),
+      ...serviceDependencies, ...effectDependencies,
     ]) visit(dependency, [...path, id])
     visiting.delete(id)
     visited.add(id)

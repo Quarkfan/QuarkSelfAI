@@ -147,3 +147,37 @@ test('native readiness follows service providers without concrete runtime depend
   assert.equal(readiness.state, 'blocked')
   assert.ok(readiness.blockers.includes('provider'))
 })
+
+test('native readiness follows effect providers without concrete runtime dependencies', async () => {
+  const activeCatalog = validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'workflow', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'active',
+        source: 'workflow', owns: [], dependsOn: [], requiresEffects: ['example.run.v1'],
+      },
+      {
+        id: 'adapter', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'active',
+        source: 'adapter', owns: [], dependsOn: [], providesEffects: ['example.run.v1'],
+      },
+    ],
+  })
+  const manifest = validateProductCompositionManifest({
+    version: 1,
+    capabilities: [{ id: 'example', required: true, modules: ['workflow'] }],
+    requiredEnvironment: [],
+    requiredConfiguration: [],
+  }, activeCatalog)
+  const degradedCatalog: AssistantModuleCatalog = {
+    ...activeCatalog,
+    modules: activeCatalog.modules.map(module => module.id === 'adapter'
+      ? { ...module, runtime: 'inactive' as const }
+      : module),
+  }
+  const runtime = new NativeProductRuntimeStatus(readyKernel, degradedCatalog, manifest, 'workflow').snapshot()
+  assert.equal(runtime.state, 'degraded')
+  assert.match(runtime.capabilities.find(capability => capability.id === 'platform-runtime-dependencies')?.detail ?? '', /adapter/)
+  const readiness = await new NativeProductReadiness({ load: async () => degradedCatalog }, manifest, 'workflow').inspect()
+  assert.equal(readiness.state, 'blocked')
+  assert.ok(readiness.blockers.includes('adapter'))
+})

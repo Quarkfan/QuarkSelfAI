@@ -104,6 +104,7 @@ export class NativeProductReadiness implements OperationalReadinessProvider {
 function runtimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readonly string[]): string[] {
   const modules = new Map(catalog.modules.map(module => [module.id, module]))
   const serviceProviders = new Map(catalog.modules.flatMap(module => module.providesServices.map(service => [service, module.id] as const)))
+  const effectProviders = new Map(catalog.modules.flatMap(module => module.providesEffects.map(effect => [effect, module.id] as const)))
   const closure = new Set<string>()
   const pending = [...roots]
   while (pending.length) {
@@ -112,7 +113,13 @@ function runtimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readon
     closure.add(id)
     const module = modules.get(id)
     const serviceDependencies = module?.requiresServices.map(service => serviceProviders.get(service)!) ?? []
-    for (const dependency of [...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []), ...serviceDependencies]) pending.push(dependency)
+    const effectDependencies = module?.requiresEffects.flatMap(effect => {
+      const provider = effectProviders.get(effect)
+      return provider && provider !== id ? [provider] : []
+    }) ?? []
+    for (const dependency of [
+      ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []), ...serviceDependencies, ...effectDependencies,
+    ]) pending.push(dependency)
   }
   return [...closure]
 }
