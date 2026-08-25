@@ -5,6 +5,7 @@ import { dirname, relative, resolve } from 'node:path'
 import { analyzeEffectCoverage, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
 import { loadModuleCatalog } from '../src/catalog/file-provider.js'
 import { ControlOnlyRuntime } from '../src/platform/operations.js'
+import { loadProductCompositionManifest, productModuleIds } from '../src/product/manifest.js'
 import { DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS } from '../src/events/runtime.js'
 import { DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS } from '../src/workflow/runtime.js'
 import { DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS } from '../src/execution/worker-plugin.js'
@@ -20,6 +21,7 @@ const packageName = typeof packageManifest.name === 'string' ? packageManifest.n
 assert.ok(packageName, 'package.json must define a package name')
 assert.ok(isRecord(packageManifest.exports), 'package.json must define exports')
 const profileSource = await readFile(resolve(root, 'cordis.patch.yml'), 'utf8')
+const productManifest = await loadProductCompositionManifest(catalog)
 const platformApiSource = await readFile(resolve(root, 'src/platform/index.ts'), 'utf8')
 const operationsContractSource = await readFile(resolve(root, 'src/platform/operations.ts'), 'utf8')
 const storagePortsSource = await readFile(resolve(root, 'src/storage/ports.ts'), 'utf8')
@@ -115,6 +117,35 @@ assertAcyclicCutovers(migrationUnits)
 assert.deepEqual([...buildOrders].sort((left, right) => left - right), migrationUnits.map((_, index) => index + 1), 'migration buildOrder values must be contiguous')
 const compatModuleIds = catalog.modules.filter(module => module.classification === 'feature' && module.runtime === 'compat').map(module => module.id)
 assert.deepEqual([...migrationModuleIds].sort(), [...compatModuleIds].sort(), 'migration units must cover every compat feature exactly once')
+const migrationTargetIds = new Set(migrationUnits.flatMap(unit => unit.targetModules as string[]))
+const productModuleIdSet = new Set(productModuleIds(productManifest))
+const uncoveredInactivePlugins = pluginBindings
+  .filter(({ module }) => module.classification === 'feature' && module.runtime === 'inactive' && !migrationTargetIds.has(module.id))
+  .map(({ module }) => module.id)
+  .sort()
+assert.deepEqual(uncoveredInactivePlugins, [], 'every inactive native feature plugin must belong to a migration target unit')
+const uncoveredProductPlugins = pluginBindings
+  .filter(({ module }) => module.classification === 'feature' && module.runtime === 'inactive' && !productModuleIdSet.has(module.id))
+  .map(({ module }) => module.id)
+  .sort()
+assert.deepEqual(uncoveredProductPlugins, [], 'every inactive native feature plugin must belong to the long-term product composition')
+assert.ok(productModuleIdSet.has('native-product-composition'), 'long-term product manifest must own its native process composition')
+const nativeProductModule = catalog.modules.find(module => module.id === 'native-product-composition')
+assert.ok(nativeProductModule, 'module catalog must define native-product-composition')
+const expectedNativeRuntimeDependencies = [
+  'dsh-runtime',
+  ...productModuleIds(productManifest).filter(id => id !== nativeProductModule.id && !nativeProductModule.dependsOn.includes(id)),
+].sort()
+assert.deepEqual(
+  [...nativeProductModule.runtimeDependsOn].sort(),
+  [...new Set(expectedNativeRuntimeDependencies)].sort(),
+  'native product runtime dependencies must exactly match the long-term product manifest',
+)
+const profileActivationEnvironment = [...new Set(profileSource.match(/QUARK_NATIVE_[A-Z_]+/g) ?? [])].sort()
+assert.deepEqual([...productManifest.requiredEnvironment].sort(), profileActivationEnvironment, 'product activation environment must exactly match native Cordis gates')
+for (const name of productManifest.requiredConfiguration) {
+  assert.ok(profileSource.includes(name), `required product configuration ${name} is not consumed by the Cordis profile`)
+}
 
 const exitUnits = migrationPlan.exitUnits as Array<Record<string, unknown>>
 const exitFields = ['afterCutoverUnits', 'afterExitUnits', 'disposition', 'id', 'modules', 'requiresMaintenanceWindow', 'rollback', 'verification']
@@ -184,7 +215,7 @@ const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const dshSourceModules = new Set<string>()
 const injectedRuntimeRequirements = new Map<string, Set<string>>()
-const forbiddenSkeletonSemantics = /\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai)\b|常东旭|任永强|张以宁/gi
+const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover)\b|常东旭|任永强|张以宁/gi
 const violations: string[] = []
 for (const filename of files) {
   const source = await readFile(filename, 'utf8')
@@ -220,10 +251,6 @@ for (const filename of files) {
   if (startsWithAny(from, ['src/storage/sqlite.ts', 'src/storage/postgres.ts', 'src/storage/service.ts'])
     && /(eventToPolicySample|recentPolicySamples|message\.received)/.test(source)) {
     violations.push(`${from} interprets assistant policy semantics inside a replaceable storage provider`)
-  }
-  if (ownerModule?.classification === 'skeleton'
-    && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|codex|claude|xiaowei|takeover|nativecutover)\b|常东旭|任永强|张以宁)/i.test(source)) {
-    violations.push(`${from} hard-codes a feature or migration identity inside skeleton module ${ownerModule.id}`)
   }
   if (from.startsWith('src/bootstrap/') && /\b(?:interface|type)\s+[A-Za-z0-9_]*ApplicationConfig\b/.test(source)) {
     violations.push(`${from} defines an aggregate application config; configuration must stay with the owning module`)

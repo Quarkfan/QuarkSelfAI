@@ -7,7 +7,7 @@
       "buildOrder": 6,
       "cutoverAfter": [],
       "modules": ["approval-cards", "dida-projection", "direct-command-workflow", "focus-intake", "owner-engagement", "notification-digest"],
-      "targetModules": ["feishu-native-ingress", "message-intake-native", "feishu-workflow-effects", "feishu-context-effects", "feishu-focus-discovery-effects", "intake-interaction-effects", "dsh-reasoning-effects", "dsh-conversation-effects", "dida-task-effects", "dida-projection-effects"],
+      "targetModules": ["native-product-composition", "feishu-native-ingress", "message-intake-native", "feishu-workflow-effects", "feishu-context-effects", "feishu-focus-discovery-effects", "intake-interaction-effects", "dsh-reasoning-effects", "dsh-conversation-effects", "agent-bound-action-worker", "dida-task-effects", "dida-projection-effects"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Freeze one checkpoint, stop all five compat Feishu streams, import pending message/card/projection state, then start the five native streams exactly once.",
       "rollback": "Stop every native stream before restoring the frozen compat checkpoint and bridge-compat process.",

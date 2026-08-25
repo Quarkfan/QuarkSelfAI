@@ -89,6 +89,9 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 - Authoring：DSH 会话动态插件创作与长期插件沉淀。
 - Product composition：选择具体 channel、provider、workflow 和 adapter 的 Cordis profile；它是可替换的产品装配，
   不是 DSH 内核。
+- Native product host：`config/product-composition.json` 声明长期能力与真实 module owner，`src/product/app.ts`
+  装配存储、DSH kernel、控制台、开放 runtime status/readiness；当前保持 inactive，维护窗口取得进程入口所有权后
+  才替代 compatibility entry。
 
 功能可以依赖骨架和其他功能契约，但不能依赖 `bridge-compat`、迁移脚本或旧 JSON 状态。当前仍由兼容宿主
 承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
@@ -124,6 +127,7 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
 当前最重要的结构缺口：
 
 1. 飞书消费者、业务定时器仍由 `bridge-compat` 自己编排，而非 DSH 插件生命周期。
+   原生 product host 已实现并保持 inactive，仍需在同一维护窗口切换部署入口与全部 activation gate。
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 所有当前本地插件均已具备模块 owner、package export 与 Cordis profile 绑定；剩余问题是这些 native 插件尚未
@@ -133,9 +137,9 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
    product composition 显式选择的 surface feature。kernel、workspace 与 Web/control-plane 配置分别归
    `kernel-supervisor`、执行边界和控制台 feature，不存在可随意扩张的全局 application config。运行状态 provider 的标识、
    健康参与度和展示模式也是开放字段。当前 `src/app.ts` 仍通过 `compat-composition` 选择已接管的 compatibility
-   consumer；`config/runtime` 仅组合稳定配置、存储 provider 配置和 compat selector。删除 compat 不再需要修改
-   或搬走骨架配置。具体边界见 ADR 0022、0027。
-6. native workflow 所需的 21 个 effect 均已有实现，但仍全部未激活；机器门禁把实现覆盖与运行所有权分别呈现，
+   consumer；长期 `src/product/app.ts` 不读取 parity、compat selector 或 legacy state，并在模块、开关或必需配置
+   不完整时失败关闭。具体边界见 ADR 0022、0027、0052。
+6. native workflow 所需的 23 个 effect 均已有实现，但仍全部未激活；机器门禁把实现覆盖与运行所有权分别呈现，
    必须逐 adapter 完成真实只读/写入回放和状态交接后才能切换。飞书通知、交互卡片、只读联系人候选解析和经
    durable approval 的本人代发 adapter 已完成契约实现；同名联系人
    只返回候选，绝不擅自选择。该插件在默认及 compat 模式均强制禁用，在维护窗口完成真实回放前仍保持

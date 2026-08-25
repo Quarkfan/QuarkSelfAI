@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "product-platform",
+      "required": true,
+      "modules": ["native-product-composition", "assistant-module-catalog", "control-console", "durable-state-host", "feishu-channel", "dynamic-plugin-authoring"]
+    },
+    {
+      "id": "delegated-execution",
+      "required": true,
+      "modules": ["claude-code-provider", "codex-provider", "agent-bound-action-worker", "blacklake-reference-routing"]
+    },
+    {
+      "id": "message-intake",
+      "required": true,
+      "modules": ["feishu-native-ingress", "message-intake-native", "feishu-workflow-effects", "feishu-context-effects", "feishu-focus-discovery-effects", "intake-interaction-effects", "dsh-reasoning-effects", "dsh-conversation-effects"]
+    },
+    {
+      "id": "task-projection-and-maintenance",
+      "required": true,
+      "modules": ["dida-task-effects", "dida-projection-effects", "dida-maintenance-native"]
+    },
+    {
+      "id": "delegated-followup-and-research",
+      "required": true,
+      "modules": ["delegated-followup-native", "xiaowei-research-native"]
+    },
+    {
+      "id": "session-lifecycle",
+      "required": true,
+      "modules": ["codex-session-effect-adapter", "session-lifecycle-native"]
+    },
+    {
+      "id": "collaboration-learning",
+      "required": true,
+      "modules": ["assistant-policy-model", "collaboration-learning-policy", "collaboration-learning-native"]
+    }
+  ],
+  "requiredEnvironment": [
+    "QUARK_NATIVE_ACTION_WORKER",
+    "QUARK_NATIVE_CODEX_SESSION_EFFECTS",
+    "QUARK_NATIVE_COLLABORATION_LEARNING",
+    "QUARK_NATIVE_CONVERSATION_EFFECTS",
+    "QUARK_NATIVE_DIDA_EFFECTS",
+    "QUARK_NATIVE_DIDA_MAINTENANCE",
+    "QUARK_NATIVE_DIDA_PROJECTION_EFFECTS",
+    "QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS",
+    "QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS",
+    "QUARK_NATIVE_FEISHU_EFFECTS",
+    "QUARK_NATIVE_FEISHU_INGRESS",
+    "QUARK_NATIVE_FOLLOWUP",
+    "QUARK_NATIVE_INTERACTION_EFFECTS",
+    "QUARK_NATIVE_MESSAGE_INTAKE",
+    "QUARK_NATIVE_REASONING_EFFECTS",
+    "QUARK_NATIVE_SESSION_LIFECYCLE",
+    "QUARK_NATIVE_XIAOWEI_RESEARCH"
+  ],
+  "requiredConfiguration": [
+    "BLACKLAKE_WORKSPACE_ROOT",
+    "CODEX_APP_SERVER_SOCKET",
+    "DIDA_FOLLOWUP_PROJECT_ID",
+    "DIDA_PROJECT_ID",
+    "QUARK_INFERENCE_API_KEY",
+    "QUARK_INFERENCE_BASE_URL",
+    "QUARK_OWNER_OPEN_ID",
+    "QUARK_OWNER_WORKSPACE",
+    "XIAOWEI_AGENT_CHAT_ID",
+    "XIAOWEI_AGENT_OPEN_ID"
+  ]
+}

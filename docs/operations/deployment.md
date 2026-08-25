@@ -88,9 +88,12 @@ systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/p
 5. 开启只读影子处理，比较新旧系统决策。
 6. 冻结旧 consumer checkpoint，确认新系统已加载 action ledger。
 7. 获得常东旭对本次切换的明确批准后，才设置 `TAKEOVER_CONFIRMED=true`。
-8. 优雅停止旧消费者，确认 server-side subscription 已释放。
-9. 启动新消费者并等待消息与卡片 EventKey 的 ready marker。
-10. 逐个启用投影和 executor；持续检查双写、重复任务和越权回复。
+8. 优雅停止 compatibility consumer，确认 server-side subscription 已释放；同一维护窗口把部署入口从
+   `dist/app.js` 切到 `dist/product/app.js`，设置 `ASSISTANT_RUNTIME=native`，并按
+   `config/product-composition.json` 一次性满足全部 activation gate 和必需配置。不得在两个入口之间并行试跑。
+9. 原生入口先核验 module catalog、产品 manifest、storage provider 和配置，再创建 store、启动 DSH 与控制台；
+   任一项未 ready 必须保持停止，不得回退为 control-only 假健康。
+10. 启动新消费者并等待消息与卡片 EventKey 的 ready marker；持续检查双写、重复任务、无 worker action 和越权回复。
 
 ## 回滚
 
