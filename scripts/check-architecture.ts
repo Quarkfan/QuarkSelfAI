@@ -291,6 +291,9 @@ for (const filename of files) {
     && /(?:\bextends\s+Service\b|\bexport\s+(?:async\s+)?function\s+apply\s*\()/.test(source)) {
     violations.push(`${from} is executable plugin/service code owned by contract module ${ownerModule.id}`)
   }
+  if (/\bPreToolDecision\b/.test(source) && /tools\/pre-execute/.test(source) && ownerModule?.layer !== 'policy') {
+    violations.push(`${from} owns a tool authorization decision but is classified as ${ownerModule?.layer ?? 'unowned'} instead of policy`)
+  }
   if (ownerModule?.layer === 'contract' && /from\s+['"]node:/.test(source)) {
     violations.push(`${from} imports a Node runtime API inside contract module ${ownerModule.id}`)
   }

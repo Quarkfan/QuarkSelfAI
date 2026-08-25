@@ -109,6 +109,9 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
   装配存储、DSH kernel、控制台、开放 runtime status/readiness；当前保持 inactive，维护窗口取得进程入口所有权后
   才替代 compatibility entry。
 
+动态插件的创建/删除审批属于 policy feature，不是 durable workflow：它在 DSH `tools/pre-execute` 边界判断 allow/ask，
+不拥有跨重启状态机。真正需要等待、重试或外部 effect 的插件沉淀流程才使用 workflow 骨架。
+
 功能可以依赖骨架和其他功能契约，但不能依赖 `bridge-compat`、迁移脚本或旧 JSON 状态。当前仍由兼容宿主
 承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
 
