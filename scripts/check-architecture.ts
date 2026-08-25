@@ -360,6 +360,9 @@ for (const filename of operationalFiles) {
   const source = await readFile(filename, 'utf8')
   const from = relative(root, filename)
   const fromOwner = ownerBySource.get(from)
+  if (fromOwner && moduleById.get(fromOwner)?.layer !== 'operations') {
+    violations.push(`${from} is an operational entry owned by non-operations module ${fromOwner}`)
+  }
   for (const specifier of relativeImports(source)) {
     const to = relative(root, resolveRelativeSource(filename, specifier))
     const toOwner = ownerBySource.get(to)
