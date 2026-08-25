@@ -55,7 +55,9 @@ Git 已跟踪的配置、SQL migration、Web 静态资源、部署入口、兼�
 skeleton/feature/migration 方向约束，但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的
 `plugin.profileId` 与
 `plugin.packageExport`；检查器会双向核对 Cordis profile、composition `mounts` 和 `package.json#exports`，防止“代码已实现但未挂载”
-或“profile 中存在无主插件”。
+或“profile 中存在无主插件”。每个 export 的 `import/types` 目标还必须反向映射到该模块拥有的同一个 `src` 文件；
+只声明正确 key、却指向其他模块构建产物同样失败。`package.json#dsh.bundle.patch` 必须精确指向长期
+`cordis.patch.yml`，不能在包入口偷偷恢复兼容 profile。
 
 feature 源码只依赖骨架的窄 contract port，例如 `DurableWorkflowPort`、`DurableEventRegistryPort` 和
 `ActionLedgerPort`；仓库内从对应 `contracts` 文件导入，仓库外从稳定的 `./platform` 子路径导入。具体 Cordis

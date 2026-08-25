@@ -25,10 +25,12 @@ for (const module of catalog.modules) {
 const packageManifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')) as {
   name?: unknown
   exports?: unknown
+  dsh?: { bundle?: { patch?: unknown } }
 }
 const packageName = typeof packageManifest.name === 'string' ? packageManifest.name : ''
 assert.ok(packageName, 'package.json must define a package name')
 assert.ok(isRecord(packageManifest.exports), 'package.json must define exports')
+assert.equal(packageManifest.dsh?.bundle?.patch, './cordis.patch.yml', 'DSH bundle must load the long-term native product profile')
 const profileSource = await readFile(resolve(root, 'cordis.patch.yml'), 'utf8')
 const compatibilityProfileSource = await readFile(resolve(root, 'compat/cordis.compat.patch.yml'), 'utf8')
 const productManifest = await loadProductCompositionManifest(catalog)
@@ -55,6 +57,7 @@ for (const profileId of ['quark-agent-action-worker', 'quark-durable-events', 'q
 const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ module, plugin: module.plugin }] : [])
 for (const { module, plugin } of pluginBindings) {
   assert.ok(plugin.packageExport in packageManifest.exports, `module ${module.id} references missing package export ${plugin.packageExport}`)
+  assertPackageExportOwned(packageManifest.exports[plugin.packageExport], module.id, module.owns)
   const expectedPackage = plugin.packageExport === '.' ? packageName : `${packageName}/${plugin.packageExport.slice(2)}`
   const mounted = profilePlugins.get(plugin.profileId)
   assert.equal(mounted?.name, expectedPackage, `module ${module.id} plugin binding differs from cordis.patch.yml`)
@@ -66,6 +69,7 @@ for (const { module, plugin } of pluginBindings) {
     assert.ok(!activationGated, `${module.runtime} module ${module.id} cannot be native-activation-gated in cordis.patch.yml`)
   }
 }
+assertPackageExportOwned(packageManifest.exports['./platform'], 'platform-api', catalog.modules.find(module => module.id === 'platform-api')?.owns ?? [])
 const boundProfileIds = new Set(pluginBindings.map(binding => binding.plugin.profileId))
 for (const [profileId, mounted] of profilePlugins) {
   if (mounted.name === packageName || mounted.name.startsWith(`${packageName}/`)) {
@@ -484,4 +488,16 @@ function unquote(value: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function assertPackageExportOwned(value: unknown, moduleId: string, ownedSources: readonly string[]): void {
+  assert.ok(isRecord(value), `package export for ${moduleId} must be an object`)
+  const importTarget = value.import
+  const typesTarget = value.types
+  assert.equal(typeof importTarget, 'string', `package export for ${moduleId} must define import`)
+  assert.equal(typeof typesTarget, 'string', `package export for ${moduleId} must define types`)
+  const importSource = String(importTarget).replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts')
+  const typesSource = String(typesTarget).replace(/^\.\/dist\//, 'src/').replace(/\.d\.ts$/, '.ts')
+  assert.ok(ownedSources.includes(importSource), `package export for ${moduleId} points outside its source ownership: ${String(importTarget)}`)
+  assert.equal(typesSource, importSource, `package export for ${moduleId} import/types targets diverge`)
 }
