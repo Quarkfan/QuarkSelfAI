@@ -68,11 +68,13 @@ systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/p
 ## macOS LaunchAgent
 
 `deploy/launchd/com.quarkfan.quark-self-ai.plist.template` 是不含秘密的模板。使用
-`npm run render:launchd -- --output ... --project-root ... --node ... --environment-file ... --path ... --stdout ... --stderr ...`
+`npm run render:launchd -- --output ... --project-root ... --node ... --environment-file ... --path ... --stdout ... --stderr ... --application-mode compatibility`
 渲染时必须指定绝对的项目目录、Node、`0600` 环境文件和日志路径；输出
 使用 `wx` 创建，存在同名文件时拒绝覆盖。环境文件由 Node 22 的 `--env-file` 读取，令牌不会写进 plist。
 `--path` 必须显式包含 Node、lark-cli、dida-cli、Claude Code 和 Codex 启动脚本所需目录；launchd 自带的
 最小 PATH 会覆盖 env-file 中同名变量，因此 PATH 作为非秘密运行依赖写入 plist。
+`--application-mode` 只接受 `compatibility` 或 `native`，省略时保持兼容入口；维护窗口必须重新渲染为 `native`，不能
+靠任意脚本路径覆盖来绕过产品入口门禁。systemd 与容器使用同一个 allowlist 变量 `QUARK_APPLICATION_MODE`。
 
 本机已完成正式切换，`com.blacklake.codex-lark-bridge` 仓库与 LaunchAgent 不再是运行依赖。新安装不得
 重新 bootstrap 旧服务；升级只替换 QuarkSelfAI 构建产物、校验 Profile，然后由同一个 LaunchAgent 优雅重启。
@@ -91,8 +93,9 @@ systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/p
 5. 开启只读影子处理，比较新旧系统决策。
 6. 冻结旧 consumer checkpoint，确认新系统已加载 action ledger。
 7. 获得常东旭对本次切换的明确批准后，才设置 `TAKEOVER_CONFIRMED=true`。
-8. 优雅停止 compatibility consumer，确认 server-side subscription 已释放；同一维护窗口把部署入口从
-   `dist/app.js` 切到 `dist/product/app.js`，先初始化 `feishu-assistant-native`，设置
+8. 优雅停止 compatibility consumer，确认 server-side subscription 已释放；同一维护窗口把
+   `QUARK_APPLICATION_MODE`（或 LaunchAgent 的 `--application-mode`）从 `compatibility` 切到 `native`，由受限入口
+   选择器把 `dist/app.js` 切到 `dist/product/app.js`；先初始化 `feishu-assistant-native`，设置
    `ASSISTANT_RUNTIME=native`，并按
    `config/product-composition.json` 一次性满足全部 activation gate 和必需配置。不得在两个入口之间并行试跑。
 9. 原生入口先核验 module catalog、产品 manifest、storage provider 和配置，再创建 store、启动 DSH 与控制台；

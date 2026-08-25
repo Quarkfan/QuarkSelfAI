@@ -8,7 +8,7 @@
   <array>
     <string>__NODE_EXECUTABLE__</string>
     <string>--env-file=__ENV_FILE__</string>
-    <string>__PROJECT_ROOT__/dist/app.js</string>
+    <string>__APPLICATION_ENTRY__</string>
   </array>
   <key>WorkingDirectory</key>
   <string>__PROJECT_ROOT__</string>

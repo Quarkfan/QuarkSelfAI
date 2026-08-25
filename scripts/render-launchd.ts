@@ -15,17 +15,24 @@ if (missing.length > 0) {
   process.stderr.write(`Missing arguments: ${missing.join(', ')}\n`)
   process.exitCode = 2
 } else {
-  const templatePath = fileURLToPath(new URL('../deploy/launchd/com.quarkfan.quark-self-ai.plist.template', import.meta.url))
-  const template = await readFile(templatePath, 'utf8')
-  const rendered = renderLaunchdTemplate(template, {
-    projectRoot: resolve(argumentsByName.get('project-root') ?? ''),
-    nodeExecutable: resolve(argumentsByName.get('node') ?? ''),
-    environmentFile: resolve(argumentsByName.get('environment-file') ?? ''),
-    executablePath: argumentsByName.get('path') ?? '',
-    stdoutPath: resolve(argumentsByName.get('stdout') ?? ''),
-    stderrPath: resolve(argumentsByName.get('stderr') ?? ''),
-  })
-  const output = resolve(argumentsByName.get('output') ?? '')
-  await writeFile(output, rendered, { flag: 'wx', mode: 0o600 })
-  process.stdout.write(`${output}\n`)
+  const applicationMode = argumentsByName.get('application-mode') ?? 'compatibility'
+  if (applicationMode !== 'compatibility' && applicationMode !== 'native') {
+    process.stderr.write('application-mode must be compatibility or native\n')
+    process.exitCode = 2
+  } else {
+    const templatePath = fileURLToPath(new URL('../deploy/launchd/com.quarkfan.quark-self-ai.plist.template', import.meta.url))
+    const template = await readFile(templatePath, 'utf8')
+    const rendered = renderLaunchdTemplate(template, {
+      applicationMode,
+      projectRoot: resolve(argumentsByName.get('project-root') ?? ''),
+      nodeExecutable: resolve(argumentsByName.get('node') ?? ''),
+      environmentFile: resolve(argumentsByName.get('environment-file') ?? ''),
+      executablePath: argumentsByName.get('path') ?? '',
+      stdoutPath: resolve(argumentsByName.get('stdout') ?? ''),
+      stderrPath: resolve(argumentsByName.get('stderr') ?? ''),
+    })
+    const output = resolve(argumentsByName.get('output') ?? '')
+    await writeFile(output, rendered, { flag: 'wx', mode: 0o600 })
+    process.stdout.write(`${output}\n`)
+  }
 }

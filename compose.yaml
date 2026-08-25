@@ -16,6 +16,7 @@ services:
       LARK_IDENTITY: bot
       DSH_HOME: /app/var/dsh
       DSH_PROFILE: feishu-assistant
+      QUARK_APPLICATION_MODE: compatibility
       ASSISTANT_WORKSPACE_ROOTS: '["/app"]'
     ports:
       - "${QUARK_PORT:-3210}:3210"

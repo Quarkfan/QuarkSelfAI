@@ -35,6 +35,8 @@ RUN npm ci --omit=dev \
 COPY --from=build /app/dist ./dist
 COPY packages/bridge-compat ./packages/bridge-compat
 COPY config ./config
+COPY compat ./compat
+COPY cordis.patch.yml ./cordis.patch.yml
 COPY migrations ./migrations
 COPY web ./web
 COPY deploy/container-entrypoint.sh /usr/local/bin/quark-self-ai-entrypoint

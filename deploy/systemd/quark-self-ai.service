@@ -11,7 +11,8 @@ User=quarkselfai
 Group=quarkselfai
 WorkingDirectory=/opt/quark-self-ai
 EnvironmentFile=/etc/quark-self-ai.env
-ExecStart=/usr/bin/node /opt/quark-self-ai/dist/app.js
+Environment=QUARK_PROJECT_ROOT=/opt/quark-self-ai
+ExecStart=/opt/quark-self-ai/deploy/container-entrypoint.sh
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30

@@ -1,4 +1,5 @@
 export interface LaunchdRenderOptions {
+  readonly applicationMode: 'compatibility' | 'native'
   readonly projectRoot: string
   readonly nodeExecutable: string
   readonly environmentFile: string
@@ -12,7 +13,9 @@ function xml(value: string): string {
 }
 
 export function renderLaunchdTemplate(template: string, options: LaunchdRenderOptions): string {
+  const applicationEntry = options.applicationMode === 'native' ? 'dist/product/app.js' : 'dist/app.js'
   const replacements: Readonly<Record<string, string>> = {
+    __APPLICATION_ENTRY__: `${options.projectRoot}/${applicationEntry}`,
     __PROJECT_ROOT__: options.projectRoot,
     __NODE_EXECUTABLE__: options.nodeExecutable,
     __ENV_FILE__: options.environmentFile,
