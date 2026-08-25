@@ -181,3 +181,32 @@ test('native readiness follows effect providers without concrete runtime depende
   assert.equal(readiness.state, 'blocked')
   assert.ok(readiness.blockers.includes('adapter'))
 })
+
+test('native readiness blocks unresolved required effects explicitly', async () => {
+  const catalog = validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'workflow', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'inactive',
+        source: 'workflow', owns: [], dependsOn: [], requiresEffects: ['missing.run.v1'],
+      },
+    ],
+  })
+  const activeCatalog: AssistantModuleCatalog = {
+    ...catalog,
+    modules: catalog.modules.map(module => ({ ...module, runtime: 'active' as const })),
+  }
+  const manifest = validateProductCompositionManifest({
+    version: 1,
+    capabilities: [{ id: 'example', required: true, modules: ['workflow'] }],
+    requiredEnvironment: [],
+    requiredConfiguration: [],
+  }, catalog)
+  const runtime = new NativeProductRuntimeStatus(readyKernel, activeCatalog, manifest, 'workflow').snapshot()
+  assert.equal(runtime.state, 'degraded')
+  assert.match(runtime.capabilities.find(capability => capability.id === 'platform-runtime-requirements')?.detail ?? '', /workflow:effect:missing\.run\.v1/)
+  const readiness = await new NativeProductReadiness({ load: async () => activeCatalog }, manifest, 'workflow').inspect()
+  assert.equal(readiness.state, 'blocked')
+  assert.ok(readiness.blockers.includes('requirement:workflow:effect:missing.run.v1'))
+  assert.equal(readiness.summary.unresolvedCapabilities, 1)
+})

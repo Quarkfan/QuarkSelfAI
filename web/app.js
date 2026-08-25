@@ -29,6 +29,9 @@ function showModule(m) {
   const providers = (dashboard?.architecture?.runtimeGraph?.edges ?? [])
     .filter((edge) => edge.from === m.id && (edge.kind === 'service' || edge.kind === 'effect'))
     .map((edge) => `${edge.kind}:${edge.capability} → ${edge.to}`)
+  providers.push(...(dashboard?.architecture?.runtimeGraph?.unresolved ?? [])
+    .filter((requirement) => requirement.from === m.id)
+    .map((requirement) => `${requirement.kind}:${requirement.capability} → 缺失`))
   showDetail('ARCHITECTURE MODULE', m.id, [
     ['归属', m.classification],
     ['层', m.layer],

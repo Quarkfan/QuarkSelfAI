@@ -486,7 +486,24 @@ test('builds one canonical runtime graph for hosts, mounts, services, and effect
     { from: 'composition', to: 'provider', kind: 'service', capability: 'examplePort' },
     { from: 'composition', to: 'provider', kind: 'effect', capability: 'example.run.v1' },
   ])
+  assert.deepEqual(analyzeModuleRuntimeGraph(catalog).unresolved, [])
   assert.deepEqual(moduleRuntimeDependencyClosure(catalog, ['composition']), ['composition', 'runtime', 'mounted', 'provider'])
+})
+
+test('reports unresolved effect capabilities without inventing provider edges', () => {
+  const catalog = validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'planned-workflow', classification: 'feature', layer: 'workflow', implementation: 'planned', runtime: 'inactive',
+        source: 'workflow', owns: [], dependsOn: [], requiresEffects: ['missing.effect.v1'],
+      },
+    ],
+  })
+  assert.deepEqual(analyzeModuleRuntimeGraph(catalog), {
+    edges: [],
+    unresolved: [{ from: 'planned-workflow', kind: 'effect', capability: 'missing.effect.v1' }],
+  })
 })
 
 test('requires plugin profile ids and package exports to have one module owner', () => {

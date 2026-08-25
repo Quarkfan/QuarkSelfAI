@@ -111,6 +111,8 @@ service/effect provider 的派生边同样服从 migration 单向边界：任何
 临时实现必须由迁移层主动调用长期能力，而不能伪装成 capability 被长期模块反向消费。
 module-catalog 统一输出包含 `runtime`、`mount`、`service`、`effect` 四种边的运行图和传递闭包；目录校验、产品
 readiness 与控制台必须消费这一个分析结果，不得分别重新实现 provider 查找规则。
+尚未实现的 required effect 不会被图静默丢弃，而是进入 `unresolved`；控制台明确显示“缺失”，任何必需产品能力
+的 unresolved capability 都会成为独立 readiness blocker。planned/inactive 允许逐步开发，不等于具备接管条件。
 
 ## 功能
 

@@ -78,6 +78,13 @@ export interface ModuleRuntimeEdge {
 
 export interface ModuleRuntimeGraph {
   readonly edges: readonly ModuleRuntimeEdge[]
+  readonly unresolved: readonly ModuleRuntimeRequirement[]
+}
+
+export interface ModuleRuntimeRequirement {
+  readonly from: string
+  readonly kind: 'service' | 'effect'
+  readonly capability: string
 }
 
 const classifications = new Set<ModuleClassification>(['skeleton', 'feature', 'migration'])
@@ -306,7 +313,13 @@ export function summarizeModules(catalog: AssistantModuleCatalog): ModuleSummary
 export function analyzeModuleRuntimeGraph(catalog: AssistantModuleCatalog): ModuleRuntimeGraph {
   const serviceProviders = new Map(catalog.modules.flatMap(module => module.providesServices.map(service => [service, module] as const)))
   const effectProviders = new Map(catalog.modules.flatMap(module => module.providesEffects.map(effect => [effect, module] as const)))
-  return { edges: runtimeEdges(catalog.modules, serviceProviders, effectProviders) }
+  const unresolved = catalog.modules.flatMap(module => [
+    ...module.requiresServices.filter(capability => !serviceProviders.has(capability))
+      .map(capability => ({ from: module.id, kind: 'service' as const, capability })),
+    ...module.requiresEffects.filter(capability => !effectProviders.has(capability))
+      .map(capability => ({ from: module.id, kind: 'effect' as const, capability })),
+  ])
+  return { edges: runtimeEdges(catalog.modules, serviceProviders, effectProviders), unresolved }
 }
 
 export function moduleRuntimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readonly string[]): string[] {
