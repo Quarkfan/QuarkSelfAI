@@ -62,7 +62,7 @@
       "buildOrder": 1,
       "cutoverAfter": ["message-intake-and-projection"],
       "modules": ["collaboration-learning"],
-      "targetModules": ["collaboration-learning-native"],
+      "targetModules": ["collaboration-learning-policy", "collaboration-learning-native"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Pause learning evaluation, import privacy-bounded observations and proposal cooldowns, then enable native policy learning.",
       "rollback": "Disable native evaluation and restore only observations newer than the frozen compat checkpoint by stable sample id.",

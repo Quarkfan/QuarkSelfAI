@@ -35,7 +35,6 @@ export interface CollaborationLearningConfig {
   readonly minimumSamples?: number
   readonly minimumScopeSamples?: number
   readonly proposalCooldownMs?: number
-  readonly timerIntervalMs?: number
 }
 
 export interface CollaborationPolicyProposal {

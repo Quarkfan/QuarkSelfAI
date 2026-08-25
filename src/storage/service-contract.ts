@@ -16,7 +16,7 @@ export interface DurableStatePort extends
   FeatureCheckpointStorePort,
   WorkflowStorePort,
   ActionStorePort,
-  Pick<PolicyStorePort, 'recentPolicySamples' | 'savePolicyDraft'> {
+  Pick<PolicyStorePort, 'recentPolicySamples' | 'savePolicyDraft' | 'activatePolicy'> {
   appendEvent(event: NormalizedChannelEvent): Promise<StoredEvent>
 }
 

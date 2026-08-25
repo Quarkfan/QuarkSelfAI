@@ -105,6 +105,10 @@ export class DurableStateService extends Service implements DurableStatePort {
     return await (await this.ready).savePolicyDraft(input)
   }
 
+  async activatePolicy(id: string, revision: number, approvedAt: string): Promise<void> {
+    await (await this.ready).activatePolicy(id, revision, approvedAt)
+  }
+
   async enqueueAction(input: DurableActionInput): Promise<{ readonly inserted: boolean }> {
     const result = await (await this.ready).enqueueAction(input)
     if (result.inserted && !input.approval) this.emitWake('quark/action-wake')

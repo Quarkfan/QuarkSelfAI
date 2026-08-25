@@ -14,6 +14,7 @@ class MemoryPort implements CollaborationLearningPort {
     id: `event-${index}`,
     facts: { source: { chatId: 'oc_repeated', senderId: 'ou_sender' } },
   }))
+  publishError: Error | undefined
 
   async appendSignal(input: DurableSignalInput) {
     const existing = this.signals.find(signal => signal.id === input.id)
@@ -44,6 +45,7 @@ class MemoryPort implements CollaborationLearningPort {
   }
 
   async publishProposal(proposal: CollaborationPolicyProposal) {
+    if (this.publishError) throw this.publishError
     this.proposals.push(proposal)
   }
 }
@@ -112,6 +114,17 @@ test('native learning retains an unsafe draft but never publishes it for approva
   assert.equal(await engine.poll(new Date('2026-08-24T00:00:00Z')), undefined)
   assert.equal(port.drafts.length, 1)
   assert.equal(port.proposals.length, 0)
+})
+
+test('failed proposal projection does not advance the evaluation checkpoint', async () => {
+  const port = new MemoryPort()
+  const engine = new CollaborationLearningEngine(port, { evaluationIntervalMs: 86_400_000 })
+  for (let index = 0; index < 20; index += 1) await engine.observe(message(index), ordinaryTask)
+  port.publishError = new Error('approval workflow unavailable')
+  await assert.rejects(engine.poll(new Date('2026-08-24T00:00:00Z')), /approval workflow unavailable/)
+  assert.equal(port.checkpoints.has('collaboration-learning:evaluation'), false)
+  port.publishError = undefined
+  assert.ok(await engine.poll(new Date('2026-08-24T00:01:00Z')))
 })
 
 test('native guidance uses interaction metadata without retaining conversation text', async () => {

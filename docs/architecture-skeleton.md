@@ -172,6 +172,9 @@ workflow create/advance/retry 同样由 durable state 发布最早可执行时�
 `wakeAt` 安排精确 timer。30 秒 workflow 空轮询已移除，10 分钟扫描只补偿重启后丢失的内存 timer。
 action enqueue、批准和 retry release 也由 durable state 发布 `quark/action-wake`；可执行 action 立即 drain，未来
 retry 精确唤醒。原 30 秒 action 空轮询已移除，同样只保留 10 分钟恢复扫描。
+业务能力自己的周期工作必须落成 durable workflow `wakeAt`，不得另建 `setInterval`。协作模式学习因此被拆成
+纯 policy engine 与 workflow orchestration：每日评估、策略提案卡片、输入补充、批准/拒绝和策略启用都由可恢复
+workflow 串联；失败的卡片投影不会提前推进评估 checkpoint。架构检查只允许骨架调度器持有原生 interval。
 外层控制面与 DSH 在 SQLite 模式下必须解析到同一个 `SQLITE_PATH`，PostgreSQL 模式下必须使用同一个
 `DATABASE_URL`；不得用 `DSH_HOME` 下的隐式第二数据库制造分叉真源。
 

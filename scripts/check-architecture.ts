@@ -144,6 +144,11 @@ const catalogMigrationModuleIds = catalog.modules.filter(module => module.classi
 assert.deepEqual([...exitingMigrationModuleIds].sort(), [...catalogMigrationModuleIds].sort(), 'migration exit units must cover every migration module exactly once')
 
 const files = await sourceFiles(resolve(root, 'src'), '.ts')
+const nativeIntervalOwners: string[] = []
+for (const file of files) {
+  if ((await readFile(file, 'utf8')).includes('setInterval(')) nativeIntervalOwners.push(relative(root, file))
+}
+assert.deepEqual(nativeIntervalOwners.sort(), ['src/runtime/wake-scheduler.ts'], 'native feature code must use durable workflows or the shared recovery scheduler instead of private intervals')
 const compatibilityFiles = await sourceFiles(resolve(root, 'packages/bridge-compat/src'), '.js')
 const operationalFiles = [
   ...await sourceFiles(resolve(root, 'scripts'), '.ts'),

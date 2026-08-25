@@ -17,7 +17,7 @@
 
 | 构建顺序 | 单元 | 模块 | 生产切换前置 | 关键边界 |
 | --- | --- | --- | --- | --- |
-| 1 | collaboration-learning | 1 | message-intake-and-projection | 无业务写入，先验证 durable 样本与 cooldown 导入 |
+| 1 | collaboration-learning | 2 | message-intake-and-projection | 先验证 durable 样本与 cooldown；只有本人批准可启用策略 revision |
 | 2 | dida-maintenance | 1 | message-intake-and-projection | timer、超期指纹和完成清理 cursor 只能有一个 owner |
 | 3 | session-lifecycle | 1 | message-intake-and-projection | 归档/删除不可重放，必须记录已经完成的外部动作 |
 | 4 | xiaowei-research | 1 | message-intake-and-projection | 请求批准与慢回复 correlation 原子迁移 |
@@ -31,11 +31,13 @@
 
 ### collaboration-learning 当前准备状态
 
-- 原生插件已拆出脱敏观察、注意力分级、稳定模式评估与策略草案事件；compat 模式下强制禁用。
+- 原生能力已拆成纯 policy engine 与 durable workflow：脱敏观察、注意力分级和安全模拟归 policy；每日评估、
+  提案卡片、输入补充、批准/拒绝及精确 revision 启用归 workflow。compat 模式下仍强制禁用。
 - 骨架新增通用 append-only signal 与 feature checkpoint，不含任何飞书联系人或协作对象语义。
 - `npm run audit:collaboration-handoff` 只读检查旧样本、owner signals、候选策略和 cooldown，生成内容摘要指纹；
   它不导入、不启用策略、不发送卡片。
-- 尚未迁移状态所有权。真正导入、接入审批卡片和启用 timer 仍是同一个维护窗口操作，不能拆开提前执行。
+- 尚未迁移状态所有权。审批链代码已闭环，但真正导入、启用 schedule workflow 与切换卡片回调所有权仍是同一个
+  维护窗口操作，不能拆开提前执行。
 
 ### dida-maintenance 当前准备状态
 

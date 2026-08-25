@@ -183,9 +183,8 @@ export class CollaborationLearningEngine {
       const lastEvaluatedAt = typeof checkpoint?.lastEvaluatedAt === 'string' ? checkpoint.lastEvaluatedAt : undefined
       const interval = this.config.evaluationIntervalMs ?? DAY_MS
       if (lastEvaluatedAt && now.getTime() - new Date(lastEvaluatedAt).getTime() < interval) return undefined
-      await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'evaluation', { lastEvaluatedAt: now.toISOString() })
       const observations = await this.observations()
-      if (observations.length < (this.config.minimumSamples ?? 20)) return undefined
+      if (observations.length < (this.config.minimumSamples ?? 20)) return await this.completeEvaluation(now)
       const proposalCheckpoint = await this.port.readCheckpoint(CHECKPOINT_NAMESPACE, 'proposal')
       const lastProposalAt = typeof proposalCheckpoint?.lastProposalAt === 'string' ? proposalCheckpoint.lastProposalAt : undefined
       if (lastProposalAt && now.getTime() - new Date(lastProposalAt).getTime() < (this.config.proposalCooldownMs ?? 7 * DAY_MS)) return undefined
@@ -197,7 +196,7 @@ export class CollaborationLearningEngine {
         .filter(scope => scope.sampleCount >= (this.config.minimumScopeSamples ?? 8) && scope.protectedCount === 0 && scope.confidence >= 0.75)
         .filter(scope => !priorScopes.has(scope.key))
         .sort((left, right) => right.reducible - left.reducible || right.confidence - left.confidence)[0]
-      if (!candidate) return undefined
+      if (!candidate) return await this.completeEvaluation(now)
       const label = candidate.kind === 'chat' ? '这个飞书会话' : '这位联系人'
       const sourceText = `根据持续协作样本，${label}的普通非紧急消息优先批量汇总；明确紧急、待批准、需要追问或调研的消息仍即时通知。`
       const document: PolicyDocument = {
@@ -224,7 +223,7 @@ export class CollaborationLearningEngine {
         scope: { [candidate.kind === 'chat' ? 'chatId' : 'senderId']: candidate.id },
         data: { scopeKey: candidate.key, policyId: id, revision, safeToActivate: simulation.safeToActivate },
       })
-      if (simulation.safeToActivate !== true) return undefined
+      if (simulation.safeToActivate !== true) return await this.completeEvaluation(now)
       await this.port.publishProposal(proposal)
       await this.port.appendSignal({
         id: signalId('collaboration-proposal-published', id, String(revision)),
@@ -233,10 +232,16 @@ export class CollaborationLearningEngine {
         data: { scopeKey: candidate.key, policyId: id, revision },
       })
       await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'proposal', { lastProposalAt: now.toISOString(), policyId: id, revision })
+      await this.completeEvaluation(now)
       return proposal
     } finally {
       this.evaluating = false
     }
+  }
+
+  private async completeEvaluation(now: Date): Promise<undefined> {
+    await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'evaluation', { lastEvaluatedAt: now.toISOString() })
+    return undefined
   }
 
   private async observations(): Promise<Observation[]> {

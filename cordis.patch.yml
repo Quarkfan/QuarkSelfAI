@@ -342,7 +342,7 @@
       disabled: !!js process.env.QUARK_NATIVE_COLLABORATION_LEARNING !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
       config:
         enabled: true
-        timerIntervalMs: 600000
+        evaluationIntervalMs: 86400000
     - id: quark-dynamic-plugin-policy
       name: '@quarkfan/quark-self-ai/dynamic-plugin-policy'
     - id: dsh-tool-cordis
