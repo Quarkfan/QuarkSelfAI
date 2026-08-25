@@ -134,6 +134,9 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     if (module.layer !== 'contract' && module.runtime === 'static') {
       throw new Error(`only contract modules can use runtime=static: ${module.id}`)
     }
+    if (module.runtime === 'static' && module.runtimeDependsOn.length > 0) {
+      throw new Error(`static contract module ${module.id} cannot declare runtime dependencies`)
+    }
     if (module.classification === 'skeleton'
       && (module.implementation !== 'ready' || (module.layer === 'contract' ? module.runtime !== 'static' : module.runtime !== 'active'))) {
       throw new Error(`skeleton module ${module.id} must be ready and its executable runtime must be active`)

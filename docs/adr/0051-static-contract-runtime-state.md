@@ -12,7 +12,9 @@ owner 或启停行为，却被迫选择一个运行状态；同类契约因此�
 
 `ModuleRuntime` 增加 `static`。所有 `layer=contract` 模块必须使用 `runtime=static`，非 contract 模块不得使用。
 `implementation` 仍表示契约本身是否完成；active/inactive/shadow/compat 只用于可执行模块。骨架 contract 仍须
-`implementation=ready`，骨架的其他可执行模块仍须 `runtime=active`。
+`implementation=ready`，骨架的其他可执行模块仍须 `runtime=active`。static contract 不得声明
+`runtimeDependsOn`；Cordis `declare module` 等纯类型绑定不会生成运行时依赖，实际 provider 由使用端和 composition
+声明。
 
 控制台将 static 展示为“静态契约”，不显示为原生宿主。迁移 target、effect provider 和健康判断只处理可执行
 模块，不把 static contract 当成未激活 blocker。

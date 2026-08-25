@@ -212,6 +212,13 @@ test('uses static only for non-executable contract modules', () => {
     version: 3,
     modules: [{ id: 'workflow-a', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'static', source: 'a', owns: [], dependsOn: [] }],
   }), /only contract modules can use runtime=static/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'runtime-a', classification: 'skeleton', layer: 'kernel', implementation: 'ready', runtime: 'active', source: 'a', owns: [], dependsOn: [] },
+      { id: 'contract-a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static', source: 'b', owns: [], dependsOn: [], runtimeDependsOn: ['runtime-a'] },
+    ],
+  }), /static contract module contract-a cannot declare runtime dependencies/)
 })
 
 test('fails closed for misspelled fields and invalid migration ownership combinations', () => {

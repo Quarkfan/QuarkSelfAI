@@ -191,7 +191,10 @@ for (const filename of files) {
   const from = relative(root, filename)
   const owner = ownerBySource.get(from)
   const ownerModule = moduleById.get(owner ?? '')
-  if (owner && /@deepseek-ai\/(?:cordis|dsh-)/.test(source)) dshSourceModules.add(owner)
+  const importsDshRuntime = /^import\s+(?!type\b)[^\n]*from\s+['"]@deepseek-ai\/(?:cordis|dsh-)/m.test(source)
+  const definesCordisPlugin = /from\s+['"]@deepseek-ai\/cordis['"]/.test(source)
+    && /(?:\bextends\s+Service\b|\bexport\s+(?:async\s+)?function\s+apply\s*\()/.test(source)
+  if (owner && (importsDshRuntime || definesCordisPlugin)) dshSourceModules.add(owner)
   if (ownerModule?.classification === 'skeleton') {
     const productTerms = [...new Set([...source.matchAll(forbiddenSkeletonSemantics)].map(match => match[0]!.toLowerCase()))]
     if (productTerms.length) violations.push(`${from} puts product semantics in the skeleton: ${productTerms.join(', ')}`)

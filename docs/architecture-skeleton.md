@@ -73,7 +73,8 @@ contract/policy；provider、adapter、workflow、projection 和 surface 只能�
 长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。
 `implementation` 单独回答代码是否 ready，`runtime` 单独回答当前是否 inactive、shadow、active 或仍归 compat。
 纯 `contract` 没有进程、消费者或状态 owner，必须标记为 `runtime=static`，不能用 active/inactive 暗示它在运行或
-尚未运行；只有可执行模块才进入 active/inactive/shadow/compat 的所有权判断。
+尚未运行，也不得声明 `runtimeDependsOn`；纯 TypeScript host augmentation 不等于运行时注入。只有可执行模块才进入
+active/inactive/shadow/compat 的所有权判断。
 没有实现的 provider 与已经实现但尚未激活的 provider 会分别进入 `nativeCutoverBlockers`；active workflow 的
 effect provider 必须同样 active。这样“状态机代码写完”和“具备真实外部执行能力”不会再被混为一谈。
 
