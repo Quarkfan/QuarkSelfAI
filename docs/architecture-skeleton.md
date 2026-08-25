@@ -108,6 +108,8 @@ readiness 会像 service 一样沿 required effect 的唯一 provider 递归展�
 不形成自环。
 service/effect provider 的派生边同样服从 migration 单向边界：任何 skeleton/feature 都不能依赖 migration provider。
 临时实现必须由迁移层主动调用长期能力，而不能伪装成 capability 被长期模块反向消费。
+module-catalog 统一输出包含 `runtime`、`mount`、`service`、`effect` 四种边的运行图和传递闭包；目录校验、产品
+readiness 与控制台必须消费这一个分析结果，不得分别重新实现 provider 查找规则。
 
 ## 功能
 

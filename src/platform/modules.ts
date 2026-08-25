@@ -67,6 +67,19 @@ export interface ModuleSummary {
   readonly runtime: Record<ModuleRuntime, number>
 }
 
+export type ModuleRuntimeEdgeKind = 'runtime' | 'mount' | 'service' | 'effect'
+
+export interface ModuleRuntimeEdge {
+  readonly from: string
+  readonly to: string
+  readonly kind: ModuleRuntimeEdgeKind
+  readonly capability?: string
+}
+
+export interface ModuleRuntimeGraph {
+  readonly edges: readonly ModuleRuntimeEdge[]
+}
+
 const classifications = new Set<ModuleClassification>(['skeleton', 'feature', 'migration'])
 const layers = new Set<ModuleLayer>(['kernel', 'contract', 'adapter', 'provider', 'policy', 'workflow', 'projection', 'surface', 'operations'])
 const implementations = new Set<ModuleImplementation>(['planned', 'partial', 'ready'])
@@ -290,6 +303,26 @@ export function summarizeModules(catalog: AssistantModuleCatalog): ModuleSummary
   return summary
 }
 
+export function analyzeModuleRuntimeGraph(catalog: AssistantModuleCatalog): ModuleRuntimeGraph {
+  const serviceProviders = new Map(catalog.modules.flatMap(module => module.providesServices.map(service => [service, module] as const)))
+  const effectProviders = new Map(catalog.modules.flatMap(module => module.providesEffects.map(effect => [effect, module] as const)))
+  return { edges: runtimeEdges(catalog.modules, serviceProviders, effectProviders) }
+}
+
+export function moduleRuntimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readonly string[]): string[] {
+  const dependencies = new Map(catalog.modules.map(module => [module.id, [] as string[]]))
+  for (const edge of analyzeModuleRuntimeGraph(catalog).edges) dependencies.get(edge.from)?.push(edge.to)
+  const closure = new Set<string>()
+  const pending = [...roots]
+  while (pending.length) {
+    const id = pending.shift()!
+    if (closure.has(id)) continue
+    closure.add(id)
+    pending.push(...(dependencies.get(id) ?? []))
+  }
+  return [...closure]
+}
+
 function parseModule(value: unknown): AssistantModuleDescriptor {
   if (!isRecord(value)) throw new Error('each module descriptor must be an object')
   if ('status' in value) throw new Error('module uses ambiguous legacy status; use implementation and runtime')
@@ -427,6 +460,8 @@ function assertAcyclic(
   serviceProviders: ReadonlyMap<string, AssistantModuleDescriptor>,
   effectProviders: ReadonlyMap<string, AssistantModuleDescriptor>,
 ): void {
+  const runtimeDependencies = new Map(modules.map(module => [module.id, [] as string[]]))
+  for (const edge of runtimeEdges(modules, serviceProviders, effectProviders)) runtimeDependencies.get(edge.from)?.push(edge.to)
   const visiting = new Set<string>()
   const visited = new Set<string>()
   const visit = (id: string, path: readonly string[]): void => {
@@ -434,20 +469,32 @@ function assertAcyclic(
     if (visited.has(id)) return
     visiting.add(id)
     const module = byId.get(id)
-    const serviceDependencies = module?.requiresServices.map(service => serviceProviders.get(service)!.id) ?? []
-    const effectDependencies = module?.requiresEffects
-      .flatMap(effect => {
-        const provider = effectProviders.get(effect)?.id
-        return provider && provider !== id ? [provider] : []
-      }) ?? []
-    for (const dependency of [
-      ...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []),
-      ...serviceDependencies, ...effectDependencies,
-    ]) visit(dependency, [...path, id])
+    for (const dependency of [...(module?.dependsOn ?? []), ...(runtimeDependencies.get(id) ?? [])]) visit(dependency, [...path, id])
     visiting.delete(id)
     visited.add(id)
   }
   for (const module of modules) visit(module.id, [])
+}
+
+function runtimeEdges(
+  modules: readonly AssistantModuleDescriptor[],
+  serviceProviders: ReadonlyMap<string, AssistantModuleDescriptor>,
+  effectProviders: ReadonlyMap<string, AssistantModuleDescriptor>,
+): ModuleRuntimeEdge[] {
+  return modules.flatMap(module => [
+    ...module.runtimeDependsOn.map(to => ({ from: module.id, to, kind: 'runtime' as const })),
+    ...module.mounts.map(to => ({ from: module.id, to, kind: 'mount' as const })),
+    ...module.requiresServices.flatMap(capability => {
+      const provider = serviceProviders.get(capability)
+      return provider ? [{ from: module.id, to: provider.id, kind: 'service' as const, capability }] : []
+    }),
+    ...module.requiresEffects.flatMap(capability => {
+      const provider = effectProviders.get(capability)
+      return provider && provider.id !== module.id
+        ? [{ from: module.id, to: provider.id, kind: 'effect' as const, capability }]
+        : []
+    }),
+  ])
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

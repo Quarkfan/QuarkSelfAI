@@ -1,4 +1,4 @@
-import type { AssistantModuleCatalog, ModuleCatalogProvider } from '../platform/modules.js'
+import { moduleRuntimeDependencyClosure, type AssistantModuleCatalog, type ModuleCatalogProvider } from '../platform/modules.js'
 import type {
   KernelStatusProvider,
   OperationalReadinessProvider,
@@ -25,7 +25,7 @@ export class NativeProductRuntimeStatus implements RuntimeStatusProvider {
       ...this.manifest.capabilities.filter(capability => capability.required).flatMap(capability => capability.modules),
       this.storageModuleId,
     ]
-    const runtimeDependencies = runtimeDependencyClosure(this.catalog, requiredRoots)
+    const runtimeDependencies = moduleRuntimeDependencyClosure(this.catalog, requiredRoots)
       .filter(id => !requiredRoots.includes(id))
     capabilities.push(this.capability('platform-runtime-dependencies', true, runtimeDependencies, kernel.state))
     const required = capabilities.filter(capability => capability.required)
@@ -78,8 +78,8 @@ export class NativeProductReadiness implements OperationalReadinessProvider {
       ...this.manifest.capabilities.filter(capability => capability.required).flatMap(capability => capability.modules),
       this.storageModuleId,
     ]
-    const listed = [...new Set([...roots, ...runtimeDependencyClosure(catalog, roots)])]
-    const required = new Set(runtimeDependencyClosure(catalog, requiredRoots))
+    const listed = [...new Set([...roots, ...moduleRuntimeDependencyClosure(catalog, roots)])]
+    const required = new Set(moduleRuntimeDependencyClosure(catalog, requiredRoots))
     const modules = new Map(catalog.modules.map(module => [module.id, module]))
     const items = listed.map(id => {
       const module = modules.get(id)
@@ -98,28 +98,4 @@ export class NativeProductReadiness implements OperationalReadinessProvider {
       summary: { requiredModules: required.size, readyModules: required.size - blockers.length },
     }
   }
-}
-
-/** Resolve provider/runtime ownership transitively without treating source imports as live services. */
-function runtimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readonly string[]): string[] {
-  const modules = new Map(catalog.modules.map(module => [module.id, module]))
-  const serviceProviders = new Map(catalog.modules.flatMap(module => module.providesServices.map(service => [service, module.id] as const)))
-  const effectProviders = new Map(catalog.modules.flatMap(module => module.providesEffects.map(effect => [effect, module.id] as const)))
-  const closure = new Set<string>()
-  const pending = [...roots]
-  while (pending.length) {
-    const id = pending.shift()!
-    if (closure.has(id)) continue
-    closure.add(id)
-    const module = modules.get(id)
-    const serviceDependencies = module?.requiresServices.map(service => serviceProviders.get(service)!) ?? []
-    const effectDependencies = module?.requiresEffects.flatMap(effect => {
-      const provider = effectProviders.get(effect)
-      return provider && provider !== id ? [provider] : []
-    }) ?? []
-    for (const dependency of [
-      ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []), ...serviceDependencies, ...effectDependencies,
-    ]) pending.push(dependency)
-  }
-  return [...closure]
 }

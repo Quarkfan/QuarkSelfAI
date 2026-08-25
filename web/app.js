@@ -26,17 +26,9 @@ function showMonitor(m) {
 
 function showModule(m) {
   const plugin = m.plugin ? `${m.plugin.profileId} → ${m.plugin.packageExport}` : '—'
-  const modules = dashboard?.architecture?.modules ?? []
-  const providers = [
-    ...(m.requiresServices ?? []).map((capability) => {
-      const provider = modules.find((candidate) => candidate.providesServices?.includes(capability))
-      return `service:${capability} → ${provider?.id ?? '缺失'}`
-    }),
-    ...(m.requiresEffects ?? []).map((capability) => {
-      const provider = modules.find((candidate) => candidate.providesEffects?.includes(capability))
-      return `effect:${capability} → ${provider?.id ?? '缺失'}`
-    }),
-  ]
+  const providers = (dashboard?.architecture?.runtimeGraph?.edges ?? [])
+    .filter((edge) => edge.from === m.id && (edge.kind === 'service' || edge.kind === 'effect'))
+    .map((edge) => `${edge.kind}:${edge.capability} → ${edge.to}`)
   showDetail('ARCHITECTURE MODULE', m.id, [
     ['归属', m.classification],
     ['层', m.layer],

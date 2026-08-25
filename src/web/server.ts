@@ -12,7 +12,7 @@ import { PolicyAuthoringService, policyProposalId } from '../collaboration/polic
 import { matchesPolicy } from '../policy/engine.js'
 import type { AssistantPolicyDocument } from '../collaboration/policy-model.js'
 import { eventToPolicySample } from '../collaboration/policy-samples.js'
-import { summarizeModules, type ModuleCatalogProvider } from '../platform/modules.js'
+import { analyzeModuleRuntimeGraph, summarizeModules, type ModuleCatalogProvider } from '../platform/modules.js'
 import type { ConsoleServerConfig } from './config.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
@@ -118,6 +118,7 @@ async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusPr
     architecture: {
       summary: summarizeModules(moduleCatalog),
       modules: moduleCatalog.modules,
+      runtimeGraph: analyzeModuleRuntimeGraph(moduleCatalog),
     },
     generatedAt: new Date().toISOString(),
   }

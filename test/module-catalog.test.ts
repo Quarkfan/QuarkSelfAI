@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { analyzeEffectCoverage, summarizeModules, validateAssetOwnership, validateModuleCatalog, validateSourceOwnership } from '../src/platform/modules.js'
+import {
+  analyzeEffectCoverage, analyzeModuleRuntimeGraph, moduleRuntimeDependencyClosure, summarizeModules,
+  validateAssetOwnership, validateModuleCatalog, validateSourceOwnership,
+} from '../src/platform/modules.js'
 import { loadModuleCatalog } from '../src/catalog/file-provider.js'
 
 test('classifies every current module as skeleton, feature, or migration', async () => {
@@ -458,6 +461,32 @@ test('keeps product effects and migration capabilities out of the skeleton', () 
       },
     ],
   }), /feature module feature cannot require effect temporary.effect.v1 from migration module temporary/)
+})
+
+test('builds one canonical runtime graph for hosts, mounts, services, and effects', () => {
+  const catalog = validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'runtime', classification: 'skeleton', layer: 'kernel', implementation: 'ready', runtime: 'active', source: 'runtime', owns: [], dependsOn: [] },
+      {
+        id: 'provider', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'active',
+        source: 'provider', owns: [], dependsOn: [], providesServices: ['examplePort'], providesEffects: ['example.run.v1'],
+      },
+      { id: 'mounted', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'active', source: 'mounted', owns: [], dependsOn: [] },
+      {
+        id: 'composition', classification: 'feature', layer: 'operations', implementation: 'ready', runtime: 'active',
+        source: 'composition', owns: [], dependsOn: [], runtimeDependsOn: ['runtime'], mounts: ['mounted'],
+        requiresServices: ['examplePort'], requiresEffects: ['example.run.v1'],
+      },
+    ],
+  })
+  assert.deepEqual(analyzeModuleRuntimeGraph(catalog).edges.filter(edge => edge.from === 'composition'), [
+    { from: 'composition', to: 'runtime', kind: 'runtime' },
+    { from: 'composition', to: 'mounted', kind: 'mount' },
+    { from: 'composition', to: 'provider', kind: 'service', capability: 'examplePort' },
+    { from: 'composition', to: 'provider', kind: 'effect', capability: 'example.run.v1' },
+  ])
+  assert.deepEqual(moduleRuntimeDependencyClosure(catalog, ['composition']), ['composition', 'runtime', 'mounted', 'provider'])
 })
 
 test('requires plugin profile ids and package exports to have one module owner', () => {

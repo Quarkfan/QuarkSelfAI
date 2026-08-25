@@ -15,6 +15,7 @@ test('renders source, runtime assets, and module dependencies as separate consol
   assert.match(application, /m\.providesEffects/)
   assert.match(application, /m\.mounts/)
   assert.match(application, /解析后的能力实现/)
+  assert.match(application, /runtimeGraph\?\.edges/)
   assert.match(application, /m\.assets/)
   assert.match(application, /showModule\(item\)/)
   assert.match(document, /点击模块查看源码、运行资产与依赖/)
