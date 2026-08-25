@@ -184,6 +184,7 @@ const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const dshSourceModules = new Set<string>()
 const injectedRuntimeRequirements = new Map<string, Set<string>>()
+const forbiddenSkeletonSemantics = /\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai)\b|常东旭|任永强|张以宁/gi
 const violations: string[] = []
 for (const filename of files) {
   const source = await readFile(filename, 'utf8')
@@ -191,6 +192,10 @@ for (const filename of files) {
   const owner = ownerBySource.get(from)
   const ownerModule = moduleById.get(owner ?? '')
   if (owner && /@deepseek-ai\/(?:cordis|dsh-)/.test(source)) dshSourceModules.add(owner)
+  if (ownerModule?.classification === 'skeleton') {
+    const productTerms = [...new Set([...source.matchAll(forbiddenSkeletonSemantics)].map(match => match[0]!.toLowerCase()))]
+    if (productTerms.length) violations.push(`${from} puts product semantics in the skeleton: ${productTerms.join(', ')}`)
+  }
   if (ownerModule?.classification === 'feature') {
     const required = injectedRuntimeRequirements.get(ownerModule.id) ?? new Set<string>()
     if (/\bquarkWorkflows\b/.test(source)) required.add('durable-workflow-runtime')
