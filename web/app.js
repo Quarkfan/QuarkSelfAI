@@ -26,6 +26,17 @@ function showMonitor(m) {
 
 function showModule(m) {
   const plugin = m.plugin ? `${m.plugin.profileId} → ${m.plugin.packageExport}` : '—'
+  const modules = dashboard?.architecture?.modules ?? []
+  const providers = [
+    ...(m.requiresServices ?? []).map((capability) => {
+      const provider = modules.find((candidate) => candidate.providesServices?.includes(capability))
+      return `service:${capability} → ${provider?.id ?? '缺失'}`
+    }),
+    ...(m.requiresEffects ?? []).map((capability) => {
+      const provider = modules.find((candidate) => candidate.providesEffects?.includes(capability))
+      return `effect:${capability} → ${provider?.id ?? '缺失'}`
+    }),
+  ]
   showDetail('ARCHITECTURE MODULE', m.id, [
     ['归属', m.classification],
     ['层', m.layer],
@@ -37,8 +48,12 @@ function showModule(m) {
     ['当前宿主', m.hostedBy ?? (m.runtime === 'static' ? '静态契约' : m.runtime === 'active' ? '原生' : '—')],
     ['源码依赖', m.dependsOn?.join(', ') || '无'],
     ['运行依赖', m.runtimeDependsOn?.join(', ') || '无'],
+    ['组合挂载', m.mounts?.join(', ') || '无'],
+    ['需要 Services', m.requiresServices?.join(', ') || '无'],
+    ['提供 Services', m.providesServices?.join(', ') || '无'],
     ['需要 Effects', m.requiresEffects?.join(', ') || '无'],
     ['提供 Effects', m.providesEffects?.join(', ') || '无'],
+    ['解析后的能力实现', providers.join(', ') || '无'],
     ['插件绑定', plugin],
     ['退出条件', m.exitCriteria ?? '—'],
   ])
@@ -95,7 +110,7 @@ function render(data) {
     ? `${moduleSummary.classification.skeleton} 骨架 · ${moduleSummary.runtime.static} 静态契约 · ${moduleSummary.implementation.ready}/${moduleSummary.total} 已实现 · ${moduleSummary.runtime.compat} 兼容层`
     : '—'
   $('#architecture-table').innerHTML = architecture?.modules?.length
-    ? architecture.modules.map((m) => `<tr class="clickable" data-detail="module" data-id="${esc(m.id)}"><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'static' ? '静态契约' : m.runtime === 'active' ? '原生' : '—'))}</td><td><small>源码依赖 ${esc(m.dependsOn?.length ?? 0)} · 运行依赖 ${esc(m.runtimeDependsOn?.length ?? 0)} · 资产 ${esc(m.assets?.length ?? 0)}</small></td></tr>`).join('')
+    ? architecture.modules.map((m) => `<tr class="clickable" data-detail="module" data-id="${esc(m.id)}"><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'static' ? '静态契约' : m.runtime === 'active' ? '原生' : '—'))}</td><td><small>源码 ${esc(m.dependsOn?.length ?? 0)} · Service ${esc(m.requiresServices?.length ?? 0)}/${esc(m.providesServices?.length ?? 0)} · Effect ${esc(m.requiresEffects?.length ?? 0)}/${esc(m.providesEffects?.length ?? 0)} · 挂载 ${esc(m.mounts?.length ?? 0)} · 资产 ${esc(m.assets?.length ?? 0)}</small></td></tr>`).join('')
     : emptyRow('暂无模块目录', 7)
   if (runtime.conversationUrl) {
     dshUrl = runtime.conversationUrl
