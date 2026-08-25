@@ -4,7 +4,7 @@
     {
       "id": "product-platform",
       "required": true,
-      "modules": ["native-product-composition", "assistant-module-catalog", "control-console", "durable-state-host", "feishu-channel", "dynamic-plugin-authoring"]
+      "modules": ["native-product-profile", "native-product-composition", "assistant-module-catalog", "control-console", "durable-state-host", "feishu-channel", "dynamic-plugin-authoring"]
     },
     {
       "id": "delegated-execution",

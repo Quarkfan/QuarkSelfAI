@@ -43,7 +43,8 @@ npm run takeover:preflight
 npm start
 ```
 
-`npm start` 默认同时监管 DSH `feishu-assistant` profile；只有测试或故障诊断才设置
+兼容入口的 `npm start` 默认监管 DSH `feishu-assistant` profile；长期原生入口监管隔离的
+`feishu-assistant-native`。只有测试或故障诊断才设置
 `ASSISTANT_KERNEL=off`。启动器优先使用项目内固定版本的 `node_modules/.bin/dsh`，本地开发可回退到同级
 `github/deepseek-harness` 正式 checkout，服务器则必须安装锁定版本。DSH profile 尚未初始化时先执行下方
 profile 接入命令。
@@ -86,7 +87,9 @@ npm run register:compat-state
 
 从源码验证时，DSH checkout 固定放在同级 `github/deepseek-harness`。隔离验证使用 `var/dsh-validation`；
 本机现网使用 `var/dsh` 下的 `feishu-assistant` profile；它组合 DSH base、web-app 与 QuarkSelfAI Bundle，
-由父守护统一监管。清理命令只删除终态记录，拒绝在工作队列非空时运行，并保留消息幂等检查点与活动影子窗口。
+并叠加 compatibility-only overlay，由父守护统一监管。原生切换前使用
+`node --import tsx scripts/setup-native-dsh-profile.ts` 准备独立的 `feishu-assistant-native`。清理命令只删除
+终态记录，拒绝在工作队列非空时运行，并保留消息幂等检查点与活动影子窗口。
 
 ## 文档入口
 

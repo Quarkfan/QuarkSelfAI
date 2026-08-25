@@ -16,7 +16,7 @@ export function loadNativeProductConfig(
   cwd = process.cwd(),
 ): NativeProductConfig {
   if (env.ASSISTANT_RUNTIME !== 'native') throw new Error('native product entry requires ASSISTANT_RUNTIME=native')
-  const kernel = loadAssistantKernelConfig(env, cwd, { kernelProfile: 'feishu-assistant' })
+  const kernel = loadAssistantKernelConfig(env, cwd, { kernelProfile: 'feishu-assistant-native' })
   if (kernel.kernel.mode !== 'dsh') throw new Error('native product entry requires ASSISTANT_KERNEL=dsh')
   const missingActivation = manifest.requiredEnvironment.filter(name => env[name] !== 'true')
   if (missingActivation.length) throw new Error(`native product activation is incomplete: ${missingActivation.join(',')}`)

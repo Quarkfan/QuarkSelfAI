@@ -49,7 +49,9 @@ ASSISTANT_WORKSPACE_ROOTS=["/Users/your-name/BlackLakeWork","/Users/your-name/Do
 最终配置树。它只运行 `--dump-config`，不会启动 Harness。首次初始化命令见 DSH 官方 `plugin --profile`
 流程；本机验证 profile 固定放在 `var/dsh-validation`，不作为生产配置。正式本地 profile 使用
 `npm run setup:dsh` 在 `var/dsh` 初始化；脚本会先核验 DSH 版本和 commit，再把本项目以 link 方式加入
-`feishu-assistant`，不会修改同级 DSH checkout。
+`feishu-assistant` 并写入 compatibility-only overlay，不会修改同级 DSH checkout。长期原生 profile 使用
+`node --import tsx scripts/setup-native-dsh-profile.ts` 初始化为 `feishu-assistant-native`；该入口写入空的
+profile-owned patch，只加载本项目长期 bundle。两个 profile 不得指向同一个名字。
 
 ## 在 DSH 会话里创建临时插件
 

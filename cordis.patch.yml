@@ -91,9 +91,8 @@
       name: '@quarkfan/quark-self-ai/action-ledger'
     - id: quark-agent-action-worker
       name: '@quarkfan/quark-self-ai/action-worker'
-      # Claims approved durable actions and gives each one an exact DSH parent
-      # session. Keep disabled while compatibility execution owns live work.
-      disabled: !!js process.env.QUARK_NATIVE_ACTION_WORKER !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Claims approved durable actions and gives each one an exact DSH parent session.
+      disabled: !!js process.env.QUARK_NATIVE_ACTION_WORKER !== 'true'
       config:
         enabled: true
         workerId: !!js process.env.QUARK_ACTION_WORKER_ID || ('action-' + process.pid)
@@ -125,24 +124,21 @@
         maxAttempts: 5
     - id: quark-dsh-conversation-effects
       name: '@quarkfan/quark-self-ai/dsh-conversation-effects'
-      # Creates or resumes user-visible DSH sessions. Keep disabled until the
-      # native Feishu consumer owns intake and result-return correlation.
-      disabled: !!js process.env.QUARK_NATIVE_CONVERSATION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Creates or resumes user-visible DSH sessions after explicit product activation.
+      disabled: !!js process.env.QUARK_NATIVE_CONVERSATION_EFFECTS !== 'true'
       config:
         enabled: true
         titlePrefix: 飞书直办
     - id: quark-feishu-context-effects
       name: '@quarkfan/quark-self-ai/feishu-context-effects'
-      # Read-only, but it must share the same intake ownership window so the
-      # compatibility host and native workflow do not duplicate API traffic.
-      disabled: !!js process.env.QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Read-only context loading shares the same explicit intake ownership window.
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS !== 'true'
       config:
         executable: lark-cli
     - id: quark-feishu-focus-discovery-effects
       name: '@quarkfan/quark-self-ai/feishu-focus-discovery-effects'
-      # Read-only low-frequency searches still share intake ownership. Keep
-      # absent while compatibility polling owns the same Feishu search windows.
-      disabled: !!js process.env.QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Read-only low-frequency searches share the explicit intake ownership window.
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS !== 'true'
       config:
         executable: lark-cli
         searchPageLimit: 10
@@ -150,9 +146,8 @@
         feedPageLimit: 100
     - id: quark-message-intake
       name: '@quarkfan/quark-self-ai/message-intake'
-      # The definitions are loadable, but compat remains the sole production
-      # intake/projection owner until a maintenance-window cutover.
-      disabled: !!js process.env.QUARK_NATIVE_MESSAGE_INTAKE !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Intake/projection starts only after explicit single-owner activation.
+      disabled: !!js process.env.QUARK_NATIVE_MESSAGE_INTAKE !== 'true'
       config:
         enabled: true
         ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
@@ -181,14 +176,14 @@
       name: '@quarkfan/quark-self-ai/intake-interaction-effects'
       # Card callbacks are consumers too: keep the provider under the same
       # single-owner cutover gate as native message intake.
-      disabled: !!js process.env.QUARK_NATIVE_INTERACTION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js process.env.QUARK_NATIVE_INTERACTION_EFFECTS !== 'true'
       config:
         ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
     - id: quark-dsh-reasoning-effects
       name: '@quarkfan/quark-self-ai/dsh-reasoning-effects'
       # Structured policy reasoning is independent from user-visible DSH
       # conversations, but must cut over with the native intake owner.
-      disabled: !!js process.env.QUARK_NATIVE_REASONING_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js process.env.QUARK_NATIVE_REASONING_EFFECTS !== 'true'
       config:
         enabled: true
         provider: blacklake-deepseek
@@ -198,7 +193,7 @@
       name: '@quarkfan/quark-self-ai/dida-task-effects'
       # Adapter preparation. Cleanup is bounded by authorization evidence carried
       # in durable workflow state. Keep disabled until real replay and cutover.
-      disabled: !!js process.env.QUARK_NATIVE_DIDA_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js process.env.QUARK_NATIVE_DIDA_EFFECTS !== 'true'
       config:
         executable: dida
         projectIds: !!js >-
@@ -207,16 +202,15 @@
       name: '@quarkfan/quark-self-ai/dida-projection-effects'
       # Writes only under durable owner evidence carried by each effect. Keep
       # disabled until projection shadow replay and single-owner cutover.
-      disabled: !!js process.env.QUARK_NATIVE_DIDA_PROJECTION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js process.env.QUARK_NATIVE_DIDA_PROJECTION_EFFECTS !== 'true'
       config:
         executable: dida
         projectIds: !!js >-
           [process.env.DIDA_PROJECT_ID, process.env.DIDA_FOLLOWUP_PROJECT_ID].filter(Boolean)
     - id: quark-dida-maintenance
       name: '@quarkfan/quark-self-ai/dida-maintenance'
-      # Definitions are ready, but task-system and notification effect handlers
-      # must cut over first. Never create native instances during compat ownership.
-      disabled: !!js process.env.QUARK_NATIVE_DIDA_MAINTENANCE !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Definitions are ready, but task-system and notification handlers must activate first.
+      disabled: !!js process.env.QUARK_NATIVE_DIDA_MAINTENANCE !== 'true'
       config:
         enabled: true
         projectId: !!js process.env.DIDA_PROJECT_ID
@@ -241,10 +235,9 @@
           maximumDeletesPerRun: 50
     - id: quark-codex-session-effects
       name: '@quarkfan/quark-self-ai/codex-session-effects'
-      # Read-only inspection plus owner-authorized archive/delete. Keep absent
-      # until compat session ownership is frozen and exact workflows migrate.
+      # Read-only inspection plus owner-authorized archive/delete requires explicit activation.
       disabled: !!js >-
-        process.env.QUARK_NATIVE_CODEX_SESSION_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat' || !process.env.CODEX_APP_SERVER_SOCKET
+        process.env.QUARK_NATIVE_CODEX_SESSION_EFFECTS !== 'true' || !process.env.CODEX_APP_SERVER_SOCKET
       config:
         executable: codex
         appServerSocket: !!js process.env.CODEX_APP_SERVER_SOCKET
@@ -254,9 +247,8 @@
         workspace: !!js process.env.QUARK_OWNER_WORKSPACE || '/Users/edy/BlackLakeWork'
     - id: quark-session-lifecycle
       name: '@quarkfan/quark-self-ai/session-lifecycle'
-      # Archive/delete effects are irreversible. Keep the plugin absent until
-      # compat session ownership is frozen and its audited workflow state imports.
-      disabled: !!js process.env.QUARK_NATIVE_SESSION_LIFECYCLE !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Archive/delete effects are irreversible and remain behind explicit activation.
+      disabled: !!js process.env.QUARK_NATIVE_SESSION_LIFECYCLE !== 'true'
       config:
         enabled: true
         pollIntervalMs: 21600000
@@ -276,8 +268,7 @@
     - id: quark-xiaowei-research
       name: '@quarkfan/quark-self-ai/xiaowei-research'
       # Requests require durable owner approval and one Feishu channel owner.
-      # The native feature stays absent throughout compatibility ownership.
-      disabled: !!js process.env.QUARK_NATIVE_XIAOWEI_RESEARCH !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js process.env.QUARK_NATIVE_XIAOWEI_RESEARCH !== 'true'
       config:
         enabled: true
         agentName: 智造湖小维
@@ -298,9 +289,8 @@
             projectId: !!js process.env.DIDA_PROJECT_ID
     - id: quark-followup
       name: '@quarkfan/quark-self-ai/followup'
-      # The compatibility host remains the only workday timer, card callback,
-      # contact resolution, and reply consumer until an audited cutover.
-      disabled: !!js process.env.QUARK_NATIVE_FOLLOWUP !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Workday timer, card callback, contact resolution and reply consumption activate together.
+      disabled: !!js process.env.QUARK_NATIVE_FOLLOWUP !== 'true'
       config:
         enabled: true
         projectId: !!js process.env.DIDA_FOLLOWUP_PROJECT_ID
@@ -322,24 +312,22 @@
             projectId: !!js process.env.DIDA_FOLLOWUP_PROJECT_ID
     - id: quark-feishu-ingress
       name: '@quarkfan/quark-self-ai/feishu-ingress'
-      # This is the prepared native replacement. It must stay disabled while
-      # bridge-compat owns the production server-side subscriptions.
-      disabled: !!js process.env.QUARK_NATIVE_FEISHU_INGRESS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      # Server-side subscriptions start only after explicit single-owner activation.
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_INGRESS !== 'true'
       config:
         startConsumer: true
     - id: quark-feishu-workflow-effects
       name: '@quarkfan/quark-self-ai/feishu-workflow-effects'
       # Contains external writes. Keep absent until the approved maintenance
       # window has transferred notification and outbound-message ownership.
-      disabled: !!js process.env.QUARK_NATIVE_FEISHU_EFFECTS !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js process.env.QUARK_NATIVE_FEISHU_EFFECTS !== 'true'
       config:
         executable: lark-cli
         ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
     - id: quark-collaboration-learning
       name: '@quarkfan/quark-self-ai/collaboration-learning'
-      # Compat still owns observations, proposals and owner-decision state.
       # Enable only inside the approved state-ownership maintenance window.
-      disabled: !!js process.env.QUARK_NATIVE_COLLABORATION_LEARNING !== 'true' || process.env.ASSISTANT_RUNTIME === 'compat'
+      disabled: !!js process.env.QUARK_NATIVE_COLLABORATION_LEARNING !== 'true'
       config:
         enabled: true
         evaluationIntervalMs: 86400000

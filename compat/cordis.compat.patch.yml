@@ -1,0 +1,36 @@
+# Compatibility-only profile overlay. This layer keeps every not-yet-cut-over
+# owner absent even if a machine accidentally carries activation flags.
+- id: quark-agent-action-worker
+  disabled: true
+- id: quark-dsh-conversation-effects
+  disabled: true
+- id: quark-feishu-context-effects
+  disabled: true
+- id: quark-feishu-focus-discovery-effects
+  disabled: true
+- id: quark-message-intake
+  disabled: true
+- id: quark-intake-interaction-effects
+  disabled: true
+- id: quark-dsh-reasoning-effects
+  disabled: true
+- id: quark-dida-task-effects
+  disabled: true
+- id: quark-dida-projection-effects
+  disabled: true
+- id: quark-dida-maintenance
+  disabled: true
+- id: quark-codex-session-effects
+  disabled: true
+- id: quark-session-lifecycle
+  disabled: true
+- id: quark-xiaowei-research
+  disabled: true
+- id: quark-followup
+  disabled: true
+- id: quark-feishu-ingress
+  disabled: true
+- id: quark-feishu-workflow-effects
+  disabled: true
+- id: quark-collaboration-learning
+  disabled: true

@@ -53,6 +53,7 @@ test('native product entry fails closed on mode, activation gates, and inactive 
   assert.throws(() => loadNativeProductConfig(manifest, { ...environment, QUARK_NATIVE_MESSAGE_INTAKE: 'false' }), /activation is incomplete: QUARK_NATIVE_MESSAGE_INTAKE/)
   assert.throws(() => loadNativeProductConfig(manifest, { ...environment, DIDA_PROJECT_ID: '' }), /configuration is incomplete: DIDA_PROJECT_ID/)
   const config = loadNativeProductConfig(manifest, environment)
+  assert.equal(config.kernel.mode === 'dsh' && config.kernel.profile, 'feishu-assistant-native')
   await assert.rejects(() => createNativeProductApplication(config, manifest), /native product modules are not ready/)
 })
 

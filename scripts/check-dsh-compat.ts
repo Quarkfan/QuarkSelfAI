@@ -9,6 +9,7 @@ const exec = promisify(execFile)
 const projectRoot = process.cwd()
 const checkout = resolve(projectRoot, process.env.DSH_CHECKOUT ?? '../deepseek-harness')
 const validationHome = resolve(projectRoot, process.env.DSH_VALIDATION_HOME ?? 'var/dsh-validation')
+const compatibilityOverlay = resolve(projectRoot, 'compat/cordis.compat.patch.yml')
 const baseline = JSON.parse(await readFile(resolve(projectRoot, 'compat/dsh-baseline.json'), 'utf8')) as {
   version: string
   sourceCommit: string
@@ -45,7 +46,7 @@ const dynamicPluginPolicy = await import(resolve(projectRoot, 'dist/runtime/dyna
 assert.equal(typeof dynamicPluginPolicy.apply, 'function', 'dynamic plugin approval policy must expose apply(ctx)')
 
 const { stdout: dump } = await exec('corepack', [
-  'pnpm', 'dsh', '--profile', 'feishu-assistant', '--dump-config',
+  'pnpm', 'dsh', '--profile', 'feishu-assistant', '--patch', compatibilityOverlay, '--dump-config',
 ], {
   cwd: checkout,
   env: {
@@ -69,26 +70,36 @@ assert.match(dump, /id: quark-durable-state[\s\S]*name: '@quarkfan\/quark-self-a
 assert.match(dump, /id: quark-action-ledger[\s\S]*name: '@quarkfan\/quark-self-ai\/action-ledger'/)
 assert.match(dump, /id: quark-durable-workflows[\s\S]*name: '@quarkfan\/quark-self-ai\/durable-workflows'/)
 assert.match(dump, /id: quark-dsh-conversation-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dsh-conversation-effects'/)
-assert.match(dump, /quark-dsh-conversation-effects[\s\S]*QUARK_NATIVE_CONVERSATION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /quark-dsh-conversation-effects[\s\S]*QUARK_NATIVE_CONVERSATION_EFFECTS/)
 assert.match(dump, /id: quark-feishu-context-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-context-effects'/)
-assert.match(dump, /quark-feishu-context-effects[\s\S]*QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /quark-feishu-context-effects[\s\S]*QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS/)
 assert.match(dump, /id: quark-feishu-focus-discovery-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-focus-discovery-effects'/)
-assert.match(dump, /quark-feishu-focus-discovery-effects[\s\S]*QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /quark-feishu-focus-discovery-effects[\s\S]*QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS/)
 assert.match(dump, /id: quark-intake-interaction-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/intake-interaction-effects'/)
-assert.match(dump, /quark-intake-interaction-effects[\s\S]*QUARK_NATIVE_INTERACTION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /quark-intake-interaction-effects[\s\S]*QUARK_NATIVE_INTERACTION_EFFECTS/)
 assert.match(dump, /id: quark-dsh-reasoning-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dsh-reasoning-effects'/)
-assert.match(dump, /quark-dsh-reasoning-effects[\s\S]*QUARK_NATIVE_REASONING_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /quark-dsh-reasoning-effects[\s\S]*QUARK_NATIVE_REASONING_EFFECTS/)
 assert.match(dump, /id: quark-dida-projection-effects[\s\S]*name: '@quarkfan\/quark-self-ai\/dida-projection-effects'/)
-assert.match(dump, /quark-dida-projection-effects[\s\S]*QUARK_NATIVE_DIDA_PROJECTION_EFFECTS[\s\S]*ASSISTANT_RUNTIME === 'compat'/)
+assert.match(dump, /quark-dida-projection-effects[\s\S]*QUARK_NATIVE_DIDA_PROJECTION_EFFECTS/)
 assert.match(dump, /id: quark-feishu-ingress[\s\S]*name: '@quarkfan\/quark-self-ai\/feishu-ingress'/)
-assert.match(dump, /quark-feishu-ingress[\s\S]*QUARK_NATIVE_FEISHU_INGRESS[\s\S]*ASSISTANT_RUNTIME === 'compat'[\s\S]*startConsumer: true/)
+assert.match(dump, /quark-feishu-ingress[\s\S]*QUARK_NATIVE_FEISHU_INGRESS[\s\S]*startConsumer: true/)
+assert.doesNotMatch(dump, /ASSISTANT_RUNTIME/, 'long-term bundle must not contain migration selectors')
+for (const profileId of [
+  'quark-agent-action-worker',
+  'quark-message-intake',
+  'quark-dida-maintenance',
+  'quark-followup',
+  'quark-feishu-ingress',
+]) {
+  assert.match(dump, new RegExp(`id: ${profileId}\\n  disabled: true`), `compatibility overlay must disable ${profileId}`)
+}
 assert.match(dump, /id: quark-dynamic-plugin-policy[\s\S]*name: '@quarkfan\/quark-self-ai\/dynamic-plugin-policy'/)
 assert.match(dump, /id: dsh-tool-cordis[\s\S]*name: '@deepseek-ai\/dsh-tool-cordis'/)
 
 const ledgerPath = resolve(validationHome, 'compat-action-ledger.sqlite3')
 await rm(ledgerPath, { force: true })
 const activation = spawn(process.execPath, [
-  '--import', 'tsx/esm', 'apps/cli/src/bin.ts', '--profile', 'feishu-assistant', '--help',
+  '--import', 'tsx/esm', 'apps/cli/src/bin.ts', '--profile', 'feishu-assistant', '--patch', compatibilityOverlay, '--help',
 ], {
   cwd: checkout,
   env: {

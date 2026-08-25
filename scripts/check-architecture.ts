@@ -21,6 +21,7 @@ const packageName = typeof packageManifest.name === 'string' ? packageManifest.n
 assert.ok(packageName, 'package.json must define a package name')
 assert.ok(isRecord(packageManifest.exports), 'package.json must define exports')
 const profileSource = await readFile(resolve(root, 'cordis.patch.yml'), 'utf8')
+const compatibilityProfileSource = await readFile(resolve(root, 'compat/cordis.compat.patch.yml'), 'utf8')
 const productManifest = await loadProductCompositionManifest(catalog)
 const platformApiSource = await readFile(resolve(root, 'src/platform/index.ts'), 'utf8')
 const operationsContractSource = await readFile(resolve(root, 'src/platform/operations.ts'), 'utf8')
@@ -47,12 +48,12 @@ for (const { module, plugin } of pluginBindings) {
   const expectedPackage = plugin.packageExport === '.' ? packageName : `${packageName}/${plugin.packageExport.slice(2)}`
   const mounted = profilePlugins.get(plugin.profileId)
   assert.equal(mounted?.name, expectedPackage, `module ${module.id} plugin binding differs from cordis.patch.yml`)
-  const compatibilityGated = /disabled:[\s\S]*ASSISTANT_RUNTIME[^\n]*compat/.test(mounted?.block ?? '')
+  const activationGated = /disabled:[\s\S]*QUARK_NATIVE_[A-Z_]+/.test(mounted?.block ?? '')
   if (module.runtime === 'inactive') {
-    assert.ok(compatibilityGated, `inactive module ${module.id} must be compatibility-gated in cordis.patch.yml`)
+    assert.ok(activationGated, `inactive module ${module.id} must be activation-gated in cordis.patch.yml`)
   }
   if (module.runtime === 'active' || module.runtime === 'shadow') {
-    assert.ok(!compatibilityGated, `${module.runtime} module ${module.id} cannot be compatibility-gated in cordis.patch.yml`)
+    assert.ok(!activationGated, `${module.runtime} module ${module.id} cannot be native-activation-gated in cordis.patch.yml`)
   }
 }
 const boundProfileIds = new Set(pluginBindings.map(binding => binding.plugin.profileId))
@@ -61,14 +62,34 @@ for (const [profileId, mounted] of profilePlugins) {
     assert.ok(boundProfileIds.has(profileId), `local Cordis plugin ${profileId} is not owned by a module catalog binding`)
   }
 }
+assert.doesNotMatch(profileSource, /\b(?:ASSISTANT_RUNTIME|compatibility|compat)\b/i, 'long-term Cordis bundle cannot contain migration semantics')
 const profileCompositions = catalog.modules.filter(module => module.source === 'cordis.patch.yml')
-assert.equal(profileCompositions.length, 1, 'the bundled Cordis profile must have exactly one catalog owner')
+assert.equal(profileCompositions.length, 1, 'the native Cordis profile must have exactly one catalog owner')
 const profileComposition = profileCompositions[0]!
-const compatibilityAwareProfile = /ASSISTANT_RUNTIME[^\n]*compat/.test(profileSource)
-assert.equal(profileComposition.classification, compatibilityAwareProfile ? 'migration' : 'feature', 'Cordis profile classification must reflect compatibility awareness')
-assert.ok(profileComposition.runtimeDependsOn.includes('dsh-runtime'), 'the Cordis profile composition must depend on the DSH runtime')
+assert.equal(profileComposition.id, 'native-product-profile', 'the long-term bundle must be owned by native-product-profile')
+assert.equal(profileComposition.classification, 'feature', 'the long-term Cordis profile must be a feature')
+assert.ok(profileComposition.runtimeDependsOn.includes('dsh-runtime'), 'the native Cordis profile must depend on the DSH runtime')
 for (const { module } of pluginBindings) {
-  assert.ok(profileComposition.runtimeDependsOn.includes(module.id), `Cordis profile composition does not declare plugin module ${module.id}`)
+  assert.ok(profileComposition.runtimeDependsOn.includes(module.id), `native Cordis profile does not declare plugin module ${module.id}`)
+}
+const compatibilityProfileCompositions = catalog.modules.filter(module => module.source === 'compat/cordis.compat.patch.yml')
+assert.equal(compatibilityProfileCompositions.length, 1, 'the compatibility profile overlay must have exactly one catalog owner')
+assert.equal(compatibilityProfileCompositions[0]?.classification, 'migration', 'the compatibility profile overlay must remain migration-owned')
+assert.deepEqual(
+  [...compatibilityProfileCompositions[0]!.runtimeDependsOn].sort(),
+  ['dsh-runtime', 'native-product-profile'],
+  'the compatibility overlay may depend only on the DSH runtime and native product profile',
+)
+assert.doesNotMatch(compatibilityProfileSource, /ASSISTANT_RUNTIME|QUARK_NATIVE_/, 'compatibility overlay must disable exact owners without copying activation policy')
+const compatibilityEntries = cordisPatchEntries(compatibilityProfileSource)
+const inactiveProfileIds = pluginBindings
+  .filter(({ module }) => module.classification === 'feature' && module.runtime === 'inactive')
+  .map(({ plugin }) => plugin.profileId)
+  .sort()
+assert.deepEqual([...compatibilityEntries.keys()].sort(), inactiveProfileIds, 'compatibility overlay must disable every inactive native plugin exactly once')
+for (const [profileId, block] of compatibilityEntries) {
+  assert.match(block, /\bdisabled:\s*true\b/, `compatibility overlay entry ${profileId} must fail closed`)
+  assert.doesNotMatch(block, /\bname:/, `compatibility overlay entry ${profileId} cannot remount a plugin`)
 }
 const migrationPlan = JSON.parse(await readFile(resolve(root, 'config/native-migration-plan.json'), 'utf8')) as {
   version?: unknown
@@ -410,6 +431,27 @@ function cordisPlugins(source: string): Map<string, { readonly name: string; rea
     current?.lines.push(line)
     const name = line.match(/^\s+name:\s*([^\s#]+)\s*(?:#.*)?$/)?.[1]
     if (name && current) current.name = unquote(name)
+  }
+  flush()
+  return result
+}
+
+function cordisPatchEntries(source: string): Map<string, string> {
+  const result = new Map<string, string>()
+  let current: { id: string; lines: string[] } | undefined
+  const flush = (): void => {
+    if (!current) return
+    assert.ok(!result.has(current.id), `duplicate Cordis patch id ${current.id}`)
+    result.set(current.id, current.lines.join('\n'))
+  }
+  for (const line of source.split(/\r?\n/)) {
+    const id = line.match(/^\s*-\s+id:\s*([^\s#]+)\s*(?:#.*)?$/)?.[1]
+    if (id) {
+      flush()
+      current = { id: unquote(id), lines: [line] }
+      continue
+    }
+    current?.lines.push(line)
   }
   flush()
   return result

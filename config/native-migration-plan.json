@@ -7,7 +7,7 @@
       "buildOrder": 6,
       "cutoverAfter": [],
       "modules": ["approval-cards", "dida-projection", "direct-command-workflow", "focus-intake", "owner-engagement", "notification-digest"],
-      "targetModules": ["native-product-composition", "feishu-native-ingress", "message-intake-native", "feishu-workflow-effects", "feishu-context-effects", "feishu-focus-discovery-effects", "intake-interaction-effects", "dsh-reasoning-effects", "dsh-conversation-effects", "agent-bound-action-worker", "dida-task-effects", "dida-projection-effects"],
+      "targetModules": ["native-product-profile", "native-product-composition", "feishu-native-ingress", "message-intake-native", "feishu-workflow-effects", "feishu-context-effects", "feishu-focus-discovery-effects", "intake-interaction-effects", "dsh-reasoning-effects", "dsh-conversation-effects", "agent-bound-action-worker", "dida-task-effects", "dida-projection-effects"],
       "stateOwner": "managed compatibility handoff state.json",
       "cutoverBoundary": "Freeze one checkpoint, stop all five compat Feishu streams, import pending message/card/projection state, then start the five native streams exactly once.",
       "rollback": "Stop every native stream before restoring the frozen compat checkpoint and bridge-compat process.",
@@ -71,13 +71,13 @@
   ],
   "exitUnits": [
     {
-      "id": "promote-native-profile",
+      "id": "remove-compat-profile",
       "modules": ["assistant-profile-composition"],
-      "disposition": "reclassify-feature",
+      "disposition": "remove",
       "afterCutoverUnits": ["message-intake-and-projection", "dida-maintenance", "delegated-followup", "xiaowei-research", "session-lifecycle", "collaboration-learning"],
       "afterExitUnits": [],
-      "verification": "Cordis profile contains no ASSISTANT_RUNTIME=compat gate; every mounted local plugin binding and runtime owner passes architecture:check and a supervised restart.",
-      "rollback": "Restore the last compatibility-aware profile before restarting the compatibility host.",
+      "verification": "The native profile loads the long-term bundle without the compatibility overlay; every mounted local plugin binding and runtime owner passes architecture:check and a supervised restart.",
+      "rollback": "Restore the compatibility overlay and compatibility setup entry before restarting the compatibility host.",
       "requiresMaintenanceWindow": true
     },
     {
@@ -85,7 +85,7 @@
       "modules": ["bridge-compat-host"],
       "disposition": "remove",
       "afterCutoverUnits": ["message-intake-and-projection", "dida-maintenance", "delegated-followup", "xiaowei-research", "session-lifecycle", "collaboration-learning"],
-      "afterExitUnits": ["promote-native-profile"],
+      "afterExitUnits": ["remove-compat-profile"],
       "verification": "No process, profile, source import, runtime dependency, state writer or deployment entry references bridge-compat; one native consumer owns each Feishu stream after restart.",
       "rollback": "Stop every native consumer, restore the frozen compatibility release and state checkpoint, then start compatibility consumers exactly once.",
       "requiresMaintenanceWindow": true

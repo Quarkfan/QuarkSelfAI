@@ -108,6 +108,8 @@
 - `native-product-composition` 提供不读取 parity、compat config 或 legacy state 的长期进程入口；产品 manifest 精确声明
   必需模块、DSH activation 开关和 owner/任务/小维/Codex/推理配置。任何模块仍 inactive、开关未打开或配置缺失时，
   原生入口在创建数据库与启动消费者前失败关闭。
+- `native-product-profile` 已拥有无迁移 selector 的长期 `cordis.patch.yml` 和隔离的
+  `feishu-assistant-native` 安装入口；现网 `feishu-assistant` 只通过 migration-owned overlay 保持未切换 owner 禁用。
 
 ## 每个单元的统一完成证据
 
@@ -123,7 +125,7 @@
 
 | 顺序 | 退出单元 | 处置 | 关键证明 |
 | --- | --- | --- | --- |
-| 1 | promote-native-profile | 转为 feature | profile 无 compat gate，所有插件绑定和监督重启通过 |
+| 1 | remove-compat-profile | 删除 | native profile 不加载兼容 overlay，所有插件绑定和监督重启通过 |
 | 2 | retire-compat-host | 删除 | 无进程、源码、资产或状态写入引用 compat，飞书流仍各有唯一 owner |
 | 3 | retire-takeover-readiness | 删除 | 控制面只读取开放 readiness provider，不再读取 feature parity |
 | 3 | retire-legacy-state-tooling | 删除 | 旧 JSON 无生产读写路径，回滚保留期结束，native checkpoint 完整 |

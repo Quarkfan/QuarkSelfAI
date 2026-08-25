@@ -118,8 +118,9 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
 
 ## 迁移层
 
-迁移层包括 `bridge-compat-host`、旧状态工具、takeover 证据，以及当前仍带 compat 禁用表达式的
-`assistant-profile-composition`。它可以读取骨架和功能以完成搬迁，但任何
+迁移层包括 `bridge-compat-host`、旧状态工具、takeover 证据，以及仅为现网 profile 叠加禁用项的
+`assistant-profile-composition`。长期 `cordis.patch.yml` 已由 `native-product-profile` feature 拥有；迁移层只保留
+`compat/cordis.compat.patch.yml` 和旧 profile 安装入口。它可以读取骨架和功能以完成搬迁，但任何
 骨架或功能都不能反向依赖它。每个迁移模块必须有 `exitCriteria`；没有退出条件的“兼容层”就是第二套内核。
 `native-migration-plan.json` 还必须用退出单元逐一覆盖所有 migration 模块，明确删除/转正、前置切换、退出拓扑、
 验证和回滚；自然语言 `exitCriteria` 不能单独证明脚手架可以拔除。
@@ -130,7 +131,7 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
    原生 product host 已实现并保持 inactive，仍需在同一维护窗口切换部署入口与全部 activation gate。
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
-4. 所有当前本地插件均已具备模块 owner、package export 与 Cordis profile 绑定；剩余问题是这些 native 插件尚未
+4. 所有当前本地插件均已具备模块 owner、package export 与长期 Cordis profile 绑定；剩余问题是这些 native 插件尚未
    取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。`dsh-runtime` 已指向真实 DSH package，不再把
    整份业务 profile 冒充成 skeleton；当前 profile 独立归 migration，移除 compat 条件后再转为 product feature。
 5. 原生 `application-composition` 已建立，只装配注入的 durable store、DSH kernel 和开放组件工厂；控制台是由外层

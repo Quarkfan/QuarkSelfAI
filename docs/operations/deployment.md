@@ -16,8 +16,9 @@ PostgreSQL 和 systemd 是未来服务器部署的兼容形态，不代表默认
 远程部署又需要处理个人电脑文件时，应部署本机 worker 与远端控制面之间的受限任务协议，不能把主目录
 直接挂载到服务器。
 
-正式进程默认启动并监管 `feishu-assistant` DSH profile；内核退出会使父守护进程失败退出，交给 launchd、
-systemd 或容器 restart policy 退避恢复。`ASSISTANT_KERNEL=off` 只允许用于测试/诊断，不满足生产接管门禁。
+兼容期进程启动并监管 `feishu-assistant` DSH profile，它在长期 bundle 上叠加 compatibility-only overlay；
+原生产品入口固定默认 `feishu-assistant-native`，不得复用旧 profile。内核退出会使父守护进程失败退出，交给
+launchd、systemd 或容器 restart policy 退避恢复。`ASSISTANT_KERNEL=off` 只允许用于测试/诊断，不满足生产接管门禁。
 
 ## 容器部署
 
@@ -57,8 +58,9 @@ arborist 在一个依赖图内解析整个 DSH Profile。容器首次启动时�
 
 systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/pnpm-lock.yaml` 执行冻结安装，并在
 `/etc/quark-self-ai.env` 中配置 `DSH_EXECUTABLE=/opt/quark-dsh-runtime/node_modules/.bin/dsh`、
-`DSH_HOME=/var/lib/quark-self-ai/dsh`。首次启动前运行 `npm run setup:dsh`，或用同一个 DSH executable 执行
-`dsh plugin --profile feishu-assistant add link:/opt/quark-self-ai`。不得将 `ASSISTANT_KERNEL=off` 用作绕过。
+`DSH_HOME=/var/lib/quark-self-ai/dsh`。兼容期首次启动前必须运行 `npm run setup:dsh`，由安装器同时固定 bundle
+列表和 compatibility overlay；只执行裸 `dsh plugin add` 会遗漏 profile-owned 门禁，不是等价安装方式。
+不得将 `ASSISTANT_KERNEL=off` 用作绕过。
 
 非容器 Linux 可参考 `deploy/systemd/quark-self-ai.service`。服务用户只需代码读取权、数据目录写入权和必要 CLI 凭证；不要用 root 运行。
 
@@ -89,7 +91,8 @@ systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/p
 6. 冻结旧 consumer checkpoint，确认新系统已加载 action ledger。
 7. 获得常东旭对本次切换的明确批准后，才设置 `TAKEOVER_CONFIRMED=true`。
 8. 优雅停止 compatibility consumer，确认 server-side subscription 已释放；同一维护窗口把部署入口从
-   `dist/app.js` 切到 `dist/product/app.js`，设置 `ASSISTANT_RUNTIME=native`，并按
+   `dist/app.js` 切到 `dist/product/app.js`，先初始化 `feishu-assistant-native`，设置
+   `ASSISTANT_RUNTIME=native`，并按
    `config/product-composition.json` 一次性满足全部 activation gate 和必需配置。不得在两个入口之间并行试跑。
 9. 原生入口先核验 module catalog、产品 manifest、storage provider 和配置，再创建 store、启动 DSH 与控制台；
    任一项未 ready 必须保持停止，不得回退为 control-only 假健康。
