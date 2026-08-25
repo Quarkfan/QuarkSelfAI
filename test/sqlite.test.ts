@@ -32,6 +32,19 @@ test('SQLite is a zero-configuration durable default with event idempotency', as
       id: 'row-1', source: event.source, payload: event.payload,
     }])
     assert.deepEqual(await store.recentEventPayloads('card.action', 10), [])
+    const calendarEvent = {
+      ...event,
+      kind: 'calendar.schedule.changed',
+      eventKey: 'calendar.schedule.changed.v1',
+      deduplicationKey: 'schedule-1',
+      source: { channel: 'calendar', eventId: 'schedule-1' },
+      payload: { scheduleId: 'schedule-1' },
+      raw: {},
+    }
+    assert.deepEqual(await store.appendEvent('row-calendar', calendarEvent), { id: 'row-calendar', inserted: true })
+    assert.deepEqual(await store.recentEventPayloads('calendar.schedule.changed', 10), [{
+      id: 'row-calendar', source: calendarEvent.source, payload: calendarEvent.payload,
+    }])
     const signal = {
       id: 'signal-1', kind: 'collaboration.observation.v1', occurredAt: '2026-08-22T09:00:00.000Z',
       scope: { chatId: 'oc-one' }, data: { difference: 'could_batch' },

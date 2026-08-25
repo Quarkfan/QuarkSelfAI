@@ -1,4 +1,6 @@
 export type ChannelId = string
+/** Open semantic event id owned by adapters and consuming features. */
+export type ChannelEventKind = string
 
 export interface SourceRef {
   readonly channel: ChannelId
@@ -9,7 +11,7 @@ export interface SourceRef {
 }
 
 export interface NormalizedChannelEvent {
-  readonly kind: 'message.received' | 'card.action' | 'channel.event'
+  readonly kind: ChannelEventKind
   readonly source: SourceRef
   readonly occurredAt?: string
   readonly eventKey: string

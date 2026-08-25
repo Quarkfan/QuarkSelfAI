@@ -1,7 +1,7 @@
 export type ExecutorId = string
 import type { SourceRef } from './channel.js'
 export { eventRecordId } from './channel.js'
-export type { ChannelId, NormalizedChannelEvent, SourceRef } from './channel.js'
+export type { ChannelEventKind, ChannelId, NormalizedChannelEvent, SourceRef } from './channel.js'
 
 export type ActionState =
   | 'observed'
