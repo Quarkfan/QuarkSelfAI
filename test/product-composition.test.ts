@@ -21,6 +21,7 @@ test('long-term product composition contains every native owner and no migration
   assert.ok(ids.has('native-product-composition'))
   assert.ok(ids.has('agent-bound-action-worker'))
   assert.ok(ids.has('message-intake-native'))
+  assert.deepEqual(catalog.modules.find(module => module.id === 'native-product-composition')?.runtimeDependsOn, ['dsh-runtime'])
   assert.equal([...ids].some(id => catalog.modules.find(module => module.id === id)?.classification === 'migration'), false)
   assert.equal(new Set(manifest.requiredEnvironment).size, manifest.requiredEnvironment.length)
 })

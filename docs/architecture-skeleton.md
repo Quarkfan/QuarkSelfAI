@@ -113,6 +113,8 @@ module-catalog 统一输出包含 `runtime`、`mount`、`service`、`effect` 四
 readiness 与控制台必须消费这一个分析结果，不得分别重新实现 provider 查找规则。
 尚未实现的 required effect 不会被图静默丢弃，而是进入 `unresolved`；控制台明确显示“缺失”，任何必需产品能力
 的 unresolved capability 都会成为独立 readiness blocker。planned/inactive 允许逐步开发，不等于具备接管条件。
+产品 manifest 负责选择能力模块，Cordis profile 负责物理挂载插件，统一运行图负责解析 provider；
+`native-product-composition.runtimeDependsOn` 不得复制 manifest 或 profile，只保留进程自身真正需要的 DSH runtime。
 
 ## 功能
 

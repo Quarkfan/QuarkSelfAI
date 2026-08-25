@@ -184,14 +184,10 @@ assert.deepEqual(uncoveredProductPlugins, [], 'every inactive native feature plu
 assert.ok(productModuleIdSet.has('native-product-composition'), 'long-term product manifest must own its native process composition')
 const nativeProductModule = catalog.modules.find(module => module.id === 'native-product-composition')
 assert.ok(nativeProductModule, 'module catalog must define native-product-composition')
-const expectedNativeRuntimeDependencies = [
-  'dsh-runtime',
-  ...productModuleIds(productManifest).filter(id => id !== nativeProductModule.id && !nativeProductModule.dependsOn.includes(id)),
-].sort()
 assert.deepEqual(
-  [...nativeProductModule.runtimeDependsOn].sort(),
-  [...new Set(expectedNativeRuntimeDependencies)].sort(),
-  'native product runtime dependencies must exactly match the long-term product manifest',
+  nativeProductModule.runtimeDependsOn,
+  ['dsh-runtime'],
+  'native product composition must not duplicate product selection or profile mounts as runtime dependencies',
 )
 const profileActivationEnvironment = [...new Set(profileSource.match(/QUARK_NATIVE_[A-Z_]+/g) ?? [])].sort()
 assert.deepEqual([...productManifest.requiredEnvironment].sort(), profileActivationEnvironment, 'product activation environment must exactly match native Cordis gates')
