@@ -66,8 +66,11 @@ Git 已跟踪的配置、SQL migration、Web 静态资源、部署入口、兼�
 skeleton/feature/migration 方向约束，但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的
 `plugin.profileId` 与
 `plugin.packageExport`；检查器会双向核对 Cordis profile、composition `mounts` 和 `package.json#exports`，防止“代码已实现但未挂载”
-或“profile 中存在无主插件”。每个 export 的 `import/types` 目标还必须反向映射到该模块拥有的同一个 `src` 文件；
-只声明正确 key、却指向其他模块构建产物同样失败。`package.json#dsh.bundle.patch` 必须精确指向长期
+或“profile 中存在无主插件”。所有已经进入 Git 的 package export 都必须由目标源码或静态资产反向解析出唯一模块
+owner；普通 contract、surface 与 metadata export 不能因为不是 Cordis 插件而绕过目录。编译型 export 的
+`import/types` 目标必须映射到同一个 owner，Client 静态 export 的 runtime/types 资产也必须属于同一个 surface
+模块。未跟踪的本地 UI 实验不进入仓库所有权，任一目标进入 Git 后则立即受完整校验。只声明正确 key、却指向
+其他模块构建产物同样失败。`package.json#dsh.bundle.patch` 必须精确指向长期
 `cordis.patch.yml`，不能在包入口偷偷恢复兼容 profile。
 
 feature 源码只依赖骨架的窄 contract port，例如 `DurableWorkflowPort`、`DurableEventRegistryPort` 和
@@ -158,7 +161,9 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
    原生 product host 已实现并保持 inactive，仍需在同一维护窗口切换部署入口与全部 activation gate。
 2. 兼容 `state.json` 与 durable database 并存，部分功能仍以前者为真源。
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
-4. 所有当前本地插件均已具备模块 owner、package export 与长期 Cordis profile 绑定；剩余问题是这些 native 插件尚未
+4. 所有当前本地插件均已具备模块 owner、package export 与长期 Cordis profile 绑定；普通公共 contract export
+   同样按实际目标反向绑定模块 owner，新的 Client export 在静态资产进入 Git 时必须先登记为独立 surface feature。
+   剩余问题是这些 native 插件尚未
    取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。`dsh-runtime` 已指向真实 DSH package，不再把
    整份业务 profile 冒充成 skeleton；长期 profile 已归 `native-product-profile` feature，compat overlay 仍是待删除 migration。
 5. 原生 `application-composition` 已建立，只装配注入的 durable store、DSH kernel 和开放组件工厂；控制台是由外层

@@ -10,6 +10,7 @@ import { loadProductCompositionManifest, productModuleIds } from '../src/product
 import { DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS } from '../src/events/runtime.js'
 import { DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS } from '../src/workflow/runtime.js'
 import { DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS } from '../src/execution/worker-plugin.js'
+import { validateTrackedPackageExportOwnership } from '../src/architecture/package-exports.js'
 
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
@@ -70,7 +71,19 @@ for (const { module, plugin } of pluginBindings) {
     assert.ok(!activationGated, `${module.runtime} module ${module.id} cannot be native-activation-gated in cordis.patch.yml`)
   }
 }
-assertPackageExportOwned(packageManifest.exports['./platform'], 'platform-api', catalog.modules.find(module => module.id === 'platform-api')?.owns ?? [])
+validateTrackedPackageExportOwnership(
+  packageManifest.exports,
+  new Set(execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean)),
+  {
+    ownerByPath: new Map(catalog.modules.flatMap(module => [
+      ...module.owns.map(path => [path, module.id] as const),
+      ...module.assets.map(path => [path, module.id] as const),
+    ])),
+    pluginOwnerByExport: new Map(catalog.modules.flatMap(module => module.plugin
+      ? [[module.plugin.packageExport, module.id] as const]
+      : [])),
+  },
+)
 const boundProfileIds = new Set(pluginBindings.map(binding => binding.plugin.profileId))
 for (const [profileId, mounted] of profilePlugins) {
   if (mounted.name === packageName || mounted.name.startsWith(`${packageName}/`)) {
