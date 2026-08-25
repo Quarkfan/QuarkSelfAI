@@ -103,6 +103,7 @@ export class NativeProductReadiness implements OperationalReadinessProvider {
 /** Resolve provider/runtime ownership transitively without treating source imports as live services. */
 function runtimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readonly string[]): string[] {
   const modules = new Map(catalog.modules.map(module => [module.id, module]))
+  const serviceProviders = new Map(catalog.modules.flatMap(module => module.providesServices.map(service => [service, module.id] as const)))
   const closure = new Set<string>()
   const pending = [...roots]
   while (pending.length) {
@@ -110,7 +111,8 @@ function runtimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readon
     if (closure.has(id)) continue
     closure.add(id)
     const module = modules.get(id)
-    for (const dependency of [...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? [])]) pending.push(dependency)
+    const serviceDependencies = module?.requiresServices.map(service => serviceProviders.get(service)!) ?? []
+    for (const dependency of [...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []), ...serviceDependencies]) pending.push(dependency)
   }
   return [...closure]
 }

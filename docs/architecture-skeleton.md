@@ -56,8 +56,8 @@ runtime 不需要修改 `RuntimeSnapshot`。
 如实进入目录，防止脚本成为绕过骨架边界的暗门。注入、宿主和
 所有 `scripts/*` 入口必须由 operations 模块拥有；业务 workflow 可以被审计脚本调用，但不能为了同 owner 方便而兼任
 运维职责。
-外部 live provider 关系单独放在 `runtimeDependsOn`；只有 operations composition 可以用 `mounts` 表达“装入配置但
-尚未取得运行所有权”。active consumer 的每个 `runtimeDependsOn` 必须已经 active/static，mounts 则允许预装
+独立存在的外部 runtime/package/host 关系单独放在 `runtimeDependsOn`；只有 operations composition 可以用
+`mounts` 表达“装入配置但尚未取得运行所有权”。active consumer 的每个 `runtimeDependsOn` 必须已经 active/static，mounts 则允许预装
 inactive/shadow 模块。同一目录的 `assets` 是非源码运行资产所有权真源。架构检查只枚举
 Git 已跟踪的配置、SQL migration、Web 静态资源、部署入口、兼容 schema 和插件模板，因此不会接管个人未提交的
 界面文件，但任何进入仓库的运行资产都必须明确属于一个 skeleton、feature 或 migration 模块。资产归属是维护责任，
@@ -66,7 +66,8 @@ Cordis service 关系由 `requiresServices`/`providesServices` 单独表达：se
 可解析，active consumer 只能使用 active provider。检查器从源码的 `static inject`、模块级 `inject`、`Service`
 注册和 `ctx.provide` 反向提取实际关系，并与目录精确比对。service capability 是运行时依赖倒置，不等于源码或模块
 所有权依赖；因此 skeleton 可以依赖一个开放 service contract，由 feature provider 在产品组合中实现，而不会形成
-skeleton 对 feature 源码的反向耦合。
+skeleton 对 feature 源码的反向耦合。readiness 会自动沿 service 的唯一 provider 递归展开，功能不得再把同一 provider
+重复写入 `runtimeDependsOn` 形成双重真源；service provider 边也参与运行依赖环检测。
 新增 helper、重复归属、失效路径、未声明 import 和已失效的声明依赖都会阻断 `npm check`。两类依赖都受
 skeleton/feature/migration 方向约束，但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的
 `plugin.profileId` 与
@@ -80,8 +81,8 @@ owner；普通 contract、surface 与 metadata export 不能因为不是 Cordis 
 
 feature 源码只依赖骨架的窄 contract port，例如 `DurableWorkflowPort`、`DurableEventRegistryPort` 和
 `ActionLedgerPort`；仓库内从对应 `contracts` 文件导入，仓库外从稳定的 `./platform` 子路径导入。具体 Cordis
-Service 是可替换 provider，只能由 composition/profile 装配，并在模块的 `runtimeDependsOn` 声明。架构检查同时
-阻断 feature 直接 import runtime 实现，以及注入端口却漏报 provider 的情况。这样替换调度、事件分发或 action
+Service 是可替换 provider，只能由 composition/profile 装配，并由 `requiresServices`/`providesServices` 解析。架构检查同时
+阻断 feature 直接 import runtime 实现，以及实际注入/注册与目录不一致的情况。这样替换调度、事件分发或 action
 ledger 实现时，不要求重写业务 workflow。
 
 `layer` 也不是展示标签：contract 只能依赖 contract，kernel 只能依赖 contract/kernel，policy 只能依赖
@@ -264,7 +265,7 @@ workflow 串联；失败的卡片投影不会提前推进评估 checkpoint。架
 2. 在 `config/module-catalog.json` 增加模块，选择符合依赖矩阵的 layer，并精确登记 `owns`、`assets`、真实依赖、
    `requiresServices`/`providesServices` 和插件绑定；`architecture:check` 必须通过。
 3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表；源码 `dependsOn` 指向 contract，注入端口
-   所需的实际 provider 放入 `runtimeDependsOn`，不得 import 具体 runtime Service。
+   所需 capability 放入 `requiresServices`，由唯一 provider 自动解析；不得 import 或在 `runtimeDependsOn` 写死具体 runtime Service。
 4. 开放式 executor/本地修改走 durable action/approval；已建模业务写入走 durable workflow effect/outbox，高影响
    effect 消费精确 approval 与授权证据。长期等待必须持久化，不靠进程内 `sleep`。
 5. 用 DSH 动态插件验证想法可以，但跨重启能力必须沉淀为仓库插件。

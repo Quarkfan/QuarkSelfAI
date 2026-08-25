@@ -268,7 +268,6 @@ const actualDependencies = new Map(catalog.modules.map(module => [module.id, new
 const actualRequiredServices = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const actualProvidedServices = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const dshSourceModules = new Set<string>()
-const injectedRuntimeRequirements = new Map<string, Set<string>>()
 const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|grantedBy\s*:\s*['"]owner['"]|\b(?:conversationId|messageId|senderId)\b|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover)\b|常东旭|任永强|张以宁/gi
 const violations: string[] = []
 for (const module of catalog.modules.filter(item => item.layer === 'contract')) {
@@ -304,13 +303,6 @@ for (const filename of files) {
   }
   if (from === 'src/platform/lifecycle.ts' && /readonly\s+kind:\s*['"]/.test(source)) {
     violations.push(`${from} closes the component category vocabulary; lifecycle kinds must stay provider-owned strings`)
-  }
-  if (ownerModule?.classification === 'feature') {
-    const required = injectedRuntimeRequirements.get(ownerModule.id) ?? new Set<string>()
-    if (/\bquarkWorkflows\b/.test(source)) required.add('durable-workflow-runtime')
-    if (/\bquarkEvents\b/.test(source)) required.add('durable-event-runtime')
-    if (/\bquarkActionLedger\b/.test(source)) required.add('durable-action-ledger')
-    injectedRuntimeRequirements.set(ownerModule.id, required)
   }
   if (ownerModule?.layer === 'contract'
     && /(?:\bextends\s+Service\b|\bexport\s+(?:async\s+)?function\s+apply\s*\()/.test(source)) {
@@ -430,11 +422,6 @@ for (const module of catalog.modules) {
   }
   if (dshSourceModules.has(module.id) && module.id !== 'dsh-runtime' && !module.runtimeDependsOn.includes('dsh-runtime')) {
     violations.push(`module ${module.id} imports the DSH/Cordis runtime without runtimeDependsOn=dsh-runtime`)
-  }
-  for (const runtimeDependency of injectedRuntimeRequirements.get(module.id) ?? []) {
-    if (!module.runtimeDependsOn.includes(runtimeDependency)) {
-      violations.push(`feature module ${module.id} injects ${runtimeDependency} without declaring the runtime dependency`)
-    }
   }
   if (module.owns.some(source => source.startsWith('src/') && source.endsWith('.ts'))) {
     const actualRequired = [...(actualRequiredServices.get(module.id) ?? [])].sort()

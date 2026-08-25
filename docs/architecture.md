@@ -61,9 +61,9 @@ approval 绑定、租约 owner/期限、attempt、结果和下次可执行时间
 退避重试，确定性边界错误直接失败，防止用第二个模型重复执行同一业务动作。
 
 原生产品 readiness 不只检查 `product-composition.json` 的顶层能力。它从每个必需能力和实际 storage provider
-递归展开模块目录中的 `runtimeDependsOn`，把 DSH、executor router、durable action/workflow/event 等运行依赖
+递归展开模块目录中的 `runtimeDependsOn`、`mounts` 以及 `requiresServices` 指向的唯一 provider，把 DSH、executor router、durable action/workflow/event 等运行依赖
 汇总成 `platform-runtime-dependencies`；任一依赖不是 `active/static` 时，原生入口在创建 store 前失败关闭。
-源码 `dependsOn` 只表达编译/契约关系，不会把未选择的替代 provider 错判为运行依赖。
+源码 `dependsOn` 只表达编译/契约关系；Cordis service 也不会通过写死具体 provider 形成第二套真源。
 
 ## 本地优先运行边界
 

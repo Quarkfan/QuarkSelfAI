@@ -26,7 +26,7 @@ export interface AssistantModuleDescriptor {
   readonly assets: readonly string[]
   /** Exact cross-module source imports. Architecture checks reject missing and stale entries. */
   readonly dependsOn: readonly string[]
-  /** Runtime/plugin injection relationships that do not create a source import. */
+  /** Non-service runtime/package/host relationships that do not create a source import. */
   readonly runtimeDependsOn: readonly string[]
   /** Modules selected by an operations composition; mounting does not claim their runtime ownership. */
   readonly mounts: readonly string[]
@@ -208,10 +208,14 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
   }
   for (const module of modules) {
     for (const service of module.requiresServices) {
-      if (!serviceProviders.has(service)) throw new Error(`module ${module.id} requires unprovided service ${service}`)
+      const provider = serviceProviders.get(service)
+      if (!provider) throw new Error(`module ${module.id} requires unprovided service ${service}`)
+      if (provider.owns.length > 0 && module.runtimeDependsOn.includes(provider.id)) {
+        throw new Error(`module ${module.id} duplicates service provider ${provider.id} in runtimeDependsOn`)
+      }
     }
   }
-  assertAcyclic(modules, byId)
+  assertAcyclic(modules, byId, serviceProviders)
   return { version: 3, modules }
 }
 
@@ -405,7 +409,11 @@ function serviceList(value: unknown, label: string): string[] {
   return result
 }
 
-function assertAcyclic(modules: readonly AssistantModuleDescriptor[], byId: ReadonlyMap<string, AssistantModuleDescriptor>): void {
+function assertAcyclic(
+  modules: readonly AssistantModuleDescriptor[],
+  byId: ReadonlyMap<string, AssistantModuleDescriptor>,
+  serviceProviders: ReadonlyMap<string, AssistantModuleDescriptor>,
+): void {
   const visiting = new Set<string>()
   const visited = new Set<string>()
   const visit = (id: string, path: readonly string[]): void => {
@@ -413,7 +421,10 @@ function assertAcyclic(modules: readonly AssistantModuleDescriptor[], byId: Read
     if (visited.has(id)) return
     visiting.add(id)
     const module = byId.get(id)
-    for (const dependency of [...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? [])]) visit(dependency, [...path, id])
+    const serviceDependencies = module?.requiresServices.map(service => serviceProviders.get(service)!.id) ?? []
+    for (const dependency of [
+      ...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? []), ...serviceDependencies,
+    ]) visit(dependency, [...path, id])
     visiting.delete(id)
     visited.add(id)
   }

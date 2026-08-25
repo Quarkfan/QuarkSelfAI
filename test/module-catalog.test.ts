@@ -314,7 +314,7 @@ test('treats Cordis services as explicit runtime capabilities', () => {
     modules: [
       {
         id: 'feature-provider', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'active',
-        source: 'provider', owns: [], dependsOn: [], providesServices: ['examplePort'],
+        source: 'src/provider.ts', owns: ['src/provider.ts'], dependsOn: [], providesServices: ['examplePort'],
       },
       {
         id: 'skeleton-consumer', classification: 'skeleton', layer: 'kernel', implementation: 'ready', runtime: 'active',
@@ -363,6 +363,38 @@ test('rejects services on static contracts and malformed service ids', () => {
       },
     ],
   }), /invalid service id/)
+})
+
+test('rejects runtime cycles formed through service providers', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'provider-a', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'inactive',
+        source: 'a', owns: [], dependsOn: [], requiresServices: ['portB'], providesServices: ['portA'],
+      },
+      {
+        id: 'provider-b', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'inactive',
+        source: 'b', owns: [], dependsOn: [], requiresServices: ['portA'], providesServices: ['portB'],
+      },
+    ],
+  }), /module dependency cycle: provider-a -> provider-b -> provider-a/)
+})
+
+test('rejects duplicated concrete provider dependencies for required services', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'provider', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'inactive',
+        source: 'src/provider.ts', owns: ['src/provider.ts'], dependsOn: [], providesServices: ['examplePort'],
+      },
+      {
+        id: 'consumer', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'inactive',
+        source: 'consumer', owns: [], dependsOn: [], runtimeDependsOn: ['provider'], requiresServices: ['examplePort'],
+      },
+    ],
+  }), /module consumer duplicates service provider provider in runtimeDependsOn/)
 })
 
 test('requires plugin profile ids and package exports to have one module owner', () => {

@@ -39,7 +39,7 @@ test('feature template is a valid inactive module-catalog v3 extension', async (
   assert.deepEqual(feature?.owns, ['src/features/feature-id/plugin.ts'])
   assert.deepEqual(feature?.assets, [])
   assert.deepEqual(feature?.dependsOn, ['durable-workflow-contracts'])
-  assert.deepEqual(feature?.runtimeDependsOn, ['dsh-runtime', 'durable-workflow-runtime'])
+  assert.deepEqual(feature?.runtimeDependsOn, ['dsh-runtime'])
   assert.deepEqual(feature?.requiresServices, ['quarkWorkflows'])
   assert.deepEqual(feature?.providesServices, [])
   assert.deepEqual(feature?.plugin, { profileId: 'feature-id', packageExport: './feature-id' })

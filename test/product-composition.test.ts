@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { loadModuleCatalog } from '../src/catalog/file-provider.js'
-import type { AssistantModuleCatalog } from '../src/platform/modules.js'
+import { validateModuleCatalog, type AssistantModuleCatalog } from '../src/platform/modules.js'
 import type { KernelStatusProvider } from '../src/platform/operations.js'
 import { createNativeProductApplication } from '../src/product/composition.js'
 import { loadNativeProductConfig } from '../src/product/config.js'
@@ -60,6 +60,8 @@ test('native product entry fails closed on mode, activation gates, and inactive 
 
 test('native status and readiness derive from the product manifest instead of migration parity', async () => {
   const catalog = await loadModuleCatalog()
+  assert.equal(catalog.modules.find(module => module.id === 'message-intake-native')?.runtimeDependsOn.includes('durable-workflow-runtime'), false)
+  assert.ok(catalog.modules.find(module => module.id === 'message-intake-native')?.requiresServices.includes('quarkWorkflows'))
   const manifest = await loadProductCompositionManifest(catalog)
   const current = new NativeProductRuntimeStatus(readyKernel, catalog, manifest, 'sqlite-storage').snapshot()
   assert.equal(current.mode, 'native-product')
@@ -110,4 +112,38 @@ test('optional product capabilities remain visible without blocking native start
   assert.equal(readiness.state, 'ready')
   assert.deepEqual(readiness.blockers, [])
   assert.ok(readiness.items.some(item => item.id === 'postgres-storage' && item.status === 'ready/inactive'))
+})
+
+test('native readiness follows service providers without concrete runtime dependencies', async () => {
+  const activeCatalog = validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'consumer', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'active',
+        source: 'consumer', owns: [], dependsOn: [], requiresServices: ['examplePort'],
+      },
+      {
+        id: 'provider', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'active',
+        source: 'provider', owns: [], dependsOn: [], providesServices: ['examplePort'],
+      },
+    ],
+  })
+  const manifest = validateProductCompositionManifest({
+    version: 1,
+    capabilities: [{ id: 'example', required: true, modules: ['consumer'] }],
+    requiredEnvironment: [],
+    requiredConfiguration: [],
+  }, activeCatalog)
+  const degradedCatalog: AssistantModuleCatalog = {
+    ...activeCatalog,
+    modules: activeCatalog.modules.map(module => module.id === 'provider'
+      ? { ...module, runtime: 'inactive' as const }
+      : module),
+  }
+  const runtime = new NativeProductRuntimeStatus(readyKernel, degradedCatalog, manifest, 'consumer').snapshot()
+  assert.equal(runtime.state, 'degraded')
+  assert.match(runtime.capabilities.find(capability => capability.id === 'platform-runtime-dependencies')?.detail ?? '', /provider/)
+  const readiness = await new NativeProductReadiness({ load: async () => degradedCatalog }, manifest, 'consumer').inspect()
+  assert.equal(readiness.state, 'blocked')
+  assert.ok(readiness.blockers.includes('provider'))
 })
