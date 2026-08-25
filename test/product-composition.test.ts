@@ -77,6 +77,19 @@ test('native status and readiness derive from the product manifest instead of mi
   assert.equal(readiness.id, 'native-product')
   assert.equal(readiness.state, 'ready')
   assert.deepEqual(readiness.blockers, [])
+
+  const brokenRuntimeCatalog: AssistantModuleCatalog = {
+    ...readyCatalog,
+    modules: readyCatalog.modules.map(module => module.id === 'durable-workflow-runtime'
+      ? { ...module, runtime: 'inactive' as const }
+      : module),
+  }
+  const degraded = new NativeProductRuntimeStatus(readyKernel, brokenRuntimeCatalog, manifest, 'sqlite-storage').snapshot()
+  assert.equal(degraded.state, 'degraded')
+  assert.match(degraded.capabilities.find(capability => capability.id === 'platform-runtime-dependencies')?.detail ?? '', /durable-workflow-runtime/)
+  const blocked = await new NativeProductReadiness({ load: async () => brokenRuntimeCatalog }, manifest, 'sqlite-storage').inspect()
+  assert.equal(blocked.state, 'blocked')
+  assert.ok(blocked.blockers.includes('durable-workflow-runtime'))
 })
 
 test('optional product capabilities remain visible without blocking native startup readiness', async () => {

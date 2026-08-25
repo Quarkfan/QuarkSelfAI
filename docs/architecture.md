@@ -56,6 +56,11 @@ approval 绑定、租约 owner/期限、attempt、结果和下次可执行时间
 只有租约过期的新 worker 能接管，旧 worker 不能提交结果。基础设施错误按指数
 退避重试，确定性边界错误直接失败，防止用第二个模型重复执行同一业务动作。
 
+原生产品 readiness 不只检查 `product-composition.json` 的顶层能力。它从每个必需能力和实际 storage provider
+递归展开模块目录中的 `runtimeDependsOn`，把 DSH、executor router、durable action/workflow/event 等运行依赖
+汇总成 `platform-runtime-dependencies`；任一依赖不是 `active/static` 时，原生入口在创建 store 前失败关闭。
+源码 `dependsOn` 只表达编译/契约关系，不会把未选择的替代 provider 错判为运行依赖。
+
 ## 本地优先运行边界
 
 本节的约束由 [ADR 0003](adr/0003-local-first-personal-assistant.md) 固化。服务器部署是本地个人助手的

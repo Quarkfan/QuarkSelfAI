@@ -21,6 +21,13 @@ export class NativeProductRuntimeStatus implements RuntimeStatusProvider {
     const kernel = this.kernel.snapshot()
     const capabilities = this.manifest.capabilities.map(capability => this.capability(capability.id, capability.required, capability.modules, kernel.state))
     capabilities.push(this.capability('storage-provider', true, [this.storageModuleId], kernel.state))
+    const requiredRoots = [
+      ...this.manifest.capabilities.filter(capability => capability.required).flatMap(capability => capability.modules),
+      this.storageModuleId,
+    ]
+    const runtimeDependencies = runtimeDependencyClosure(this.catalog, requiredRoots)
+      .filter(id => !requiredRoots.includes(id))
+    capabilities.push(this.capability('platform-runtime-dependencies', true, runtimeDependencies, kernel.state))
     const required = capabilities.filter(capability => capability.required)
     const state = kernel.state === 'ready' && required.every(capability => capability.state === 'ready')
       ? 'ready'
@@ -66,11 +73,13 @@ export class NativeProductReadiness implements OperationalReadinessProvider {
 
   async inspect(): Promise<OperationalReadinessReport> {
     const catalog = await this.catalog.load()
-    const listed = [...this.manifest.capabilities.flatMap(capability => capability.modules), this.storageModuleId]
-    const required = new Set([
+    const roots = [...this.manifest.capabilities.flatMap(capability => capability.modules), this.storageModuleId]
+    const requiredRoots = [
       ...this.manifest.capabilities.filter(capability => capability.required).flatMap(capability => capability.modules),
       this.storageModuleId,
-    ])
+    ]
+    const listed = [...new Set([...roots, ...runtimeDependencyClosure(catalog, roots)])]
+    const required = new Set(runtimeDependencyClosure(catalog, requiredRoots))
     const modules = new Map(catalog.modules.map(module => [module.id, module]))
     const items = listed.map(id => {
       const module = modules.get(id)
@@ -89,4 +98,18 @@ export class NativeProductReadiness implements OperationalReadinessProvider {
       summary: { requiredModules: required.size, readyModules: required.size - blockers.length },
     }
   }
+}
+
+/** Resolve provider/runtime ownership transitively without treating source imports as live services. */
+function runtimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readonly string[]): string[] {
+  const modules = new Map(catalog.modules.map(module => [module.id, module]))
+  const closure = new Set<string>()
+  const pending = [...roots]
+  while (pending.length) {
+    const id = pending.shift()!
+    if (closure.has(id)) continue
+    closure.add(id)
+    for (const dependency of modules.get(id)?.runtimeDependsOn ?? []) pending.push(dependency)
+  }
+  return [...closure]
 }
