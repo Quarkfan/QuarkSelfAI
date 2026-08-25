@@ -1,7 +1,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { DEFAULT_DURABLE_RECOVERY_INTERVAL_MS, DurableWakeScheduler } from '../runtime/wake-scheduler.js'
-import type { DurableStatePort } from '../storage/service-contract.js'
+import type { DurableEventConsumerStatePort } from '../storage/service-contract.js'
 import type { DurableEventConsumer, DurableEventRegistryPort } from './contracts.js'
 export type { DurableEventConsumer, DurableEventRegistryPort } from './contracts.js'
 
@@ -10,9 +10,9 @@ export interface DurableEventRuntimeConfig { readonly workerId: string; readonly
 export const DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS = DEFAULT_DURABLE_RECOVERY_INTERVAL_MS
 
 export class DurableEventRuntime extends Service implements DurableEventRegistryPort {
-  static inject = ['quarkState']
+  static inject = ['quarkEventConsumerState']
   private readonly consumers = new Map<string, DurableEventConsumer>()
-  private readonly state: DurableStatePort
+  private readonly state: DurableEventConsumerStatePort
   private running = false
   private readonly scheduler: DurableWakeScheduler<{ readonly claimed: number; readonly delivered: number; readonly failed: number }>
   constructor(ctx: Context, private readonly config: DurableEventRuntimeConfig) {
@@ -20,7 +20,7 @@ export class DurableEventRuntime extends Service implements DurableEventRegistry
     if (!config.workerId?.trim()) throw new Error('durable event runtime workerId is required')
     // Resolve injected services while Cordis is constructing this plugin. Timer
     // callbacks intentionally run outside the plugin's dependency trace scope.
-    this.state = ctx.quarkState
+    this.state = ctx.quarkEventConsumerState
     this.scheduler = new DurableWakeScheduler({
       enabled: config.enabled === true,
       recoveryIntervalMs: config.pollIntervalMs ?? DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS,
@@ -60,5 +60,5 @@ export class DurableEventRuntime extends Service implements DurableEventRegistry
   }
 }
 export const name = 'quark-durable-events'
-export const inject = ['quarkState']
+export const inject = ['quarkEventConsumerState']
 export function apply(ctx: Context, config: DurableEventRuntimeConfig): void { ctx.plugin(DurableEventRuntime, config) }

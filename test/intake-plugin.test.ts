@@ -27,12 +27,12 @@ test('intake cheaply selects owner DM, focus people, owner cards, membership and
     await ctx.quarkIntake.handle({ ...base, kind: 'card.action', eventKey: 'card.action.trigger', deduplicationKey: 'card', payload: { operatorId: 'owner' } })
     await ctx.quarkIntake.handle({ ...base, kind: 'channel.event', eventKey: 'im.chat.member.user.added_v1', deduplicationKey: 'member', payload: { event: { operator_id: { open_id: 'delegate' }, users: [{ user_id: { open_id: 'owner' } }] } } })
     await ctx.quarkIntake.handle({ ...base, kind: 'channel.event', eventKey: 'im.message.reaction.created_v1', deduplicationKey: 'reaction', payload: { event: { user_id: { open_id: 'owner' } } } })
-    assert.equal(await ctx.quarkState.workflow(`message-intake:${hash('noise')}`), undefined)
-    const workflows = await ctx.quarkState.dueWorkflows('2099-01-01T00:00:00Z', 20)
+    assert.equal(await ctx.quarkWorkflows.workflow(`message-intake:${hash('noise')}`), undefined)
+    const workflows = await ctx.quarkWorkflowState.dueWorkflows('2099-01-01T00:00:00Z', 20)
     assert.deepEqual(workflows.map(item => item.id), ['focus-discovery:singleton'])
     for (const key of ['dm', 'focus', 'other-dm', 'discovered', 'card', 'member', 'reaction']) {
       const id = `message-intake:${hash(key)}`
-      assert.ok(await ctx.quarkState.workflow(id), key)
+      assert.ok(await ctx.quarkWorkflows.workflow(id), key)
     }
   } finally {
     await ctx.fiber.dispose()

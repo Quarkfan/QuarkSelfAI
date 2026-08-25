@@ -35,6 +35,7 @@ export interface DurableWorkflowPort {
   register(definition: WorkflowDefinition): () => void
   registerEffect(kind: string, handler: WorkflowEffectHandler): () => void
   wake(at?: string): void
+  workflow(id: string): Promise<WorkflowInstance | undefined>
   start(id: string, kind: string, input: Readonly<Record<string, unknown>>, now?: Date): Promise<WorkflowInstance>
   ensure(id: string, kind: string, input: Readonly<Record<string, unknown>>, now?: Date): Promise<WorkflowInstance>
   dispatch(instanceId: string, event: WorkflowEvent): Promise<WorkflowInstance>

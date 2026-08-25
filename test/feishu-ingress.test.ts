@@ -26,7 +26,7 @@ test('native ingress journals an event without starting a consumer by default', 
       assert.equal(name, 'feishu/event')
       listener = callback
     },
-    quarkState: { async appendEvent(value: NormalizedChannelEvent) { appended.push(value); return { inserted: true } } },
+    quarkEventAppendState: { async appendEvent(value: NormalizedChannelEvent) { appended.push(value); return { inserted: true } } },
     larkCli: { async start() { starts += 1 }, async stop() {} },
   } as unknown as Context
   await apply(ctx)

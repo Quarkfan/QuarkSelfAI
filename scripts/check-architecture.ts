@@ -334,6 +334,21 @@ for (const filename of files) {
     && !startsWithAny(from, ['src/execution/claim-authorization.ts', 'src/execution/worker.ts'])) {
     violations.push(`${from} mints executor authorization outside the durable action worker boundary`)
   }
+  if (/\bquarkState\b/.test(source)) {
+    violations.push(`${from} injects the removed aggregate durable state service`)
+  }
+  const restrictedStateOwners: Readonly<Record<string, readonly string[]>> = {
+    quarkWorkflowState: ['durable-state-contract', 'durable-state-host', 'durable-workflow-runtime'],
+    quarkEventConsumerState: ['durable-state-contract', 'durable-state-host', 'durable-event-runtime'],
+    quarkActionEnqueueState: ['durable-state-contract', 'durable-state-host', 'durable-action-ledger'],
+    quarkActionWorkerState: ['durable-state-contract', 'durable-state-host', 'agent-bound-action-worker'],
+    quarkActionDecisionState: ['durable-state-contract', 'durable-state-host'],
+  }
+  for (const [capability, allowedOwners] of Object.entries(restrictedStateOwners)) {
+    if (source.includes(capability) && ownerModule && !allowedOwners.includes(ownerModule.id)) {
+      violations.push(`${from} injects restricted state capability ${capability} from module ${ownerModule.id}`)
+    }
+  }
   if (/from\s+['"]node:child_process['"]/.test(source)
     && ownerModule?.layer !== 'adapter'
     && !['kernel-supervisor', 'bridge-compat-host'].includes(ownerModule?.id ?? '')) {

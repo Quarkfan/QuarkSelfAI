@@ -171,9 +171,9 @@ export class FeishuFocusDiscoveryEffectAdapter {
 }
 
 export const name = 'quark-feishu-focus-discovery-effects'
-export const inject = ['quarkWorkflows', 'quarkState']
+export const inject = ['quarkWorkflows', 'quarkEventAppendState']
 export function apply(ctx: Context, config: FeishuFocusDiscoveryEffectConfig = {}): void {
-  const adapter = new FeishuFocusDiscoveryEffectAdapter(config, ctx.quarkState)
+  const adapter = new FeishuFocusDiscoveryEffectAdapter(config, ctx.quarkEventAppendState)
   const dispose = ctx.quarkWorkflows.registerEffect(INTAKE_EFFECTS.discoverSignals, { execute: effect => adapter.execute(effect) })
   ctx.effect(() => dispose, 'quark Feishu focus discovery effects')
 }

@@ -37,7 +37,7 @@ test('durable event runtime retries the same journal event after a handler failu
     await ctx.plugin(DurableStateService, { sqlitePath: join(directory, 'state.sqlite3') })
     await ctx.plugin(DurableEventRuntime, { workerId: 'event-worker', enabled: false, retryDelayMs: 1_000, maxAttempts: 3 })
     let attempts = 0; ctx.quarkEvents.register({ name: 'intake', eventKeys: ['im.message.receive_v1'], async handle() { attempts += 1; if (attempts === 1) throw new Error('temporary') } })
-    await ctx.quarkState.appendEvent(event('om-1'))
+    await ctx.quarkEventAppendState.appendEvent(event('om-1'))
     assert.deepEqual(await ctx.quarkEvents.runOnce(new Date('2026-08-24T00:00:00Z')), { claimed: 1, delivered: 0, failed: 0 })
     assert.deepEqual(await ctx.quarkEvents.runOnce(new Date('2026-08-24T00:00:00.500Z')), { claimed: 0, delivered: 0, failed: 0 })
     assert.deepEqual(await ctx.quarkEvents.runOnce(new Date('2026-08-24T00:00:01Z')), { claimed: 1, delivered: 1, failed: 0 })
@@ -53,7 +53,7 @@ test('durable append wakes event consumers instead of waiting for recovery polli
     let delivered!: () => void
     const handled = new Promise<void>((resolve) => { delivered = resolve })
     ctx.quarkEvents.register({ name: 'intake', eventKeys: ['im.message.receive_v1'], async handle() { delivered() } })
-    await ctx.quarkState.appendEvent(event('om-wake'))
+    await ctx.quarkEventAppendState.appendEvent(event('om-wake'))
     let timeout: NodeJS.Timeout | undefined
     try {
       await Promise.race([
@@ -78,7 +78,7 @@ test('failed event delivery wakes again at its exact retry deadline', async () =
       name: 'retry-intake', eventKeys: ['im.message.receive_v1'],
       async handle() { attempts += 1; if (attempts === 1) throw new Error('temporary'); completed() },
     })
-    await ctx.quarkState.appendEvent(event('om-retry-wake'))
+    await ctx.quarkEventAppendState.appendEvent(event('om-retry-wake'))
     let timeout: NodeJS.Timeout | undefined
     try {
       await Promise.race([

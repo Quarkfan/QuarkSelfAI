@@ -9,20 +9,33 @@ import type {
   WorkflowStorePort,
 } from './types.js'
 
-/** Stable DSH-facing state port. Concrete databases and connection ownership are replaceable providers. */
-export interface DurableStatePort extends
-  Omit<EventJournalStorePort, 'appendEvent'>,
-  SignalStorePort,
-  FeatureCheckpointStorePort,
-  WorkflowStorePort,
-  ActionStorePort,
-  Pick<PolicyStorePort, 'savePolicyDraft' | 'activatePolicy'> {
+/** Narrow DSH-facing capability ports. One provider may implement all of them. */
+export interface DurableEventAppendStatePort {
   appendEvent(event: NormalizedChannelEvent): Promise<StoredEvent>
 }
+export type DurableEventConsumerStatePort = Pick<EventJournalStorePort,
+  'claimNextEvent' | 'settleEvent' | 'releaseEvent' | 'updateCheckpoint'>
+export type DurableEventQueryStatePort = Pick<EventJournalStorePort, 'recentEventPayloads'>
+export type DurableWorkflowStatePort = WorkflowStorePort
+export type DurableActionEnqueueStatePort = Pick<ActionStorePort, 'enqueueAction'>
+export type DurableActionDecisionStatePort = Pick<ActionStorePort, 'decideApproval'>
+export type DurableActionWorkerStatePort = Pick<ActionStorePort, 'claimNextAction' | 'settleAction' | 'releaseActionClaim'>
+export type DurableSignalStatePort = SignalStorePort
+export type DurableCheckpointStatePort = FeatureCheckpointStorePort
+export type DurablePolicyStatePort = Pick<PolicyStorePort, 'savePolicyDraft' | 'activatePolicy'>
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    quarkState: DurableStatePort
+    quarkEventAppendState: DurableEventAppendStatePort
+    quarkEventConsumerState: DurableEventConsumerStatePort
+    quarkEventQueryState: DurableEventQueryStatePort
+    quarkWorkflowState: DurableWorkflowStatePort
+    quarkActionEnqueueState: DurableActionEnqueueStatePort
+    quarkActionDecisionState: DurableActionDecisionStatePort
+    quarkActionWorkerState: DurableActionWorkerStatePort
+    quarkSignalState: DurableSignalStatePort
+    quarkCheckpointState: DurableCheckpointStatePort
+    quarkPolicyState: DurablePolicyStatePort
   }
   interface Events {
     /** A new durable event is ready now, or a failed delivery becomes ready at this time. */

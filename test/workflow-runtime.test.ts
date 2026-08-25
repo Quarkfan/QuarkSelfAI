@@ -107,8 +107,8 @@ test('workflow runtime resumes due instances and dispatches durable effects thro
     await runtime.start('counter-1', 'counter', {}, new Date('2026-08-24T00:00:00.000Z'))
     assert.deepEqual(await runtime.runOnce(new Date('2026-08-24T00:00:01.000Z')), { due: 1, effect: 'delivered' })
     assert.deepEqual(delivered, ['started'])
-    assert.deepEqual((await ctx.quarkState.workflow('counter-1'))?.state, { count: 1, delivered: 'started' })
-    assert.equal((await ctx.quarkState.workflow('counter-1'))?.status, 'completed')
+    assert.deepEqual((await ctx.quarkWorkflows.workflow('counter-1'))?.state, { count: 1, delivered: 'started' })
+    assert.equal((await ctx.quarkWorkflows.workflow('counter-1'))?.status, 'completed')
   } finally {
     await ctx.fiber.dispose()
     await rm(directory, { recursive: true, force: true })

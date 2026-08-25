@@ -7,7 +7,7 @@ import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { ActionWorkerService } from '../src/execution/worker-plugin.js'
 import type { ExecutorRouterService } from '../src/execution/router.js'
-import type { DurableStatePort } from '../src/storage/service-contract.js'
+import type { DurableActionWorkerStatePort } from '../src/storage/service-contract.js'
 import { DurableStateService } from '../src/storage/service.js'
 
 const action = (id: string, workspace: string, approval?: { readonly id: string; readonly prompt: string }) => ({
@@ -33,22 +33,22 @@ test('durable action commits emit only actionable wake hints', async () => {
     ctx.on('quark/action-wake', at => { hints.push(at) })
     await ctx.plugin(DurableStateService, { sqlitePath: join(directory, 'assistant.sqlite3') })
 
-    await ctx.quarkState.enqueueAction(action('immediate', directory))
+    await ctx.quarkActionEnqueueState.enqueueAction(action('immediate', directory))
     await flushEvents()
     assert.deepEqual(hints, [undefined])
 
-    await ctx.quarkState.enqueueAction(action('approval', directory, { id: 'approval-1', prompt: 'approve' }))
+    await ctx.quarkActionEnqueueState.enqueueAction(action('approval', directory, { id: 'approval-1', prompt: 'approve' }))
     await flushEvents()
     assert.deepEqual(hints, [undefined])
 
-    await ctx.quarkState.decideApproval('approval-1', 'approved', {}, new Date().toISOString())
+    await ctx.quarkActionDecisionState.decideApproval('approval-1', 'approved', {}, new Date().toISOString())
     await flushEvents()
     assert.deepEqual(hints, [undefined, undefined])
 
-    const claimed = await ctx.quarkState.claimNextAction('worker', directory, new Date().toISOString(), new Date(Date.now() + 60_000).toISOString())
+    const claimed = await ctx.quarkActionWorkerState.claimNextAction('worker', directory, new Date().toISOString(), new Date(Date.now() + 60_000).toISOString())
     assert.ok(claimed)
     const retryAt = new Date(Date.now() + 120_000).toISOString()
-    await ctx.quarkState.releaseActionClaim({ actionId: claimed.actionId, workerId: 'worker', disposition: 'retry', error: 'temporary', availableAt: retryAt })
+    await ctx.quarkActionWorkerState.releaseActionClaim({ actionId: claimed.actionId, workerId: 'worker', disposition: 'retry', error: 'temporary', availableAt: retryAt })
     await flushEvents()
     assert.deepEqual(hints, [undefined, undefined, retryAt])
   } finally {
@@ -75,7 +75,7 @@ test('action worker drains existing durable work immediately on startup', async 
     },
     async settleAction() { settled() },
     async releaseActionClaim() { throw new Error('release must not run') },
-  } as unknown as DurableStatePort
+  } as unknown as DurableActionWorkerStatePort
   const router = {
     async execute() {
       return { actionId: 'startup-action', executor: 'codex' as const, status: 'completed' as const, summary: 'done', attempts: [], output: [] }
@@ -87,7 +87,7 @@ test('action worker drains existing durable work immediately on startup', async 
     async create() { return { agent: parent, async dispose() {} } },
   } as unknown as Context['agents']
   try {
-    ctx.provide('quarkState', state)
+    ctx.provide('quarkActionWorkerState', state)
     ctx.provide('quarkExecutors', router)
     ctx.provide('agents', agents)
     await ctx.plugin(ActionWorkerService, { enabled: true, workerId: 'startup-worker', workspaces: [workspace], pollIntervalMs: 600_000 })

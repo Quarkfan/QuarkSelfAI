@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import type { DurableEventRegistryPort } from '../events/contracts.js'
-import type { DurableStatePort } from '../storage/service-contract.js'
 import type { DurableWorkflowPort } from '../workflow/contracts.js'
 import { FOCUS_DISCOVERY_WORKFLOW_ID, FOCUS_DISCOVERY_WORKFLOW_KIND, focusDiscoveryWorkflow } from './discovery-workflow.js'
 import { INTAKE_WORKFLOW_KIND, messageIntakeWorkflow } from './workflow.js'
@@ -11,16 +10,14 @@ import { FOCUS_DISCOVERY_EVENT_KEY, type FocusDiscoverySources, type IntakePlugi
 declare module '@deepseek-ai/cordis' { interface Context { quarkIntake: IntakeService } }
 
 export class IntakeService extends Service {
-  static inject = ['quarkEvents', 'quarkWorkflows', 'quarkState']
+  static inject = ['quarkEvents', 'quarkWorkflows']
   private readonly definition = messageIntakeWorkflow()
   private readonly discoveryDefinition = focusDiscoveryWorkflow()
-  private readonly state: DurableStatePort
   private readonly workflows: DurableWorkflowPort
   constructor(ctx: Context, private readonly config: IntakePluginConfig) {
     super(ctx, 'quarkIntake')
     if (!config.ownerOpenId?.trim() || !config.workspace?.trim()) throw new Error('intake ownerOpenId and workspace are required')
     if (config.enabled === true && !config.taskProjection) throw new Error('enabled intake requires taskProjection authorization')
-    this.state = ctx.quarkState
     this.workflows = ctx.quarkWorkflows
     const events: DurableEventRegistryPort = ctx.quarkEvents
     const disposeDefinition = this.workflows.register(this.definition)
@@ -51,24 +48,14 @@ export class IntakeService extends Service {
       retryMs: this.config.discoveryRetryMs ?? 10 * 60_000,
       sources,
     }
-    const existing = await this.state.workflow(FOCUS_DISCOVERY_WORKFLOW_ID)
+    const existing = await this.workflows.workflow(FOCUS_DISCOVERY_WORKFLOW_ID)
     if (existing) {
       if (existing.kind !== FOCUS_DISCOVERY_WORKFLOW_KIND || existing.definitionVersion !== this.discoveryDefinition.version) {
         throw new Error(`workflow ${FOCUS_DISCOVERY_WORKFLOW_ID} already belongs to ${existing.kind}@${existing.definitionVersion}`)
       }
       return
     }
-    const now = new Date().toISOString()
-    const decision = this.discoveryDefinition.initialize(input, now)
-    await this.state.createWorkflow({
-      id: FOCUS_DISCOVERY_WORKFLOW_ID,
-      kind: FOCUS_DISCOVERY_WORKFLOW_KIND,
-      definitionVersion: this.discoveryDefinition.version,
-      status: decision.status,
-      state: decision.state,
-      ...(decision.wakeAt ? { wakeAt: decision.wakeAt } : {}),
-      ...(decision.effects ? { effects: decision.effects } : {}),
-    })
+    await this.workflows.ensure(FOCUS_DISCOVERY_WORKFLOW_ID, FOCUS_DISCOVERY_WORKFLOW_KIND, input)
   }
   async [Service.init](): Promise<void> { await this.ensureDiscovery() }
   async handle(event: NormalizedChannelEvent): Promise<void> {
@@ -124,7 +111,7 @@ function mentionIds(value: Record<string, unknown>): readonly unknown[] {
 }
 
 export const name = 'quark-message-intake'
-export const inject = ['quarkEvents', 'quarkWorkflows', 'quarkState']
+export const inject = ['quarkEvents', 'quarkWorkflows']
 export async function apply(ctx: Context, config: IntakePluginConfig): Promise<void> { await ctx.plugin(IntakeService, config) }
 export * from './types.js'
 export * from './workflow.js'

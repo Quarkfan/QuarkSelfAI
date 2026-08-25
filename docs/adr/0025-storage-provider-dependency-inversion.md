@@ -11,7 +11,7 @@
 ## 决策
 
 1. `storage-port` 与新的 `durable-state-contract` 是 skeleton；前者定义持久化语义，后者定义 DSH 插件可见的
-   `quarkState` 能力面。
+   持久化能力面。最初实现为聚合 `quarkState`，后由 ADR 0072 拆成窄 capability，数据库 provider 分类不变。
 2. SQLite、PostgreSQL 和负责迁移/关闭连接的 `quark-durable-state` 都是 infrastructure feature provider。
 3. application composition 不再创建数据库，只接收一个已构造的 `AssistantStore`。当前 compat composition 负责
    选择与现网配置相同的 provider，未来 native/server composition 可独立替换。

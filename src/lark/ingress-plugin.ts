@@ -4,7 +4,7 @@ import type {} from '../storage/service-contract.js'
 import type {} from './service.js'
 
 export const name = 'quark-feishu-ingress'
-export const inject = ['larkCli', 'quarkState']
+export const inject = ['larkCli', 'quarkEventAppendState']
 
 export interface FeishuIngressConfig {
   /** Starts the single server-side consumer. Keep false until the maintenance-window cutover. */
@@ -17,7 +17,7 @@ export interface FeishuIngressConfig {
  */
 export async function apply(ctx: Context, config: FeishuIngressConfig = {}): Promise<void> {
   ctx.on('feishu/event', async (event: NormalizedChannelEvent) => {
-    await ctx.quarkState.appendEvent(event)
+    await ctx.quarkEventAppendState.appendEvent(event)
   })
   if (config.startConsumer !== true) return
   await ctx.larkCli.start()

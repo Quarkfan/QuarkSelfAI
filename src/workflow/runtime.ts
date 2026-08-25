@@ -1,6 +1,6 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { WorkflowInstance } from '../storage/types.js'
-import type { DurableStatePort } from '../storage/service-contract.js'
+import type { DurableWorkflowStatePort } from '../storage/service-contract.js'
 import { DEFAULT_DURABLE_RECOVERY_INTERVAL_MS, DurableWakeScheduler } from '../runtime/wake-scheduler.js'
 import type {
   DurableWorkflowPort,
@@ -30,10 +30,10 @@ export interface WorkflowRuntimeConfig {
 export const DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS = DEFAULT_DURABLE_RECOVERY_INTERVAL_MS
 
 export class DurableWorkflowRuntime extends Service implements DurableWorkflowPort {
-  static inject = ['quarkState']
+  static inject = ['quarkWorkflowState']
   private readonly definitions = new Map<string, WorkflowDefinition>()
   private readonly effectHandlers = new Map<string, WorkflowEffectHandler>()
-  private readonly state: DurableStatePort
+  private readonly state: DurableWorkflowStatePort
   private running = false
   private readonly scheduler: DurableWakeScheduler<{ readonly due: number; readonly effect: 'idle' | 'delivered' | 'deferred' | 'failed' }>
 
@@ -42,7 +42,7 @@ export class DurableWorkflowRuntime extends Service implements DurableWorkflowPo
     if (!config.workerId?.trim()) throw new Error('workflow runtime workerId is required')
     // Capture the injected port while Cordis dependency tracing is active;
     // durable timers execute after that construction scope has ended.
-    this.state = ctx.quarkState
+    this.state = ctx.quarkWorkflowState
     this.scheduler = new DurableWakeScheduler({
       enabled: config.enabled === true,
       recoveryIntervalMs: config.pollIntervalMs ?? DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS,
@@ -77,6 +77,10 @@ export class DurableWorkflowRuntime extends Service implements DurableWorkflowPo
   /** Schedule the exact durable deadline, or drain immediately when no future time is supplied. */
   wake(at?: string): void {
     this.scheduler.wake(at)
+  }
+
+  workflow(id: string): Promise<WorkflowInstance | undefined> {
+    return this.state.workflow(id)
   }
 
   async start(id: string, kind: string, input: Readonly<Record<string, unknown>>, now = new Date()): Promise<WorkflowInstance> {

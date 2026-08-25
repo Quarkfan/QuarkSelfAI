@@ -1,7 +1,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import { CollaborationLearningEngine } from './engine.js'
 import type { CollaborationLearningConfig, CollaborationMessage, CollaborationPolicyProposal, CollaborationTaskDecision } from './types.js'
-import type { DurableStatePort } from '../storage/service-contract.js'
+import type { DurablePolicyStatePort } from '../storage/service-contract.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import { eventToPolicySample } from './policy-samples.js'
 import type { DurableWorkflowPort } from '../workflow/contracts.js'
@@ -17,26 +17,31 @@ declare module '@deepseek-ai/cordis' {
 }
 
 export class CollaborationLearningService extends Service {
-  static inject = ['quarkState', 'quarkWorkflows']
+  static inject = [
+    'quarkSignalState', 'quarkCheckpointState', 'quarkEventQueryState', 'quarkPolicyState', 'quarkWorkflows',
+  ]
   private readonly engine: CollaborationLearningEngine
-  private readonly state: DurableStatePort
+  private readonly policyState: DurablePolicyStatePort
   private readonly workflows: DurableWorkflowPort
   private readonly scheduleDefinition
   private readonly approvalDefinition
 
   constructor(ctx: Context, private readonly config: CollaborationLearningConfig = {}) {
     super(ctx, 'quarkCollaborationLearning')
-    this.state = ctx.quarkState
+    const signals = ctx.quarkSignalState
+    const checkpoints = ctx.quarkCheckpointState
+    const events = ctx.quarkEventQueryState
+    this.policyState = ctx.quarkPolicyState
     this.workflows = ctx.quarkWorkflows
     this.scheduleDefinition = collaborationScheduleWorkflow(config.evaluationIntervalMs)
     this.approvalDefinition = collaborationPolicyApprovalWorkflow()
     this.engine = new CollaborationLearningEngine({
-      appendSignal: input => this.state.appendSignal(input),
-      recentSignals: (kind, limit) => this.state.recentSignals(kind, limit),
-      readCheckpoint: (namespace, key) => this.state.readFeatureCheckpoint(namespace, key),
-      writeCheckpoint: (namespace, key, value) => this.state.writeFeatureCheckpoint(namespace, key, value),
-      recentPolicySamples: async limit => (await this.state.recentEventPayloads('message.received', limit)).map(eventToPolicySample),
-      savePolicyDraft: input => this.state.savePolicyDraft(input),
+      appendSignal: input => signals.appendSignal(input),
+      recentSignals: (kind, limit) => signals.recentSignals(kind, limit),
+      readCheckpoint: (namespace, key) => checkpoints.readFeatureCheckpoint(namespace, key),
+      writeCheckpoint: (namespace, key, value) => checkpoints.writeFeatureCheckpoint(namespace, key, value),
+      recentPolicySamples: async limit => (await events.recentEventPayloads('message.received', limit)).map(eventToPolicySample),
+      savePolicyDraft: input => this.policyState.savePolicyDraft(input),
       publishProposal: proposal => this.openApproval(proposal),
     }, config)
     const disposers = [
@@ -89,14 +94,16 @@ export class CollaborationLearningService extends Service {
     const decision = effect.payload.decision
     const decidedAt = timestamp(effect.payload.decidedAt, 'decidedAt')
     if (decision !== 'approve' && decision !== 'decline') throw new Error('collaboration policy decision is invalid')
-    if (decision === 'approve') await this.state.activatePolicy(policyId, revision, decidedAt)
+    if (decision === 'approve') await this.policyState.activatePolicy(policyId, revision, decidedAt)
     await this.engine.recordPolicyDecision(policyId, decision, new Date(decidedAt))
     return { policyId, revision, decision }
   }
 }
 
 export const name = 'quark-collaboration-learning'
-export const inject = ['quarkState', 'quarkWorkflows']
+export const inject = [
+  'quarkSignalState', 'quarkCheckpointState', 'quarkEventQueryState', 'quarkPolicyState', 'quarkWorkflows',
+]
 
 export async function apply(ctx: Context, config: CollaborationLearningConfig = {}): Promise<void> {
   await ctx.plugin(CollaborationLearningService, config)

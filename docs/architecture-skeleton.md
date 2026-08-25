@@ -17,7 +17,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
 | Durable event runtime | 入站事件按消费者独立租约、失败重放和结算 | 飞书消息语义或具体业务路由 |
-| Storage port / durable-state contract | 跨数据库的一致数据契约，以及 DSH 插件依赖的稳定 `quarkState` 端口 | 创建具体数据库连接、兼容 `state.json` 结构 |
+| Storage port / durable-state contract | 跨数据库的一致数据契约，以及按 event/workflow/action/policy 等职责拆分的窄 DSH capability | 创建具体数据库连接、兼容 `state.json` 结构或提供聚合 service locator |
 | Policy runtime | 开放 fact/effect 的受限条件 DSL 与 schema 校验挂点 | 具体消息事实、提醒/任务/回复效果和安全模拟 |
 | Executor router | Provider 选择、串行兜底、权限边界 | Claude/Codex 的具体协议 |
 | Workspace boundary | 本地路径授权与防逃逸 | 上传或同步文件 |
@@ -132,6 +132,9 @@ SQLite；PostgreSQL 保持 ready/inactive，切换配置不应迫使骨架 impor
 边界之外重新依赖完整 `AssistantStore`，避免未来增加一种“肉”时被迫扩大所有骨架消费者。具体
 `StorageConfig` 属于 durable-state provider，稳定 `platform` API 只导出有意承诺的 `storage/ports`；存储
 provider id 是开放字符串，增加新数据库不能要求骨架扩充枚举。
+DSH 中也不再提供聚合 `quarkState`：同一连接 host 只暴露 event append/consumer/query、workflow runtime、action
+enqueue/decision/worker、signal、checkpoint 与 policy 等冻结的窄 capability。业务 workflow 的创建和查询统一通过
+`quarkWorkflows`，不能为了少写一个 port 就直接取得底层 workflow/action store。
 
 仓库外插件统一从 `@quarkfan/quark-self-ai/platform` 使用稳定 SDK。该子路径自身是 `contract/static`，只能
 重导出 contract 模块和纯校验函数；进程生命周期、本地文件策略、默认 provider、数据库连接及具体 runtime Service

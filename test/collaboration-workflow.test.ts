@@ -86,7 +86,7 @@ test('approved collaboration card activates the exact safe policy revision', asy
     await ctx.plugin(DurableWorkflowRuntime, { workerId: 'collaboration-test', enabled: false })
     ctx.quarkWorkflows.registerEffect(ASSISTANT_EFFECTS.requestInteraction, { async execute() { return { messageId: 'om-card' } } })
     await ctx.plugin(CollaborationLearningService, { enabled: false })
-    await ctx.quarkState.savePolicyDraft({
+    await ctx.quarkPolicyState.savePolicyDraft({
       id: proposal.id, name: proposal.document.name, sourceText: proposal.sourceText,
       document: proposal.document, simulation: proposal.simulation,
     })
@@ -94,14 +94,14 @@ test('approved collaboration card activates the exact safe policy revision', asy
     await ctx.quarkWorkflows.start(workflowId, 'assistant.collaboration-learning.policy-approval.v1', { proposal }, new Date('2026-08-25T00:00:00.000Z'))
     const cardRun = await ctx.quarkWorkflows.runOnce(new Date('2026-08-25T00:00:01.000Z'))
     assert.equal(cardRun.effect, 'delivered')
-    const approvalId = String((await ctx.quarkState.workflow(workflowId))?.state.approvalId)
+    const approvalId = String((await ctx.quarkWorkflows.workflow(workflowId))?.state.approvalId)
     await ctx.quarkWorkflows.dispatch(workflowId, {
       id: 'owner-approved', type: 'approval.approved', occurredAt: '2026-08-25T00:00:02.000Z', payload: { approvalId },
     })
     const decisionRun = await ctx.quarkWorkflows.runOnce(new Date('2026-08-25T00:00:03.000Z'))
     assert.equal(decisionRun.effect, 'delivered')
-    assert.equal((await ctx.quarkState.workflow(workflowId))?.status, 'completed')
-    const decisions = await ctx.quarkState.recentSignals('collaboration.owner-signal.v1', 10)
+    assert.equal((await ctx.quarkWorkflows.workflow(workflowId))?.status, 'completed')
+    const decisions = await ctx.quarkSignalState.recentSignals('collaboration.owner-signal.v1', 10)
     assert.equal(decisions[0]?.data.decision, 'approve')
     assert.equal(decisions[0]?.data.policyId, proposal.id)
   } finally {

@@ -5,11 +5,9 @@ import { ActionLedgerService } from '../src/execution/ledger-service.js'
 
 test('durable action ledger loads and persists without an executor or DSH agent', async () => {
   const enqueued: unknown[] = []
-  const approvals: unknown[] = []
   const ctx = new Context()
-  ctx.reflect.provide('quarkState', {
+  ctx.reflect.provide('quarkActionEnqueueState', {
     async enqueueAction(input: unknown) { enqueued.push(input); return { inserted: true } },
-    async decideApproval(...args: unknown[]) { approvals.push(args) },
   })
   const fiber = ctx.plugin(ActionLedgerService, {})
   try {
@@ -21,9 +19,8 @@ test('durable action ledger loads and persists without an executor or DSH agent'
     }
     const ledger = ctx.quarkActionLedger
     assert.deepEqual(await new Promise((resolve, reject) => setImmediate(() => ledger.enqueue(action).then(resolve, reject))), { inserted: true })
-    await new Promise<void>((resolve, reject) => setImmediate(() => ledger.decideApproval('approval-1', 'approved', { actor: 'owner' }, '2026-08-24T00:00:00Z').then(resolve, reject)))
     assert.deepEqual(enqueued, [action])
-    assert.deepEqual(approvals, [['approval-1', 'approved', { actor: 'owner' }, '2026-08-24T00:00:00Z']])
+    assert.equal('decideApproval' in ctx.quarkActionLedger, false)
     assert.equal('runOnce' in ctx.quarkActionLedger, false)
   } finally {
     await ctx.fiber.dispose()

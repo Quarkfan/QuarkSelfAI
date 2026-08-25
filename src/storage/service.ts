@@ -22,7 +22,18 @@ import type {
   WorkflowInstance,
 } from './types.js'
 import type { ExecutorResult } from '../domain/contracts.js'
-import type { DurableStatePort } from './service-contract.js'
+import type {
+  DurableActionDecisionStatePort,
+  DurableActionEnqueueStatePort,
+  DurableActionWorkerStatePort,
+  DurableCheckpointStatePort,
+  DurableEventAppendStatePort,
+  DurableEventConsumerStatePort,
+  DurableEventQueryStatePort,
+  DurablePolicyStatePort,
+  DurableSignalStatePort,
+  DurableWorkflowStatePort,
+} from './service-contract.js'
 
 const sqliteMigrations = fileURLToPath(new URL('../../migrations/sqlite/', import.meta.url))
 const postgresMigrations = fileURLToPath(new URL('../../migrations/', import.meta.url))
@@ -48,13 +59,49 @@ async function createStateStore(config: DurableStateConfig): Promise<AssistantSt
   return store
 }
 
-/** The single DSH-owned database connection provider behind the durable-state contract. */
-export class DurableStateService extends Service implements DurableStatePort {
+/** The single database connection host behind separately injected capability ports. */
+export class DurableStateService extends Service implements
+  DurableEventAppendStatePort,
+  DurableEventConsumerStatePort,
+  DurableEventQueryStatePort,
+  DurableWorkflowStatePort,
+  DurableActionEnqueueStatePort,
+  DurableActionDecisionStatePort,
+  DurableActionWorkerStatePort,
+  DurableSignalStatePort,
+  DurableCheckpointStatePort,
+  DurablePolicyStatePort {
   private readonly ready: Promise<AssistantStore>
 
   constructor(ctx: Context, config: DurableStateConfig) {
-    super(ctx, 'quarkState')
+    super(ctx, 'quarkStateHost')
     this.ready = createStateStore(config)
+    ctx.provide('quarkEventAppendState', Object.freeze({ appendEvent: this.appendEvent.bind(this) }))
+    ctx.provide('quarkEventConsumerState', Object.freeze({
+      claimNextEvent: this.claimNextEvent.bind(this), settleEvent: this.settleEvent.bind(this),
+      releaseEvent: this.releaseEvent.bind(this), updateCheckpoint: this.updateCheckpoint.bind(this),
+    }))
+    ctx.provide('quarkEventQueryState', Object.freeze({ recentEventPayloads: this.recentEventPayloads.bind(this) }))
+    ctx.provide('quarkWorkflowState', Object.freeze({
+      createWorkflow: this.createWorkflow.bind(this), workflow: this.workflow.bind(this), dueWorkflows: this.dueWorkflows.bind(this),
+      advanceWorkflow: this.advanceWorkflow.bind(this), claimNextWorkflowEffect: this.claimNextWorkflowEffect.bind(this),
+      settleWorkflowEffect: this.settleWorkflowEffect.bind(this), releaseWorkflowEffect: this.releaseWorkflowEffect.bind(this),
+    }))
+    ctx.provide('quarkActionEnqueueState', Object.freeze({ enqueueAction: this.enqueueAction.bind(this) }))
+    ctx.provide('quarkActionDecisionState', Object.freeze({ decideApproval: this.decideApproval.bind(this) }))
+    ctx.provide('quarkActionWorkerState', Object.freeze({
+      claimNextAction: this.claimNextAction.bind(this), settleAction: this.settleAction.bind(this),
+      releaseActionClaim: this.releaseActionClaim.bind(this),
+    }))
+    ctx.provide('quarkSignalState', Object.freeze({
+      appendSignal: this.appendSignal.bind(this), recentSignals: this.recentSignals.bind(this),
+    }))
+    ctx.provide('quarkCheckpointState', Object.freeze({
+      readFeatureCheckpoint: this.readFeatureCheckpoint.bind(this), writeFeatureCheckpoint: this.writeFeatureCheckpoint.bind(this),
+    }))
+    ctx.provide('quarkPolicyState', Object.freeze({
+      savePolicyDraft: this.savePolicyDraft.bind(this), activatePolicy: this.activatePolicy.bind(this),
+    }))
     ctx.effect(() => async () => { await (await this.ready.catch(() => undefined))?.close() }, 'quark durable state store')
   }
 

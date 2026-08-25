@@ -7,8 +7,9 @@
 durable inbox、workflow 和 action ledger 都需要“提交后立即处理、未来重试按时处理、重启后可以恢复”。分别维护
 timer、drain 和 fallback poll 会形成三套细微不同的并发语义；action worker 还保留了每 30 秒空扫描。
 
-Cordis 的注入校验只在插件依赖追踪作用域内有效。原生 timer callback 离开该作用域后再读取 `ctx.quarkState` 等
-provider 会失败，因此仅把重复代码抽成工具并不足以形成可靠骨架。
+Cordis 的注入校验只在插件依赖追踪作用域内有效。原生 timer callback 离开该作用域后再读取注入的 state capability
+会失败，因此仅把重复代码抽成工具并不足以形成可靠骨架。原聚合 `quarkState` 已由 ADR 0072 拆分，但构造期捕获
+窄端口的要求不变。
 
 ## 决策
 

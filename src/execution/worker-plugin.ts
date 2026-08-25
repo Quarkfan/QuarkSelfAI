@@ -20,7 +20,7 @@ declare module '@deepseek-ai/cordis' {
  * this provider derives one exact DSH parent session from the durable action id.
  */
 export class ActionWorkerService extends Service {
-  static inject = ['agents', 'quarkState', 'quarkExecutors']
+  static inject = ['agents', 'quarkActionWorkerState', 'quarkExecutors']
   private readonly workers: readonly DurableExecutorWorker[]
   private running = false
   private readonly controller = new AbortController()
@@ -31,7 +31,7 @@ export class ActionWorkerService extends Service {
     validateConfig(config)
     const host = new CordisActionAgentHost(ctx.agents, config)
     this.workers = config.workspaces.map(workspace => new DurableExecutorWorker(
-      ctx.quarkState,
+      ctx.quarkActionWorkerState,
       ctx.quarkExecutors,
       host,
       {
@@ -120,7 +120,7 @@ class CordisActionAgentHost implements DurableActionAgentHost {
 }
 
 export const name = 'quark-agent-action-worker'
-export const inject = ['agents', 'quarkState', 'quarkExecutors']
+export const inject = ['agents', 'quarkActionWorkerState', 'quarkExecutors']
 export const DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS = DEFAULT_DURABLE_RECOVERY_INTERVAL_MS
 export function apply(ctx: Context, config: ActionWorkerConfig): void {
   ctx.plugin(ActionWorkerService, config)
