@@ -265,6 +265,8 @@ validateAssetOwnership(catalog, runtimeAssets)
 const moduleById = new Map(catalog.modules.map(module => [module.id, module]))
 const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
+const actualRequiredServices = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
+const actualProvidedServices = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const dshSourceModules = new Set<string>()
 const injectedRuntimeRequirements = new Map<string, Set<string>>()
 const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|grantedBy\s*:\s*['"]owner['"]|\b(?:conversationId|messageId|senderId)\b|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover)\b|常东旭|任永强|张以宁/gi
@@ -282,6 +284,16 @@ for (const filename of files) {
   const from = relative(root, filename)
   const owner = ownerBySource.get(from)
   const ownerModule = moduleById.get(owner ?? '')
+  if (owner) {
+    const requiredServices = actualRequiredServices.get(owner)!
+    for (const declaration of source.matchAll(/(?:static\s+inject|export\s+const\s+inject)\s*=\s*\[([^\]]*)\]/gs)) {
+      for (const service of declaration[1]!.matchAll(/['"]([a-z][A-Za-z0-9]*)['"]/g)) requiredServices.add(service[1]!)
+    }
+    const providedServices = actualProvidedServices.get(owner)!
+    for (const registration of source.matchAll(/(?:super\(ctx,|ctx\.provide\()\s*['"]([a-z][A-Za-z0-9]*)['"]/g)) {
+      providedServices.add(registration[1]!)
+    }
+  }
   const importsDshRuntime = /^import\s+(?!type\b)[^\n]*from\s+['"]@deepseek-ai\/(?:cordis|dsh-)/m.test(source)
   const definesCordisPlugin = /from\s+['"]@deepseek-ai\/cordis['"]/.test(source)
     && /(?:\bextends\s+Service\b|\bexport\s+(?:async\s+)?function\s+apply\s*\()/.test(source)
@@ -422,6 +434,18 @@ for (const module of catalog.modules) {
   for (const runtimeDependency of injectedRuntimeRequirements.get(module.id) ?? []) {
     if (!module.runtimeDependsOn.includes(runtimeDependency)) {
       violations.push(`feature module ${module.id} injects ${runtimeDependency} without declaring the runtime dependency`)
+    }
+  }
+  if (module.owns.some(source => source.startsWith('src/') && source.endsWith('.ts'))) {
+    const actualRequired = [...(actualRequiredServices.get(module.id) ?? [])].sort()
+    const declaredRequired = [...module.requiresServices].sort()
+    if (JSON.stringify(actualRequired) !== JSON.stringify(declaredRequired)) {
+      violations.push(`module ${module.id} required services differ: declared=[${declaredRequired.join(',')}] actual=[${actualRequired.join(',')}]`)
+    }
+    const actualProvided = [...(actualProvidedServices.get(module.id) ?? [])].sort()
+    const declaredProvided = [...module.providesServices].sort()
+    if (JSON.stringify(actualProvided) !== JSON.stringify(declaredProvided)) {
+      violations.push(`module ${module.id} provided services differ: declared=[${declaredProvided.join(',')}] actual=[${actualProvided.join(',')}]`)
     }
   }
 }

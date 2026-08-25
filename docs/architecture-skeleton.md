@@ -12,7 +12,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | DSH/Cordis runtime | session、插件装配、工具、短时 approval | 具体业务判断 |
 | Lifecycle host | 进程组件启动顺序、失败传播、逆序回滚 | 功能定时器和业务重试 |
 | Application composition/host | 接收已构造的存储端口与 kernel 配置，装配内核并接收开放组件贡献；统一启动、停止、失败等待和状态快照 | 解析其他模块配置、创建 SQLite/PostgreSQL、Web 控制台、枚举 compat、飞书或某个业务功能 |
-| Module catalog | 模块分类、逐文件源码与运行资产所有权、真实 import 依赖、分层方向和迁移退出条件 | 动态启停业务功能 |
+| Module catalog | 模块分类、逐文件源码与运行资产所有权、真实 import 依赖、Cordis service 能力、分层方向和迁移退出条件 | 动态启停业务功能 |
 | Event/domain contracts | 规范化事件、matter、action、approval | 飞书字段和滴答参数 |
 | Durable action ledger | action 入队、批准绑定、租约和结算 | 选择/创建 DSH 会话或驱动 Agent |
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
@@ -62,6 +62,11 @@ inactive/shadow 模块。同一目录的 `assets` 是非源码运行资产所有
 Git 已跟踪的配置、SQL migration、Web 静态资源、部署入口、兼容 schema 和插件模板，因此不会接管个人未提交的
 界面文件，但任何进入仓库的运行资产都必须明确属于一个 skeleton、feature 或 migration 模块。资产归属是维护责任，
 不替代源码 import 依赖。
+Cordis service 关系由 `requiresServices`/`providesServices` 单独表达：service 只能有一个 provider，每个需求都必须
+可解析，active consumer 只能使用 active provider。检查器从源码的 `static inject`、模块级 `inject`、`Service`
+注册和 `ctx.provide` 反向提取实际关系，并与目录精确比对。service capability 是运行时依赖倒置，不等于源码或模块
+所有权依赖；因此 skeleton 可以依赖一个开放 service contract，由 feature provider 在产品组合中实现，而不会形成
+skeleton 对 feature 源码的反向耦合。
 新增 helper、重复归属、失效路径、未声明 import 和已失效的声明依赖都会阻断 `npm check`。两类依赖都受
 skeleton/feature/migration 方向约束，但不会再把编译耦合与运行装配混为一谈。可加载插件还必须声明稳定的
 `plugin.profileId` 与
@@ -256,8 +261,8 @@ workflow 串联；失败的卡片投影不会提前推进评估 checkpoint。架
 ## 新想法如何接入
 
 1. 先回答：换掉当前外部系统后，这个机制是否仍成立？若否，它是 feature。
-2. 在 `config/module-catalog.json` 增加模块，选择符合依赖矩阵的 layer，并精确登记 `owns`、`assets`、真实依赖和
-   插件绑定；`architecture:check` 必须通过。
+2. 在 `config/module-catalog.json` 增加模块，选择符合依赖矩阵的 layer，并精确登记 `owns`、`assets`、真实依赖、
+   `requiresServices`/`providesServices` 和插件绑定；`architecture:check` 必须通过。
 3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表；源码 `dependsOn` 指向 contract，注入端口
    所需的实际 provider 放入 `runtimeDependsOn`，不得 import 具体 runtime Service。
 4. 开放式 executor/本地修改走 durable action/approval；已建模业务写入走 durable workflow effect/outbox，高影响

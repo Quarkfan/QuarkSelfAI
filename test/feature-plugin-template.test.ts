@@ -27,6 +27,7 @@ test('feature template is a valid inactive module-catalog v3 extension', async (
         id: 'durable-workflow-runtime', classification: 'skeleton', layer: 'kernel',
         implementation: 'ready', runtime: 'active', source: 'src/workflow/runtime.ts',
         owns: ['src/workflow/runtime.ts'], dependsOn: ['durable-workflow-contracts'], runtimeDependsOn: ['dsh-runtime'],
+        providesServices: ['quarkWorkflows'],
       },
       fragment,
     ],
@@ -39,6 +40,8 @@ test('feature template is a valid inactive module-catalog v3 extension', async (
   assert.deepEqual(feature?.assets, [])
   assert.deepEqual(feature?.dependsOn, ['durable-workflow-contracts'])
   assert.deepEqual(feature?.runtimeDependsOn, ['dsh-runtime', 'durable-workflow-runtime'])
+  assert.deepEqual(feature?.requiresServices, ['quarkWorkflows'])
+  assert.deepEqual(feature?.providesServices, [])
   assert.deepEqual(feature?.plugin, { profileId: 'feature-id', packageExport: './feature-id' })
 })
 

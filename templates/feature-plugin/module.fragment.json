@@ -12,6 +12,8 @@
   "mounts": [],
   "requiresEffects": [],
   "providesEffects": [],
+  "requiresServices": ["quarkWorkflows"],
+  "providesServices": [],
   "plugin": {
     "profileId": "feature-id",
     "packageExport": "./feature-id"

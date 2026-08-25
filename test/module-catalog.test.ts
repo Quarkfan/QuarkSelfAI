@@ -308,6 +308,63 @@ test('requires each effect to have only one provider', () => {
   }), /effect task-system\.read\.v1 is provided by both a and b/)
 })
 
+test('treats Cordis services as explicit runtime capabilities', () => {
+  assert.doesNotThrow(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'feature-provider', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'active',
+        source: 'provider', owns: [], dependsOn: [], providesServices: ['examplePort'],
+      },
+      {
+        id: 'skeleton-consumer', classification: 'skeleton', layer: 'kernel', implementation: 'ready', runtime: 'active',
+        source: 'consumer', owns: [], dependsOn: [], requiresServices: ['examplePort'],
+      },
+    ],
+  }))
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'consumer', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'inactive', source: 'consumer', owns: [], dependsOn: [], requiresServices: ['missingPort'] },
+    ],
+  }), /module consumer requires unprovided service missingPort/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'provider-a', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'active', source: 'a', owns: [], dependsOn: [], providesServices: ['examplePort'] },
+      { id: 'provider-b', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'active', source: 'b', owns: [], dependsOn: [], providesServices: ['examplePort'] },
+    ],
+  }), /service examplePort is provided by both provider-a and provider-b/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'provider', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'inactive', source: 'provider', owns: [], dependsOn: [], providesServices: ['examplePort'] },
+      { id: 'consumer', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'active', source: 'consumer', owns: [], dependsOn: [], requiresServices: ['examplePort'] },
+    ],
+  }), /active module consumer requires inactive service examplePort/)
+})
+
+test('rejects services on static contracts and malformed service ids', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'contract', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static',
+        source: 'contract', owns: [], dependsOn: [], providesServices: ['examplePort'],
+      },
+    ],
+  }), /static contract module contract cannot require or provide runtime services/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      {
+        id: 'provider', classification: 'feature', layer: 'provider', implementation: 'ready', runtime: 'inactive',
+        source: 'provider', owns: [], dependsOn: [], providesServices: ['Example-Port'],
+      },
+    ],
+  }), /invalid service id/)
+})
+
 test('requires plugin profile ids and package exports to have one module owner', () => {
   const plugin = { profileId: 'shared-plugin', packageExport: './shared-plugin' }
   assert.throws(() => validateModuleCatalog({

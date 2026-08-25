@@ -32,6 +32,10 @@ export interface AssistantModuleDescriptor {
   readonly mounts: readonly string[]
   readonly requiresEffects: readonly string[]
   readonly providesEffects: readonly string[]
+  /** Cordis services resolved by this module at runtime. */
+  readonly requiresServices: readonly string[]
+  /** Cordis services uniquely registered by this module. */
+  readonly providesServices: readonly string[]
   /** Present only when this module owns a loadable plugin entrypoint. */
   readonly plugin?: AssistantPluginBinding
   readonly hostedBy?: string
@@ -82,6 +86,7 @@ const catalogFields = new Set(['version', 'modules'])
 const moduleFields = new Set([
   'id', 'classification', 'layer', 'implementation', 'runtime', 'source', 'owns', 'assets', 'dependsOn',
   'runtimeDependsOn', 'mounts', 'requiresEffects', 'providesEffects', 'plugin', 'hostedBy', 'exitCriteria',
+  'requiresServices', 'providesServices',
 ])
 
 export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
@@ -154,6 +159,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
   const ownership = new Map<string, string>()
   const assetOwnership = new Map<string, string>()
   const effectProviders = new Map<string, AssistantModuleDescriptor>()
+  const serviceProviders = new Map<string, AssistantModuleDescriptor>()
   const pluginProfiles = new Map<string, string>()
   const pluginExports = new Map<string, string>()
   for (const module of modules) {
@@ -171,6 +177,11 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       const existing = effectProviders.get(effect)
       if (existing) throw new Error(`effect ${effect} is provided by both ${existing.id} and ${module.id}`)
       effectProviders.set(effect, module)
+    }
+    for (const service of module.providesServices) {
+      const existing = serviceProviders.get(service)
+      if (existing) throw new Error(`service ${service} is provided by both ${existing.id} and ${module.id}`)
+      serviceProviders.set(service, module)
     }
     if (module.plugin) {
       const profileOwner = pluginProfiles.get(module.plugin.profileId)
@@ -190,6 +201,14 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
     for (const effect of module.requiresEffects) {
       if (effectProviders.get(effect)?.runtime !== 'active') throw new Error(`active module ${module.id} requires inactive effect ${effect}`)
+    }
+    for (const service of module.requiresServices) {
+      if (serviceProviders.get(service)?.runtime !== 'active') throw new Error(`active module ${module.id} requires inactive service ${service}`)
+    }
+  }
+  for (const module of modules) {
+    for (const service of module.requiresServices) {
+      if (!serviceProviders.has(service)) throw new Error(`module ${module.id} requires unprovided service ${service}`)
     }
   }
   assertAcyclic(modules, byId)
@@ -311,6 +330,11 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
   if (overlappingDependencies.length) throw new Error(`module ${id} declares multiple relationship types for ${overlappingDependencies.join(', ')}`)
   const requiresEffects = effectList(value.requiresEffects, `requiresEffects for ${id}`)
   const providesEffects = effectList(value.providesEffects, `providesEffects for ${id}`)
+  const requiresServices = serviceList(value.requiresServices, `requiresServices for ${id}`)
+  const providesServices = serviceList(value.providesServices, `providesServices for ${id}`)
+  if (runtime === 'static' && (requiresServices.length > 0 || providesServices.length > 0)) {
+    throw new Error(`static contract module ${id} cannot require or provide runtime services`)
+  }
   if (dependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
   if (runtimeDependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
   if (mounts.includes(id)) throw new Error(`module ${id} cannot mount itself`)
@@ -335,6 +359,8 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     mounts,
     requiresEffects,
     providesEffects,
+    requiresServices,
+    providesServices,
     ...(value.plugin === undefined ? {} : { plugin: parsePlugin(value.plugin, id) }),
     ...(hostedBy === undefined ? {} : { hostedBy }),
     ...(exitCriteria === undefined ? {} : { exitCriteria }),
@@ -364,6 +390,17 @@ function effectList(value: unknown, label: string): string[] {
   if (result.length !== value.length) throw new Error(`${label} must not contain duplicates`)
   for (const effect of result) {
     if (!/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+\.v[1-9][0-9]*$/.test(effect)) throw new Error(`invalid effect id in ${label}: ${effect}`)
+  }
+  return result
+}
+
+function serviceList(value: unknown, label: string): string[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) throw new Error(`${label} must be a string array`)
+  const result = [...new Set(value as string[])]
+  if (result.length !== value.length) throw new Error(`${label} must not contain duplicates`)
+  for (const service of result) {
+    if (!/^[a-z][A-Za-z0-9]*$/.test(service)) throw new Error(`invalid service id in ${label}: ${service}`)
   }
   return result
 }
