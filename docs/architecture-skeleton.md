@@ -26,6 +26,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 消息接入属于骨架上生长的功能：`message-intake` 使用 durable event/workflow 骨架，但“本人私聊直接委托、重点关注、上下文判断、任务标题/优先级、是否通知”等均留在可替换的 feature policy 与 effect adapter 中。低优先级非艾特消息允许由 10 分钟级 discovery effect 补充，不要求骨架高频轮询。
 
 骨架依赖只能指向骨架。它不能出现“常东旭”“任永强”“滴答”“飞书”“BlackLake”等具体协作语义。
+产品品牌同样属于 surface/composition，不得进入 skeleton 的日志、默认状态或公共 contract 注释。
 架构检查会扫描 skeleton 所属源码并阻断个人、外部产品、具体 channel 和具体 executor/provider 标识；需要这些名称的
 contract、policy、adapter 或 provider 必须归 feature，而不是以通用接口为名留在内核。
 通道和 executor 使用插件注册的开放标识；现有 Claude → Codex fallback 是组合配置，不是内核分支。事件 `kind`

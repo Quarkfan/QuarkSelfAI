@@ -12,14 +12,14 @@ export async function runAssistantApplication(application: AssistantApplication)
   const stop = async (signal: string): Promise<void> => {
     if (stopping) return
     stopping = true
-    process.stdout.write(`QuarkSelfAI stopping on ${signal}\n`)
+    process.stdout.write(`Assistant host stopping on ${signal}\n`)
     await application.stop()
   }
 
   void application.waitForFailure().then(async ({ componentId, error }) => {
-    process.stderr.write(`QuarkSelfAI component ${componentId} failed: ${error.message}\n`)
+    process.stderr.write(`Assistant component ${componentId} failed: ${error.message}\n`)
     await stop(`${componentId}-failure`).catch((stopError) => {
-      process.stderr.write(`QuarkSelfAI shutdown after component failure also failed: ${String(stopError)}\n`)
+      process.stderr.write(`Assistant shutdown after component failure also failed: ${String(stopError)}\n`)
     })
     process.exitCode = 1
   })

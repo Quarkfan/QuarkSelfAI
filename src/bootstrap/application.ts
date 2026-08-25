@@ -49,7 +49,7 @@ export async function createAssistantApplication(
       kind: 'kernel',
       start: async () => {
         await kernel.start()
-        process.stdout.write(`QuarkSelfAI DSH kernel ready profile=${kernel.snapshot().profile ?? 'unknown'}\n`)
+        process.stdout.write(`DSH kernel ready profile=${kernel.snapshot().profile ?? 'unknown'}\n`)
       },
       stop: async () => { await kernel.stop() },
       waitForFailure: async () => await kernel.waitForFailure(),

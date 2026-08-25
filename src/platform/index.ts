@@ -1,4 +1,4 @@
-/** Stable extension surface for durable QuarkSelfAI plugins. */
+/** Stable extension surface for durable assistant-platform plugins. */
 export type * from '../domain/contracts.js'
 export type * from '../domain/authorization.js'
 export { requireAuthorizationEvidence } from '../domain/authorization.js'

@@ -268,7 +268,7 @@ const actualDependencies = new Map(catalog.modules.map(module => [module.id, new
 const actualRequiredServices = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const actualProvidedServices = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const dshSourceModules = new Set<string>()
-const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|grantedBy\s*:\s*['"]owner['"]|\b(?:conversationId|messageId|senderId)\b|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover)\b|常东旭|任永强|张以宁/gi
+const forbiddenSkeletonSemantics = /im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|grantedBy\s*:\s*['"]owner['"]|\b(?:conversationId|messageId|senderId)\b|\b(?:feishu|lark|dida|ticktick|blacklake|xiaowei|claude|codex|openai|takeover|nativecutover|quarkselfai|quark-self-ai)\b|Quark\s+Self\s+AI|常东旭|任永强|张以宁/gi
 const violations: string[] = []
 for (const module of catalog.modules.filter(item => item.layer === 'contract')) {
   for (const filename of module.owns) {
