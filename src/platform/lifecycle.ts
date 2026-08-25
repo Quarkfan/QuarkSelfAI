@@ -55,22 +55,40 @@ export class LifecycleSupervisor {
   async start(): Promise<void> {
     if (this.state !== 'idle') throw new Error(`lifecycle cannot start from ${this.state}`)
     this.state = 'starting'
+    let starting: ManagedComponent | undefined
     try {
       for (const component of this.components) {
+        starting = component
         this.setStatus(component, { state: 'starting' })
-        await component.start()
+        // A component may allocate resources before start() rejects. Put the
+        // attempt on the rollback stack first so partial starts are stoppable.
         this.started.push(component)
+        await component.start()
         this.setStatus(component, { state: 'ready', startedAt: new Date().toISOString() })
         if (component.critical !== false && component.waitForFailure) {
-          void component.waitForFailure().then(error => this.reportFailure(component, error))
+          void component.waitForFailure().then(
+            error => this.reportFailure(component, error),
+            error => this.reportFailure(component, normalizeError(error)),
+          )
         }
       }
       this.state = 'ready'
     } catch (error) {
-      const failed = this.components[this.started.length]
-      if (failed) this.setStatus(failed, { state: 'failed', lastError: errorMessage(error) })
+      const startError = normalizeError(error)
       this.state = 'failed'
-      await this.stopStarted()
+      let rollbackError: Error | undefined
+      try {
+        await this.stopStarted()
+      } catch (rollbackFailure) {
+        rollbackError = normalizeError(rollbackFailure)
+      }
+      if (starting) this.setStatus(starting, { state: 'failed', lastError: startError.message })
+      if (rollbackError) {
+        throw new AggregateError(
+          [startError, rollbackError],
+          `component ${starting?.id ?? 'unknown'} failed to start and rollback failed: ${startError.message}`,
+        )
+      }
       throw error
     }
   }
@@ -132,4 +150,8 @@ export class LifecycleSupervisor {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function normalizeError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error))
 }

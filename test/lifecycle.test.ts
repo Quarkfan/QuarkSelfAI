@@ -40,9 +40,33 @@ test('rolls back already-started components when a later start fails', async () 
     component('surface', log),
   ])
   await assert.rejects(supervisor.start(), /kernel failed/)
-  assert.deepEqual(log, ['start:store', 'start:kernel', 'stop:store'])
+  assert.deepEqual(log, ['start:store', 'start:kernel', 'stop:kernel', 'stop:store'])
   assert.equal(supervisor.snapshot()[0]?.state, 'stopped')
   assert.equal(supervisor.snapshot()[1]?.state, 'failed')
+})
+
+test('preserves start and rollback failures when a partial start cannot be stopped', async () => {
+  const log: string[] = []
+  const startError = new Error('kernel start failed')
+  const stopError = new Error('kernel rollback failed')
+  const supervisor = new LifecycleSupervisor([
+    component('store', log),
+    component('kernel', log, { startError, stopError }),
+  ])
+
+  await assert.rejects(supervisor.start(), (error: unknown) => {
+    assert.ok(error instanceof AggregateError)
+    assert.match(error.message, /kernel start failed/)
+    assert.equal(error.errors[0], startError)
+    assert.ok(error.errors[1] instanceof AggregateError)
+    assert.match(error.errors[1].message, /failed to stop/)
+    return true
+  })
+  assert.deepEqual(log, ['start:store', 'start:kernel', 'stop:kernel', 'stop:store'])
+  assert.equal(supervisor.snapshot()[0]?.state, 'stopped')
+  assert.deepEqual(supervisor.snapshot()[1], {
+    id: 'kernel', kind: 'infrastructure', state: 'failed', lastError: 'kernel start failed',
+  })
 })
 
 test('surfaces the first critical component failure', async () => {
@@ -55,6 +79,19 @@ test('surfaces the first critical component failure', async () => {
   assert.equal(result.componentId, 'kernel')
   assert.match(result.error.message, /runtime exited/)
   assert.equal(supervisor.snapshot()[0]?.state, 'failed')
+  await supervisor.stop()
+})
+
+test('normalizes a rejected critical failure watcher', async () => {
+  const rejected = {
+    ...component('kernel', []),
+    waitForFailure: async () => { throw 'watcher disconnected' },
+  }
+  const supervisor = new LifecycleSupervisor([rejected])
+  await supervisor.start()
+  const result = await supervisor.waitForFailure()
+  assert.equal(result.componentId, 'kernel')
+  assert.match(result.error.message, /watcher disconnected/)
   await supervisor.stop()
 })
 
