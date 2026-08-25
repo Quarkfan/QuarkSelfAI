@@ -56,3 +56,18 @@ test('disposing a durable wake scheduler cancels pending work', async () => {
   await new Promise(resolve => setTimeout(resolve, 40))
   assert.equal(runs, 0)
 })
+
+test('durable wake scheduler rejects pass limits that can cause an empty reschedule loop', () => {
+  const create = (maxPasses: number) => new DurableWakeScheduler({
+    enabled: false,
+    maxPasses,
+    async run() { return false },
+    continueAfter: () => false,
+    onError(error) { throw error },
+  })
+
+  for (const maxPasses of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => create(maxPasses), /maxPasses must be a positive safe integer/)
+  }
+  assert.doesNotThrow(() => create(1).dispose())
+})

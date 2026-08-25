@@ -28,6 +28,10 @@ export class DurableWakeScheduler<Result> {
     if (!Number.isSafeInteger(recoveryIntervalMs) || recoveryIntervalMs < 1_000) {
       throw new Error('durable wake recoveryIntervalMs must be an integer of at least 1000')
     }
+    if (options.maxPasses !== undefined
+      && (!Number.isSafeInteger(options.maxPasses) || options.maxPasses < 1)) {
+      throw new Error('durable wake maxPasses must be a positive safe integer')
+    }
     if (options.enabled) {
       this.recoveryTimer = setInterval(() => this.wake(), recoveryIntervalMs)
       this.recoveryTimer.unref()
