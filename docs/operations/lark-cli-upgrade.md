@@ -13,7 +13,7 @@
 5. 运行 `npm run check` 和脱敏历史事件回放。
 6. 影子运行只读消费者；验证断线、ready、SIGTERM 和 checkpoint 恢复。
 7. 一次只升级一个实例，保留旧 CLI 和回滚命令。
-8. 观察期通过后再更新 `compat/lark-cli.json` 的最低版本和契约快照。
+8. 观察期通过后再更新 `config/lark-cli-contract.json` 的最低版本和长期适配器契约。
 
 ## 新功能接入
 

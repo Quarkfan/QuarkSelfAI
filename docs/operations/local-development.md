@@ -7,7 +7,7 @@
 - npm
 - `lark-cli` 1.0.88 及以上
 - 可选 PostgreSQL 14 及以上
-- DSH checkout：工作区的 `github/deepseek-harness`（版本见 `compat/dsh-baseline.json`）
+- DSH checkout：工作区的 `github/deepseek-harness`（版本见 `config/dsh-baseline.json`）
 
 ## 验证
 

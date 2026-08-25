@@ -10,7 +10,7 @@ const projectRoot = process.cwd()
 const checkout = resolve(projectRoot, process.env.DSH_CHECKOUT ?? '../deepseek-harness')
 const validationHome = resolve(projectRoot, process.env.DSH_VALIDATION_HOME ?? 'var/dsh-validation')
 const compatibilityOverlay = resolve(projectRoot, 'compat/cordis.compat.patch.yml')
-const baseline = JSON.parse(await readFile(resolve(projectRoot, 'compat/dsh-baseline.json'), 'utf8')) as {
+const baseline = JSON.parse(await readFile(resolve(projectRoot, 'config/dsh-baseline.json'), 'utf8')) as {
   version: string
   sourceCommit: string
 }

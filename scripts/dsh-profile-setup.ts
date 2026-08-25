@@ -37,7 +37,7 @@ export function resolveDshProfileSetup(
 
 /** Install one isolated profile and make its profile-owned patch deterministic. */
 export async function setupDshProfile(options: DshProfileSetupOptions): Promise<void> {
-  const baseline = JSON.parse(await readFile(resolve(options.projectRoot, 'compat/dsh-baseline.json'), 'utf8')) as {
+  const baseline = JSON.parse(await readFile(resolve(options.projectRoot, 'config/dsh-baseline.json'), 'utf8')) as {
     version: string
     sourceCommit: string
   }

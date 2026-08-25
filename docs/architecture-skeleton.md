@@ -125,6 +125,10 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
 `native-migration-plan.json` 还必须用退出单元逐一覆盖所有 migration 模块，明确删除/转正、前置切换、退出拓扑、
 验证和回滚；自然语言 `exitCriteria` 不能单独证明脚手架可以拔除。
 
+长期 skeleton/feature 的 source、owns 和 assets 不得落在 `compat/` 或 `packages/bridge-compat/`；只有
+`runtime=compat` 的待替代 feature 和 migration 模块允许使用这些物理路径。DSH 与 lark-cli 的长期版本/能力
+契约统一放在 `config/`，兼容校验可以读取它们，但不能反过来取得所有权。
+
 当前最重要的结构缺口：
 
 1. 飞书消费者、业务定时器仍由 `bridge-compat` 自己编排，而非 DSH 插件生命周期。

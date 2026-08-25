@@ -8,7 +8,7 @@ interface Manifest {
   requiredEventKeys: string[]
 }
 
-const manifest = JSON.parse(await readFile(resolve('compat/lark-cli.json'), 'utf8')) as Manifest
+const manifest = JSON.parse(await readFile(resolve('config/lark-cli-contract.json'), 'utf8')) as Manifest
 const discovery = new LarkCapabilityDiscovery(new ProcessCommandRunner())
 const report = await discovery.inspect(manifest.requiredEventKeys)
 const versionCompatible = isVersionAtLeast(report.cliVersion, manifest.minimumVersion)

@@ -13,6 +13,15 @@ import { DEFAULT_ACTION_RECOVERY_POLL_INTERVAL_MS } from '../src/execution/worke
 const root = process.cwd()
 const catalog = await loadModuleCatalog()
 for (const module of catalog.modules) await access(resolve(root, module.source))
+for (const module of catalog.modules) {
+  if (module.classification === 'migration' || module.runtime === 'compat') continue
+  const ownedPaths = [module.source, ...module.owns, ...(module.assets ?? [])]
+  assert.deepEqual(
+    ownedPaths.filter(path => path.startsWith('compat/') || path.startsWith('packages/bridge-compat/')),
+    [],
+    `long-term module ${module.id} cannot own compatibility paths`,
+  )
+}
 const packageManifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')) as {
   name?: unknown
   exports?: unknown

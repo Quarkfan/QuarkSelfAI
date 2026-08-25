@@ -24,7 +24,7 @@ QuarkSelfAI 是基于 DeepSeek Harness（DSH）的本地优先个人工作助手
 - DSH 官方 Claude Code/Codex Provider、native spawn 与 Claude-primary 串行兜底路由。
 - DSH 原生 durable action ledger：精确批准、数据库租约、崩溃接管、退避和陈旧 worker 防护。
 
-DSH 的兼容基线固定在 `compat/dsh-baseline.json`，不把整个 Harness 安装闭包塞进插件的
+DSH 的版本基线固定在 `config/dsh-baseline.json`，不把整个 Harness 安装闭包塞进插件的
 开发依赖；profile 验证使用工作区 `github/deepseek-harness` 下的正式 checkout。
 
 ## 本地验证
@@ -52,7 +52,7 @@ profile 接入命令。
 `compat:lark` 只执行读取操作。缺少必须事件时返回非零；新增字段和可选事件只进入报告，
 不会要求业务插件同步升级。
 
-`compat:dsh` 对 `compat/dsh-baseline.json` 校验正式 DSH checkout 的版本和 commit，再导入构建产物、读取
+`compat:dsh` 对 `config/dsh-baseline.json` 校验正式 DSH checkout 的版本和 commit，再导入构建产物、读取
 隔离的 `feishu-assistant` profile 配置，并短暂启动该 profile 后以 SIGTERM 验证清洁退出。QuarkSelfAI 的
 Lark 插件只注册 capability，不在这个烟测中启动飞书事件消费者。首次运行前按下方 DSH profile 步骤把
 本地包链接进 `var/dsh-validation`；源码 checkout 还需先执行 `corepack pnpm build`。
