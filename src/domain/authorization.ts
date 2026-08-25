@@ -1,10 +1,15 @@
 export interface DurableAuthorizationEvidence {
   readonly id: string
-  readonly grantedBy: 'owner'
+  readonly grantedBy: string
   readonly grantedAt: string
   readonly scope: string
   readonly revision: number
   readonly source: string
+}
+
+export interface AuthorizationExpectation {
+  readonly scope: string
+  readonly grantedBy: string
 }
 
 /**
@@ -13,7 +18,7 @@ export interface DurableAuthorizationEvidence {
  */
 export function requireAuthorizationEvidence(
   value: unknown,
-  expectedScope: string,
+  expected: AuthorizationExpectation,
   effectiveAt: string,
 ): DurableAuthorizationEvidence {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error('authorization evidence is required')
@@ -21,11 +26,13 @@ export function requireAuthorizationEvidence(
   const grantedAt = timestamp(evidence.grantedAt, 'authorization grantedAt')
   const effectiveTime = new Date(timestamp(effectiveAt, 'authorization effectiveAt')).getTime()
   if (new Date(grantedAt).getTime() > effectiveTime) throw new Error('authorization cannot be granted in the future')
-  if (evidence.grantedBy !== 'owner') throw new Error('authorization must be granted by the owner')
+  const expectedScope = text(expected.scope, 'expected authorization scope', 300)
+  const expectedGrantor = text(expected.grantedBy, 'expected authorization grantor', 300)
+  if (evidence.grantedBy !== expectedGrantor) throw new Error(`authorization must be granted by ${expectedGrantor}`)
   if (evidence.scope !== expectedScope) throw new Error(`authorization scope must be ${expectedScope}`)
   if (!Number.isSafeInteger(evidence.revision) || Number(evidence.revision) < 1) throw new Error('authorization revision must be a positive integer')
   return {
-    id: text(evidence.id, 'authorization id', 300), grantedBy: 'owner', grantedAt,
+    id: text(evidence.id, 'authorization id', 300), grantedBy: expectedGrantor, grantedAt,
     scope: expectedScope, revision: Number(evidence.revision), source: text(evidence.source, 'authorization source', 500),
   }
 }

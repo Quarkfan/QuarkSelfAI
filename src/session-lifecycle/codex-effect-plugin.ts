@@ -141,7 +141,9 @@ export class CodexSessionEffectAdapter {
     }
     const effectiveAt = timestamp(effect.payload.effectiveAt, 'session effectiveAt')
     const authorization = requireAuthorizationEvidence(
-      effect.payload.authorization, 'codex.auto-research-session-lifecycle', effectiveAt,
+      effect.payload.authorization,
+      { scope: 'codex.auto-research-session-lifecycle', grantedBy: 'owner' },
+      effectiveAt,
     )
     if (effect.payload.managedBy !== 'quarkselfai-auto-research') throw new Error('session is not owned by QuarkSelfAI auto research')
     if (await this.activity.running(sessionId) !== false) throw new Error('Codex session activity is not confirmed idle')

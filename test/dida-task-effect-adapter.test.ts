@@ -83,6 +83,6 @@ test('cleanup authorization fails closed before any Dida command', async () => {
   await assert.rejects(adapter.execute(effect('task-maintenance.cleanup-completed.v1', {
     projectId: 'project-auto', cutoff: '2026-07-25T00:00:00Z', effectiveAt: '2026-08-24T00:00:00Z', maxDeletes: 1,
     authorization: { id: 'forged', grantedBy: 'bot', grantedAt: '2026-08-20T00:00:00Z', scope: 'dida.completed-task-cleanup', revision: 1, source: 'test', projectId: 'project-auto', minimumRetentionDays: 30, maximumDeletesPerRun: 1 },
-  })), /granted by the owner/)
+  })), /granted by owner/)
   assert.equal(runner.calls.length, 0)
 })

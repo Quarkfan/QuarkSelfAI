@@ -182,7 +182,11 @@ export function sessionLifecycleWorkflow(config: SessionLifecycleConfig = {}): W
 
 function lifecycleAuthorization(config: SessionLifecycleConfig, deleteAfterDays: number): NonNullable<SessionLifecycleConfig['authorization']> {
   const raw = config.authorization
-  const evidence = requireAuthorizationEvidence(raw, 'codex.auto-research-session-lifecycle', new Date().toISOString())
+  const evidence = requireAuthorizationEvidence(
+    raw,
+    { scope: 'codex.auto-research-session-lifecycle', grantedBy: 'owner' },
+    new Date().toISOString(),
+  )
   if (!raw) throw new Error('session lifecycle authorization is required')
   const minimumArchivedDays = integer(raw.minimumArchivedDays, 0, 'authorization minimumArchivedDays')
   if (deleteAfterDays < minimumArchivedDays) throw new Error('deleteAfterDays exceeds the session lifecycle authorization scope')

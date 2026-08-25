@@ -36,6 +36,8 @@ policy/storage 骨架不得反向解析通道原始字段；原 envelope 只保�
 词汇，必须在通道边界完成映射。这样日历事件、文档 revision 或其他资源不需要伪装成消息才能进入 durable event。
 Lifecycle 的 component `kind` 同样是 provider 自报的开放字符串；骨架只做排序、回滚和状态展示，不枚举 migration
 或未来功能类型。
+Authorization 骨架只校验调用方声明的 scope、grantor、时间和 revision，不内置“owner 才能批准”。当前个人助手的
+滴答写入、会话清理和对外动作仍由各 feature 显式要求 `grantedBy=owner`；未来团队审批不会迫使骨架新增角色枚举。
 控制台也只能读取通用状态端口；迁移就绪度、compat 诊断和 DSH 进程状态由 composition root 注入，控制台不得直接读取迁移 manifest 或 runtime 实现。
 运行态也通过开放的 capability 列表表达，不在骨架中预设“消息、卡片或某组 EventKey”。规范化 event `kind` 同样是
 adapter/feature 拥有的开放字符串；骨架不枚举消息、卡片、日历或邮件种类，消费者按自己声明的 event key/kind 订阅。具体 channel provider

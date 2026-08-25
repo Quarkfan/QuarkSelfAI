@@ -75,7 +75,11 @@ export class DidaTaskEffectAdapter {
     const cutoff = timestamp(effect.payload.cutoff, 'cleanup cutoff')
     const maxDeletes = integer(effect.payload.maxDeletes, 'cleanup maxDeletes')
     const effectiveAt = timestamp(effect.payload.effectiveAt, 'cleanup effectiveAt')
-    const evidence = requireAuthorizationEvidence(effect.payload.authorization, 'dida.completed-task-cleanup', effectiveAt)
+    const evidence = requireAuthorizationEvidence(
+      effect.payload.authorization,
+      { scope: 'dida.completed-task-cleanup', grantedBy: 'owner' },
+      effectiveAt,
+    )
     const authorization = object(effect.payload.authorization, 'cleanup authorization')
     if (authorization.projectId !== projectId) throw new Error('cleanup authorization does not cover this project')
     const minimumRetentionDays = integer(authorization.minimumRetentionDays, 'authorization minimumRetentionDays')

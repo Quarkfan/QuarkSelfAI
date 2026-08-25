@@ -64,7 +64,7 @@ export class DidaProjectionEffectAdapter {
     const projectId = required(effect.payload.projectId, 'projection projectId', 300)
     if (!this.allowedProjects.has(projectId)) throw new Error(`project ${projectId} is outside the projection allowlist`)
     const effectiveAt = timestamp(effect.payload.effectiveAt, 'projection effectiveAt')
-    requireAuthorizationEvidence(effect.payload.authorization, SCOPE, effectiveAt)
+    requireAuthorizationEvidence(effect.payload.authorization, { scope: SCOPE, grantedBy: 'owner' }, effectiveAt)
     const authorization = object(effect.payload.authorization, 'projection authorization')
     if (authorization.projectId !== projectId) throw new Error('projection authorization does not cover this project')
     return projectId

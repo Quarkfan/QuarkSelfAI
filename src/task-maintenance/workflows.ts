@@ -224,7 +224,11 @@ function cleanupAuthorization(
   maxPerRun: number,
 ): NonNullable<DidaMaintenanceConfig['cleanupAuthorization']> {
   const raw = config.cleanupAuthorization
-  const evidence = requireAuthorizationEvidence(raw, 'dida.completed-task-cleanup', new Date().toISOString())
+  const evidence = requireAuthorizationEvidence(
+    raw,
+    { scope: 'dida.completed-task-cleanup', grantedBy: 'owner' },
+    new Date().toISOString(),
+  )
   if (!raw || raw.projectId !== projectId) throw new Error('cleanup authorization projectId must match maintenance projectId')
   const minimumRetentionDays = positiveInteger(raw.minimumRetentionDays, 0, 'authorization minimumRetentionDays')
   const maximumDeletesPerRun = positiveInteger(raw.maximumDeletesPerRun, 0, 'authorization maximumDeletesPerRun')
