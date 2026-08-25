@@ -42,6 +42,22 @@ test('collaboration evaluation cadence is a durable workflow, not an in-memory p
   assert.equal(scheduled.wakeAt, '2026-08-26T00:00:01.000Z')
 })
 
+test('daily review is delivered through one durable owner notification before rescheduling', () => {
+  const workflow = collaborationScheduleWorkflow(86_400_000)
+  const initial = workflow.initialize({}, '2026-08-25T00:00:00.000Z')
+  const evaluating = workflow.reduce(initial.state, { id: 'timer', type: 'timer', occurredAt: '2026-08-25T00:00:00.000Z', payload: {} })
+  const reporting = workflow.reduce(evaluating.state, {
+    id: 'reviewed', type: 'effect.delivered', occurredAt: '2026-08-25T00:00:01.000Z',
+    payload: { effectKind: COLLABORATION_EFFECTS.evaluate, briefEnabled: true, briefTitle: '每日回顾', briefBody: '没有调整', reviewedAt: '2026-08-25T00:00:00.000Z' },
+  })
+  assert.equal(reporting.effects?.[0]?.kind, ASSISTANT_EFFECTS.notifyOwner)
+  assert.equal(reporting.wakeAt, null)
+  const scheduled = workflow.reduce(reporting.state, {
+    id: 'briefed', type: 'effect.delivered', occurredAt: '2026-08-25T00:00:02.000Z', payload: { effectKind: ASSISTANT_EFFECTS.notifyOwner },
+  })
+  assert.equal(scheduled.wakeAt, '2026-08-26T00:00:02.000Z')
+})
+
 test('collaboration policy proposal requires exact owner approval before activation effect', () => {
   const workflow = collaborationPolicyApprovalWorkflow()
   const initial = workflow.initialize({ proposal }, '2026-08-25T00:00:00.000Z')

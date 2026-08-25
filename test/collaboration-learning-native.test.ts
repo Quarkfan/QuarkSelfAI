@@ -137,3 +137,27 @@ test('native guidance uses interaction metadata without retaining conversation t
   assert.match(guidance, /同类脱敏样本 2 条/)
   assert.match(guidance, /建单 1、更新 0、忽略 1/)
 })
+
+test('native daily review returns a concise no-change brief even before policy sample threshold', async () => {
+  const port = new MemoryPort()
+  const engine = new CollaborationLearningEngine(port, { evaluationIntervalMs: 0, minimumSamples: 20 })
+  await engine.observe(message(1), ordinaryTask, new Date('2026-08-24T00:00:00Z'))
+  const review = await engine.review(new Date('2026-08-25T00:00:00Z'))
+  assert.equal(review?.decision, 'no-change')
+  assert.equal(review?.sampleCount, 1)
+  assert.match(review?.briefBody ?? '', /可能打扰 1/)
+  assert.equal((await port.recentSignals('collaboration.daily-review.v1', 10)).length, 1)
+})
+
+test('native daily review auto-tunes repeated safe quiet signals and reuses the profile as guidance', async () => {
+  const port = new MemoryPort()
+  const engine = new CollaborationLearningEngine(port, { evaluationIntervalMs: 0, minimumSamples: 100, autoTuneMinimumSamples: 8 })
+  const signal = { type: 'reaction', operation: 'created', emojiType: 'THUMBSUP', ownerOperated: true }
+  for (let index = 0; index < 8; index += 1) {
+    await engine.observe({ ...message(index), signal }, { ...ordinaryTask, taskAction: 'ignored', notificationDecision: 'silent' })
+  }
+  const review = await engine.review(new Date('2026-08-25T00:00:00Z'))
+  assert.equal(review?.decision, 'auto-tuned')
+  assert.match(review?.autoAdjustments[0] ?? '', /默认降噪/)
+  assert.match(await engine.guidanceFor({ ...message(9), signal }), /每日回顾已自动校准/)
+})

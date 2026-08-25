@@ -5,6 +5,8 @@ import type { PolicySample } from '../policy/types.js'
 import type { DurableSignal, DurableSignalInput, PolicyDraftInput } from '../storage/types.js'
 import type {
   AttentionTier,
+  CollaborationDailyReview,
+  CollaborationGuidanceProfile,
   CollaborationLearningConfig,
   CollaborationMessage,
   CollaborationPolicyProposal,
@@ -16,6 +18,7 @@ const OBSERVATION_KIND = 'collaboration.observation.v1'
 const OWNER_SIGNAL_KIND = 'collaboration.owner-signal.v1'
 const PROPOSAL_KIND = 'collaboration.policy-proposal.v1'
 const PROPOSAL_PUBLISHED_KIND = 'collaboration.policy-proposal-published.v1'
+const DAILY_REVIEW_KIND = 'collaboration.daily-review.v1'
 const CHECKPOINT_NAMESPACE = 'collaboration-learning'
 
 export interface CollaborationLearningPort {
@@ -159,15 +162,20 @@ export class CollaborationLearningEngine {
   }
 
   async guidanceFor(message: CollaborationMessage): Promise<string> {
-    if (!message.signal?.type) return '暂无同类协作信号样本；按当前上下文保守判断。'
+    const signal = message.signal
+    if (!signal?.type) return '暂无同类协作信号样本；按当前上下文保守判断。'
     const observations = (await this.observations())
-      .filter(item => item.signalType === message.signal?.type)
-      .filter(item => !message.signal?.emojiType || item.emojiType === message.signal.emojiType)
-      .filter(item => message.signal?.ownerOperated === undefined || item.ownerOperated === message.signal.ownerOperated)
+      .filter(item => item.signalType === signal.type)
+      .filter(item => !signal.emojiType || item.emojiType === signal.emojiType)
+      .filter(item => signal.ownerOperated === undefined || item.ownerOperated === signal.ownerOperated)
       .slice(-20)
     if (!observations.length) return '暂无同类协作信号样本；按当前上下文保守判断。'
     const count = (field: keyof Observation, value: unknown) => observations.filter(item => item[field] === value).length
+    const profile = (await this.guidanceProfiles()).find(item => item.key === guidanceKey(signal))
     return [
+      ...(profile?.recommendation === 'prefer-silent-ignore'
+        ? [`每日回顾已自动校准：同类信号在 ${profile.sampleCount} 条安全样本中 ${(profile.confidence * 100).toFixed(0)}% 无需建单或即时通知；若上下文没有明确行动，优先静默。`]
+        : []),
       `同类脱敏样本 ${observations.length} 条`,
       `建单 ${count('taskAction', 'created')}、更新 ${count('taskAction', 'updated')}、忽略 ${count('taskAction', 'ignored')}`,
       `即时通知 ${count('actualNotification', 'notify')}、静默 ${count('actualNotification', 'silent')}`,
@@ -176,6 +184,10 @@ export class CollaborationLearningEngine {
   }
 
   async poll(now = new Date()): Promise<CollaborationPolicyProposal | undefined> {
+    return (await this.review(now))?.proposal
+  }
+
+  async review(now = new Date()): Promise<CollaborationDailyReview | undefined> {
     if (this.evaluating || this.config.enabled === false) return undefined
     this.evaluating = true
     try {
@@ -184,64 +196,111 @@ export class CollaborationLearningEngine {
       const interval = this.config.evaluationIntervalMs ?? DAY_MS
       if (lastEvaluatedAt && now.getTime() - new Date(lastEvaluatedAt).getTime() < interval) return undefined
       const observations = await this.observations()
-      if (observations.length < (this.config.minimumSamples ?? 20)) return await this.completeEvaluation(now)
+      const windowStartedAt = lastEvaluatedAt ?? new Date(now.getTime() - DAY_MS).toISOString()
+      const window = observations.filter(item => new Date(item.at).getTime() >= new Date(windowStartedAt).getTime())
+      const autoAdjustments = await this.autoTuneGuidance(observations, now)
+      let proposal: CollaborationPolicyProposal | undefined
       const proposalCheckpoint = await this.port.readCheckpoint(CHECKPOINT_NAMESPACE, 'proposal')
       const lastProposalAt = typeof proposalCheckpoint?.lastProposalAt === 'string' ? proposalCheckpoint.lastProposalAt : undefined
-      if (lastProposalAt && now.getTime() - new Date(lastProposalAt).getTime() < (this.config.proposalCooldownMs ?? 7 * DAY_MS)) return undefined
-      const publishedProposals = await this.port.recentSignals(PROPOSAL_PUBLISHED_KIND, 100)
-      const priorScopes = new Set(publishedProposals.flatMap(signal => {
-        return typeof signal.data.scopeKey === 'string' ? [signal.data.scopeKey] : []
-      }))
-      const candidate = this.evaluateScopes(observations)
-        .filter(scope => scope.sampleCount >= (this.config.minimumScopeSamples ?? 8) && scope.protectedCount === 0 && scope.confidence >= 0.75)
-        .filter(scope => !priorScopes.has(scope.key))
-        .sort((left, right) => right.reducible - left.reducible || right.confidence - left.confidence)[0]
-      if (!candidate) return await this.completeEvaluation(now)
-      const label = candidate.kind === 'chat' ? '这个飞书会话' : '这位联系人'
-      const sourceText = `根据持续协作样本，${label}的普通非紧急消息优先批量汇总；明确紧急、待批准、需要追问或调研的消息仍即时通知。`
-      const document: AssistantPolicyDocument = {
-        version: 1,
-        name: `${label}普通消息批量汇总`,
-        description: `从 ${candidate.sampleCount} 条脱敏协作样本中发现 ${candidate.reducible} 条可合并通知；只限定精确来源，紧急保护由模拟门禁复核。`,
-        priority: 200,
-        when: { fact: candidate.kind === 'chat' ? 'source.chatId' : 'source.senderId', op: 'eq', value: candidate.id },
-        effect: { attention: 'batch' },
+      const canPropose = observations.length >= (this.config.minimumSamples ?? 20)
+        && !(lastProposalAt && now.getTime() - new Date(lastProposalAt).getTime() < (this.config.proposalCooldownMs ?? 7 * DAY_MS))
+      if (canPropose) {
+        const publishedProposals = await this.port.recentSignals(PROPOSAL_PUBLISHED_KIND, 100)
+        const priorScopes = new Set(publishedProposals.flatMap(signal => typeof signal.data.scopeKey === 'string' ? [signal.data.scopeKey] : []))
+        const candidate = this.evaluateScopes(observations)
+          .filter(scope => scope.sampleCount >= (this.config.minimumScopeSamples ?? 8) && scope.protectedCount === 0 && scope.confidence >= 0.75)
+          .filter(scope => !priorScopes.has(scope.key))
+          .sort((left, right) => right.reducible - left.reducible || right.confidence - left.confidence)[0]
+        if (candidate) proposal = await this.propose(candidate, now)
       }
-      validateAssistantPolicy(document)
-      const samples = await this.port.recentPolicySamples(2000)
-      const simulation = simulateAssistantPolicy(document, samples)
-      const id = policyProposalId(sourceText, document)
-      const revision = await this.port.savePolicyDraft({ id, name: document.name, sourceText, document, simulation })
-      const proposal: CollaborationPolicyProposal = {
-        id, revision, sourceText, document, simulation,
-        sampleCount: candidate.sampleCount, reducibleCount: candidate.reducible, confidence: candidate.confidence,
-      }
-      await this.port.appendSignal({
-        id: signalId('collaboration-proposal', id, String(revision)),
-        kind: PROPOSAL_KIND,
-        occurredAt: now.toISOString(),
-        scope: { [candidate.kind === 'chat' ? 'chatId' : 'senderId']: candidate.id },
-        data: { scopeKey: candidate.key, policyId: id, revision, safeToActivate: simulation.safeToActivate },
-      })
-      if (simulation.safeToActivate !== true) return await this.completeEvaluation(now)
-      await this.port.publishProposal(proposal)
-      await this.port.appendSignal({
-        id: signalId('collaboration-proposal-published', id, String(revision)),
-        kind: PROPOSAL_PUBLISHED_KIND,
-        occurredAt: now.toISOString(),
-        data: { scopeKey: candidate.key, policyId: id, revision },
-      })
-      await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'proposal', { lastProposalAt: now.toISOString(), policyId: id, revision })
-      await this.completeEvaluation(now)
-      return proposal
+      const review = await this.buildReview(window, windowStartedAt, autoAdjustments, proposal, now)
+      await this.port.appendSignal({ id: signalId('collaboration-daily-review', review.reviewedAt), kind: DAILY_REVIEW_KIND,
+        occurredAt: review.reviewedAt, data: review as unknown as Record<string, unknown> })
+      await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'evaluation', { lastEvaluatedAt: now.toISOString(), decision: review.decision })
+      return review
     } finally {
       this.evaluating = false
     }
   }
 
-  private async completeEvaluation(now: Date): Promise<undefined> {
-    await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'evaluation', { lastEvaluatedAt: now.toISOString() })
-    return undefined
+  private async propose(candidate: ScopeEvaluation, now: Date): Promise<CollaborationPolicyProposal | undefined> {
+    const label = candidate.kind === 'chat' ? '这个飞书会话' : '这位联系人'
+    const sourceText = `根据持续协作样本，${label}的普通非紧急消息优先批量汇总；明确紧急、待批准、需要追问或调研的消息仍即时通知。`
+    const document: AssistantPolicyDocument = {
+      version: 1, name: `${label}普通消息批量汇总`,
+      description: `从 ${candidate.sampleCount} 条脱敏协作样本中发现 ${candidate.reducible} 条可合并通知；只限定精确来源，紧急保护由模拟门禁复核。`,
+      priority: 200, when: { fact: candidate.kind === 'chat' ? 'source.chatId' : 'source.senderId', op: 'eq', value: candidate.id },
+      effect: { attention: 'batch' },
+    }
+    validateAssistantPolicy(document)
+    const simulation = simulateAssistantPolicy(document, await this.port.recentPolicySamples(2000))
+    const id = policyProposalId(sourceText, document)
+    const revision = await this.port.savePolicyDraft({ id, name: document.name, sourceText, document, simulation })
+    const proposal = { id, revision, sourceText, document, simulation, sampleCount: candidate.sampleCount,
+      reducibleCount: candidate.reducible, confidence: candidate.confidence }
+    await this.port.appendSignal({ id: signalId('collaboration-proposal', id, String(revision)), kind: PROPOSAL_KIND,
+      occurredAt: now.toISOString(), scope: { [candidate.kind === 'chat' ? 'chatId' : 'senderId']: candidate.id },
+      data: { scopeKey: candidate.key, policyId: id, revision, safeToActivate: simulation.safeToActivate } })
+    if (simulation.safeToActivate !== true) return undefined
+    await this.port.publishProposal(proposal)
+    await this.port.appendSignal({ id: signalId('collaboration-proposal-published', id, String(revision)), kind: PROPOSAL_PUBLISHED_KIND,
+      occurredAt: now.toISOString(), data: { scopeKey: candidate.key, policyId: id, revision } })
+    await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'proposal', { lastProposalAt: now.toISOString(), policyId: id, revision })
+    return proposal
+  }
+
+  private async autoTuneGuidance(observations: readonly Observation[], now: Date): Promise<string[]> {
+    const minimum = this.config.autoTuneMinimumSamples ?? 8
+    const threshold = this.config.autoTuneConfidence ?? 0.85
+    const safe = observations.filter(item => item.signalType && item.attentionTier !== 'realtime' && !item.approvalRequired
+      && item.researchDecision === 'skip' && !item.intakeReasons.includes('@常东旭')
+      && !item.intakeReasons.some(reason => reason.startsWith('特别关注')))
+    const groups = new Map<string, Observation[]>()
+    for (const item of safe) { const key = guidanceKey(item); groups.set(key, [...(groups.get(key) ?? []), item]) }
+    const profiles: CollaborationGuidanceProfile[] = []
+    for (const [key, items] of groups) {
+      const quiet = items.filter(item => item.taskAction === 'ignored' && item.actualNotification === 'silent').length
+      const confidence = quiet / items.length
+      if (items.length >= minimum && confidence >= threshold) profiles.push({ key, signalType: items[0]!.signalType!,
+        ...(items[0]!.emojiType ? { emojiType: items[0]!.emojiType } : {}),
+        ...(items[0]!.ownerOperated === undefined ? {} : { ownerOperated: items[0]!.ownerOperated }),
+        recommendation: 'prefer-silent-ignore', sampleCount: items.length, confidence, updatedAt: now.toISOString() })
+    }
+    const previous = await this.guidanceProfiles()
+    await this.port.writeCheckpoint(CHECKPOINT_NAMESPACE, 'guidance-profiles', { profiles })
+    return profiles.filter(profile => !previous.some(item => item.key === profile.key && item.recommendation === profile.recommendation))
+      .map(profile => `${profile.signalType}${profile.emojiType ? `/${profile.emojiType}` : ''} 的普通确认信号默认降噪（${profile.sampleCount} 条样本，置信度 ${(profile.confidence * 100).toFixed(0)}%）`)
+  }
+
+  private async guidanceProfiles(): Promise<CollaborationGuidanceProfile[]> {
+    const value = await this.port.readCheckpoint(CHECKPOINT_NAMESPACE, 'guidance-profiles')
+    return Array.isArray(value?.profiles) ? value.profiles.filter(isGuidanceProfile) : []
+  }
+
+  private async buildReview(window: readonly Observation[], windowStartedAt: string, autoAdjustments: readonly string[],
+    proposal: CollaborationPolicyProposal | undefined, now: Date): Promise<CollaborationDailyReview> {
+    const ownerSignals = (await this.port.recentSignals(OWNER_SIGNAL_KIND, 1000))
+      .filter(signal => new Date(signal.occurredAt).getTime() >= new Date(windowStartedAt).getTime())
+    const count = (field: keyof Observation, value: unknown) => window.filter(item => item[field] === value).length
+    const ownerCorrections = ownerSignals.filter(signal => signal.data.correctionCue === true || signal.data.rejectionCue === true).length
+    const ownerApprovals = ownerSignals.filter(signal => signal.data.approvalCue === true || signal.data.decision === 'approve').length
+    const decision = proposal ? 'approval-proposed' : autoAdjustments.length ? 'auto-tuned' : 'no-change'
+    const adjustmentText = proposal ? '发现可能影响通知节奏的策略，已单独发起确认，未自动启用。'
+      : autoAdjustments.length ? autoAdjustments.join('；') : '证据不足以支持新的调整，保持现有策略。'
+    return {
+      reviewedAt: now.toISOString(), windowStartedAt, sampleCount: window.length,
+      taskCreated: count('taskAction', 'created'), taskUpdated: count('taskAction', 'updated'), taskIgnored: count('taskAction', 'ignored'),
+      notifications: count('actualNotification', 'notify'), possibleNoise: count('difference', 'possible_noise') + count('difference', 'could_batch'),
+      possibleMisses: count('difference', 'possible_miss'), ownerCorrections, ownerApprovals, decision, autoAdjustments,
+      ...(proposal ? { proposal } : {}), briefTitle: 'QuarkSelfAI 每日协作回顾',
+      briefBody: [
+        `回顾范围：${windowStartedAt} 至 ${now.toISOString()}，处理 ${window.length} 条脱敏协作样本。`,
+        `任务：新建 ${count('taskAction', 'created')}、更新 ${count('taskAction', 'updated')}、静默忽略 ${count('taskAction', 'ignored')}；飞书即时通知 ${count('actualNotification', 'notify')}。`,
+        `质量信号：可能打扰 ${count('difference', 'possible_noise') + count('difference', 'could_batch')}、可能漏报 ${count('difference', 'possible_miss')}；收到你的纠正/否决 ${ownerCorrections}、批准 ${ownerApprovals}。`,
+        `今日决定：${adjustmentText}`,
+        '边界不变：不会自动对外回复、外联、启动调研或执行高影响操作。',
+      ].join('\n\n'),
+    }
   }
 
   private async observations(): Promise<Observation[]> {
@@ -270,4 +329,17 @@ export class CollaborationLearningEngine {
       return { key, kind: scope.kind, id: scope.id, sampleCount: scope.items.length, reducible, protectedCount, confidence: reducible / scope.items.length }
     })
   }
+}
+
+function guidanceKey(value: { readonly signalType?: string; readonly emojiType?: string; readonly ownerOperated?: boolean }
+  | NonNullable<CollaborationMessage['signal']>): string {
+  const signalType = (value as { readonly signalType?: string }).signalType
+    ?? (value as NonNullable<CollaborationMessage['signal']>).type
+  return [signalType ?? '', value.emojiType ?? '', value.ownerOperated === undefined ? '' : String(value.ownerOperated)].join('|')
+}
+
+function isGuidanceProfile(value: unknown): value is CollaborationGuidanceProfile {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    && typeof (value as CollaborationGuidanceProfile).key === 'string'
+    && (value as CollaborationGuidanceProfile).recommendation === 'prefer-silent-ignore'
 }

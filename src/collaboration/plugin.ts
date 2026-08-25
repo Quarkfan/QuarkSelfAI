@@ -1,6 +1,6 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import { CollaborationLearningEngine } from './engine.js'
-import type { CollaborationLearningConfig, CollaborationMessage, CollaborationPolicyProposal, CollaborationTaskDecision } from './types.js'
+import type { CollaborationDailyReview, CollaborationLearningConfig, CollaborationMessage, CollaborationPolicyProposal, CollaborationTaskDecision } from './types.js'
 import type { DurablePolicyStatePort } from '../storage/service-contract.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import { eventToPolicySample } from './policy-samples.js'
@@ -73,6 +73,10 @@ export class CollaborationLearningService extends Service {
     return this.engine.poll(now)
   }
 
+  review(now?: Date): Promise<CollaborationDailyReview | undefined> {
+    return this.engine.review(now)
+  }
+
   async start(now = new Date()): Promise<void> {
     if (this.config.enabled !== true) return
     await this.workflows.ensure(COLLABORATION_SCHEDULE_ID, this.scheduleDefinition.kind, {}, now)
@@ -84,8 +88,14 @@ export class CollaborationLearningService extends Service {
 
   private async evaluate(effect: ClaimedWorkflowEffect): Promise<Readonly<Record<string, unknown>>> {
     const evaluatedAt = timestamp(effect.payload.evaluatedAt, 'evaluatedAt')
-    const proposal = await this.engine.poll(new Date(evaluatedAt))
-    return { proposed: proposal !== undefined, evaluatedAt }
+    const review = await this.engine.review(new Date(evaluatedAt))
+    if (!review) return { reviewed: false, evaluatedAt, briefEnabled: false }
+    return {
+      reviewed: true, evaluatedAt, proposed: review.proposal !== undefined,
+      briefEnabled: this.config.dailyBriefEnabled !== false,
+      briefTitle: review.briefTitle, briefBody: review.briefBody, reviewedAt: review.reviewedAt,
+      decision: review.decision, sampleCount: review.sampleCount,
+    }
   }
 
   private async applyDecision(effect: ClaimedWorkflowEffect): Promise<Readonly<Record<string, unknown>>> {

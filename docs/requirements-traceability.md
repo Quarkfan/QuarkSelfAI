@@ -26,7 +26,7 @@
 | 超期监控、完成任务定期清理、自动化跟进清单每工作日评估 | dida-monitors | 契约测试；三类 monitor 均有现网运行时间且当前健康 | complete |
 | 跟进清单由助手跟踪和修改；联系他人前征求批准 | dida-monitors, approval-cards | 联系人解析、批准卡片、回复回写原任务测试 | gated：外联动作必须逐次批准 |
 | 自然语言增加降噪策略，编译、样本模拟、确认后启用和回滚 | natural-language-policy | 受限 DSL、覆盖率/紧急保护、稳定 proposal；现网 Card 2.0 批准；隔离 SQLite 激活与回滚演练 | complete |
-| 从长期协作中挖掘模式，前期允许较多沟通，证据充分后减少干扰 | collaboration-learning, natural-language-policy | 脱敏观察与 owner 信号；20/8/75% 门槛；@、特别关注、紧急、审批和调研保护；每日评估、每周单一建议、精确 revision 批准测试 | implemented：随真实协作持续积累样本，高影响变化仍逐项批准 |
+| 从长期协作中挖掘模式，每日自我回顾、自主决定是否调整并发送简报 | collaboration-learning, natural-language-policy | 每日一次脱敏质量简报；同日幂等；8 条/85% 安全弱信号自动 guidance 校准；20/8/75% 高影响策略门槛；@、特别关注、紧急、审批和调研保护；每周单一建议、精确 revision 批准测试 | complete：兼容现网与 DSH-native 使用同一安全边界，低风险提示可自行调整，高影响变化仍逐项批准 |
 | BlackLake 问题先按参考项目和 skills 路由，再决定 start/confirm/skip | blacklake-routing | 三源动态哈希、skill/operation-chain 门禁；合成用例 route→ledger→approval→claim | complete |
 | 智造湖小维作为慢速排查工具，调用前必须本人批准，结果回灌且不重复建任务 | xiaowei-channel | 授权/持久等待测试；现网 3 个请求完成且均关联回复 | complete |
 | Claude Code 优先、Codex 兜底、同一 action 只能一个执行者 | executor-routing | 官方 providers、基础设施错误分类、串行 dispose、action lease；Claude start/ENOENT 后串行 handoff；真实 Codex task 固定回执 | complete；第三方 Claude 成本通道仍是可选未配置项 |

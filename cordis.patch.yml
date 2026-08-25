@@ -331,6 +331,9 @@
       config:
         enabled: true
         evaluationIntervalMs: 86400000
+        dailyBriefEnabled: true
+        autoTuneMinimumSamples: 8
+        autoTuneConfidence: 0.85
     - id: quark-dynamic-plugin-policy
       name: '@quarkfan/quark-self-ai/dynamic-plugin-policy'
     - id: dsh-tool-cordis

@@ -13,7 +13,7 @@ export const COLLABORATION_EFFECTS = {
 } as const
 
 interface ScheduleState extends Record<string, unknown> {
-  readonly phase: 'scheduled' | 'evaluating'
+  readonly phase: 'scheduled' | 'evaluating' | 'reporting'
   readonly intervalMs: number
   readonly sequence: number
 }
@@ -51,6 +51,28 @@ export function collaborationScheduleWorkflow(intervalMs = DAY_MS): WorkflowDefi
       }
       if ((event.type === 'effect.delivered' || event.type === 'effect.failed') && state.phase === 'evaluating'
         && event.payload.effectKind === COLLABORATION_EFFECTS.evaluate) {
+        if (event.type === 'effect.delivered' && event.payload.briefEnabled === true) {
+          const next = { ...state, phase: 'reporting' as const }
+          return {
+            status: 'waiting', state: next, wakeAt: null,
+            effects: [{
+              id: stable('collaboration-daily-brief', String(state.sequence)), kind: ASSISTANT_EFFECTS.notifyOwner,
+              availableAt: event.occurredAt,
+              payload: {
+                title: text(event.payload.briefTitle, 'daily brief title', 100) ?? 'QuarkSelfAI 每日协作回顾',
+                body: text(event.payload.briefBody, 'daily brief body', 12_000) ?? '今日回顾已完成，未发现需要调整的事项。',
+                idempotencyKey: `collaboration-daily-review:${text(event.payload.reviewedAt, 'reviewedAt', 100) ?? event.occurredAt}`,
+              },
+            }],
+          }
+        }
+        return {
+          status: 'waiting', state: { ...state, phase: 'scheduled', sequence: state.sequence + 1 },
+          wakeAt: at(event.occurredAt, state.intervalMs),
+        }
+      }
+      if ((event.type === 'effect.delivered' || event.type === 'effect.failed') && state.phase === 'reporting'
+        && event.payload.effectKind === ASSISTANT_EFFECTS.notifyOwner) {
         return {
           status: 'waiting', state: { ...state, phase: 'scheduled', sequence: state.sequence + 1 },
           wakeAt: at(event.occurredAt, state.intervalMs),
@@ -147,7 +169,7 @@ function proposalInput(input: Readonly<Record<string, unknown>>): CollaborationP
 }
 
 function scheduleState(value: Readonly<Record<string, unknown>>): ScheduleState {
-  if ((value.phase !== 'scheduled' && value.phase !== 'evaluating') || !Number.isSafeInteger(value.intervalMs)
+  if (!['scheduled', 'evaluating', 'reporting'].includes(String(value.phase)) || !Number.isSafeInteger(value.intervalMs)
     || !Number.isSafeInteger(value.sequence)) throw new Error('collaboration schedule state is invalid')
   return value as ScheduleState
 }

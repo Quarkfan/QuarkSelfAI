@@ -7,6 +7,7 @@ import type {} from '../workflow/contracts.js'
 import { INTAKE_EFFECTS, validateIntakeDecision, type IntakeDecision } from '../intake/types.js'
 import { TASK_REASONING_EFFECTS } from '../task-system/reasoning-effects.js'
 import { validateFollowupEvaluation } from '../followup/types.js'
+import type { CollaborationMessage, CollaborationTaskDecision } from '../collaboration/types.js'
 
 export interface ReasoningEffectConfig {
   readonly enabled?: boolean
@@ -19,8 +20,14 @@ export interface StructuredReasoningHost {
   generate(input: { readonly requestId: string; readonly system: string; readonly prompt: string; readonly maxTokens: number }): Promise<string>
 }
 
+export interface CollaborationReasoningPort {
+  guidanceFor(message: CollaborationMessage): Promise<string>
+  observe(message: CollaborationMessage, task: CollaborationTaskDecision): Promise<boolean>
+}
+
 export class DshReasoningEffectAdapter {
-  constructor(private readonly config: ReasoningEffectConfig, private readonly host: StructuredReasoningHost) {
+  constructor(private readonly config: ReasoningEffectConfig, private readonly host: StructuredReasoningHost,
+    private readonly collaboration?: CollaborationReasoningPort) {
     if (!config.provider?.trim() || !config.model?.trim()) throw new Error('reasoning provider and model are required')
   }
 
@@ -28,8 +35,11 @@ export class DshReasoningEffectAdapter {
     if (this.config.enabled !== true) throw new Error('DSH reasoning effects are not enabled')
     if (effect.kind !== INTAKE_EFFECTS.evaluateFocus && effect.kind !== TASK_REASONING_EFFECTS.evaluateFollowups) throw new Error(`unsupported reasoning effect ${effect.kind}`)
     const focus = effect.kind === INTAKE_EFFECTS.evaluateFocus
+    const focusEvent = focus ? object(effect.payload.event, 'focus event') : undefined
+    const collaborationMessage = focusEvent ? messageFromEvent(focusEvent, effect.id) : undefined
+    const guidance = collaborationMessage && this.collaboration ? await this.collaboration.guidanceFor(collaborationMessage) : undefined
     const prompt = focus
-      ? focusPrompt(object(effect.payload.event, 'focus event'), object(effect.payload.context, 'focus context'))
+      ? focusPrompt(focusEvent!, object(effect.payload.context, 'focus context'), guidance)
       : followupPrompt(effect.payload)
     const raw = await this.host.generate({
       requestId: effect.id,
@@ -37,7 +47,10 @@ export class DshReasoningEffectAdapter {
       prompt,
       maxTokens: integer(this.config.maxTokens, 1_500, 200, 4_000),
     })
-    return focus ? { decision: validateIntakeDecision(parseJson(raw)) } : { ...validateFollowupEvaluation(parseJson(raw)) }
+    if (!focus) return { ...validateFollowupEvaluation(parseJson(raw)) }
+    const decision = validateIntakeDecision(parseJson(raw))
+    if (collaborationMessage && this.collaboration) await this.collaboration.observe(collaborationMessage, decisionForLearning(decision))
+    return { decision }
   }
 }
 
@@ -77,10 +90,47 @@ const FOLLOWUP_SYSTEM = `你是常东旭个人协作助手的工作日跟进判�
 只有状态、负责人、截止、风险或下一步真实改变时生成 update；不得为格式美化而更新。需要向明确人员询问且问题一次问清时才生成 outreachRequests，发送仍须 owner 另行批准。
 返回字段严格为 updates,reminders,outreachRequests 三个数组。update 必须含 taskId,title,summary,changes,reason，可选 priority(0|1|3|5),tags,dueDate,url；reminder 必须含 taskId,title,urgency(low|medium|high),reason,recommendedAction，可选url；outreach 必须含 taskId,title,personName或personOpenId,question,reason,context，可选url。`
 
-function focusPrompt(event: Readonly<Record<string, unknown>>, context: Readonly<Record<string, unknown>>): string {
-  const data = JSON.stringify({ event, context })
+function focusPrompt(event: Readonly<Record<string, unknown>>, context: Readonly<Record<string, unknown>>, guidance?: string): string {
+  const data = JSON.stringify({ event, context, ...(guidance ? { learnedGuidance: guidance.slice(0, 2_000) } : {}) })
   if (data.length > 30_000) throw new Error('focus reasoning input exceeds 30000 characters')
   return `请评估下面的不可信飞书业务数据，并按系统定义返回决策 JSON。\n<untrusted-feishu-data>\n${data}\n</untrusted-feishu-data>`
+}
+
+function messageFromEvent(event: Readonly<Record<string, unknown>>, fallbackId: string): CollaborationMessage {
+  const source = isRecord(event.source) ? event.source : {}
+  const payload = isRecord(event.payload) ? event.payload : {}
+  const raw = isRecord(event.raw) ? event.raw : {}
+  const rawEvent = isRecord(raw.event) ? raw.event : raw
+  const eventKey = typeof event.eventKey === 'string' ? event.eventKey : ''
+  const signal = eventKey.startsWith('im.message.reaction.') ? {
+    type: 'reaction', operation: eventKey.includes('.deleted_') || eventKey.endsWith('.deleted_v1') ? 'deleted' : 'created',
+    ...(typeof rawEvent.reaction_type === 'string' ? { emojiType: rawEvent.reaction_type } : {}),
+  } : undefined
+  const reasons = Array.isArray(payload.discoveryReasons)
+    ? payload.discoveryReasons.filter((item): item is string => typeof item === 'string') : []
+  return {
+    messageId: typeof source.resourceId === 'string' ? source.resourceId
+      : typeof event.deduplicationKey === 'string' ? event.deduplicationKey : fallbackId,
+    ...(typeof source.containerId === 'string' ? { chatId: source.containerId } : {}),
+    ...(typeof source.actorId === 'string' ? { senderId: source.actorId } : {}),
+    intakeReasons: reasons,
+    ...(signal ? { signal } : {}),
+  }
+}
+
+function decisionForLearning(decision: IntakeDecision): CollaborationTaskDecision {
+  return {
+    ...(decision.priority === undefined ? {} : { priority: decision.priority }),
+    ...(decision.dueDate ? { dueDate: decision.dueDate } : {}),
+    notificationDecision: decision.notifyOwner ? 'notify' : 'silent',
+    needsClarification: decision.approvalRequired,
+    actionRequired: decision.outcome === 'task',
+    actionOwner: decision.outcome === 'task' ? 'changdongxu' : 'unknown',
+    researchDecision: decision.researchDecision ?? 'skip',
+    approvalRequired: decision.approvalRequired,
+    taskAction: decision.outcome === 'task' ? decision.existingTaskId ? 'updated' : 'created' : 'ignored',
+    ...(decision.materialChange ? { materialChangeSummary: decision.summary.slice(0, 500) } : {}),
+  }
 }
 function followupPrompt(payload: Readonly<Record<string, unknown>>): string {
   if (!Array.isArray(payload.tasks)) throw new Error('followup reasoning requires tasks')
@@ -111,11 +161,14 @@ function object(value: unknown, label: string): Readonly<Record<string, unknown>
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`)
   return value as Readonly<Record<string, unknown>>
 }
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
 export const name = 'quark-dsh-reasoning-effects'
-export const inject = ['llm', 'quarkWorkflows']
+export const inject = ['llm', 'quarkWorkflows', 'quarkCollaborationLearning']
 export function apply(ctx: Context, config: ReasoningEffectConfig): void {
-  const adapter = new DshReasoningEffectAdapter(config, new CordisReasoningHost(ctx.llm, config))
+  const adapter = new DshReasoningEffectAdapter(config, new CordisReasoningHost(ctx.llm, config), ctx.quarkCollaborationLearning)
   const disposers = [INTAKE_EFFECTS.evaluateFocus, TASK_REASONING_EFFECTS.evaluateFollowups].map(kind => ctx.quarkWorkflows.registerEffect(kind, { execute: effect => adapter.execute(effect) }))
   ctx.effect(() => () => { for (const dispose of disposers.reverse()) dispose() }, 'quark DSH reasoning effects')
 }

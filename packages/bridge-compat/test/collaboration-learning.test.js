@@ -4,6 +4,7 @@ import { CollaborationLearningMonitor } from "../src/collaboration-learning.js";
 
 function harness(overrides = {}) {
   const sent = [];
+  const briefs = [];
   const proposals = [];
   const state = { state: {}, async save() {} };
   const monitor = new CollaborationLearningMonitor({
@@ -16,7 +17,10 @@ function harness(overrides = {}) {
       ...overrides,
     },
     state,
-    lark: { async sendInteractive(...args) { sent.push(args); return { message_id: "om_card" }; } },
+    lark: {
+      async sendInteractive(...args) { sent.push(args); return { message_id: "om_card" }; },
+      async send(...args) { briefs.push(args); return { message_id: "om_brief" }; },
+    },
     policyManager: { async proposePolicy(sourceText, document) {
       proposals.push({ sourceText, document });
       return {
@@ -26,7 +30,7 @@ function harness(overrides = {}) {
     } },
     logger: { error() {} },
   });
-  return { monitor, state, sent, proposals };
+  return { monitor, state, sent, briefs, proposals };
 }
 
 function message(index, extra = {}) {
@@ -115,4 +119,29 @@ test("records owner continuity and policy decisions as learning signals", async 
   assert.equal(messageSignal.explicitReply, true);
   assert.equal(messageSignal.correctionCue, true);
   assert.equal(h.state.state.collaborationLearning.candidates[0].status, "declined");
+});
+
+test("sends one concise daily review and does not duplicate it after another poll", async () => {
+  const h = harness({ collaborationLearningMinimumSamples: 100 });
+  await h.monitor.observe(message(1), ordinaryTask(), new Date("2026-08-24T00:00:00Z"));
+  await h.monitor.poll(new Date("2026-08-25T00:00:00Z"));
+  await h.monitor.poll(new Date("2026-08-25T01:00:00Z"));
+  assert.equal(h.briefs.length, 1);
+  assert.match(h.briefs[0][0], /任务判断/);
+  assert.match(h.briefs[0][0], /可能打扰/);
+  assert.equal(h.state.state.collaborationLearning.reviews.length, 1);
+});
+
+test("auto-tunes only repeated safe quiet signals and feeds the result back into guidance", async () => {
+  const h = harness({ collaborationLearningMinimumSamples: 100, collaborationAutoTuneMinimumSamples: 8 });
+  const signal = { type: "reaction", operation: "created", emojiType: "THUMBSUP", ownerOperated: true };
+  for (let index = 0; index < 8; index += 1) {
+    await h.monitor.observe(message(index, { collaborationSignal: signal }), {
+      ...ordinaryTask(), taskAction: "ignored", notificationDecision: "silent",
+    }, new Date(`2026-08-24T00:0${index}:00Z`));
+  }
+  await h.monitor.poll(new Date("2026-08-25T00:00:00Z"));
+  assert.equal(h.state.state.collaborationLearning.guidanceProfiles.length, 1);
+  assert.match(h.monitor.guidanceFor(message(9, { collaborationSignal: signal })), /每日回顾已自动校准/);
+  assert.match(h.briefs[0][0], /普通确认信号默认降噪/);
 });

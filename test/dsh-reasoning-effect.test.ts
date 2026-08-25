@@ -42,6 +42,19 @@ test('validates workday followup reasoning as suggestions rather than claimed wr
   assert.match(host.input?.prompt ?? '', /untrusted-task-data/)
 })
 
+test('feeds learned guidance into focus reasoning and records the resulting decision', async () => {
+  const host = new StubHost(JSON.stringify({ outcome: 'ignored', summary: '只是确认', materialChange: false, notifyOwner: false, approvalRequired: false }))
+  const observations: unknown[] = []
+  const adapter = new DshReasoningEffectAdapter({ enabled: true, provider: 'test', model: 'test-model' }, host, {
+    async guidanceFor() { return '同类点赞通常无需建单' },
+    async observe(message, task) { observations.push({ message, task }); return true },
+  })
+  await adapter.execute(effect({ content: '好的' }))
+  assert.match(host.input?.prompt ?? '', /同类点赞通常无需建单/)
+  assert.equal(observations.length, 1)
+  assert.equal((observations[0] as { task: { taskAction: string } }).task.taskAction, 'ignored')
+})
+
 function effect(payload: Readonly<Record<string, unknown>>): ClaimedWorkflowEffect {
   return { id: 'focus-effect:1', instanceId: 'intake:1', kind: INTAKE_EFFECTS.evaluateFocus, attempt: 1, payload: { event: { kind: 'message.received', payload }, context: { externalGroup: false, messages: [] } } }
 }

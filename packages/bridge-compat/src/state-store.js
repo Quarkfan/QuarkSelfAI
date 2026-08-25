@@ -173,6 +173,8 @@ export class StateStore {
         this.state.collaborationLearning.observations = (this.state.collaborationLearning.observations || []).slice(-2000);
         this.state.collaborationLearning.ownerSignals = (this.state.collaborationLearning.ownerSignals || []).slice(-1000);
         this.state.collaborationLearning.candidates = (this.state.collaborationLearning.candidates || []).slice(-100);
+        this.state.collaborationLearning.guidanceProfiles = (this.state.collaborationLearning.guidanceProfiles || []).slice(-100);
+        this.state.collaborationLearning.reviews = (this.state.collaborationLearning.reviews || []).slice(-90);
       }
       this.state.notificationDigestPending = (this.state.notificationDigestPending || []).slice(-500);
       const temporary = `${this.path}.tmp`;
