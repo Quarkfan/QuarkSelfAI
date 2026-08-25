@@ -15,12 +15,12 @@ test('feature template is a valid inactive module-catalog v3 extension', async (
       },
       {
         id: 'storage-port', classification: 'skeleton', layer: 'contract',
-        implementation: 'ready', runtime: 'active', source: 'src/storage/types.ts',
+        implementation: 'ready', runtime: 'static', source: 'src/storage/types.ts',
         owns: ['src/storage/types.ts'], dependsOn: [],
       },
       {
         id: 'durable-workflow-contracts', classification: 'skeleton', layer: 'contract',
-        implementation: 'ready', runtime: 'active', source: 'src/workflow/contracts.ts',
+        implementation: 'ready', runtime: 'static', source: 'src/workflow/contracts.ts',
         owns: ['src/workflow/contracts.ts'], dependsOn: ['storage-port'], runtimeDependsOn: ['dsh-runtime'],
       },
       {

@@ -21,7 +21,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Policy runtime | 开放 fact/effect 的受限条件 DSL 与 schema 校验挂点 | 具体消息事实、提醒/任务/回复效果和安全模拟 |
 | Executor router | Provider 选择、串行兜底、权限边界 | Claude/Codex 的具体协议 |
 | Workspace boundary | 本地路径授权与防逃逸 | 上传或同步文件 |
-| Control plane | 登录、健康、模块、开放 readiness gate 与领域状态可见性 | 硬编码每项业务规则或某次迁移字段 |
+| Control-plane contracts | 登录边界、健康、模块、开放 readiness gate 与领域状态端口 | Web 界面、硬编码业务规则或某次迁移字段 |
 
 消息接入属于骨架上生长的功能：`message-intake` 使用 durable event/workflow 骨架，但“本人私聊直接委托、重点关注、上下文判断、任务标题/优先级、是否通知”等均留在可替换的 feature policy 与 effect adapter 中。低优先级非艾特消息允许由 10 分钟级 discovery effect 补充，不要求骨架高频轮询。
 
@@ -72,6 +72,8 @@ contract/policy；provider、adapter、workflow、projection 和 surface 只能�
 
 长期 workflow 通过 `requiresEffects` 声明所有外部能力，adapter 通过 `providesEffects` 声明唯一实现。
 `implementation` 单独回答代码是否 ready，`runtime` 单独回答当前是否 inactive、shadow、active 或仍归 compat。
+纯 `contract` 没有进程、消费者或状态 owner，必须标记为 `runtime=static`，不能用 active/inactive 暗示它在运行或
+尚未运行；只有可执行模块才进入 active/inactive/shadow/compat 的所有权判断。
 没有实现的 provider 与已经实现但尚未激活的 provider 会分别进入 `nativeCutoverBlockers`；active workflow 的
 effect provider 必须同样 active。这样“状态机代码写完”和“具备真实外部执行能力”不会再被混为一谈。
 

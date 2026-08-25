@@ -297,7 +297,7 @@ for (const module of catalog.modules) {
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)
 const summary = summarizeModules(catalog)
 const effectCoverage = analyzeEffectCoverage(catalog)
-process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} assets=${runtimeAssets.length} cutoverUnits=${migrationUnits.length} exitUnits=${exitUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
+process.stdout.write(`Architecture verified modules=${summary.total} skeleton=${summary.classification.skeleton} features=${summary.classification.feature} migration=${summary.classification.migration} ready=${summary.implementation.ready} static=${summary.runtime.static} active=${summary.runtime.active} compat=${summary.runtime.compat} plugins=${pluginBindings.length} assets=${runtimeAssets.length} cutoverUnits=${migrationUnits.length} exitUnits=${exitUnits.length} effectsImplemented=${effectCoverage.implemented.length}/${effectCoverage.required.length} effectsActive=${effectCoverage.active.length}/${effectCoverage.required.length}\n`)
 
 function trackedRuntimeAssets(projectRoot: string): string[] {
   const paths = [

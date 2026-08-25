@@ -1,7 +1,7 @@
 export type ModuleClassification = 'skeleton' | 'feature' | 'migration'
 export type ModuleLayer = 'kernel' | 'contract' | 'adapter' | 'provider' | 'policy' | 'workflow' | 'projection' | 'surface' | 'operations'
 export type ModuleImplementation = 'planned' | 'partial' | 'ready'
-export type ModuleRuntime = 'inactive' | 'shadow' | 'active' | 'compat'
+export type ModuleRuntime = 'static' | 'inactive' | 'shadow' | 'active' | 'compat'
 
 export interface AssistantPluginBinding {
   /** Stable instance id in the bundled Cordis profile. */
@@ -69,7 +69,7 @@ export interface ModuleSummary {
 const classifications = new Set<ModuleClassification>(['skeleton', 'feature', 'migration'])
 const layers = new Set<ModuleLayer>(['kernel', 'contract', 'adapter', 'provider', 'policy', 'workflow', 'projection', 'surface', 'operations'])
 const implementations = new Set<ModuleImplementation>(['planned', 'partial', 'ready'])
-const runtimes = new Set<ModuleRuntime>(['inactive', 'shadow', 'active', 'compat'])
+const runtimes = new Set<ModuleRuntime>(['static', 'inactive', 'shadow', 'active', 'compat'])
 const sourceDependencyLayers: Readonly<Record<ModuleLayer, ReadonlySet<ModuleLayer>>> = {
   contract: new Set(['contract']),
   kernel: new Set(['contract', 'kernel']),
@@ -128,8 +128,15 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     if (module.runtime === 'active' && module.implementation !== 'ready') {
       throw new Error(`active module ${module.id} must have a ready implementation`)
     }
-    if (module.classification === 'skeleton' && (module.implementation !== 'ready' || module.runtime !== 'active')) {
-      throw new Error(`skeleton module ${module.id} must be ready and active`)
+    if (module.layer === 'contract' && module.runtime !== 'static') {
+      throw new Error(`contract module ${module.id} must use runtime=static`)
+    }
+    if (module.layer !== 'contract' && module.runtime === 'static') {
+      throw new Error(`only contract modules can use runtime=static: ${module.id}`)
+    }
+    if (module.classification === 'skeleton'
+      && (module.implementation !== 'ready' || (module.layer === 'contract' ? module.runtime !== 'static' : module.runtime !== 'active'))) {
+      throw new Error(`skeleton module ${module.id} must be ready and its executable runtime must be active`)
     }
     if (module.classification === 'migration' && !module.exitCriteria?.trim()) {
       throw new Error(`migration module ${module.id} must define exitCriteria`)
@@ -229,7 +236,7 @@ export function summarizeModules(catalog: AssistantModuleCatalog): ModuleSummary
     total: catalog.modules.length,
     classification: { skeleton: 0, feature: 0, migration: 0 },
     implementation: { planned: 0, partial: 0, ready: 0 },
-    runtime: { inactive: 0, shadow: 0, active: 0, compat: 0 },
+    runtime: { static: 0, inactive: 0, shadow: 0, active: 0, compat: 0 },
   }
   for (const module of catalog.modules) {
     summary.classification[module.classification] += 1

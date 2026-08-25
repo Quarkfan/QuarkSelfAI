@@ -7,12 +7,14 @@ test('classifies every current module as skeleton, feature, or migration', async
   const catalog = await loadModuleCatalog()
   const summary = summarizeModules(catalog)
   assert.ok(summary.classification.skeleton >= 10)
+  assert.ok(summary.runtime.static >= 10)
   assert.ok(summary.runtime.active >= 4)
   assert.ok(summary.runtime.compat >= 8)
   assert.ok(summary.implementation.ready >= 20)
   assert.equal(catalog.modules.some(module => module.classification === 'migration' && !module.exitCriteria), false)
   const modules = new Map(catalog.modules.map(module => [module.id, module]))
   assert.equal(modules.get('durable-state-contract')?.classification, 'skeleton')
+  assert.equal(modules.get('durable-state-contract')?.runtime, 'static')
   assert.equal(modules.get('control-console')?.classification, 'feature')
   assert.equal(modules.get('application-composition')?.dependsOn.includes('control-console'), false)
   assert.equal(modules.get('sqlite-storage')?.classification, 'feature')
@@ -49,13 +51,13 @@ test('enforces source layer direction instead of treating layer as documentation
     version: 3,
     modules: [
       { id: 'workflow-a', classification: 'skeleton', layer: 'workflow', implementation: 'ready', runtime: 'active', source: 'a', owns: [], dependsOn: [] },
-      { id: 'contract-a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'b', owns: [], dependsOn: ['workflow-a'] },
+      { id: 'contract-a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static', source: 'b', owns: [], dependsOn: ['workflow-a'] },
     ],
   }), /contract module contract-a cannot source-depend on workflow module workflow-a/)
   assert.doesNotThrow(() => validateModuleCatalog({
     version: 3,
     modules: [
-      { id: 'contract-a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'a', owns: [], dependsOn: [] },
+      { id: 'contract-a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static', source: 'a', owns: [], dependsOn: [] },
       { id: 'operations-a', classification: 'migration', layer: 'operations', implementation: 'ready', runtime: 'active', source: 'b', owns: [], dependsOn: ['contract-a'], exitCriteria: 'remove it' },
     ],
   }))
@@ -99,7 +101,7 @@ test('requires every source file to have exactly one explicit module owner', () 
   const catalog = validateModuleCatalog({
     version: 3,
     modules: [
-      { id: 'contracts', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'src/domain/contracts.ts', owns: ['src/domain/contracts.ts'], dependsOn: [] },
+      { id: 'contracts', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static', source: 'src/domain/contracts.ts', owns: ['src/domain/contracts.ts'], dependsOn: [] },
     ],
   })
   assert.doesNotThrow(() => validateSourceOwnership(catalog, ['src/domain/contracts.ts']))
@@ -150,14 +152,14 @@ test('rejects duplicate ownership and src entrypoints that are not owned', () =>
   assert.throws(() => validateModuleCatalog({
     version: 3,
     modules: [
-      { id: 'a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'src/domain/a.ts', owns: ['src/domain/a.ts'], dependsOn: [] },
-      { id: 'b', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'src/domain/b.ts', owns: ['src/domain/a.ts', 'src/domain/b.ts'], dependsOn: [] },
+      { id: 'a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static', source: 'src/domain/a.ts', owns: ['src/domain/a.ts'], dependsOn: [] },
+      { id: 'b', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static', source: 'src/domain/b.ts', owns: ['src/domain/a.ts', 'src/domain/b.ts'], dependsOn: [] },
     ],
   }), /source src\/domain\/a.ts is owned by both a and b/)
   assert.throws(() => validateModuleCatalog({
     version: 3,
     modules: [
-      { id: 'a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'src/domain/a.ts', owns: [], dependsOn: [] },
+      { id: 'a', classification: 'skeleton', layer: 'contract', implementation: 'ready', runtime: 'static', source: 'src/domain/a.ts', owns: [], dependsOn: [] },
     ],
   }), /must own its src entrypoint/)
 })
@@ -199,6 +201,17 @@ test('rejects active unfinished modules and the ambiguous legacy status field', 
     version: 3,
     modules: [{ id: 'legacy', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', status: 'planned', source: 'a', owns: [], dependsOn: [] }],
   }), /ambiguous legacy status/)
+})
+
+test('uses static only for non-executable contract modules', () => {
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{ id: 'contract-a', classification: 'feature', layer: 'contract', implementation: 'ready', runtime: 'active', source: 'a', owns: [], dependsOn: [] }],
+  }), /contract module contract-a must use runtime=static/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{ id: 'workflow-a', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'static', source: 'a', owns: [], dependsOn: [] }],
+  }), /only contract modules can use runtime=static/)
 })
 
 test('fails closed for misspelled fields and invalid migration ownership combinations', () => {
