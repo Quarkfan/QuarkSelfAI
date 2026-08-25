@@ -507,19 +507,37 @@ test('reports unresolved effect capabilities without inventing provider edges', 
 })
 
 test('requires plugin profile ids and package exports to have one module owner', () => {
-  const plugin = { profileId: 'shared-plugin', packageExport: './shared-plugin' }
+  const plugin = { profileId: 'shared-plugin', packageExport: './shared-plugin', activationGate: 'QUARK_NATIVE_SHARED_PLUGIN' }
   assert.throws(() => validateModuleCatalog({
     version: 3,
     modules: [
       { id: 'a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'a', owns: [], dependsOn: [], plugin },
-      { id: 'b', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'b', owns: [], dependsOn: [], plugin: { profileId: 'shared-plugin', packageExport: './other' } },
+      { id: 'b', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'b', owns: [], dependsOn: [], plugin: { profileId: 'shared-plugin', packageExport: './other', activationGate: 'QUARK_NATIVE_OTHER' } },
     ],
   }), /plugin profile shared-plugin is owned by both a and b/)
   assert.throws(() => validateModuleCatalog({
     version: 3,
     modules: [
       { id: 'a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'a', owns: [], dependsOn: [], plugin },
-      { id: 'b', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'b', owns: [], dependsOn: [], plugin: { profileId: 'other-plugin', packageExport: './shared-plugin' } },
+      { id: 'b', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'b', owns: [], dependsOn: [], plugin: { profileId: 'other-plugin', packageExport: './shared-plugin', activationGate: 'QUARK_NATIVE_OTHER' } },
     ],
   }), /plugin export \.\/shared-plugin is owned by both a and b/)
+})
+
+test('makes inactive plugin activation gates unique module-owned capabilities', () => {
+  const inactive = (id: string, activationGate?: string) => ({
+    id, classification: 'feature' as const, layer: 'adapter' as const, implementation: 'ready' as const,
+    runtime: 'inactive' as const, source: id, owns: [], dependsOn: [],
+    plugin: { profileId: id, packageExport: `./${id}`, ...(activationGate ? { activationGate } : {}) },
+  })
+  assert.throws(() => validateModuleCatalog({ version: 3, modules: [inactive('a')] }), /must own its activationGate/)
+  assert.throws(() => validateModuleCatalog({ version: 3, modules: [inactive('a', 'FEATURE_A')] }), /invalid plugin activationGate/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [inactive('a', 'QUARK_NATIVE_SHARED'), inactive('b', 'QUARK_NATIVE_SHARED')],
+  }), /plugin activation gate QUARK_NATIVE_SHARED is owned by both a and b/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [{ ...inactive('a', 'QUARK_NATIVE_A'), runtime: 'active' }],
+  }), /only inactive plugin modules can declare activationGate/)
 })

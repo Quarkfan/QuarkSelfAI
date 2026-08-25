@@ -16,6 +16,7 @@
   "providesServices": [],
   "plugin": {
     "profileId": "feature-id",
-    "packageExport": "./feature-id"
+    "packageExport": "./feature-id",
+    "activationGate": "QUARK_NATIVE_FEATURE_ID"
   }
 }

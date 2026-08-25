@@ -24,11 +24,18 @@ test('long-term product composition contains every native owner and no migration
   assert.deepEqual(catalog.modules.find(module => module.id === 'native-product-composition')?.runtimeDependsOn, ['dsh-runtime'])
   assert.equal([...ids].some(id => catalog.modules.find(module => module.id === id)?.classification === 'migration'), false)
   assert.equal(new Set(manifest.requiredEnvironment).size, manifest.requiredEnvironment.length)
+  assert.deepEqual(
+    manifest.requiredEnvironment,
+    catalog.modules
+      .filter(module => ids.has(module.id) && module.runtime === 'inactive' && module.plugin)
+      .map(module => module.plugin!.activationGate!)
+      .sort(),
+  )
 })
 
 test('product manifest rejects unknown, temporary, and multiply-owned modules', async () => {
   const catalog = await loadModuleCatalog()
-  const base = { version: 1, requiredEnvironment: [], requiredConfiguration: [] }
+  const base = { version: 2, requiredConfiguration: [] }
   assert.throws(() => validateProductCompositionManifest({
     ...base, capabilities: [{ id: 'unknown', required: true, modules: ['missing-module'] }],
   }, catalog), /unknown module missing-module/)
@@ -42,6 +49,11 @@ test('product manifest rejects unknown, temporary, and multiply-owned modules', 
       { id: 'second', required: false, modules: ['control-console'] },
     ],
   }, catalog), /belongs to multiple capabilities/)
+  assert.throws(() => validateProductCompositionManifest({
+    ...base,
+    capabilities: [{ id: 'console', required: true, modules: ['control-console'] }],
+    requiredEnvironment: [],
+  }, catalog), /unknown or missing fields/)
 })
 
 test('native product entry fails closed on mode, activation gates, and inactive modules', async () => {
@@ -98,12 +110,11 @@ test('native status and readiness derive from the product manifest instead of mi
 test('optional product capabilities remain visible without blocking native startup readiness', async () => {
   const catalog = await loadModuleCatalog()
   const manifest = validateProductCompositionManifest({
-    version: 1,
+    version: 2,
     capabilities: [
       { id: 'required-console', required: true, modules: ['control-console'] },
       { id: 'optional-postgres', required: false, modules: ['postgres-storage'] },
     ],
-    requiredEnvironment: [],
     requiredConfiguration: [],
   }, catalog)
   const runtime = new NativeProductRuntimeStatus(readyKernel, catalog, manifest, 'sqlite-storage').snapshot()
@@ -130,9 +141,8 @@ test('native readiness follows service providers without concrete runtime depend
     ],
   })
   const manifest = validateProductCompositionManifest({
-    version: 1,
+    version: 2,
     capabilities: [{ id: 'example', required: true, modules: ['consumer'] }],
-    requiredEnvironment: [],
     requiredConfiguration: [],
   }, activeCatalog)
   const degradedCatalog: AssistantModuleCatalog = {
@@ -164,9 +174,8 @@ test('native readiness follows effect providers without concrete runtime depende
     ],
   })
   const manifest = validateProductCompositionManifest({
-    version: 1,
+    version: 2,
     capabilities: [{ id: 'example', required: true, modules: ['workflow'] }],
-    requiredEnvironment: [],
     requiredConfiguration: [],
   }, activeCatalog)
   const degradedCatalog: AssistantModuleCatalog = {
@@ -198,9 +207,8 @@ test('native readiness blocks unresolved required effects explicitly', async () 
     modules: catalog.modules.map(module => ({ ...module, runtime: 'active' as const })),
   }
   const manifest = validateProductCompositionManifest({
-    version: 1,
+    version: 2,
     capabilities: [{ id: 'example', required: true, modules: ['workflow'] }],
-    requiredEnvironment: [],
     requiredConfiguration: [],
   }, catalog)
   const runtime = new NativeProductRuntimeStatus(readyKernel, activeCatalog, manifest, 'workflow').snapshot()

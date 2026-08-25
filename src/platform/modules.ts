@@ -8,6 +8,8 @@ export interface AssistantPluginBinding {
   readonly profileId: string
   /** Package export key, for example `.` or `./message-intake`. */
   readonly packageExport: string
+  /** Owner of the pre-cutover activation environment gate, when inactive. */
+  readonly activationGate?: string
 }
 
 export interface AssistantModuleDescriptor {
@@ -153,6 +155,12 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     if (module.runtime === 'active' && module.implementation !== 'ready') {
       throw new Error(`active module ${module.id} must have a ready implementation`)
     }
+    if (module.plugin?.activationGate !== undefined && module.runtime !== 'inactive') {
+      throw new Error(`only inactive plugin modules can declare activationGate: ${module.id}`)
+    }
+    if (module.plugin && module.runtime === 'inactive' && module.plugin.activationGate === undefined) {
+      throw new Error(`inactive plugin module ${module.id} must own its activationGate`)
+    }
     if (module.layer === 'contract' && module.runtime !== 'static') {
       throw new Error(`contract module ${module.id} must use runtime=static`)
     }
@@ -185,6 +193,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
   const serviceProviders = new Map<string, AssistantModuleDescriptor>()
   const pluginProfiles = new Map<string, string>()
   const pluginExports = new Map<string, string>()
+  const pluginActivationGates = new Map<string, string>()
   for (const module of modules) {
     for (const source of module.owns) {
       const existing = ownership.get(source)
@@ -213,6 +222,11 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       const exportOwner = pluginExports.get(module.plugin.packageExport)
       if (exportOwner) throw new Error(`plugin export ${module.plugin.packageExport} is owned by both ${exportOwner} and ${module.id}`)
       pluginExports.set(module.plugin.packageExport, module.id)
+      if (module.plugin.activationGate) {
+        const gateOwner = pluginActivationGates.get(module.plugin.activationGate)
+        if (gateOwner) throw new Error(`plugin activation gate ${module.plugin.activationGate} is owned by both ${gateOwner} and ${module.id}`)
+        pluginActivationGates.set(module.plugin.activationGate, module.id)
+      }
     }
   }
   for (const module of modules.filter(item => item.runtime === 'active')) {
@@ -437,12 +451,16 @@ function normalizedProjectPath(value: string): boolean {
 function parsePlugin(value: unknown, moduleId: string): AssistantPluginBinding {
   if (!isRecord(value)) throw new Error(`plugin for ${moduleId} must be an object`)
   const keys = Object.keys(value)
-  if (keys.some(key => key !== 'profileId' && key !== 'packageExport')) throw new Error(`plugin for ${moduleId} has unknown fields`)
+  if (keys.some(key => key !== 'profileId' && key !== 'packageExport' && key !== 'activationGate')) throw new Error(`plugin for ${moduleId} has unknown fields`)
   const profileId = string(value.profileId, `plugin profileId for ${moduleId}`)
   const packageExport = string(value.packageExport, `plugin packageExport for ${moduleId}`)
+  const activationGate = value.activationGate === undefined ? undefined : string(value.activationGate, `plugin activationGate for ${moduleId}`)
   if (!/^[a-z][a-z0-9-]*$/.test(profileId)) throw new Error(`invalid plugin profileId for ${moduleId}: ${profileId}`)
   if (packageExport !== '.' && !/^\.\/[a-z0-9-]+$/.test(packageExport)) throw new Error(`invalid plugin packageExport for ${moduleId}: ${packageExport}`)
-  return { profileId, packageExport }
+  if (activationGate !== undefined && !/^QUARK_NATIVE_[A-Z][A-Z0-9_]*$/.test(activationGate)) {
+    throw new Error(`invalid plugin activationGate for ${moduleId}: ${activationGate}`)
+  }
+  return { profileId, packageExport, ...(activationGate === undefined ? {} : { activationGate }) }
 }
 
 function effectList(value: unknown, label: string): string[] {

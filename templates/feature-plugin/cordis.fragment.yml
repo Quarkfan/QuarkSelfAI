@@ -2,6 +2,6 @@
   name: '@quarkfan/quark-self-ai/feature-id'
   # New features start inactive. Replace the gate with the exact ownership or
   # maintenance-window condition; never default a new consumer or writer on.
-  disabled: !!js process.env.QUARK_FEATURE_ID_ENABLED !== 'true'
+  disabled: !!js process.env.QUARK_NATIVE_FEATURE_ID !== 'true'
   config:
     enabled: true

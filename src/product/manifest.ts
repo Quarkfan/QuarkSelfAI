@@ -9,7 +9,7 @@ export interface ProductCapabilityDefinition {
 }
 
 export interface ProductCompositionManifest {
-  readonly version: 1
+  readonly version: 2
   readonly capabilities: readonly ProductCapabilityDefinition[]
   readonly requiredEnvironment: readonly string[]
   readonly requiredConfiguration: readonly string[]
@@ -28,11 +28,11 @@ export function validateProductCompositionManifest(
   value: unknown,
   catalog: AssistantModuleCatalog,
 ): ProductCompositionManifest {
-  if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.capabilities)
-    || !Array.isArray(value.requiredEnvironment) || !Array.isArray(value.requiredConfiguration)) {
-    throw new Error('product composition manifest must be a version 1 object')
+  if (!isRecord(value) || value.version !== 2 || !Array.isArray(value.capabilities)
+    || !Array.isArray(value.requiredConfiguration)) {
+    throw new Error('product composition manifest must be a version 2 object')
   }
-  if (Object.keys(value).sort().join(',') !== 'capabilities,requiredConfiguration,requiredEnvironment,version') {
+  if (Object.keys(value).sort().join(',') !== 'capabilities,requiredConfiguration,version') {
     throw new Error('product composition manifest has unknown or missing fields')
   }
   const byModule = new Map(catalog.modules.map(module => [module.id, module]))
@@ -64,17 +64,17 @@ export function validateProductCompositionManifest(
     return { id, required: candidate.required, modules }
   })
   if (capabilities.length === 0) throw new Error('product composition manifest requires capabilities')
-  if (value.requiredEnvironment.some(item => typeof item !== 'string' || !/^QUARK_NATIVE_[A-Z_]+$/.test(item))) {
-    throw new Error('product requiredEnvironment must contain QUARK_NATIVE_* names')
-  }
-  const requiredEnvironment = [...new Set(value.requiredEnvironment as string[])]
-  if (requiredEnvironment.length !== value.requiredEnvironment.length) throw new Error('product requiredEnvironment contains duplicates')
+  const requiredEnvironment = [...ownedModules]
+    .map(moduleId => byModule.get(moduleId)!)
+    .filter(module => module.runtime === 'inactive' && module.plugin)
+    .map(module => module.plugin!.activationGate!)
+    .sort()
   if (value.requiredConfiguration.some(item => typeof item !== 'string' || !/^[A-Z][A-Z0-9_]+$/.test(item))) {
     throw new Error('product requiredConfiguration must contain environment names')
   }
   const requiredConfiguration = [...new Set(value.requiredConfiguration as string[])]
   if (requiredConfiguration.length !== value.requiredConfiguration.length) throw new Error('product requiredConfiguration contains duplicates')
-  return { version: 1, capabilities, requiredEnvironment, requiredConfiguration }
+  return { version: 2, capabilities, requiredEnvironment, requiredConfiguration }
 }
 
 export function productModuleIds(manifest: ProductCompositionManifest): readonly string[] {

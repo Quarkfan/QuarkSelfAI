@@ -185,6 +185,8 @@ enqueue/decision/worker、signal、checkpoint 与 policy 等冻结的窄 capabil
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 所有当前本地插件均已具备模块 owner、package export 与长期 Cordis profile 绑定；普通公共 contract export
    同样按实际目标反向绑定模块 owner，新的 Client export 在静态资产进入 Git 时必须先登记为独立 surface feature。
+   inactive 插件的激活门禁由模块目录唯一拥有，产品清单从所选模块派生必需门禁，profile 只能消费精确同名门禁；
+   不再允许产品清单和 profile 各自维护一份无归属的开关列表。
    剩余问题是这些 native 插件尚未
    取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。`dsh-runtime` 已指向真实 DSH package，不再把
    整份业务 profile 冒充成 skeleton；长期 profile 已归 `native-product-profile` feature，compat overlay 仍是待删除 migration。

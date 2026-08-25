@@ -12,11 +12,13 @@
 
 1. 可加载模块在 `config/module-catalog.json` 中声明 `plugin.profileId` 与 `plugin.packageExport`；没有独立插件
    入口的 contract、policy helper 或 migration 模块不声明该字段。
-2. profile id 和 package export 在整个目录中都必须唯一，防止两个模块争用同一个装载身份。
+2. profile id、package export 和 inactive 插件的 `activationGate` 在整个目录中都必须唯一，防止两个模块争用同一个
+   装载身份或激活权限。
 3. `architecture:check` 读取实际 `package.json` 与 `cordis.patch.yml`，验证每个绑定都存在且指向相同包名。
 4. profile 中所有 `@quarkfan/quark-self-ai` 插件必须反向映射到一个模块；外部 DSH provider 不由本目录认领。
-5. `runtime=inactive` 插件必须在长期 profile 中使用独立 `QUARK_NATIVE_*` 激活门禁；`runtime=active/shadow`
-   模块不得使用该门禁。兼容期禁用由独立 profile overlay 精确覆盖所有 inactive plugin，不得混进长期 bundle。
+5. `runtime=inactive` 插件必须在模块绑定中拥有独立 `QUARK_NATIVE_*` 激活门禁，长期 product manifest 从所选模块
+   自动派生必需门禁，长期 profile 必须使用精确同名门禁；`runtime=active/shadow` 模块不得声明或使用该门禁。
+   兼容期禁用由独立 profile overlay 精确覆盖所有 inactive plugin，不得混进长期 bundle。
 6. profile composition 通过 `mounts` 声明挂载项；不得用 `runtimeDependsOn` 把 disabled 插件伪装成 active provider。
 
 ## 结果

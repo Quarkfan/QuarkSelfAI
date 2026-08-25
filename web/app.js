@@ -25,7 +25,9 @@ function showMonitor(m) {
 }
 
 function showModule(m) {
-  const plugin = m.plugin ? `${m.plugin.profileId} → ${m.plugin.packageExport}` : '—'
+  const plugin = m.plugin
+    ? `${m.plugin.profileId} → ${m.plugin.packageExport}${m.plugin.activationGate ? ` · gate ${m.plugin.activationGate}` : ''}`
+    : '—'
   const providers = (dashboard?.architecture?.runtimeGraph?.edges ?? [])
     .filter((edge) => edge.from === m.id && (edge.kind === 'service' || edge.kind === 'effect'))
     .map((edge) => `${edge.kind}:${edge.capability} → ${edge.to}`)

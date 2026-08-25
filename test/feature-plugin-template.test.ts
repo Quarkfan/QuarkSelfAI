@@ -42,12 +42,14 @@ test('feature template is a valid inactive module-catalog v3 extension', async (
   assert.deepEqual(feature?.runtimeDependsOn, ['dsh-runtime'])
   assert.deepEqual(feature?.requiresServices, ['quarkWorkflows'])
   assert.deepEqual(feature?.providesServices, [])
-  assert.deepEqual(feature?.plugin, { profileId: 'feature-id', packageExport: './feature-id' })
+  assert.deepEqual(feature?.plugin, {
+    profileId: 'feature-id', packageExport: './feature-id', activationGate: 'QUARK_NATIVE_FEATURE_ID',
+  })
 })
 
 test('feature template ships a fail-closed Cordis activation gate', async () => {
   const source = await readFile(new URL('../templates/feature-plugin/cordis.fragment.yml', import.meta.url), 'utf8')
-  assert.match(source, /disabled:.*QUARK_FEATURE_ID_ENABLED/s)
+  assert.match(source, /disabled:.*QUARK_NATIVE_FEATURE_ID/s)
   assert.doesNotMatch(source, /ASSISTANT_RUNTIME\s*!==\s*['"]compat/)
 })
 

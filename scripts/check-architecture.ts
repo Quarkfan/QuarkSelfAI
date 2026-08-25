@@ -63,12 +63,18 @@ for (const { module, plugin } of pluginBindings) {
   const expectedPackage = plugin.packageExport === '.' ? packageName : `${packageName}/${plugin.packageExport.slice(2)}`
   const mounted = profilePlugins.get(plugin.profileId)
   assert.equal(mounted?.name, expectedPackage, `module ${module.id} plugin binding differs from cordis.patch.yml`)
-  const activationGated = /disabled:[\s\S]*QUARK_NATIVE_[A-Z_]+/.test(mounted?.block ?? '')
+  const mountedActivationGates = [...new Set((mounted?.block.match(/QUARK_NATIVE_[A-Z][A-Z0-9_]*/g) ?? []))]
   if (module.runtime === 'inactive') {
-    assert.ok(activationGated, `inactive module ${module.id} must be activation-gated in cordis.patch.yml`)
+    assert.ok(plugin.activationGate, `inactive module ${module.id} must own an activation gate`)
+    assert.deepEqual(
+      mountedActivationGates,
+      [plugin.activationGate],
+      `inactive module ${module.id} must consume its exact activation gate in cordis.patch.yml`,
+    )
   }
   if (module.runtime === 'active' || module.runtime === 'shadow') {
-    assert.ok(!activationGated, `${module.runtime} module ${module.id} cannot be native-activation-gated in cordis.patch.yml`)
+    assert.equal(plugin.activationGate, undefined, `${module.runtime} module ${module.id} cannot own an activation gate`)
+    assert.deepEqual(mountedActivationGates, [], `${module.runtime} module ${module.id} cannot be native-activation-gated in cordis.patch.yml`)
   }
 }
 validateTrackedPackageExportOwnership(
@@ -189,7 +195,7 @@ assert.deepEqual(
   ['dsh-runtime'],
   'native product composition must not duplicate product selection or profile mounts as runtime dependencies',
 )
-const profileActivationEnvironment = [...new Set(profileSource.match(/QUARK_NATIVE_[A-Z_]+/g) ?? [])].sort()
+const profileActivationEnvironment = [...new Set(profileSource.match(/QUARK_NATIVE_[A-Z][A-Z0-9_]*/g) ?? [])].sort()
 assert.deepEqual([...productManifest.requiredEnvironment].sort(), profileActivationEnvironment, 'product activation environment must exactly match native Cordis gates')
 for (const name of productManifest.requiredConfiguration) {
   assert.ok(profileSource.includes(name), `required product configuration ${name} is not consumed by the Cordis profile`)

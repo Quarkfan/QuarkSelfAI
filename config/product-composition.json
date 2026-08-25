@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "capabilities": [
     {
       "id": "product-platform",
@@ -36,25 +36,6 @@
       "required": true,
       "modules": ["assistant-policy-model", "collaboration-learning-policy", "collaboration-learning-native"]
     }
-  ],
-  "requiredEnvironment": [
-    "QUARK_NATIVE_ACTION_WORKER",
-    "QUARK_NATIVE_CODEX_SESSION_EFFECTS",
-    "QUARK_NATIVE_COLLABORATION_LEARNING",
-    "QUARK_NATIVE_CONVERSATION_EFFECTS",
-    "QUARK_NATIVE_DIDA_EFFECTS",
-    "QUARK_NATIVE_DIDA_MAINTENANCE",
-    "QUARK_NATIVE_DIDA_PROJECTION_EFFECTS",
-    "QUARK_NATIVE_FEISHU_CONTEXT_EFFECTS",
-    "QUARK_NATIVE_FEISHU_DISCOVERY_EFFECTS",
-    "QUARK_NATIVE_FEISHU_EFFECTS",
-    "QUARK_NATIVE_FEISHU_INGRESS",
-    "QUARK_NATIVE_FOLLOWUP",
-    "QUARK_NATIVE_INTERACTION_EFFECTS",
-    "QUARK_NATIVE_MESSAGE_INTAKE",
-    "QUARK_NATIVE_REASONING_EFFECTS",
-    "QUARK_NATIVE_SESSION_LIFECYCLE",
-    "QUARK_NATIVE_XIAOWEI_RESEARCH"
   ],
   "requiredConfiguration": [
     "BLACKLAKE_WORKSPACE_ROOT",
