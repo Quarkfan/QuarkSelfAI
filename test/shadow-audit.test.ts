@@ -43,9 +43,36 @@ test('audits a completed shadow window without emitting business content', () =>
   assert.equal(report.counts.differences, 0)
   assert.equal(report.counts.taskMutations, 20)
   assert.equal(report.counts.sourcesWithContext, 20)
+  assert.equal(report.counts.decisionsWithFullSource, 20)
+  assert.equal(report.counts.decisionsWithReceiptOnly, 0)
+  assert.equal(report.counts.decisionsWithoutSource, 0)
   assert.equal(report.counts.uniqueChats, 2)
   assert.equal(report.distributions.intakeReason['@owner'], 20)
   assert.equal(JSON.stringify(report).includes('must never be emitted'), false)
+})
+
+test('accepts a durable processed receipt when a bounded matter source list has evicted the full source', () => {
+  const report = auditShadowState({
+    shadowMode: { enabled: true, startedAt: '2026-08-20T00:00:00.000Z', endsAt: '2026-08-27T00:00:00.000Z' },
+    shadowDecisions: [decision('receipt-only')],
+    shadowMatters: [{ key: 'matter-receipt-only', sources: [] }],
+    mentionProcessedMessageIds: ['receipt-only'],
+  }, new Date('2026-08-22T00:00:00.000Z'))
+  assert.equal(report.valid, true)
+  assert.equal(report.counts.decisionsWithFullSource, 0)
+  assert.equal(report.counts.decisionsWithReceiptOnly, 1)
+  assert.equal(report.counts.decisionsWithoutSource, 0)
+})
+
+test('blocks a decision missing both a full source and durable processed receipt', () => {
+  const report = auditShadowState({
+    shadowMode: { enabled: true, startedAt: '2026-08-20T00:00:00.000Z', endsAt: '2026-08-27T00:00:00.000Z' },
+    shadowDecisions: [decision('lost')],
+    shadowMatters: [{ key: 'matter-lost', sources: [] }],
+  }, new Date('2026-08-22T00:00:00.000Z'))
+  assert.equal(report.valid, false)
+  assert.equal(report.counts.decisionsWithoutSource, 1)
+  assert.ok(report.blockers.some((blocker) => blocker.code === 'missing-shadow-source-reference'))
 })
 
 test('blocks duplicate decisions and keeps an unfinished window pending', () => {

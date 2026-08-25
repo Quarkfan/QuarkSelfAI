@@ -38,6 +38,9 @@ export interface ShadowAuditReport {
     readonly taskMutations: number
     readonly sources: number
     readonly sourcesWithContext: number
+    readonly decisionsWithFullSource: number
+    readonly decisionsWithReceiptOnly: number
+    readonly decisionsWithoutSource: number
     readonly uniqueChats: number
     readonly uniqueSenders: number
   }
@@ -142,6 +145,7 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
   }
   const matterKeys = new Set<string>()
   const sourceMessageIds = new Set<string>()
+  const processedReceiptIds = new Set<string>()
   const chatIds = new Set<string>()
   const senderIds = new Set<string>()
   const intakeReasons: string[] = []
@@ -179,9 +183,33 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
       }
     }
   }
+  for (const field of [
+    'processedMessageIds',
+    'mentionProcessedMessageIds',
+    'xiaoweiProcessedMessageIds',
+    'ownerEngagementProcessedMessageIds',
+    'reactionProcessedEventIds',
+  ]) {
+    const values = state[field]
+    if (!Array.isArray(values)) continue
+    for (const value of values) {
+      if (nonEmptyString(value)) processedReceiptIds.add(value)
+    }
+  }
+  let decisionsWithFullSource = 0
+  let decisionsWithReceiptOnly = 0
+  let decisionsWithoutSource = 0
   for (const decision of decisions) {
     if (nonEmptyString(decision.matterKey) && !matterKeys.has(decision.matterKey)) addBlocker('missing-shadow-matter-reference')
-    if (nonEmptyString(decision.messageId) && !sourceMessageIds.has(decision.messageId)) addBlocker('missing-shadow-source-reference')
+    if (!nonEmptyString(decision.messageId)) continue
+    if (sourceMessageIds.has(decision.messageId)) {
+      decisionsWithFullSource += 1
+    } else if (processedReceiptIds.has(decision.messageId)) {
+      decisionsWithReceiptOnly += 1
+    } else {
+      decisionsWithoutSource += 1
+      addBlocker('missing-shadow-source-reference')
+    }
   }
   for (const value of Object.values(snapshots)) {
     const snapshot = record(value)
@@ -220,6 +248,9 @@ export function auditShadowState(state: Readonly<Record<string, unknown>>, now =
       taskMutations: decisions.filter((decision) => decision.taskAction === 'created' || decision.taskAction === 'updated').length,
       sources: sourceCount,
       sourcesWithContext,
+      decisionsWithFullSource,
+      decisionsWithReceiptOnly,
+      decisionsWithoutSource,
       uniqueChats: chatIds.size,
       uniqueSenders: senderIds.size,
     },
