@@ -31,7 +31,7 @@ test('overdue workflow emits stable notifications only when a task fingerprint c
   })
   const unchanged = definition.reduce(nextScan.state, {
     id: 'effect:scan-two:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T00:30:03.000Z',
-    payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 5 }] },
+    payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23T00:00:00.000Z', priority: 5, url: 'https://didadao.com/task/task-1' }] },
   })
   assert.equal(unchanged.effects?.length, 0)
   const changedScan = definition.reduce(unchanged.state, {
@@ -43,6 +43,8 @@ test('overdue workflow emits stable notifications only when a task fingerprint c
   })
   assert.equal(changed.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length, 1)
   assert.notEqual(changed.effects?.[0]?.id, first.effects?.[0]?.id)
+  assert.match(String(first.effects?.[0]?.payload.body), /https:\/\/dida365\.com\/webapp\/#p\/project-automation\/tasks\/task-1/)
+  assert.doesNotMatch(String(first.effects?.[0]?.payload.body), /didadao/)
 })
 
 test('overdue workflow persists failure debounce and emits one recovery notice', () => {

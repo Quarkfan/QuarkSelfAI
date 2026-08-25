@@ -174,6 +174,40 @@ test("keeps failed mentions pending with backoff", async () => {
   assert.ok(state.state.mentionPending[0].nextAttemptAt);
 });
 
+test("aggregates sustained processing failures without forwarding raw message content", async () => {
+  const state = stateHarness();
+  state.state.mentionPending = [
+    { message: { message_id: "om_1", content: "sensitive SQL" }, lastError: "timeout" },
+    { message: { message_id: "om_2", content: "private context" }, lastError: "timeout" },
+  ];
+  const messages = [];
+  const monitor = new MentionMonitor({
+    config: {
+      mentionProcessingFailureNotifyThreshold: 2,
+      mentionProcessingFailureNotifyAfterMs: 0,
+      notificationTimeZone: "Asia/Shanghai",
+    },
+    state,
+    lark: { async send(message) { messages.push(message); } },
+    taskCreator: {}, logger: { error() {} },
+  });
+  monitor.initializeState();
+
+  await monitor.recordProcessingFailure(new Error("request timed out"), new Date("2026-08-25T01:00:00Z"));
+  assert.equal(messages.length, 0);
+  await monitor.recordProcessingFailure(new Error("request timed out"), new Date("2026-08-25T01:01:00Z"));
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /累计失败：2 次/);
+  assert.match(messages[0], /当前待处理：2 条/);
+  assert.doesNotMatch(messages[0], /sensitive SQL|private context|om_1|om_2/);
+
+  state.state.mentionPending = [];
+  await monitor.recoverProcessingFailureIfIdle();
+  assert.equal(messages.length, 2);
+  assert.match(messages[1], /积压消息已处理完毕/);
+  assert.equal(state.state.mentionProcessingFailure, null);
+});
+
 test("recognizes Feishu 9499 as rate limiting", () => {
   assert.equal(isLarkRateLimitError(new Error('{"error":{"code":9499,"message":"too many request"}}')), true);
   assert.equal(isLarkRateLimitError(new Error("request timed out")), false);

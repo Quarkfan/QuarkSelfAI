@@ -112,8 +112,9 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
           const fingerprint = `${task.dueDate}:${task.priority}`
           if (nextNotified[task.taskId]?.fingerprint === fingerprint) continue
           const effectId = id('dida-overdue-notification', task.taskId, fingerprint)
+          const taskUrl = `https://dida365.com/webapp/#p/${encodeURIComponent(state.projectId)}/tasks/${encodeURIComponent(task.taskId)}`
           effects.push(notificationEffect(effectId, `自动化待办已超期：${task.title}`,
-            `截止：${task.dueDate}\n优先级：${task.priority}${task.url ? `\n${task.url}` : ''}`, event.occurredAt))
+            `截止：${task.dueDate}\n优先级：${task.priority}\n${taskUrl}`, event.occurredAt))
           nextNotified[task.taskId] = { fingerprint, at: event.occurredAt }
         }
         if (state.failure?.notified) {
@@ -243,7 +244,12 @@ function parseOverdueTasks(value: unknown): OverdueTask[] {
     const task = record(item)
     if (!task || typeof task.taskId !== 'string' || typeof task.title !== 'string' || typeof task.dueDate !== 'string'
       || !Number.isFinite(task.priority) || Number.isNaN(new Date(task.dueDate).getTime())) throw new Error(`invalid overdue task at index ${index}`)
-    return { taskId: task.taskId, title: task.title, dueDate: task.dueDate, priority: Number(task.priority), ...(typeof task.url === 'string' ? { url: task.url } : {}) }
+    return {
+      taskId: task.taskId,
+      title: task.title,
+      dueDate: new Date(task.dueDate).toISOString(),
+      priority: Number(task.priority),
+    }
   })
 }
 

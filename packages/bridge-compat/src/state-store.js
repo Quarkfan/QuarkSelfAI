@@ -23,6 +23,7 @@ const EMPTY_STATE = {
   xiaoweiLastPollAt: null,
   xiaoweiHealthFailure: null,
   mentionHealthFailure: null,
+  mentionProcessingFailure: null,
   mentionRateLimitFailure: null,
   mentionNextPollAt: null,
   flaggedConversationChatIds: [],

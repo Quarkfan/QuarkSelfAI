@@ -47,6 +47,8 @@ async function loadConfig() {
     mentionRateLimitBaseMs: 120000,
     mentionRateLimitMaxMs: 1800000,
     mentionRateLimitNotifyAfterMs: 1800000,
+    mentionProcessingFailureNotifyThreshold: 5,
+    mentionProcessingFailureNotifyAfterMs: 1800000,
     mentionInitialLookbackMinutes: 30,
     mentionOverlapMinutes: 10,
     mentionContextMinutes: 30,

@@ -1,5 +1,28 @@
 import { formatUserTime } from "./util.js";
 
+function normalizedDueDate(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) throw new Error(`滴答任务截止时间无效：${String(value).slice(0, 100)}`);
+  return parsed.toISOString();
+}
+
+export function overdueFingerprint(task) {
+  return `${normalizedDueDate(task.dueDate)}:${Number(task.priority)}`;
+}
+
+function equivalentStoredFingerprint(stored, task) {
+  if (typeof stored !== "string") return false;
+  const separator = stored.lastIndexOf(":");
+  if (separator < 0 || Number(stored.slice(separator + 1)) !== Number(task.priority)) return false;
+  try { return normalizedDueDate(stored.slice(0, separator)) === normalizedDueDate(task.dueDate); }
+  catch { return false; }
+}
+
+function trustedTaskUrl(projectId, taskId) {
+  if (!projectId || !taskId) return null;
+  return `https://dida365.com/webapp/#p/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}`;
+}
+
 export class DidaOverdueMonitor {
   constructor({ config = {}, state, lark, taskCreator, logger = console }) {
     this.config = config;
@@ -20,10 +43,18 @@ export class DidaOverdueMonitor {
       this.retryTimer = null;
       const notifications = this.state.state.overdueNotified;
       for (const task of result.tasks) {
-        const fingerprint = `${task.dueDate}:${task.priority}`;
-        if (notifications[task.taskId] === fingerprint) continue;
+        const dueDate = normalizedDueDate(task.dueDate);
+        const fingerprint = overdueFingerprint(task);
+        if (notifications[task.taskId] === fingerprint || equivalentStoredFingerprint(notifications[task.taskId], task)) {
+          if (notifications[task.taskId] !== fingerprint) {
+            notifications[task.taskId] = fingerprint;
+            await this.state.save();
+          }
+          continue;
+        }
+        const url = trustedTaskUrl(this.config.didaProjectId, task.taskId);
         await this.lark.send(
-          `**自动化待办已超期：${task.title}**\n\n截止：${task.dueDate}\n优先级：${task.priority}${task.url ? `\n${task.url}` : ""}`,
+          `**自动化待办已超期：${task.title}**\n\n截止：${formatUserTime(dueDate, this.config.notificationTimeZone)}（北京时间）\n优先级：${task.priority}${url ? `\n${url}` : ""}`,
           `overdue:${task.taskId}:${fingerprint}`,
         );
         notifications[task.taskId] = fingerprint;

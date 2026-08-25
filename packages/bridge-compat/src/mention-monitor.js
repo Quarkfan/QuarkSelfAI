@@ -94,6 +94,7 @@ export class MentionMonitor {
     this.state.state.flaggedConversationChatIds ??= [];
     this.state.state.mentionPending ??= [];
     this.state.state.mentionProcessedMessageIds ??= [];
+    this.state.state.mentionProcessingFailure ??= null;
     this.state.state.delegatedGroupChatIds ??= [];
     this.state.state.groupMembershipKnownChatIds ??= [];
   }
@@ -552,14 +553,45 @@ export class MentionMonitor {
         const delayMinutes = Math.min(60, 2 ** Math.min(pending.attempts, 6));
         pending.nextAttemptAt = new Date(Date.now() + delayMinutes * 60_000).toISOString();
         await this.state.save();
-        if (pending.attempts === 1 || pending.attempts % 5 === 0) {
-          await this.safeSend(
-            `飞书重点消息转自动化待办失败，已保留并将在 ${delayMinutes} 分钟后重试。\n\n来源：${pending.message.chat_name || pending.message.chat_id}\n消息：${String(pending.message.content || "").slice(0, 220)}\n错误：${userFacingError(error)}`,
-            `mention:${pending.message.message_id}:failed:${pending.attempts}`,
-          );
-        }
+        await this.recordProcessingFailure(error);
         index += 1;
       }
+    }
+    await this.recoverProcessingFailureIfIdle();
+  }
+
+  async recordProcessingFailure(error, now = new Date()) {
+    const failure = this.state.state.mentionProcessingFailure || {
+      at: now.toISOString(), count: 0, notifiedAt: null,
+    };
+    failure.count += 1;
+    failure.lastAt = now.toISOString();
+    failure.error = userFacingError(error);
+    this.state.state.mentionProcessingFailure = failure;
+    await this.state.save();
+    const threshold = Number(this.config.mentionProcessingFailureNotifyThreshold ?? 5);
+    const notifyAfterMs = Number(this.config.mentionProcessingFailureNotifyAfterMs ?? 30 * 60_000);
+    const sustained = now.getTime() - new Date(failure.at).getTime() >= notifyAfterMs;
+    if (!failure.notifiedAt && failure.count >= threshold && sustained) {
+      failure.notifiedAt = now.toISOString();
+      await this.state.save();
+      await this.safeSend(
+        `飞书重点消息处理持续异常，消息均已保留并在后台退避重试。\n\n累计失败：${failure.count} 次\n当前待处理：${this.state.state.mentionPending.length} 条\n首次发生：${formatUserTime(failure.at, this.config.notificationTimeZone)}（北京时间）\n错误类别：${failure.error}\n\n暂不需要你介入；只有授权或连接问题无法自动恢复时我会再向你请求帮助。`,
+        `mention-processing-failed:${failure.at}`,
+      );
+    }
+  }
+
+  async recoverProcessingFailureIfIdle() {
+    const failure = this.state.state.mentionProcessingFailure;
+    if (!failure || this.state.state.mentionPending.some((item) => item.lastError)) return;
+    this.state.state.mentionProcessingFailure = null;
+    await this.state.save();
+    if (failure.notifiedAt) {
+      await this.safeSend(
+        `飞书重点消息处理已恢复，积压消息已处理完毕。故障始于：${formatUserTime(failure.at, this.config.notificationTimeZone)}（北京时间）`,
+        `mention-processing-recovered:${failure.at}`,
+      );
     }
   }
 

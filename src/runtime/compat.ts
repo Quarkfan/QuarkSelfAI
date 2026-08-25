@@ -91,7 +91,9 @@ export class CompatRuntime implements RuntimeStatusProvider {
       if (typeof current === 'string') return current
       if (current && typeof current === 'object') {
         const record = current as Record<string, unknown>
-        return typeof record.message === 'string' ? record.message : typeof record.lastError === 'string' ? record.lastError : null
+        return typeof record.message === 'string' ? record.message
+          : typeof record.lastError === 'string' ? record.lastError
+            : typeof record.error === 'string' ? record.error : null
       }
       return null
     }
@@ -100,7 +102,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
       ? state.collaborationLearning as Record<string, unknown> : {}
     return {
       monitors: [
-        { id: 'focus', name: '飞书重点消息', enabled: document.mentionMonitorEnabled !== false, intervalMs: number('mentionPollIntervalMs'), lastRunAt: value('mentionLastPollAt'), nextRunAt: value('mentionNextPollAt'), failure: failure('mentionHealthFailure'), pending: arrayCount('mentionPending') },
+        { id: 'focus', name: '飞书重点消息', enabled: document.mentionMonitorEnabled !== false, intervalMs: number('mentionPollIntervalMs'), lastRunAt: value('mentionLastPollAt'), nextRunAt: value('mentionNextPollAt'), failure: failure('mentionHealthFailure') ?? failure('mentionProcessingFailure'), pending: arrayCount('mentionPending') },
         { id: 'flags', name: '标记会话同步', enabled: document.monitorFlaggedConversations !== false, intervalMs: number('flaggedConversationSyncIntervalMs'), lastRunAt: value('flaggedConversationLastSyncAt'), failure: failure('flaggedConversationHealthFailure'), pending: arrayCount('flaggedConversationChatIds') },
         { id: 'delegated-groups', name: '任永强交接群', enabled: document.groupMembershipMonitorEnabled !== false, intervalMs: number('groupMembershipSyncIntervalMs'), lastRunAt: value('groupMembershipLastSyncAt'), failure: failure('groupMembershipHealthFailure'), pending: arrayCount('delegatedGroupChatIds') },
         { id: 'owner-engagement', name: '本人参与与表情信号', enabled: document.ownerEngagementEnabled !== false, intervalMs: number('ownerEngagementPollIntervalMs'), lastRunAt: value('ownerEngagementLastPollAt'), failure: failure('ownerEngagementHealthFailure'), pending: arrayCount('ownerEngagedConversations') + arrayCount('reactionPendingEvents') },

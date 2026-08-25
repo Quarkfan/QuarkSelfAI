@@ -34,7 +34,7 @@ export function auditLegacyState(state: Record<string, unknown>): LegacyStateAud
   const xiaoweiPending = records(state.xiaoweiResearchRequests).filter((item) => !['completed', 'failed', 'cancelled'].includes(String(item.status)))
   const outreachPending = records(state.followupOutreachRequests).filter((item) => !['completed', 'declined', 'cancelled'].includes(String(item.status)))
   const failureFields = [
-    'mentionHealthFailure', 'mentionRateLimitFailure', 'flaggedConversationHealthFailure',
+    'mentionHealthFailure', 'mentionProcessingFailure', 'mentionRateLimitFailure', 'flaggedConversationHealthFailure',
     'cardActionHealthFailure', 'overdueHealthFailure', 'didaCompletedCleanupHealthFailure',
     'followupHealthFailure', 'xiaoweiHealthFailure',
   ]

@@ -73,3 +73,21 @@ test('refuses to start when the compatibility workspace escapes the local allowl
   await assert.rejects(runtime.start(), /outside the configured workspace roots/)
   assert.equal(runtime.snapshot().state, 'stopped')
 })
+
+test('surfaces aggregated focus-processing failures in compatibility diagnostics', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-compat-diagnostics-'))
+  const varDir = join(directory, 'var')
+  const config = join(directory, 'config.json')
+  await mkdir(varDir)
+  await writeFile(config, JSON.stringify({ varDir, mentionMonitorEnabled: true, mentionPollIntervalMs: 1_800_000 }))
+  await writeFile(join(varDir, 'state.json'), JSON.stringify({
+    mentionPending: [{ message: { message_id: 'om_pending' } }],
+    mentionProcessingFailure: { at: '2026-08-25T00:00:00Z', count: 5, error: '请求超时' },
+  }))
+  const runtime = new CompatRuntime(config, { cwd: directory })
+
+  const diagnostics = await runtime.diagnostics()
+  const focus = diagnostics.monitors.find((monitor) => monitor.id === 'focus')
+  assert.equal(focus?.failure, '请求超时')
+  assert.equal(focus?.pending, 1)
+})
