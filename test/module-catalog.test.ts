@@ -81,6 +81,30 @@ test('applies classification boundaries to runtime-only dependencies', () => {
   }), /skeleton module skeleton-b cannot depend on feature module feature-a/)
 })
 
+test('separates mounted composition from live runtime dependencies', () => {
+  assert.doesNotThrow(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'feature-a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'a', owns: [], dependsOn: [] },
+      { id: 'profile-a', classification: 'feature', layer: 'operations', implementation: 'ready', runtime: 'shadow', source: 'b', owns: [], dependsOn: [], mounts: ['feature-a'] },
+    ],
+  }))
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'feature-a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'a', owns: [], dependsOn: [] },
+      { id: 'consumer-a', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'active', source: 'b', owns: [], dependsOn: [], runtimeDependsOn: ['feature-a'] },
+    ],
+  }), /active module consumer-a requires inactive runtime dependency feature-a/)
+  assert.throws(() => validateModuleCatalog({
+    version: 3,
+    modules: [
+      { id: 'feature-a', classification: 'feature', layer: 'adapter', implementation: 'ready', runtime: 'inactive', source: 'a', owns: [], dependsOn: [] },
+      { id: 'workflow-a', classification: 'feature', layer: 'workflow', implementation: 'ready', runtime: 'inactive', source: 'b', owns: [], dependsOn: [], mounts: ['feature-a'] },
+    ],
+  }), /only operations modules can mount/)
+})
+
 test('rejects dependency cycles and compat features without a migration host', () => {
   assert.throws(() => validateModuleCatalog({
     version: 3,

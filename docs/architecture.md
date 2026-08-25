@@ -27,7 +27,8 @@ DSH/Cordis package 和生命周期能力属于骨架；装配本产品全部插�
 `native-product-profile` feature。它只包含产品插件、能力配置与逐能力 `QUARK_NATIVE_*` 门禁，不得出现兼容期
 selector。现网 `feishu-assistant` 在该基础层之上叠加 `compat/cordis.compat.patch.yml`，由迁移模块
 `assistant-profile-composition` 拥有并无条件禁用尚未切换的 native owner；长期入口使用隔离的
-`feishu-assistant-native` profile。架构检查会同时验证基础层插件血缘、overlay 精确覆盖和两者的模块所有权。
+`feishu-assistant-native` profile。长期 profile 当前只是被现网 bundle 预装，目录状态为 `shadow`；维护窗口真正
+取得全部 owner 后才改为 active。架构检查会同时验证基础层插件血缘、`mounts`、overlay 精确覆盖和两者的模块所有权。
 
 DSH Loader 从包根的 named `apply(ctx, config)` 装配 `LarkCliService`。包根不提供 default export，避免
 Loader 将 namespace 折叠后丢失插件元数据。该入口只注册 capability，不自动调用 `start()`；现网消费者

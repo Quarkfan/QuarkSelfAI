@@ -14,7 +14,7 @@
 2. `cordis.patch.yml` 由独立产品 profile 模块拥有。它负责选择具体插件，是产品装配而非内核。
 3. profile 的长期层与迁移层后续按 ADR 0053 进一步拆分：`native-product-profile` 是 feature，
    `assistant-profile-composition` 只拥有 compatibility-only overlay，并在切换后删除。
-4. Profile composition 通过 `runtimeDependsOn` 声明 DSH runtime 和每个已绑定的本地插件模块。架构检查从
+4. Profile composition 对 DSH live runtime 使用 `runtimeDependsOn`，对每个已绑定的本地插件使用 `mounts`。架构检查从
    profile、package exports 和 module catalog 三方反向核验，漏挂或漏声明都会失败。
 5. Claude Code 与 Codex provider 指向各自 package，不再以业务 profile 作为自身 source；router 与 provider
    的选择关系由 profile composition 拥有，骨架 router 不反向依赖任何具体 provider。

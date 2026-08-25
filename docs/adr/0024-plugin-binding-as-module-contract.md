@@ -17,6 +17,7 @@
 4. profile 中所有 `@quarkfan/quark-self-ai` 插件必须反向映射到一个模块；外部 DSH provider 不由本目录认领。
 5. `runtime=inactive` 插件必须在长期 profile 中使用独立 `QUARK_NATIVE_*` 激活门禁；`runtime=active/shadow`
    模块不得使用该门禁。兼容期禁用由独立 profile overlay 精确覆盖所有 inactive plugin，不得混进长期 bundle。
+6. profile composition 通过 `mounts` 声明挂载项；不得用 `runtimeDependsOn` 把 disabled 插件伪装成 active provider。
 
 ## 结果
 

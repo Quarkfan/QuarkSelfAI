@@ -9,6 +9,7 @@
   "assets": [],
   "dependsOn": ["durable-workflow-contracts"],
   "runtimeDependsOn": ["dsh-runtime", "durable-workflow-runtime"],
+  "mounts": [],
   "requiresEffects": [],
   "providesEffects": [],
   "plugin": {

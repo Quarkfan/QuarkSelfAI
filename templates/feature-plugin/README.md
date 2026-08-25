@@ -3,7 +3,8 @@
 复制本目录时先替换 `feature-id`，然后同步完成三处物理声明：
 
 1. 把 `module.fragment.json` 合并到 `config/module-catalog.json`，精确填写 `owns`、已提交运行文件对应的 `assets`、源码 import 对应的
-   `dependsOn`、注入/宿主关系对应的 `runtimeDependsOn`、`requiresEffects`、`providesEffects` 和 `plugin` 绑定；
+   `dependsOn`、注入/宿主关系对应的 `runtimeDependsOn`、operations composition 选择关系对应的 `mounts`、
+   `requiresEffects`、`providesEffects` 和 `plugin` 绑定；
 2. 把 `cordis.fragment.yml` 合并到 profile，默认保持 disabled，并把占位环境变量换成该功能真实的所有权门禁；
 3. 若插件需要作为包子路径加载，在 `package.json#exports` 增加自己的入口。不要把整个 `package.json` 当模板覆盖。
 

@@ -109,7 +109,8 @@ function runtimeDependencyClosure(catalog: AssistantModuleCatalog, roots: readon
     const id = pending.shift()!
     if (closure.has(id)) continue
     closure.add(id)
-    for (const dependency of modules.get(id)?.runtimeDependsOn ?? []) pending.push(dependency)
+    const module = modules.get(id)
+    for (const dependency of [...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? [])]) pending.push(dependency)
   }
   return [...closure]
 }

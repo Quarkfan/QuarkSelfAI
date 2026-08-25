@@ -28,6 +28,8 @@ export interface AssistantModuleDescriptor {
   readonly dependsOn: readonly string[]
   /** Runtime/plugin injection relationships that do not create a source import. */
   readonly runtimeDependsOn: readonly string[]
+  /** Modules selected by an operations composition; mounting does not claim their runtime ownership. */
+  readonly mounts: readonly string[]
   readonly requiresEffects: readonly string[]
   readonly providesEffects: readonly string[]
   /** Present only when this module owns a loadable plugin entrypoint. */
@@ -79,7 +81,7 @@ const sourceDependencyLayers: Readonly<Record<ModuleLayer, ReadonlySet<ModuleLay
 const catalogFields = new Set(['version', 'modules'])
 const moduleFields = new Set([
   'id', 'classification', 'layer', 'implementation', 'runtime', 'source', 'owns', 'assets', 'dependsOn',
-  'runtimeDependsOn', 'requiresEffects', 'providesEffects', 'plugin', 'hostedBy', 'exitCriteria',
+  'runtimeDependsOn', 'mounts', 'requiresEffects', 'providesEffects', 'plugin', 'hostedBy', 'exitCriteria',
 ])
 
 export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
@@ -95,7 +97,7 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     byId.set(module.id, module)
   }
   for (const module of modules) {
-    for (const dependencyId of [...module.dependsOn, ...module.runtimeDependsOn]) {
+    for (const dependencyId of [...module.dependsOn, ...module.runtimeDependsOn, ...module.mounts]) {
       const dependency = byId.get(dependencyId)
       if (!dependency) throw new Error(`module ${module.id} depends on unknown module ${dependencyId}`)
       if (module.classification === 'skeleton' && dependency.classification !== 'skeleton') {
@@ -110,6 +112,9 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
       if (!sourceDependencyLayers[module.layer].has(dependency.layer)) {
         throw new Error(`${module.layer} module ${module.id} cannot source-depend on ${dependency.layer} module ${dependencyId}`)
       }
+    }
+    if (module.mounts.length > 0 && module.layer !== 'operations') {
+      throw new Error(`only operations modules can mount other modules: ${module.id}`)
     }
     if (module.runtime === 'compat') {
       if (module.classification !== 'feature') throw new Error(`only feature modules can use runtime=compat: ${module.id}`)
@@ -177,6 +182,12 @@ export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
     }
   }
   for (const module of modules.filter(item => item.runtime === 'active')) {
+    for (const dependencyId of module.runtimeDependsOn) {
+      const runtime = byId.get(dependencyId)?.runtime
+      if (runtime !== 'active' && runtime !== 'static') {
+        throw new Error(`active module ${module.id} requires inactive runtime dependency ${dependencyId}`)
+      }
+    }
     for (const effect of module.requiresEffects) {
       if (effectProviders.get(effect)?.runtime !== 'active') throw new Error(`active module ${module.id} requires inactive effect ${effect}`)
     }
@@ -289,12 +300,20 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
   if (dependsOn.length !== value.dependsOn.length) throw new Error(`dependsOn for ${id} must not contain duplicates`)
   const runtimeDependsOn = [...new Set((value.runtimeDependsOn ?? []) as string[])]
   if (runtimeDependsOn.length !== (value.runtimeDependsOn ?? []).length) throw new Error(`runtimeDependsOn for ${id} must not contain duplicates`)
-  const overlappingDependencies = dependsOn.filter(dependency => runtimeDependsOn.includes(dependency))
-  if (overlappingDependencies.length) throw new Error(`module ${id} declares both source and runtime dependency on ${overlappingDependencies.join(', ')}`)
+  if (value.mounts !== undefined
+    && (!Array.isArray(value.mounts) || value.mounts.some(item => typeof item !== 'string'))) {
+    throw new Error(`mounts for ${id} must be a string array`)
+  }
+  const mounts = [...new Set((value.mounts ?? []) as string[])]
+  if (mounts.length !== (value.mounts ?? []).length) throw new Error(`mounts for ${id} must not contain duplicates`)
+  const overlappingDependencies = dependsOn.filter(dependency => runtimeDependsOn.includes(dependency) || mounts.includes(dependency))
+    .concat(runtimeDependsOn.filter(dependency => mounts.includes(dependency)))
+  if (overlappingDependencies.length) throw new Error(`module ${id} declares multiple relationship types for ${overlappingDependencies.join(', ')}`)
   const requiresEffects = effectList(value.requiresEffects, `requiresEffects for ${id}`)
   const providesEffects = effectList(value.providesEffects, `providesEffects for ${id}`)
   if (dependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
   if (runtimeDependsOn.includes(id)) throw new Error(`module ${id} cannot depend on itself`)
+  if (mounts.includes(id)) throw new Error(`module ${id} cannot mount itself`)
   const hostedBy = value.hostedBy === undefined ? undefined : string(value.hostedBy, `hostedBy for ${id}`)
   const exitCriteria = value.exitCriteria === undefined ? undefined : string(value.exitCriteria, `exitCriteria for ${id}`)
   const source = string(value.source, `source for ${id}`)
@@ -313,6 +332,7 @@ function parseModule(value: unknown): AssistantModuleDescriptor {
     assets,
     dependsOn,
     runtimeDependsOn,
+    mounts,
     requiresEffects,
     providesEffects,
     ...(value.plugin === undefined ? {} : { plugin: parsePlugin(value.plugin, id) }),
@@ -356,7 +376,7 @@ function assertAcyclic(modules: readonly AssistantModuleDescriptor[], byId: Read
     if (visited.has(id)) return
     visiting.add(id)
     const module = byId.get(id)
-    for (const dependency of [...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? [])]) visit(dependency, [...path, id])
+    for (const dependency of [...(module?.dependsOn ?? []), ...(module?.runtimeDependsOn ?? []), ...(module?.mounts ?? [])]) visit(dependency, [...path, id])
     visiting.delete(id)
     visited.add(id)
   }

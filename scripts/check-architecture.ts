@@ -78,18 +78,21 @@ assert.equal(profileCompositions.length, 1, 'the native Cordis profile must have
 const profileComposition = profileCompositions[0]!
 assert.equal(profileComposition.id, 'native-product-profile', 'the long-term bundle must be owned by native-product-profile')
 assert.equal(profileComposition.classification, 'feature', 'the long-term Cordis profile must be a feature')
+assert.equal(profileComposition.runtime, 'shadow', 'the native Cordis profile remains shadow-mounted until native ownership cutover')
 assert.ok(profileComposition.runtimeDependsOn.includes('dsh-runtime'), 'the native Cordis profile must depend on the DSH runtime')
 for (const { module } of pluginBindings) {
-  assert.ok(profileComposition.runtimeDependsOn.includes(module.id), `native Cordis profile does not declare plugin module ${module.id}`)
+  assert.ok(profileComposition.mounts.includes(module.id), `native Cordis profile does not mount plugin module ${module.id}`)
 }
+assert.deepEqual(profileComposition.runtimeDependsOn, ['dsh-runtime'], 'native Cordis profile runtime dependencies cannot duplicate mounted plugins')
 const compatibilityProfileCompositions = catalog.modules.filter(module => module.source === 'compat/cordis.compat.patch.yml')
 assert.equal(compatibilityProfileCompositions.length, 1, 'the compatibility profile overlay must have exactly one catalog owner')
 assert.equal(compatibilityProfileCompositions[0]?.classification, 'migration', 'the compatibility profile overlay must remain migration-owned')
 assert.deepEqual(
   [...compatibilityProfileCompositions[0]!.runtimeDependsOn].sort(),
-  ['dsh-runtime', 'native-product-profile'],
-  'the compatibility overlay may depend only on the DSH runtime and native product profile',
+  ['dsh-runtime'],
+  'the compatibility overlay may require only the DSH runtime',
 )
+assert.deepEqual(compatibilityProfileCompositions[0]!.mounts, ['native-product-profile'], 'compatibility overlay must compose over the native product profile')
 assert.doesNotMatch(compatibilityProfileSource, /ASSISTANT_RUNTIME|QUARK_NATIVE_/, 'compatibility overlay must disable exact owners without copying activation policy')
 const compatibilityEntries = cordisPatchEntries(compatibilityProfileSource)
 const inactiveProfileIds = pluginBindings
