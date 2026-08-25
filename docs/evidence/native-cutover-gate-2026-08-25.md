@@ -1,7 +1,7 @@
 # Native cutover gate evidence — 2026-08-25
 
-采集时间：`2026-08-25T02:32:58Z`  
-代码版本：`71dbf0b2381747b4dffd3bd43514f5fc8c930d66`
+采集时间：`2026-08-25T03:01:10Z`
+代码版本：`db358a6b8c50040723c4286852d496cc544c1039`
 
 ## 结论
 
@@ -12,9 +12,9 @@
 审计输入：`var/handoff/139a5aab86f473df6b62/state.json`
 
 - 结构与血缘有效：`valid=true`，blocker 0；
-- 171 条决策、79 个 matter、23 个任务快照、3 条反馈；
-- 168 条完整 source/context、3 条 durable receipt、0 条无来源决策；
-- 19 条差异、41 次任务变更；
+- 172 条决策、79 个 matter、23 个任务快照、3 条反馈；
+- 169 条完整 source/context、3 条 durable receipt、0 条无来源决策；
+- 19 条差异、42 次任务变更；
 - 窗口截止 `2026-08-27T11:52:20.935Z`，当前 `windowComplete=false`、`readyForEvaluation=false`；
 - 唯一 warning：`shadow-window-in-progress`。
 
