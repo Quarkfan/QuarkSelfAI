@@ -1,4 +1,4 @@
-import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
+import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/contracts.js'
 import { INTAKE_EFFECTS, type FocusDiscoverySources } from './types.js'
 
 const MINIMUM_INTERVAL_MS = 10 * 60_000

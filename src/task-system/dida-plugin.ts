@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { execFile } from 'node:child_process'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
-import type {} from '../workflow/runtime.js'
+import type {} from '../workflow/contracts.js'
 import { TASK_STORE_EFFECTS } from './store-effects.js'
 import { TASK_MAINTENANCE_EFFECTS } from './maintenance-effects.js'
 import { requireAuthorizationEvidence } from '../domain/authorization.js'

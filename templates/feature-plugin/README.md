@@ -7,6 +7,10 @@
 2. 把 `cordis.fragment.yml` 合并到 profile，默认保持 disabled，并把占位环境变量换成该功能真实的所有权门禁；
 3. 若插件需要作为包子路径加载，在 `package.json#exports` 增加自己的入口。不要把整个 `package.json` 当模板覆盖。
 
+仓库内 feature 直接依赖 `workflow/contracts`、`events/contracts`、`execution/ledger-contract` 等窄 port；仓库外插件可从
+`@quarkfan/quark-self-ai/platform` 获得同一组稳定类型。禁止为了调用 `register`/`enqueue` 而 import runtime Service
+实现类；具体 provider 只进入 `runtimeDependsOn` 和 Cordis profile。
+
 模板故意从 `implementation=planned,runtime=inactive` 开始：建好契约和主体代码后改为 `partial`；只有装配、幂等、
 停止、权限、失败恢复和真实依赖证据齐全时才能改为 `ready`。创建目录或写出占位入口不等于实现完成。
 

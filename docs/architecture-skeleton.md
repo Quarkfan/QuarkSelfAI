@@ -53,6 +53,12 @@ skeleton/feature/migration 方向约束，但不会再把编译耦合与运行�
 `plugin.packageExport`；检查器会双向核对 Cordis profile 和 `package.json#exports`，防止“代码已实现但未挂载”
 或“profile 中存在无主插件”。
 
+feature 源码只依赖骨架的窄 contract port，例如 `DurableWorkflowPort`、`DurableEventRegistryPort` 和
+`ActionLedgerPort`；仓库内从对应 `contracts` 文件导入，仓库外从稳定的 `./platform` 子路径导入。具体 Cordis
+Service 是可替换 provider，只能由 composition/profile 装配，并在模块的 `runtimeDependsOn` 声明。架构检查同时
+阻断 feature 直接 import runtime 实现，以及注入端口却漏报 provider 的情况。这样替换调度、事件分发或 action
+ledger 实现时，不要求重写业务 workflow。
+
 `layer` 也不是展示标签：contract 只能依赖 contract，kernel 只能依赖 contract/kernel，policy 只能依赖
 contract/policy；provider、adapter、workflow、projection 和 surface 只能向各自允许的内层依赖。只有 operations
 允许跨层执行组合、审计和迁移。具体矩阵见 ADR 0033。
@@ -205,7 +211,8 @@ workflow 串联；失败的卡片投影不会提前推进评估 checkpoint。架
 1. 先回答：换掉当前外部系统后，这个机制是否仍成立？若否，它是 feature。
 2. 在 `config/module-catalog.json` 增加模块，选择符合依赖矩阵的 layer，并精确登记 `owns`、`assets`、真实依赖和
    插件绑定；`architecture:check` 必须通过。
-3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表。
+3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表；源码 `dependsOn` 指向 contract，注入端口
+   所需的实际 provider 放入 `runtimeDependsOn`，不得 import 具体 runtime Service。
 4. 开放式 executor/本地修改走 durable action/approval；已建模业务写入走 durable workflow effect/outbox，高影响
    effect 消费精确 approval 与授权证据。长期等待必须持久化，不靠进程内 `sleep`。
 5. 用 DSH 动态插件验证想法可以，但跨重启能力必须沉淀为仓库插件。

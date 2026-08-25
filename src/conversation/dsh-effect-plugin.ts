@@ -5,7 +5,7 @@ import { createUserMessage, type ContentBlock } from '@deepseek-ai/dsh-llm'
 import { finalAssistantOutput } from '@deepseek-ai/dsh-subagent'
 import type { Agent, AgentHandle } from '@deepseek-ai/dsh-agent'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
-import type {} from '../workflow/runtime.js'
+import type {} from '../workflow/contracts.js'
 import { CONVERSATION_EFFECTS, type ConversationDispatchResult, type ConversationEffectConfig } from './types.js'
 
 export interface ConversationAgentHost {

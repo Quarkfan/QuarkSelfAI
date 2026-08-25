@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { requireAuthorizationEvidence } from '../domain/authorization.js'
 import { validateIntakeDecision } from '../intake/types.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
-import type {} from '../workflow/runtime.js'
+import type {} from '../workflow/contracts.js'
 import { TASK_PROJECTION_EFFECTS } from './projection-effects.js'
 import { validateFollowupUpdate } from '../followup/types.js'
 

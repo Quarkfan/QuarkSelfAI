@@ -1,6 +1,6 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { WorkflowInstance } from '../storage/types.js'
-import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
+import type { DurableWorkflowPort } from '../workflow/contracts.js'
 import type { XiaoweiReplyInput, XiaoweiResearchConfig, XiaoweiResearchInput } from './types.js'
 import { xiaoweiResearchWorkflow } from './workflow.js'
 
@@ -8,7 +8,7 @@ declare module '@deepseek-ai/cordis' { interface Context { quarkXiaoweiResearch:
 export class XiaoweiResearchService extends Service {
   static inject = ['quarkWorkflows']
   private readonly definition
-  private readonly workflows: DurableWorkflowRuntime
+  private readonly workflows: DurableWorkflowPort
   constructor(ctx: Context, private readonly config: XiaoweiResearchConfig) {
     super(ctx, 'quarkXiaoweiResearch')
     this.workflows = ctx.quarkWorkflows

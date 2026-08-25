@@ -1,7 +1,8 @@
 import type { Context } from '@deepseek-ai/cordis'
+import type { DurableWorkflowPort } from '../../workflow/contracts.js'
 
 export const name = 'feature-id'
-export const inject = ['requiredSkeletonService']
+export const inject = ['quarkWorkflows']
 
 export interface FeatureConfig {
   readonly enabled?: boolean
@@ -9,12 +10,12 @@ export interface FeatureConfig {
 
 export function apply(ctx: Context, config: FeatureConfig = {}): void {
   if (config.enabled === false) return
-  const requiredPort = ctx.requiredSkeletonService
+  const workflows: DurableWorkflowPort = ctx.quarkWorkflows
   // Register a Service or lifecycle-owned effects here. Do not start work at module import time.
   ctx.effect(() => {
     // Capture injected ports before registering long-lived callbacks. Business
     // schedules belong in durable workflow wakeAt, never a private interval.
-    void requiredPort
+    void workflows
     return () => {
       // dispose every listener and child process
     }

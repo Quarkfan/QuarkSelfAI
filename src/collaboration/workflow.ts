@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
-import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
+import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/contracts.js'
 import type { CollaborationPolicyProposal } from './types.js'
 
 const DAY_MS = 86_400_000

@@ -4,7 +4,7 @@ import type { CollaborationLearningConfig, CollaborationMessage, CollaborationPo
 import type { DurableStatePort } from '../storage/service-contract.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import { eventToPolicySample } from './policy-samples.js'
-import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
+import type { DurableWorkflowPort } from '../workflow/contracts.js'
 import {
   COLLABORATION_EFFECTS, COLLABORATION_POLICY_APPROVAL_KIND, COLLABORATION_SCHEDULE_ID,
   collaborationPolicyApprovalWorkflow, collaborationScheduleWorkflow,
@@ -20,7 +20,7 @@ export class CollaborationLearningService extends Service {
   static inject = ['quarkState', 'quarkWorkflows']
   private readonly engine: CollaborationLearningEngine
   private readonly state: DurableStatePort
-  private readonly workflows: DurableWorkflowRuntime
+  private readonly workflows: DurableWorkflowPort
   private readonly scheduleDefinition
   private readonly approvalDefinition
 

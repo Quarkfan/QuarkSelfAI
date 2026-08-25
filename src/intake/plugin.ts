@@ -1,10 +1,9 @@
 import { createHash } from 'node:crypto'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
-import type {} from '../events/runtime.js'
-import type { DurableEventRuntime } from '../events/runtime.js'
+import type { DurableEventRegistryPort } from '../events/contracts.js'
 import type { DurableStatePort } from '../storage/service-contract.js'
-import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
+import type { DurableWorkflowPort } from '../workflow/contracts.js'
 import { FOCUS_DISCOVERY_WORKFLOW_ID, FOCUS_DISCOVERY_WORKFLOW_KIND, focusDiscoveryWorkflow } from './discovery-workflow.js'
 import { INTAKE_WORKFLOW_KIND, messageIntakeWorkflow } from './workflow.js'
 import { FOCUS_DISCOVERY_EVENT_KEY, type FocusDiscoverySources, type IntakePluginConfig, type IntakeRoute } from './types.js'
@@ -16,14 +15,14 @@ export class IntakeService extends Service {
   private readonly definition = messageIntakeWorkflow()
   private readonly discoveryDefinition = focusDiscoveryWorkflow()
   private readonly state: DurableStatePort
-  private readonly workflows: DurableWorkflowRuntime
+  private readonly workflows: DurableWorkflowPort
   constructor(ctx: Context, private readonly config: IntakePluginConfig) {
     super(ctx, 'quarkIntake')
     if (!config.ownerOpenId?.trim() || !config.workspace?.trim()) throw new Error('intake ownerOpenId and workspace are required')
     if (config.enabled === true && !config.taskProjection) throw new Error('enabled intake requires taskProjection authorization')
     this.state = ctx.quarkState
     this.workflows = ctx.quarkWorkflows
-    const events: DurableEventRuntime = ctx.quarkEvents
+    const events: DurableEventRegistryPort = ctx.quarkEvents
     const disposeDefinition = this.workflows.register(this.definition)
     const disposeDiscoveryDefinition = this.workflows.register(this.discoveryDefinition)
     const disposeConsumer = events.register({

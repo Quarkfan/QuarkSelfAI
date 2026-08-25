@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { createHash } from 'node:crypto'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
-import type {} from '../workflow/runtime.js'
+import type {} from '../workflow/contracts.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import { buildAssistantCard } from './cards.js'
 import { LARK_EFFECTS } from './effects.js'

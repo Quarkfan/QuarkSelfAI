@@ -7,8 +7,8 @@
   "source": "src/features/feature-id/plugin.ts",
   "owns": ["src/features/feature-id/plugin.ts"],
   "assets": [],
-  "dependsOn": [],
-  "runtimeDependsOn": ["dsh-runtime"],
+  "dependsOn": ["durable-workflow-contracts"],
+  "runtimeDependsOn": ["dsh-runtime", "durable-workflow-runtime"],
   "requiresEffects": [],
   "providesEffects": [],
   "plugin": {

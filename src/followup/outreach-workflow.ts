@@ -3,7 +3,7 @@ import { LARK_EFFECTS } from '../lark/effects.js'
 import { TASK_PROJECTION_EFFECTS } from '../task-system/projection-effects.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import type { WorkflowEffectInput } from '../storage/types.js'
-import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
+import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/contracts.js'
 import type { FollowupContact, FollowupOutreachConfig, FollowupOutreachInput } from './types.js'
 
 const MINUTE_MS = 60_000

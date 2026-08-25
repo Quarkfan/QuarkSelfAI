@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
-import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
-import type {} from '../workflow/runtime.js'
+import type { DurableWorkflowPort } from '../workflow/contracts.js'
+import type {} from '../workflow/contracts.js'
 import { decodeCardCorrelation, type CardCorrelation } from '../lark/card-correlation.js'
 import { INTAKE_EFFECTS } from './types.js'
 
 export interface InteractionEffectConfig { readonly ownerOpenId: string }
-export interface InteractionWorkflowRuntime { dispatch: DurableWorkflowRuntime['dispatch'] }
+export interface InteractionWorkflowRuntime { dispatch: DurableWorkflowPort['dispatch'] }
 
 export class InteractionEffectAdapter {
   constructor(private readonly config: InteractionEffectConfig, private readonly workflows: InteractionWorkflowRuntime) {

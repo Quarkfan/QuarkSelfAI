@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { completedCleanupWorkflow, overdueWorkflow } from './workflows.js'
 import type { DidaMaintenanceConfig } from './types.js'
-import type {} from '../workflow/runtime.js'
+import type {} from '../workflow/contracts.js'
 
 export const name = 'quark-dida-maintenance'
 export const inject = ['quarkWorkflows']

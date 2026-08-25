@@ -13,17 +13,32 @@ test('feature template is a valid inactive module-catalog v3 extension', async (
         implementation: 'ready', runtime: 'active', source: 'runtime:dsh',
         owns: [], dependsOn: [], requiresEffects: [], providesEffects: [],
       },
+      {
+        id: 'storage-port', classification: 'skeleton', layer: 'contract',
+        implementation: 'ready', runtime: 'active', source: 'src/storage/types.ts',
+        owns: ['src/storage/types.ts'], dependsOn: [],
+      },
+      {
+        id: 'durable-workflow-contracts', classification: 'skeleton', layer: 'contract',
+        implementation: 'ready', runtime: 'active', source: 'src/workflow/contracts.ts',
+        owns: ['src/workflow/contracts.ts'], dependsOn: ['storage-port'], runtimeDependsOn: ['dsh-runtime'],
+      },
+      {
+        id: 'durable-workflow-runtime', classification: 'skeleton', layer: 'kernel',
+        implementation: 'ready', runtime: 'active', source: 'src/workflow/runtime.ts',
+        owns: ['src/workflow/runtime.ts'], dependsOn: ['durable-workflow-contracts'], runtimeDependsOn: ['dsh-runtime'],
+      },
       fragment,
     ],
   })
-  const feature = catalog.modules[1]
+  const feature = catalog.modules[4]
   assert.equal(feature?.classification, 'feature')
   assert.equal(feature?.implementation, 'planned')
   assert.equal(feature?.runtime, 'inactive')
   assert.deepEqual(feature?.owns, ['src/features/feature-id/plugin.ts'])
   assert.deepEqual(feature?.assets, [])
-  assert.deepEqual(feature?.dependsOn, [])
-  assert.deepEqual(feature?.runtimeDependsOn, ['dsh-runtime'])
+  assert.deepEqual(feature?.dependsOn, ['durable-workflow-contracts'])
+  assert.deepEqual(feature?.runtimeDependsOn, ['dsh-runtime', 'durable-workflow-runtime'])
   assert.deepEqual(feature?.plugin, { profileId: 'feature-id', packageExport: './feature-id' })
 })
 
@@ -40,6 +55,6 @@ test('feature template starts honestly and documents both durable write planes',
   assert.match(readme, /action\/approval/)
   assert.match(readme, /workflow effect\/outbox/)
   assert.match(readme, /不得新增业务 `setInterval`/)
-  assert.match(plugin, /const requiredPort = ctx\.requiredSkeletonService/)
+  assert.match(plugin, /const workflows: DurableWorkflowPort = ctx\.quarkWorkflows/)
   assert.doesNotMatch(plugin, /setInterval\s*\(/)
 })

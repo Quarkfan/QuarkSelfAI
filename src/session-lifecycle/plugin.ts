@@ -1,6 +1,6 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { WorkflowInstance } from '../storage/types.js'
-import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
+import type { DurableWorkflowPort } from '../workflow/contracts.js'
 import type { DurableStatePort } from '../storage/service-contract.js'
 import { sessionLifecycleWorkflow } from './workflow.js'
 import type { SessionLifecycleConfig, TrackResearchSessionInput } from './types.js'
@@ -12,7 +12,7 @@ declare module '@deepseek-ai/cordis' {
 export class SessionLifecycleService extends Service {
   static inject = ['quarkWorkflows', 'quarkState']
   private readonly definition
-  private readonly workflows: DurableWorkflowRuntime
+  private readonly workflows: DurableWorkflowPort
   private readonly state: DurableStatePort
 
   constructor(ctx: Context, private readonly config: SessionLifecycleConfig = {}) {

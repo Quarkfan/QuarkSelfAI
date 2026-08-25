@@ -4,7 +4,7 @@ import { join, relative, resolve } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { ExecutorId, SourceRef } from '../domain/contracts.js'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
-import type { ActionLedgerService } from '../execution/ledger-service.js'
+import type { ActionLedgerPort } from '../execution/ledger-contract.js'
 import type { DurableActionInput } from '../storage/types.js'
 
 const REQUIRED_SOURCES = [
@@ -108,7 +108,7 @@ declare module '@deepseek-ai/cordis' {
 export class BlacklakeReferenceService extends Service {
   static inject = ['quarkActionLedger']
   private readonly root: string
-  private readonly ledger: Pick<ActionLedgerService, 'enqueue'>
+  private readonly ledger: Pick<ActionLedgerPort, 'enqueue'>
 
   constructor(ctx: Context, config: BlacklakeReferenceConfig) {
     super(ctx, 'blacklakeReferences')

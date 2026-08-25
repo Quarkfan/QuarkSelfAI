@@ -3,7 +3,7 @@ import { TASK_REASONING_EFFECTS } from '../task-system/reasoning-effects.js'
 import { TASK_STORE_EFFECTS } from '../task-system/store-effects.js'
 import { TASK_PROJECTION_EFFECTS, type TaskProjectionTarget } from '../task-system/projection-effects.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
-import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
+import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/contracts.js'
 import { FOLLOWUP_EFFECTS, validateFollowupEvaluation, type FollowupEvaluation, type FollowupReviewConfig } from './types.js'
 
 const HOUR_MS = 3_600_000

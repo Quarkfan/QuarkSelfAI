@@ -1,7 +1,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import { createHash } from 'node:crypto'
 import type { ClaimedWorkflowEffect, WorkflowInstance } from '../storage/types.js'
-import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
+import type { DurableWorkflowPort } from '../workflow/contracts.js'
 import { followupOutreachWorkflow } from './outreach-workflow.js'
 import { followupReviewWorkflow } from './review-workflow.js'
 import { FOLLOWUP_EFFECTS, type FollowupOutreachConfig, type FollowupOutreachInput, type FollowupReplyInput, type FollowupReviewConfig } from './types.js'
@@ -13,7 +13,7 @@ export class FollowupService extends Service {
   static inject = ['quarkWorkflows']
   private readonly reviewDefinition
   private readonly outreachDefinition
-  private readonly workflows: DurableWorkflowRuntime
+  private readonly workflows: DurableWorkflowPort
   constructor(ctx: Context, private readonly config: FollowupPluginConfig = {}) {
     super(ctx, 'quarkFollowup')
     this.workflows = ctx.quarkWorkflows

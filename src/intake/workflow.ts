@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/runtime.js'
+import type { WorkflowDecision, WorkflowDefinition, WorkflowEvent } from '../workflow/contracts.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
 import { TASK_PROJECTION_EFFECTS } from '../task-system/projection-effects.js'
 import type { TaskProjectionTarget } from '../task-system/projection-effects.js'

@@ -2,14 +2,14 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import { DEFAULT_DURABLE_RECOVERY_INTERVAL_MS, DurableWakeScheduler } from '../runtime/wake-scheduler.js'
 import type { DurableStatePort } from '../storage/service-contract.js'
+import type { DurableEventConsumer, DurableEventRegistryPort } from './contracts.js'
+export type { DurableEventConsumer, DurableEventRegistryPort } from './contracts.js'
 
-export interface DurableEventConsumer { readonly name: string; readonly eventKeys: readonly string[]; handle(event: NormalizedChannelEvent): Promise<void> }
 export interface DurableEventRuntimeConfig { readonly workerId: string; readonly enabled?: boolean; readonly pollIntervalMs?: number; readonly leaseMs?: number; readonly retryDelayMs?: number; readonly maxAttempts?: number }
-declare module '@deepseek-ai/cordis' { interface Context { quarkEvents: DurableEventRuntime } }
 
 export const DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS = DEFAULT_DURABLE_RECOVERY_INTERVAL_MS
 
-export class DurableEventRuntime extends Service {
+export class DurableEventRuntime extends Service implements DurableEventRegistryPort {
   static inject = ['quarkState']
   private readonly consumers = new Map<string, DurableEventConsumer>()
   private readonly state: DurableStatePort

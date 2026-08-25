@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
-import type {} from '../workflow/runtime.js'
+import type {} from '../workflow/contracts.js'
 import { LARK_EFFECTS } from './effects.js'
 import { ProcessCommandRunner, runJson, type CommandRunner } from './runner.js'
 

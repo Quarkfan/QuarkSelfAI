@@ -183,6 +183,7 @@ const moduleById = new Map(catalog.modules.map(module => [module.id, module]))
 const ownerBySource = new Map(catalog.modules.flatMap(module => module.owns.map(source => [source, module.id] as const)))
 const actualDependencies = new Map(catalog.modules.map(module => [module.id, new Set<string>()]))
 const dshSourceModules = new Set<string>()
+const injectedRuntimeRequirements = new Map<string, Set<string>>()
 const violations: string[] = []
 for (const filename of files) {
   const source = await readFile(filename, 'utf8')
@@ -190,6 +191,13 @@ for (const filename of files) {
   const owner = ownerBySource.get(from)
   const ownerModule = moduleById.get(owner ?? '')
   if (owner && /@deepseek-ai\/(?:cordis|dsh-)/.test(source)) dshSourceModules.add(owner)
+  if (ownerModule?.classification === 'feature') {
+    const required = injectedRuntimeRequirements.get(ownerModule.id) ?? new Set<string>()
+    if (/\bquarkWorkflows\b/.test(source)) required.add('durable-workflow-runtime')
+    if (/\bquarkEvents\b/.test(source)) required.add('durable-event-runtime')
+    if (/\bquarkActionLedger\b/.test(source)) required.add('durable-action-ledger')
+    injectedRuntimeRequirements.set(ownerModule.id, required)
+  }
   if (ownerModule?.layer === 'contract'
     && /(?:\bextends\s+Service\b|\bexport\s+(?:async\s+)?function\s+apply\s*\()/.test(source)) {
     violations.push(`${from} is executable plugin/service code owned by contract module ${ownerModule.id}`)
@@ -235,11 +243,16 @@ for (const filename of files) {
     if (fromOwner && toOwner && fromOwner !== toOwner && !moduleById.get(fromOwner)?.dependsOn.includes(toOwner)) {
       violations.push(`${from} (${fromOwner}) imports ${to} (${toOwner}) without declaring the module dependency`)
     }
+    if (ownerModule?.classification === 'feature'
+      && ['durable-workflow-runtime', 'durable-event-runtime', 'durable-action-ledger'].includes(toOwner ?? '')) {
+      violations.push(`${from} imports runtime implementation ${to}; features must source-depend on its stable contract port`)
+    }
     if (from.startsWith('src/platform/') && from !== 'src/platform/index.ts' && outside(to, ['src/platform/'])) {
       violations.push(`${from} imports ${to}; platform skeleton must not depend on implementation layers`)
     }
     if (from === 'src/platform/index.ts' && outside(to, [
-      'src/platform/', 'src/domain/contracts', 'src/domain/authorization', 'src/storage/types', 'src/storage/ports', 'src/storage/service-contract', 'src/policy/types', 'src/execution/workspace-policy',
+      'src/platform/', 'src/domain/contracts', 'src/domain/authorization', 'src/storage/types', 'src/storage/ports', 'src/storage/service-contract',
+      'src/policy/types', 'src/execution/workspace-policy', 'src/execution/ledger-contract', 'src/events/contracts', 'src/workflow/contracts',
     ])) {
       violations.push(`${from} exports non-contract implementation ${to}`)
     }
@@ -269,6 +282,11 @@ for (const module of catalog.modules) {
   }
   if (dshSourceModules.has(module.id) && module.id !== 'dsh-runtime' && !module.runtimeDependsOn.includes('dsh-runtime')) {
     violations.push(`module ${module.id} imports the DSH/Cordis runtime without runtimeDependsOn=dsh-runtime`)
+  }
+  for (const runtimeDependency of injectedRuntimeRequirements.get(module.id) ?? []) {
+    if (!module.runtimeDependsOn.includes(runtimeDependency)) {
+      violations.push(`feature module ${module.id} injects ${runtimeDependency} without declaring the runtime dependency`)
+    }
   }
 }
 assert.deepEqual(violations, [], `architecture dependency violations:\n${violations.join('\n')}`)

@@ -1,16 +1,12 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { DurableActionInput } from '../storage/types.js'
 import type { DurableStatePort } from '../storage/service-contract.js'
+import type { ActionLedgerPort } from './ledger-contract.js'
+export type { ActionLedgerPort } from './ledger-contract.js'
 
 export interface ActionLedgerConfig {}
 
-declare module '@deepseek-ai/cordis' {
-  interface Context {
-    quarkActionLedger: ActionLedgerService
-  }
-}
-
-export class ActionLedgerService extends Service {
+export class ActionLedgerService extends Service implements ActionLedgerPort {
   static inject = ['quarkState']
   private readonly state: DurableStatePort
   constructor(ctx: Context, _config: ActionLedgerConfig = {}) {
