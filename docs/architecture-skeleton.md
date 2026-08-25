@@ -21,7 +21,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Policy runtime | 开放 fact/effect 的受限条件 DSL 与 schema 校验挂点 | 具体消息事实、提醒/任务/回复效果和安全模拟 |
 | Executor router | Provider 选择、串行兜底、权限边界 | Claude/Codex 的具体协议 |
 | Workspace boundary | 本地路径授权与防逃逸 | 上传或同步文件 |
-| Control-plane contracts | 登录边界、健康、模块、开放 readiness gate 与领域状态端口 | Web 界面、硬编码业务规则或某次迁移字段 |
+| Platform contract API | 对外导出领域、授权、存储、durable runtime、状态与模块的稳定窄契约 | LifecycleSupervisor、WorkspacePolicy、Web 界面或具体 provider 实现 |
 
 消息接入属于骨架上生长的功能：`message-intake` 使用 durable event/workflow 骨架，但“本人私聊直接委托、重点关注、上下文判断、任务标题/优先级、是否通知”等均留在可替换的 feature policy 与 effect adapter 中。低优先级非艾特消息允许由 10 分钟级 discovery effect 补充，不要求骨架高频轮询。
 
@@ -112,6 +112,10 @@ SQLite；PostgreSQL 保持 ready/inactive，切换配置不应迫使骨架 impor
 `StorageConfig` 属于 durable-state provider，稳定 `platform` API 只导出有意承诺的 `storage/ports`；存储
 provider id 是开放字符串，增加新数据库不能要求骨架扩充枚举。
 
+仓库外插件统一从 `@quarkfan/quark-self-ai/platform` 使用稳定 SDK。该子路径自身是 `contract/static`，只能
+重导出 contract 模块和纯校验函数；进程生命周期、本地文件策略、默认 provider、数据库连接及具体 runtime Service
+都不属于公开承诺。仓库内部仍直接依赖最窄 contract 文件，以便架构检查精确计算 owner 和依赖方向。
+
 任务能力本身也不是一整块：`task-store.*` 是可替换的任务产品读写端口，
 `assistant.task-projection.*` 拥有标题、标签、快速摘要、血缘和合并语义，`assistant.followup.*` 拥有是否提醒或
 联系他人的判断，`task-maintenance.*` 承载经过 owner 授权的清理动作。滴答 adapter 只能提供 store/maintenance，
@@ -138,7 +142,7 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
 3. 兼容运行时的监控列表仍知道所有具体业务配置键。
 4. 所有当前本地插件均已具备模块 owner、package export 与长期 Cordis profile 绑定；剩余问题是这些 native 插件尚未
    取得生产状态、消费者和 effect 所有权，而不是缺少装载入口。`dsh-runtime` 已指向真实 DSH package，不再把
-   整份业务 profile 冒充成 skeleton；当前 profile 独立归 migration，移除 compat 条件后再转为 product feature。
+   整份业务 profile 冒充成 skeleton；长期 profile 已归 `native-product-profile` feature，compat overlay 仍是待删除 migration。
 5. 原生 `application-composition` 已建立，只装配注入的 durable store、DSH kernel 和开放组件工厂；控制台是由外层
    product composition 显式选择的 surface feature。kernel、workspace 与 Web/control-plane 配置分别归
    `kernel-supervisor`、执行边界和控制台 feature，不存在可随意扩张的全局 application config。运行状态 provider 的标识、

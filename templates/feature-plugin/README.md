@@ -36,8 +36,8 @@
   `this.ctx.<service>`；
 - `dispose` 后不得残留 timer、listener 或子进程；
 - runtime 必须从 `inactive` 开始；真实回放、单 owner 证明和维护窗口完成后才能改为 `shadow/active`；
-- 迁移期 `inactive` 插件必须在 profile 中由 `ASSISTANT_RUNTIME=compat` 失败关闭；切到 `shadow/active` 时必须同步
-  移除该兼容门禁，目录与实际装载状态不一致会阻断架构检查；
+- `inactive` 插件必须在长期 profile 中使用独立 `QUARK_NATIVE_*` 激活门禁；兼容期 profile overlay 还会无条件
+  禁用所有尚未切换的 native owner。切到 `shadow/active` 时必须同步更新模块目录、激活门禁和 overlay；
 - 测试至少覆盖装配、幂等、停止、权限边界和 effect 失败恢复。
 
 `npm run architecture:check` 会验证所有 `src/*.ts` 的唯一 owner、已跟踪运行资产的唯一 owner、真实 import 与

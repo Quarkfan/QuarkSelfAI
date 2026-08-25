@@ -27,8 +27,8 @@
 该矩阵只约束 `dependsOn` 对应的源码 import。插件装配、effect provider、宿主等 `runtimeDependsOn` 允许跨层，但仍受
 skeleton/feature/migration 分类方向约束。
 
-原 `platform-api` 是对外 barrel，导出 lifecycle 与 workspace policy 实现，不是纯 contract，因此纠正为 skeleton
-`surface`。真正的 contract 仍保持只依赖 contract。
+原 `platform-api` 曾因导出 lifecycle 与 workspace policy 实现而被纠正为 skeleton `surface`。ADR 0056 后稳定
+子路径已移除这两个实现导出并重新成为 `contract/static`；真正的 contract 仍只依赖 contract。
 
 ## 后果
 

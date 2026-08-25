@@ -38,6 +38,7 @@ const storagePortsSource = await readFile(resolve(root, 'src/storage/ports.ts'),
 const durableStateContractSource = await readFile(resolve(root, 'src/storage/service-contract.ts'), 'utf8')
 const channelContractSource = await readFile(resolve(root, 'src/domain/channel.ts'), 'utf8')
 assert.ok(!platformApiSource.includes("export type * from '../storage/types.js'"), 'platform API must export the intentional storage port surface')
+assert.doesNotMatch(platformApiSource, /workspace-policy|lifecycle/, 'stable platform API cannot export replaceable runtime implementations')
 assert.ok(!/\b(?:AssistantStore|StorageConfig)\b/.test(storagePortsSource), 'public storage ports must not expose provider aggregate or configuration')
 assert.ok(!/\b(?:messageReady|cardReady|requiredEventKeys|readyEventKeys)\b/.test(operationsContractSource), 'runtime status contract must expose open capabilities instead of channel-specific readiness fields')
 assert.ok(durableStateContractSource.includes("'quark/event-wake'(at?: string)"), 'durable event contract must expose immediate and exact retry wake hints')
