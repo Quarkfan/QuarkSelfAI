@@ -44,12 +44,15 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 目标清晰、确有本地证据缺口、预期有直接收益。参考读取与 executor 执行因此共享同一审批和审计边界。
 
 `quarkExecutors` 是 DSH subagent seam 上的顺序路由层。Claude Code 与 Codex 分别注册只读和写入 Provider：
-只读实例使用 `dontAsk`/`never`，只有携带 durable owner approval 的写请求才进入 `acceptEdits`/`approve-for-me`。
+只读实例使用 `dontAsk`/`never`，只有从已批准 durable action claim 签发的单次 capability 才能让写请求进入
+`acceptEdits`/`approve-for-me`。
 默认先调用隔离命名的官方 Claude Code Provider；
 只有启动、网络、传输、额度等基础设施故障才在前一 run 完全 dispose 后调用 Codex，schema/业务拒绝等确定性
 错误不重复执行。DSH native `spawn` 仅在明确选择时使用。相同 actionId 的并发调用被拒绝，本地 workspace
-必须等于父 DSH session 的 cwd 且落在白名单内；workspace/external write 必须带 durable owner approval。
-该内存互斥只是进程内最后一道防线，正式执行仍必须先由 action ledger 原子 claim。
+必须等于父 DSH session 的 cwd 且落在白名单内。workspace/external write capability 绑定 actionId、完整请求与
+workspace，只能使用一次；伪造、修改或重放都会在 Provider 启动前失败。该 capability 和内存互斥只是进程内
+最后一道防线，正式执行仍必须先由 action ledger 原子 claim；具体 approval grantor 由发起 action 的 feature 决定，
+router 骨架不预设 owner。
 
 `quarkActionLedger` 是 DSH 原生持久执行服务。SQLite 和 PostgreSQL 使用同一契约保存完整执行请求、精确
 approval 绑定、租约 owner/期限、attempt、结果和下次可执行时间。写任务没有 durable approval 时无法入队，

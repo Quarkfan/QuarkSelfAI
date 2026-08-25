@@ -179,6 +179,8 @@ provider id 是开放字符串，增加新数据库不能要求骨架扩充枚�
    `implementation=ready,runtime=inactive`。
 7. durable action ledger 已与 agent-bound worker 分离。worker 按 action ID 确定性创建/恢复 exact DSH 父会话，
    按 workspace 独立领取 lease，并通过 Cordis lifecycle interval 恢复基础设施失败；它不会借用任意活跃会话。
+   非只读 claim 会签发绑定完整请求的单次 opaque capability，router 不再接受可伪造的 approval boolean，也不在
+   骨架里预设 grantor 身份。
    本人私聊则使用独立 `assistant.conversation.dispatch.v1` 创建或精确续接用户会话并把结果送回 intake workflow。
    两个 adapter 均已实现但仍为 inactive，代码完成不等于已取得生产执行或会话所有权。
 8. 飞书上下文读取与通知/代发是两个 adapter。只读 adapter 会补齐延迟处理后的最新会话尾部，并把无法证明

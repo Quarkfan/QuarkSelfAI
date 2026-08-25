@@ -616,7 +616,7 @@ export class SqliteAssistantStore implements AssistantStore {
       ).run(actionState, approval.action_id)
       if (decision === 'rejected') {
         this.database.prepare(
-          `UPDATE action_execution SET status = 'failed', last_error = 'owner rejected approval',
+          `UPDATE action_execution SET status = 'failed', last_error = 'approval rejected',
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE action_id = ?`,
         ).run(approval.action_id)
       }
@@ -626,7 +626,7 @@ export class SqliteAssistantStore implements AssistantStore {
       ).run(
         approval.action_id,
         actionState,
-        `owner ${decision} action`,
+        `approval ${decision} action`,
         JSON.stringify(metadata),
         `${approval.action_id}:approval:${approvalId}:${decision}`,
       )

@@ -330,6 +330,10 @@ for (const filename of files) {
   if (from === 'src/execution/router.ts' && /(claude-code|\bcodex\b|dsh-native)/i.test(source)) {
     violations.push(`${from} hard-codes an executor route instead of reading composition config`)
   }
+  if (/issueDurableExecutorAuthorization/.test(source)
+    && !startsWithAny(from, ['src/execution/claim-authorization.ts', 'src/execution/worker.ts'])) {
+    violations.push(`${from} mints executor authorization outside the durable action worker boundary`)
+  }
   if (/from\s+['"]node:child_process['"]/.test(source)
     && ownerModule?.layer !== 'adapter'
     && !['kernel-supervisor', 'bridge-compat-host'].includes(ownerModule?.id ?? '')) {

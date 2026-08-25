@@ -2,6 +2,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ActionClaimRelease, ActionStorePort, ClaimedAction } from '../storage/types.js'
 import type { RoutedExecutorRequest, RoutedExecutorResult } from './router.js'
 import { isInfrastructureFailure } from './router.js'
+import { issueDurableExecutorAuthorization } from './claim-authorization.js'
 
 export interface DurableExecutorRoute {
   execute(request: RoutedExecutorRequest, signal: AbortSignal): Promise<RoutedExecutorResult>
@@ -106,10 +107,11 @@ export class DurableExecutorWorker {
   }
 
   private routeRequest(claim: ClaimedAction, parent: Agent): RoutedExecutorRequest {
+    const authorization = issueDurableExecutorAuthorization(claim.request, claim.approvalGranted)
     return {
       ...claim.request,
       parent,
-      approvalGranted: claim.approvalGranted,
+      ...(authorization ? { authorization } : {}),
       ...(claim.requestedExecutor ? { requestedExecutor: claim.requestedExecutor } : {}),
     }
   }

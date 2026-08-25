@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { SubagentResult, SubagentRun } from '@deepseek-ai/dsh-subagent'
+import { issueDurableExecutorAuthorization, type DurableExecutorAuthorization } from '../src/execution/claim-authorization.js'
 import { SequentialExecutorRouter, type SubagentDispatcher } from '../src/execution/router.js'
 import { WorkspacePolicy } from '../src/execution/workspace-policy.js'
 
@@ -49,7 +50,7 @@ async function harness(results: Array<SubagentResult | Error>) {
 function request(workspace: string) {
   return {
     actionId: 'action-1', title: 'fixture', prompt: 'perform the fixture', workspace,
-    mode: 'read-only' as const, approvalGranted: false, parent: parent(workspace),
+    mode: 'read-only' as const, parent: parent(workspace),
   }
 }
 
@@ -80,19 +81,36 @@ test('does not duplicate deterministic Claude failures on Codex', async () => {
   assert.deepEqual(h.calls, ['quark-claude-code-read'])
 })
 
-test('requires owner approval before a workspace or external write', async () => {
+test('requires an opaque durable claim capability before a workspace or external write', async () => {
   const h = await harness([])
-  await assert.rejects(h.router.execute({ ...request(h.workspace), mode: 'workspace-write' }, new AbortController().signal), /requires a durable owner approval/)
+  const write = { ...request(h.workspace), mode: 'workspace-write' as const }
+  assert.throws(() => issueDurableExecutorAuthorization(write, false), /requires an approved durable action claim/)
+  await assert.rejects(h.router.execute(write, new AbortController().signal), /requires an approved durable action claim/)
+  await assert.rejects(h.router.execute({
+    ...write, authorization: {} as DurableExecutorAuthorization,
+  }, new AbortController().signal), /invalid durable action claim authorization/)
   assert.deepEqual(h.calls, [])
 })
 
 test('routes an approved write only to the write-capable provider', async () => {
   const h = await harness([{ stopReason: 'completed', output: [{ type: 'text', text: 'approved write done' }] }])
+  const write = { ...request(h.workspace), mode: 'workspace-write' as const }
   const result = await h.router.execute({
-    ...request(h.workspace), mode: 'workspace-write', approvalGranted: true,
+    ...write, authorization: issueDurableExecutorAuthorization(write, true),
   }, new AbortController().signal)
   assert.equal(result.status, 'completed')
   assert.deepEqual(h.calls, ['quark-claude-code-write'])
+})
+
+test('binds a durable claim capability to one exact request and consumes it once', async () => {
+  const h = await harness([{ stopReason: 'completed', output: [] }])
+  const write = { ...request(h.workspace), mode: 'external-write' as const }
+  const authorization = issueDurableExecutorAuthorization(write, true)
+  await assert.rejects(h.router.execute({
+    ...write, prompt: 'mutated prompt', authorization,
+  }, new AbortController().signal), /invalid durable action claim authorization/)
+  await assert.rejects(h.router.execute({ ...write, authorization }, new AbortController().signal), /invalid durable action claim authorization/)
+  assert.deepEqual(h.calls, [])
 })
 
 test('supports explicit DSH-native execution without entering the Claude fallback route', async () => {

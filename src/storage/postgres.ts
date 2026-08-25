@@ -645,7 +645,7 @@ export class PgAssistantStore implements AssistantStore {
       await executor.query('UPDATE action_record SET state = $2, updated_at = now() WHERE id = $1', [approval.actionId, actionState])
       if (decision === 'rejected') {
         await executor.query(
-          `UPDATE action_execution SET status = 'failed', last_error = 'owner rejected approval', updated_at = now()
+          `UPDATE action_execution SET status = 'failed', last_error = 'approval rejected', updated_at = now()
            WHERE action_id = $1`,
           [approval.actionId],
         )
@@ -656,7 +656,7 @@ export class PgAssistantStore implements AssistantStore {
         [
           approval.actionId,
           actionState,
-          `owner ${decision} action`,
+          `approval ${decision} action`,
           JSON.stringify(metadata),
           `${approval.actionId}:approval:${approvalId}:${decision}`,
         ],

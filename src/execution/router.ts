@@ -3,6 +3,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { SubagentResult, SubagentRun } from '@deepseek-ai/dsh-subagent'
 import type { ExecutorId, ExecutorRequest, ExecutorResult } from '../domain/contracts.js'
+import { consumeDurableExecutorAuthorization, type DurableExecutorAuthorization } from './claim-authorization.js'
 import { WorkspacePolicy } from './workspace-policy.js'
 
 const INFRASTRUCTURE_FAILURE = /(timeout|timed out|transport|network|connection|socket|websocket|dns|rate.?limit|quota|process-exit|spawn|enoent|unauthorized|authentication|abort|cancelled|429|502|503|504)/i
@@ -12,7 +13,7 @@ export type RoutedExecutor = ExecutorId
 export interface RoutedExecutorRequest extends ExecutorRequest {
   readonly parent: Agent
   readonly requestedExecutor?: RoutedExecutor
-  readonly approvalGranted: boolean
+  readonly authorization?: DurableExecutorAuthorization
 }
 
 export interface ExecutorAttempt {
@@ -78,9 +79,7 @@ export class SequentialExecutorRouter {
     if (this.active.has(request.actionId)) throw new Error(`action ${request.actionId} already has an active executor`)
     this.active.add(request.actionId)
     try {
-      if (request.mode !== 'read-only' && !request.approvalGranted) {
-        throw new Error(`${request.mode} execution requires a durable owner approval`)
-      }
+      consumeDurableExecutorAuthorization(request.authorization, request)
       const workspace = await this.policy.authorizeExisting(request.workspace)
       const parentWorkspace = request.parent.session.header.cwd
       if (!parentWorkspace || await this.policy.authorizeExisting(parentWorkspace) !== workspace) {
