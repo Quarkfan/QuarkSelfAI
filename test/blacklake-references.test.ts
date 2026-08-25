@@ -31,6 +31,7 @@ async function fixture(): Promise<string> {
 test('loads current three-source references and validates routed skills without copying their rules', async () => {
   const root = await fixture()
   const ctx = new Context()
+  ctx.reflect.provide('quarkActionLedger', { async enqueue() { throw new Error('inspection must not enqueue') } })
   const fiber = ctx.plugin(BlacklakeReferenceService, { workspaceRoot: root })
   await fiber
   const snapshot = await ctx.blacklakeReferences.inspect()

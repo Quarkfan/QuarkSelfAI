@@ -19,8 +19,9 @@ test('durable action ledger loads and persists without an executor or DSH agent'
       intent: 'inspect', source: { channel: 'feishu' as const },
       request: { title: '检查', prompt: '只读检查', workspace: '/workspace', mode: 'read-only' as const },
     }
-    assert.deepEqual(await ctx.quarkActionLedger.enqueue(action), { inserted: true })
-    await ctx.quarkActionLedger.decideApproval('approval-1', 'approved', { actor: 'owner' }, '2026-08-24T00:00:00Z')
+    const ledger = ctx.quarkActionLedger
+    assert.deepEqual(await new Promise((resolve, reject) => setImmediate(() => ledger.enqueue(action).then(resolve, reject))), { inserted: true })
+    await new Promise<void>((resolve, reject) => setImmediate(() => ledger.decideApproval('approval-1', 'approved', { actor: 'owner' }, '2026-08-24T00:00:00Z').then(resolve, reject)))
     assert.deepEqual(enqueued, [action])
     assert.deepEqual(approvals, [['approval-1', 'approved', { actor: 'owner' }, '2026-08-24T00:00:00Z']])
     assert.equal('runOnce' in ctx.quarkActionLedger, false)

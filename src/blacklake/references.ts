@@ -4,6 +4,7 @@ import { join, relative, resolve } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { ExecutorId, SourceRef } from '../domain/contracts.js'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
+import type { ActionLedgerService } from '../execution/ledger-service.js'
 import type { DurableActionInput } from '../storage/types.js'
 
 const REQUIRED_SOURCES = [
@@ -105,12 +106,15 @@ declare module '@deepseek-ai/cordis' {
 }
 
 export class BlacklakeReferenceService extends Service {
+  static inject = ['quarkActionLedger']
   private readonly root: string
+  private readonly ledger: Pick<ActionLedgerService, 'enqueue'>
 
   constructor(ctx: Context, config: BlacklakeReferenceConfig) {
     super(ctx, 'blacklakeReferences')
     if (!config.workspaceRoot?.trim()) throw new Error('blacklake reference workspaceRoot is required')
     this.root = resolve(config.workspaceRoot)
+    this.ledger = ctx.quarkActionLedger
   }
 
   async inspect(): Promise<BlacklakeReferenceSnapshot> {
@@ -203,7 +207,7 @@ export class BlacklakeReferenceService extends Service {
         ? { approval: { id: input.approvalId as string, prompt: input.approvalPrompt as string } }
         : {}),
     }
-    const result = await this.ctx.quarkActionLedger.enqueue(action)
+    const result = await this.ledger.enqueue(action)
     return {
       decision: input.researchDecision,
       enqueued: result.inserted,

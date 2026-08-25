@@ -165,6 +165,9 @@ DSH 内数据库连接已经从 action ledger 拆到唯一的 `quark-durable-sta
 deadline，并以 10 分钟低频扫描恢复进程崩溃或漏提示。业务 feature 不得各自复制 timer/drain/poll 实现。
 调度回调会离开 Cordis 插件依赖追踪作用域，因此 runtime 必须在构造期解析并持有声明过的窄端口，不能在原生
 timer 回调中重新从 `ctx` 动态取 provider。
+这条边界适用于所有长生命周期 service 和 adapter，而不只 timer：durable effect、agent 完成回调、stream、工具
+回调等都只能使用构造期捕获的 `state/workflows/agents/llm/ledger` 等窄端口。模块级 `inject` 不能替代嵌套
+`Service` class 自己的 `static inject`；架构检查同时禁止延迟 `this.ctx.<injected-service>` 和漏声明 class inject。
 新 channel event 成功写入 durable state 后会发布 `quark/event-appended` wake hint，由 durable event runtime 合并唤醒并
 立即清空积压；10 分钟数据库扫描仅用于进程重启、监听器暂未装载或漏唤醒恢复，不再每秒空轮询。adapter 只负责
 append，不直接依赖或手工驱动 inbox runtime。

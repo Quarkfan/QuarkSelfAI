@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
 import type {} from '../events/runtime.js'
-import type {} from '../storage/service-contract.js'
-import type {} from '../workflow/runtime.js'
+import type { DurableEventRuntime } from '../events/runtime.js'
+import type { DurableStatePort } from '../storage/service-contract.js'
+import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
 import { FOCUS_DISCOVERY_WORKFLOW_ID, FOCUS_DISCOVERY_WORKFLOW_KIND, focusDiscoveryWorkflow } from './discovery-workflow.js'
 import { INTAKE_WORKFLOW_KIND, messageIntakeWorkflow } from './workflow.js'
 import { FOCUS_DISCOVERY_EVENT_KEY, type FocusDiscoverySources, type IntakePluginConfig, type IntakeRoute } from './types.js'
@@ -14,13 +15,18 @@ export class IntakeService extends Service {
   static inject = ['quarkEvents', 'quarkWorkflows', 'quarkState']
   private readonly definition = messageIntakeWorkflow()
   private readonly discoveryDefinition = focusDiscoveryWorkflow()
+  private readonly state: DurableStatePort
+  private readonly workflows: DurableWorkflowRuntime
   constructor(ctx: Context, private readonly config: IntakePluginConfig) {
     super(ctx, 'quarkIntake')
     if (!config.ownerOpenId?.trim() || !config.workspace?.trim()) throw new Error('intake ownerOpenId and workspace are required')
     if (config.enabled === true && !config.taskProjection) throw new Error('enabled intake requires taskProjection authorization')
-    const disposeDefinition = ctx.quarkWorkflows.register(this.definition)
-    const disposeDiscoveryDefinition = ctx.quarkWorkflows.register(this.discoveryDefinition)
-    const disposeConsumer = ctx.quarkEvents.register({
+    this.state = ctx.quarkState
+    this.workflows = ctx.quarkWorkflows
+    const events: DurableEventRuntime = ctx.quarkEvents
+    const disposeDefinition = this.workflows.register(this.definition)
+    const disposeDiscoveryDefinition = this.workflows.register(this.discoveryDefinition)
+    const disposeConsumer = events.register({
       name: 'message-intake', eventKeys: [
         'im.message.receive_v1', 'card.action.trigger', 'im.chat.member.user.added_v1',
         'im.message.reaction.created_v1', 'im.message.reaction.deleted_v1', FOCUS_DISCOVERY_EVENT_KEY,
@@ -46,7 +52,7 @@ export class IntakeService extends Service {
       retryMs: this.config.discoveryRetryMs ?? 10 * 60_000,
       sources,
     }
-    const existing = await this.ctx.quarkState.workflow(FOCUS_DISCOVERY_WORKFLOW_ID)
+    const existing = await this.state.workflow(FOCUS_DISCOVERY_WORKFLOW_ID)
     if (existing) {
       if (existing.kind !== FOCUS_DISCOVERY_WORKFLOW_KIND || existing.definitionVersion !== this.discoveryDefinition.version) {
         throw new Error(`workflow ${FOCUS_DISCOVERY_WORKFLOW_ID} already belongs to ${existing.kind}@${existing.definitionVersion}`)
@@ -55,7 +61,7 @@ export class IntakeService extends Service {
     }
     const now = new Date().toISOString()
     const decision = this.discoveryDefinition.initialize(input, now)
-    await this.ctx.quarkState.createWorkflow({
+    await this.state.createWorkflow({
       id: FOCUS_DISCOVERY_WORKFLOW_ID,
       kind: FOCUS_DISCOVERY_WORKFLOW_KIND,
       definitionVersion: this.discoveryDefinition.version,
@@ -97,7 +103,7 @@ export class IntakeService extends Service {
     return `message-intake:${createHash('sha256').update(event.deduplicationKey).digest('hex').slice(0, 32)}`
   }
   private start(event: NormalizedChannelEvent, route: IntakeRoute) {
-    return this.ctx.quarkWorkflows.ensure(this.workflowId(event), INTAKE_WORKFLOW_KIND, { route, event, workspace: this.config.workspace, ...(this.config.taskProjection ? { taskProjection: this.config.taskProjection } : {}) })
+    return this.workflows.ensure(this.workflowId(event), INTAKE_WORKFLOW_KIND, { route, event, workspace: this.config.workspace, ...(this.config.taskProjection ? { taskProjection: this.config.taskProjection } : {}) })
   }
   private isDelegatedMembership(event: NormalizedChannelEvent): boolean {
     if (event.eventKey !== 'im.chat.member.user.added_v1' || !this.config.delegationInviterId) return false

@@ -159,6 +159,7 @@ declare module '@deepseek-ai/cordis' {
 }
 
 export class ExecutorRouterService extends Service {
+  static inject = ['subagents']
   private readonly ready: Promise<SequentialExecutorRouter>
 
   constructor(ctx: Context, config: ExecutorRouterConfig) {

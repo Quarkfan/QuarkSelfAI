@@ -52,11 +52,11 @@ export class DshConversationEffectAdapter {
 }
 
 class CordisConversationAgentHost implements ConversationAgentHost {
-  constructor(private readonly ctx: Context, private readonly config: ConversationEffectConfig) {}
+  constructor(private readonly agents: Context['agents'], private readonly config: ConversationEffectConfig) {}
 
   async dispatch(input: ConversationAgentInput, signal?: AbortSignal): Promise<ConversationAgentResult> {
     const id = SessionId(input.targetSessionId ?? input.sessionId)
-    const live = this.ctx.agents.get(id)
+    const live = this.agents.get(id)
     if (live?.status === 'running') throw new Error(`target DSH session ${id} is busy`)
     let handle: AgentHandle | undefined
     let agent: Agent
@@ -66,7 +66,7 @@ class CordisConversationAgentHost implements ConversationAgentHost {
       const resumed = await this.resume(id, signal)
       if (resumed) { handle = resumed; agent = resumed.agent }
       else {
-        handle = await this.ctx.agents.create({
+        handle = await this.agents.create({
           sessionId: id,
           meta: { cwd: input.workspace },
           agentOptions: {
@@ -100,7 +100,7 @@ class CordisConversationAgentHost implements ConversationAgentHost {
   }
 
   private async resume(id: SessionId, signal?: AbortSignal): Promise<AgentHandle | undefined> {
-    try { return await this.ctx.agents.resume({ resumeSessionId: id, ...(signal ? { signal } : {}) }) }
+    try { return await this.agents.resume({ resumeSessionId: id, ...(signal ? { signal } : {}) }) }
     catch (error) {
       if (/not found|session-not-found|unknown session/i.test(error instanceof Error ? error.message : String(error))) return undefined
       throw error
@@ -111,7 +111,7 @@ class CordisConversationAgentHost implements ConversationAgentHost {
 export const name = 'quark-dsh-conversation-effects'
 export const inject = ['agents', 'quarkWorkflows']
 export function apply(ctx: Context, config: ConversationEffectConfig): void {
-  const adapter = new DshConversationEffectAdapter(config, new CordisConversationAgentHost(ctx, config))
+  const adapter = new DshConversationEffectAdapter(config, new CordisConversationAgentHost(ctx.agents, config))
   const dispose = ctx.quarkWorkflows.registerEffect(CONVERSATION_EFFECTS.dispatch, { execute: effect => adapter.execute(effect) })
   ctx.effect(() => dispose, 'quark DSH conversation effects')
 }

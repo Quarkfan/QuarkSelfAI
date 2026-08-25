@@ -1,6 +1,6 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { DurableActionInput } from '../storage/types.js'
-import type {} from '../storage/service-contract.js'
+import type { DurableStatePort } from '../storage/service-contract.js'
 
 export interface ActionLedgerConfig {}
 
@@ -11,15 +11,18 @@ declare module '@deepseek-ai/cordis' {
 }
 
 export class ActionLedgerService extends Service {
+  static inject = ['quarkState']
+  private readonly state: DurableStatePort
   constructor(ctx: Context, _config: ActionLedgerConfig = {}) {
     super(ctx, 'quarkActionLedger')
+    this.state = ctx.quarkState
   }
 
   async enqueue(input: DurableActionInput): Promise<{ readonly inserted: boolean }> {
-    return await this.ctx.quarkState.enqueueAction(input)
+    return await this.state.enqueueAction(input)
   }
 
   async decideApproval(approvalId: string, decision: 'approved' | 'rejected', metadata: Readonly<Record<string, unknown>>, decidedAt = new Date().toISOString()): Promise<void> {
-    await this.ctx.quarkState.decideApproval(approvalId, decision, metadata, decidedAt)
+    await this.state.decideApproval(approvalId, decision, metadata, decidedAt)
   }
 }

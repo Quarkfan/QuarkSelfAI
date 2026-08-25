@@ -42,7 +42,7 @@ export class DshReasoningEffectAdapter {
 }
 
 class CordisReasoningHost implements StructuredReasoningHost {
-  constructor(private readonly ctx: Context, private readonly config: ReasoningEffectConfig) {}
+  constructor(private readonly llm: Context['llm'], private readonly config: ReasoningEffectConfig) {}
   async generate(input: { readonly requestId: string; readonly system: string; readonly prompt: string; readonly maxTokens: number }): Promise<string> {
     const sessionId = SessionId(deterministicUuid(`quark-reasoning:${input.requestId}`))
     const options: GenerateOptions = deepFreeze({
@@ -54,7 +54,7 @@ class CordisReasoningHost implements StructuredReasoningHost {
       maxTokens: input.maxTokens,
     })
     const assembler = new BlockAssembler()
-    for await (const chunk of this.ctx.llm.stream(options)) assembler.push(chunk)
+    for await (const chunk of this.llm.stream(options)) assembler.push(chunk)
     const finish = assembler.finish
     if (finish?.kind === 'error') throw new Error(`reasoning model failed: ${String(finish.failure.message)}`)
     const blocks = assembler.blocks()
@@ -115,7 +115,7 @@ function object(value: unknown, label: string): Readonly<Record<string, unknown>
 export const name = 'quark-dsh-reasoning-effects'
 export const inject = ['llm', 'quarkWorkflows']
 export function apply(ctx: Context, config: ReasoningEffectConfig): void {
-  const adapter = new DshReasoningEffectAdapter(config, new CordisReasoningHost(ctx, config))
+  const adapter = new DshReasoningEffectAdapter(config, new CordisReasoningHost(ctx.llm, config))
   const disposers = [INTAKE_EFFECTS.evaluateFocus, TASK_REASONING_EFFECTS.evaluateFollowups].map(kind => ctx.quarkWorkflows.registerEffect(kind, { execute: effect => adapter.execute(effect) }))
   ctx.effect(() => () => { for (const dispose of disposers.reverse()) dispose() }, 'quark DSH reasoning effects')
 }

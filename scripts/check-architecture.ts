@@ -145,10 +145,25 @@ assert.deepEqual([...exitingMigrationModuleIds].sort(), [...catalogMigrationModu
 
 const files = await sourceFiles(resolve(root, 'src'), '.ts')
 const nativeIntervalOwners: string[] = []
+const lateInjectedLookups: string[] = []
+const missingClassInjects: string[] = []
+const injectedPortPattern = /\bctx\.(agents|llm|subagents|quarkState|quarkWorkflows|quarkEvents|quarkActionLedger|quarkExecutors)\b/g
 for (const file of files) {
-  if ((await readFile(file, 'utf8')).includes('setInterval(')) nativeIntervalOwners.push(relative(root, file))
+  const source = await readFile(file, 'utf8')
+  if (source.includes('setInterval(')) nativeIntervalOwners.push(relative(root, file))
+  for (const match of source.matchAll(/this\.ctx\.(?!parallel\b|logger\b|emit\b|on\b|effect\b)([A-Za-z_$][\w$]*)/g)) {
+    lateInjectedLookups.push(`${relative(root, file)}:${match[1]}`)
+  }
+  if (/\bclass\s+\w+\s+extends\s+Service\b/.test(source)) {
+    const accessed = new Set([...source.matchAll(injectedPortPattern)].map(match => match[1]!))
+    const declared = new Set((/static\s+inject\s*=\s*\[([^\]]*)\]/s.exec(source)?.[1] ?? '')
+      .match(/[A-Za-z_$][\w$]*/g) ?? [])
+    for (const name of accessed) if (!declared.has(name)) missingClassInjects.push(`${relative(root, file)}:${name}`)
+  }
 }
 assert.deepEqual(nativeIntervalOwners.sort(), ['src/runtime/wake-scheduler.ts'], 'native feature code must use durable workflows or the shared recovery scheduler instead of private intervals')
+assert.deepEqual(lateInjectedLookups, [], 'long-lived services must capture injected ports during construction instead of resolving them through this.ctx later')
+assert.deepEqual(missingClassInjects, [], 'Cordis Service classes must declare every injected port they resolve during construction')
 const compatibilityFiles = await sourceFiles(resolve(root, 'packages/bridge-compat/src'), '.js')
 const operationalFiles = [
   ...await sourceFiles(resolve(root, 'scripts'), '.ts'),
