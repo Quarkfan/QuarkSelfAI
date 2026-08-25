@@ -16,8 +16,9 @@ QuarkSelfAI 主要由单个用户在个人电脑上长期运行。它不仅处�
    时只允许启动目录，禁止以 `/` 或用户主目录作为隐式默认值。
 3. 所有 executor、兼容 Provider 和未来文件插件共用 `WorkspacePolicy`。已有路径解析真实路径，新建路径
    解析真实父目录，阻止目录穿越和符号链接逃逸。
-4. 只读动作可在白名单内直接执行；工作区写入和外部写入必须进入 durable action/approval 链路。批准绑定
-   到具体 action，不能成为永久的全局写权限。
+4. 只读动作可在白名单内直接执行。开放式 executor 的工作区修改或任意外部操作进入 durable action/approval；
+   已建模功能通过 durable workflow effect/outbox 写入外部系统，并携带该 effect 所需的 owner approval 与授权证据。
+   两种批准都绑定具体 action/workflow correlation，不能成为永久的全局写权限。
 5. 本地文件内容默认留在本机。飞书、滴答、远端 PostgreSQL 和可选服务器只接收必要的意图、状态、审计
    元数据及结果摘要；具体文件上传必须由用户针对该动作明确批准。
 6. 服务器和容器是可选形态。纯控制面使用 `ASSISTANT_EXECUTION_MODE=remote`，不得声称能够直接访问个人

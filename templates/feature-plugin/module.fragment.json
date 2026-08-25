@@ -2,7 +2,7 @@
   "id": "feature-id",
   "classification": "feature",
   "layer": "workflow",
-  "implementation": "ready",
+  "implementation": "planned",
   "runtime": "inactive",
   "source": "src/features/feature-id/plugin.ts",
   "owns": ["src/features/feature-id/plugin.ts"],

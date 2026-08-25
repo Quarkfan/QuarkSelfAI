@@ -18,7 +18,7 @@ test('feature template is a valid inactive module-catalog v3 extension', async (
   })
   const feature = catalog.modules[1]
   assert.equal(feature?.classification, 'feature')
-  assert.equal(feature?.implementation, 'ready')
+  assert.equal(feature?.implementation, 'planned')
   assert.equal(feature?.runtime, 'inactive')
   assert.deepEqual(feature?.owns, ['src/features/feature-id/plugin.ts'])
   assert.deepEqual(feature?.assets, [])
@@ -31,4 +31,15 @@ test('feature template ships a fail-closed Cordis activation gate', async () => 
   const source = await readFile(new URL('../templates/feature-plugin/cordis.fragment.yml', import.meta.url), 'utf8')
   assert.match(source, /disabled:.*QUARK_FEATURE_ID_ENABLED/s)
   assert.doesNotMatch(source, /ASSISTANT_RUNTIME\s*!==\s*['"]compat/)
+})
+
+test('feature template starts honestly and documents both durable write planes', async () => {
+  const readme = await readFile(new URL('../templates/feature-plugin/README.md', import.meta.url), 'utf8')
+  const plugin = await readFile(new URL('../templates/feature-plugin/plugin.ts.template', import.meta.url), 'utf8')
+  assert.match(readme, /planned[\s\S]*partial[\s\S]*ready/)
+  assert.match(readme, /action\/approval/)
+  assert.match(readme, /workflow effect\/outbox/)
+  assert.match(readme, /不得新增业务 `setInterval`/)
+  assert.match(plugin, /const requiredPort = ctx\.requiredSkeletonService/)
+  assert.doesNotMatch(plugin, /setInterval\s*\(/)
 })

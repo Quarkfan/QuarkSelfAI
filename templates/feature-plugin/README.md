@@ -7,6 +7,9 @@
 2. 把 `cordis.fragment.yml` 合并到 profile，默认保持 disabled，并把占位环境变量换成该功能真实的所有权门禁；
 3. 若插件需要作为包子路径加载，在 `package.json#exports` 增加自己的入口。不要把整个 `package.json` 当模板覆盖。
 
+模板故意从 `implementation=planned,runtime=inactive` 开始：建好契约和主体代码后改为 `partial`；只有装配、幂等、
+停止、权限、失败恢复和真实依赖证据齐全时才能改为 `ready`。创建目录或写出占位入口不等于实现完成。
+
 约束：
 
 - 插件入口只负责装配 Service，不在模块顶层启动消费者或定时器；
@@ -22,8 +25,11 @@
 - catalog 及 descriptor 不接受未登记字段或未规范化、逃逸项目目录的 `source`；仅 compat feature 可声明 `hostedBy`，仅
   migration 可声明 `exitCriteria`；
 - 只依赖 catalog 中声明的骨架或功能契约；
-- 外部写入进入 durable action/approval；
+- 开放式自然语言执行、本地文件修改或任意 executor 写操作进入 durable action/approval；已建模的业务流程通过
+  durable workflow effect/outbox 写外部系统，高影响 effect 仍必须消费精确 owner approval 与授权证据；
 - 长期等待进入 durable workflow，事件源进入 durable inbox；不得新增业务 `sleep` 或私有 JSON 真源；
+- 不得新增业务 `setInterval`；长生命周期 callback 必须在注册前捕获已声明的 injected port，禁止延迟
+  `this.ctx.<service>`；
 - `dispose` 后不得残留 timer、listener 或子进程；
 - runtime 必须从 `inactive` 开始；真实回放、单 owner 证明和维护窗口完成后才能改为 `shadow/active`；
 - 迁移期 `inactive` 插件必须在 profile 中由 `ASSISTANT_RUNTIME=compat` 失败关闭；切到 `shadow/active` 时必须同步

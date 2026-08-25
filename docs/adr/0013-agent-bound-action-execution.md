@@ -15,8 +15,9 @@
 2. `DurableExecutorWorker` 与 `ActionWorkerService` 归入 `agent-bound-action-worker` feature；
 3. worker 按 action ID 确定性创建或恢复 exact DSH 父会话，不得从全局 registry 随机选择或缓存“最近会话”；
    每个已配置 workspace 使用独立 worker lease identity，action 只能由同 workspace 的父会话执行；
-4. worker 通过 Cordis 生命周期管理的 30 秒默认 interval 领取 durable action，不使用 `sleep` 或占用用户会话。
-   相同 action 的基础设施失败会恢复同一个父会话；确定性边界失败直接结算，不跨执行器重复；
+4. action enqueue、批准和 retry release 提交后立即或按 `availableAt` 精确唤醒 worker；10 分钟扫描只恢复进程重启、
+   漏 hint 或失效 lease，不使用业务 `sleep` 或高频空轮询。相同 action 的基础设施失败会恢复同一个父会话；
+   确定性边界失败直接结算，不跨执行器重复；
 5. 入队成功不得在界面或消息中表述为“正在执行”。控制面需要分别展示 queued、assigned-session、executing
    和 completed。
 

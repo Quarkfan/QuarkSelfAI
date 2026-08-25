@@ -199,7 +199,8 @@ workflow 串联；失败的卡片投影不会提前推进评估 checkpoint。架
 2. 在 `config/module-catalog.json` 增加模块，选择符合依赖矩阵的 layer，并精确登记 `owns`、`assets`、真实依赖和
    插件绑定；`architecture:check` 必须通过。
 3. 依赖骨架端口，不直接读取其他功能的私有文件、环境变量或数据库表。
-4. 外部写入必须创建 durable action/approval；长期等待必须持久化，不靠进程内 `sleep`。
+4. 开放式 executor/本地修改走 durable action/approval；已建模业务写入走 durable workflow effect/outbox，高影响
+   effect 消费精确 approval 与授权证据。长期等待必须持久化，不靠进程内 `sleep`。
 5. 用 DSH 动态插件验证想法可以，但跨重启能力必须沉淀为仓库插件。
 6. 为功能提供契约测试、运行状态和停用/回滚路径，再加入正式 profile。
 
