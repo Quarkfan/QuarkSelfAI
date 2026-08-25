@@ -2,7 +2,6 @@ import { readFile, readdir } from 'node:fs/promises'
 import type { PoolClient, PoolConfig, QueryResult, QueryResultRow } from 'pg'
 import pg from 'pg'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
-import { eventToPolicySample, type PolicyEventSampleInput } from '../policy/samples.js'
 import type {
   ActionClaimRelease,
   AdvanceWorkflowInput,
@@ -459,14 +458,14 @@ export class PgAssistantStore implements AssistantStore {
     return result.rows
   }
 
-  async recentPolicySamples(limit: number) {
-    const result = await this.database.query<PolicyEventSampleInput>(
+  async recentEventPayloads(kind: string, limit: number) {
+    const result = await this.database.query<{ id: string; source: Record<string, unknown>; payload: Record<string, unknown> }>(
       `SELECT id, source, payload FROM assistant_event
-       WHERE kind = 'message.received'
-       ORDER BY received_at DESC LIMIT $1`,
-      [limit],
+       WHERE kind = $1
+       ORDER BY received_at DESC LIMIT $2`,
+      [kind, limit],
     )
-    return result.rows.map(eventToPolicySample)
+    return result.rows
   }
 
   async recentMatters(limit: number): Promise<readonly MatterSummary[]> {

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { loadModuleCatalog } from '../platform/modules.js'
+import { loadModuleCatalog } from '../catalog/file-provider.js'
 import type { OperationalReadinessReport } from '../platform/operations.js'
 
 export type FeatureStatus = 'complete' | 'partial' | 'missing'

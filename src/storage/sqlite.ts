@@ -2,7 +2,6 @@ import { mkdir, readFile, readdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import type { NormalizedChannelEvent } from '../domain/contracts.js'
-import { eventToPolicySample } from '../policy/samples.js'
 import type {
   ActionClaimRelease,
   AdvanceWorkflowInput,
@@ -396,13 +395,13 @@ export class SqliteAssistantStore implements AssistantStore {
     }))
   }
 
-  async recentPolicySamples(limit: number) {
+  async recentEventPayloads(kind: string, limit: number) {
     const rows = this.database.prepare(
       `SELECT id, source, payload FROM assistant_event
-       WHERE kind = 'message.received'
+       WHERE kind = ?
        ORDER BY received_at DESC LIMIT ?`,
-    ).all(limit) as unknown as Array<{ id: string; source: string; payload: string }>
-    return rows.map((row) => eventToPolicySample({
+    ).all(kind, limit) as unknown as Array<{ id: string; source: string; payload: string }>
+    return rows.map((row) => ({
       id: row.id,
       source: JSON.parse(row.source) as Record<string, unknown>,
       payload: JSON.parse(row.payload) as Record<string, unknown>,

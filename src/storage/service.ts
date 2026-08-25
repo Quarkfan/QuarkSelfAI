@@ -16,11 +16,11 @@ import type {
   DurableSignal,
   DurableSignalInput,
   EventClaimRelease,
+  EventPayloadRecord,
   PolicyDraftInput,
   StoredEvent,
   WorkflowInstance,
 } from './types.js'
-import type { PolicySample } from '../policy/types.js'
 import type { ExecutorResult } from '../domain/contracts.js'
 import type { DurableStatePort } from './service-contract.js'
 
@@ -99,8 +99,8 @@ export class DurableStateService extends Service implements DurableStatePort {
     await (await this.ready).writeFeatureCheckpoint(namespace, key, value)
   }
 
-  async recentPolicySamples(limit: number): Promise<readonly PolicySample[]> {
-    return await (await this.ready).recentPolicySamples(limit)
+  async recentEventPayloads(kind: string, limit: number): Promise<readonly EventPayloadRecord[]> {
+    return await (await this.ready).recentEventPayloads(kind, limit)
   }
 
   async savePolicyDraft(input: PolicyDraftInput): Promise<number> {

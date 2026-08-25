@@ -1,13 +1,21 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { PolicyAuthoringStorePort } from '../storage/types.js'
-import { policyRequiresApproval, simulatePolicy, validatePolicy } from './engine.js'
-import type { NaturalLanguagePolicyCompiler, PolicyDocument, PolicySample, PolicySimulation } from './types.js'
+import {
+  assistantPolicyRequiresApproval,
+  simulateAssistantPolicy,
+  validateAssistantPolicy,
+  type AssistantPolicyDocument,
+  type AssistantPolicySimulation,
+} from './policy-model.js'
+import type { NaturalLanguagePolicyCompiler, PolicyCandidate, PolicySample } from '../policy/types.js'
+
+type AssistantPolicyCompiler = NaturalLanguagePolicyCompiler<PolicyCandidate<AssistantPolicyDocument, AssistantPolicySimulation>>
 
 export interface PolicyProposal {
   readonly id: string
   readonly revision: number
-  readonly document: PolicyDocument
-  readonly simulation: PolicySimulation
+  readonly document: AssistantPolicyDocument
+  readonly simulation: AssistantPolicySimulation
   readonly requiresApproval: boolean
 }
 
@@ -20,7 +28,7 @@ function canonical(value: unknown): string {
   return JSON.stringify(value)
 }
 
-export function policyProposalId(sourceText: string, document: PolicyDocument): string {
+export function policyProposalId(sourceText: string, document: AssistantPolicyDocument): string {
   const digest = createHash('sha256').update(sourceText.trim()).update('\0').update(canonical(document)).digest('hex')
   return `${digest.slice(0, 8)}-${digest.slice(8, 12)}-5${digest.slice(13, 16)}-a${digest.slice(17, 20)}-${digest.slice(20, 32)}`
 }
@@ -28,7 +36,7 @@ export function policyProposalId(sourceText: string, document: PolicyDocument): 
 export class PolicyAuthoringService {
   constructor(
     private readonly store: PolicyAuthoringStorePort,
-    private readonly compiler: NaturalLanguagePolicyCompiler,
+    private readonly compiler: AssistantPolicyCompiler,
   ) {}
 
   async propose(sourceText: string, samples: readonly PolicySample[], signal: AbortSignal): Promise<PolicyProposal> {
@@ -39,14 +47,14 @@ export class PolicyAuthoringService {
 
   async proposeCompiled(
     sourceText: string,
-    document: PolicyDocument,
+    document: AssistantPolicyDocument,
     samples: readonly PolicySample[],
     id: string = randomUUID(),
   ): Promise<PolicyProposal> {
     if (!sourceText.trim() || sourceText.length > 4_000) throw new Error('policy request must contain 1-4000 characters')
-    validatePolicy(document)
+    validateAssistantPolicy(document)
     // Never trust a model-supplied simulation; recompute against the exact local samples.
-    const simulation = simulatePolicy(document, samples)
+    const simulation = simulateAssistantPolicy(document, samples)
     const revision = await this.store.savePolicyDraft({
       id,
       name: document.name,
@@ -59,7 +67,7 @@ export class PolicyAuthoringService {
       revision,
       document,
       simulation,
-      requiresApproval: policyRequiresApproval(document),
+      requiresApproval: assistantPolicyRequiresApproval(document),
     }
   }
 

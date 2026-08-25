@@ -4,6 +4,7 @@ import { loadNativeCutoverReadiness } from '../config/feature-parity.js'
 import { ControlOnlyRuntime } from '../platform/operations.js'
 import { createAssistantStore } from '../storage/factory.js'
 import { createControlConsoleComponent } from '../web/component.js'
+import { FileModuleCatalogProvider } from '../catalog/file-provider.js'
 import { CompatRuntime, compatRuntimeComponent } from './compat.js'
 
 /**
@@ -26,6 +27,7 @@ export async function createConfiguredAssistantApplication(config: RuntimeConfig
         runtime,
         kernelStatus,
         readiness,
+        new FileModuleCatalogProvider(),
       )],
     })
   } catch (error) {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateAssetOwnership, validateModuleCatalog, validateSourceOwnership } from '../src/platform/modules.js'
+import { analyzeEffectCoverage, summarizeModules, validateAssetOwnership, validateModuleCatalog, validateSourceOwnership } from '../src/platform/modules.js'
+import { loadModuleCatalog } from '../src/catalog/file-provider.js'
 
 test('classifies every current module as skeleton, feature, or migration', async () => {
   const catalog = await loadModuleCatalog()

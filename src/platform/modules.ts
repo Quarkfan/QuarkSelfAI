@@ -1,6 +1,3 @@
-import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-
 export type ModuleClassification = 'skeleton' | 'feature' | 'migration'
 export type ModuleLayer = 'kernel' | 'contract' | 'adapter' | 'provider' | 'policy' | 'workflow' | 'projection' | 'surface' | 'operations'
 export type ModuleImplementation = 'planned' | 'partial' | 'ready'
@@ -44,6 +41,15 @@ export interface AssistantModuleCatalog {
   readonly modules: readonly AssistantModuleDescriptor[]
 }
 
+export interface ModuleCatalogProvider {
+  load(): Promise<AssistantModuleCatalog>
+}
+
+/** Neutral catalog for hosts that intentionally do not mount a product composition. */
+export class EmptyModuleCatalogProvider implements ModuleCatalogProvider {
+  async load(): Promise<AssistantModuleCatalog> { return { version: 3, modules: [] } }
+}
+
 export interface EffectCoverage {
   readonly required: readonly string[]
   readonly declared: readonly string[]
@@ -60,7 +66,6 @@ export interface ModuleSummary {
   readonly runtime: Record<ModuleRuntime, number>
 }
 
-const catalogPath = fileURLToPath(new URL('../../config/module-catalog.json', import.meta.url))
 const classifications = new Set<ModuleClassification>(['skeleton', 'feature', 'migration'])
 const layers = new Set<ModuleLayer>(['kernel', 'contract', 'adapter', 'provider', 'policy', 'workflow', 'projection', 'surface', 'operations'])
 const implementations = new Set<ModuleImplementation>(['planned', 'partial', 'ready'])
@@ -81,10 +86,6 @@ const moduleFields = new Set([
   'id', 'classification', 'layer', 'implementation', 'runtime', 'source', 'owns', 'assets', 'dependsOn',
   'runtimeDependsOn', 'requiresEffects', 'providesEffects', 'plugin', 'hostedBy', 'exitCriteria',
 ])
-
-export async function loadModuleCatalog(path = catalogPath): Promise<AssistantModuleCatalog> {
-  return validateModuleCatalog(JSON.parse(await readFile(path, 'utf8')))
-}
 
 export function validateModuleCatalog(value: unknown): AssistantModuleCatalog {
   if (!isRecord(value) || value.version !== 3 || !Array.isArray(value.modules)) {

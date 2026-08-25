@@ -18,7 +18,7 @@ DSH/Cordis 提供插件运行内核；QuarkSelfAI 骨架提供稳定契约、领
 | Durable workflow runtime | 跨重启状态机、定时唤醒、effect outbox、租约与重试 | 滴答清理、联系人跟进等具体步骤 |
 | Durable event runtime | 入站事件按消费者独立租约、失败重放和结算 | 飞书消息语义或具体业务路由 |
 | Storage port / durable-state contract | 跨数据库的一致数据契约，以及 DSH 插件依赖的稳定 `quarkState` 端口 | 创建具体数据库连接、兼容 `state.json` 结构 |
-| Policy runtime | 受限 DSL、模拟、版本和激活 | 任意代码执行 |
+| Policy runtime | 开放 fact/effect 的受限条件 DSL 与 schema 校验挂点 | 具体消息事实、提醒/任务/回复效果和安全模拟 |
 | Executor router | Provider 选择、串行兜底、权限边界 | Claude/Codex 的具体协议 |
 | Workspace boundary | 本地路径授权与防逃逸 | 上传或同步文件 |
 | Control plane | 登录、健康、模块、开放 readiness gate 与领域状态可见性 | 硬编码每项业务规则或某次迁移字段 |
@@ -35,7 +35,9 @@ policy/storage 骨架不得反向解析通道原始字段；原 envelope 只保�
 负责给出 capability id、是否必要和当前状态；控制台只聚合必要能力的就绪数量。增加邮件、其他 IM 或非消息型
 runtime 不需要修改 `RuntimeSnapshot`。
 
-`module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件、
+骨架 `module-catalog` 只包含 descriptor、validator 与分析契约，不读取固定产品文件。具体 QuarkSelfAI 清单由
+`assistant-module-catalog` provider 加载，清单资产及检查程序属于 `architecture-governance` 产品功能；换一套产品组合
+不需要修改骨架 contract。`module-catalog.json` 的 `owns` 是源码所有权真源，不是说明性目录：`src` 下每个 TypeScript 文件、
 `packages/bridge-compat/src` 下每个现网 JavaScript 文件，以及 `scripts` 下每个 TypeScript/MJS 运维入口必须恰好
 出现一次，原生模块入口也必须由自身拥有。
 架构检查会把原生源码的相对 import 映射回 owner，并要求与 `dependsOn` 双向
@@ -78,6 +80,10 @@ effect provider 必须同样 active。这样“状态机代码写完”和“具
 
 功能可以依赖骨架和其他功能契约，但不能依赖 `bridge-compat`、迁移脚本或旧 JSON 状态。当前仍由兼容宿主
 承载的功能在模块目录中标记为 `implementation=ready,runtime=compat`，这是待迁移事实，不是允许继续耦合的接口。
+
+策略骨架只认识开放的 dotted fact id、布尔条件树和 product schema port。`assistant-policy-model` 才定义
+`message.mentionsOwner`、`urgency`、attention/task/reply、紧急消息保护、样本覆盖率和审批条件。数据库 provider
+只提供按开放 event kind 读取持久 payload 的端口，不解析消息、生成协作事实或决定策略安全性。
 
 SQLite、PostgreSQL 与 `quark-durable-state` connection host 也属于可替换 infrastructure feature：应用骨架只接收
 控制台与生命周期所需的窄存储端口，DSH 内的 ledger/workflow/event runtime 只依赖 `durable-state-contract`。当前本地部署实际使用

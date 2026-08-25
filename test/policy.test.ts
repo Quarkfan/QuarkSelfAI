@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { matchesPolicy, policyRequiresApproval, simulatePolicy, validatePolicy } from '../src/policy/engine.js'
-import { policyProposalId } from '../src/policy/authoring.js'
-import { PolicyAuthoringService } from '../src/policy/authoring.js'
-import type { PolicyDocument, PolicySample } from '../src/policy/types.js'
+import { matchesPolicy, validatePolicy } from '../src/policy/engine.js'
+import {
+  assistantPolicyRequiresApproval,
+  simulateAssistantPolicy,
+  validateAssistantPolicy,
+  type AssistantPolicyDocument,
+} from '../src/collaboration/policy-model.js'
+import { policyProposalId } from '../src/collaboration/policy-authoring.js'
+import { PolicyAuthoringService } from '../src/collaboration/policy-authoring.js'
+import type { PolicySample } from '../src/policy/types.js'
 import type { AssistantStore } from '../src/storage/types.js'
 
-const policy: PolicyDocument = {
+const policy: AssistantPolicyDocument = {
   version: 1,
   name: '普通群消息进入汇总',
   description: '未明确提到我的内部群消息不实时提醒',
@@ -27,10 +33,10 @@ const samples: PolicySample[] = [
 ]
 
 test('evaluates a deterministic compiled policy', () => {
-  validatePolicy(policy)
+  validateAssistantPolicy(policy)
   assert.equal(matchesPolicy(policy.when, samples[0]?.facts ?? {}), true)
   assert.equal(matchesPolicy(policy.when, samples[1]?.facts ?? {}), false)
-  assert.deepEqual(simulatePolicy(policy, samples), {
+  assert.deepEqual(simulateAssistantPolicy(policy, samples), {
     sampleCount: 2,
     matchedCount: 1,
     silentCount: 0,
@@ -41,20 +47,38 @@ test('evaluates a deterministic compiled policy', () => {
     safeToActivate: false,
     matchedSampleIds: ['normal'],
   })
-  assert.equal(policyRequiresApproval(policy), true)
+  assert.equal(assistantPolicyRequiresApproval(policy), true)
+})
+
+test('the policy skeleton accepts a different product fact and effect through its schema port', () => {
+  const document = {
+    version: 1 as const,
+    name: 'calendar product policy',
+    description: 'proves the kernel does not enumerate assistant message vocabulary',
+    priority: 10,
+    when: { fact: 'calendar.attendeeCount', op: 'gte' as const, value: 8 },
+    effect: { preparation: 'briefing' },
+  }
+  validatePolicy(document, {
+    facts: new Set(['calendar.attendeeCount']),
+    validateEffect(effect) {
+      assert.equal((effect as { preparation?: unknown }).preparation, 'briefing')
+    },
+  })
+  assert.equal(matchesPolicy(document.when, { calendar: { attendeeCount: 10 } }), true)
 })
 
 test('blocks activation when a silence rule would suppress urgent samples', () => {
-  const unsafe: PolicyDocument = {
+  const unsafe: AssistantPolicyDocument = {
     ...policy,
     effect: { attention: 'silent' },
     when: { fact: 'channel.chatType', op: 'eq', value: 'group' },
   }
-  const simulation = simulatePolicy(unsafe, samples)
+  const simulation = simulateAssistantPolicy(unsafe, samples)
   assert.equal(simulation.urgentSuppressedCount, 1)
   assert.equal(simulation.coverageSufficient, false)
   assert.equal(simulation.safeToActivate, false)
-  assert.equal(policyRequiresApproval(unsafe), true)
+  assert.equal(assistantPolicyRequiresApproval(unsafe), true)
 })
 
 test('allows a noise-reduction draft only when local sample coverage is sufficient', () => {
@@ -62,13 +86,13 @@ test('allows a noise-reduction draft only when local sample coverage is sufficie
     id: `sample-${index}`,
     facts: { channel: { chatType: 'group', external: false }, message: { mentionsOwner: false }, urgency: 'normal' },
   }))
-  const simulation = simulatePolicy(policy, covered)
+  const simulation = simulateAssistantPolicy(policy, covered)
   assert.equal(simulation.coverageSufficient, true)
   assert.equal(simulation.safeToActivate, true)
 })
 
 test('rejects unsupported facts instead of executing arbitrary expressions', () => {
-  assert.throws(() => validatePolicy({
+  assert.throws(() => validateAssistantPolicy({
     ...policy,
     when: { fact: 'process.env.SECRET' as never, op: 'exists' },
   }), /unsupported policy fact/)

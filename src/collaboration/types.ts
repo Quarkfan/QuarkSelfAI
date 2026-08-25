@@ -1,4 +1,4 @@
-import type { PolicyDocument, PolicySimulation } from '../policy/types.js'
+import type { AssistantPolicyDocument, AssistantPolicySimulation } from './policy-model.js'
 
 export type AttentionTier = 'silent' | 'today' | 'realtime'
 export type NotificationDecision = 'silent' | 'notify'
@@ -41,8 +41,8 @@ export interface CollaborationPolicyProposal {
   readonly id: string
   readonly revision: number
   readonly sourceText: string
-  readonly document: PolicyDocument
-  readonly simulation: PolicySimulation
+  readonly document: AssistantPolicyDocument
+  readonly simulation: AssistantPolicySimulation
   readonly sampleCount: number
   readonly reducibleCount: number
   readonly confidence: number

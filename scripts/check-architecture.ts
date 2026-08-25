@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { access, readFile, readdir } from 'node:fs/promises'
 import { dirname, relative, resolve } from 'node:path'
-import { analyzeEffectCoverage, loadModuleCatalog, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
+import { analyzeEffectCoverage, summarizeModules, validateAssetOwnership, validateSourceOwnership } from '../src/platform/modules.js'
+import { loadModuleCatalog } from '../src/catalog/file-provider.js'
 import { ControlOnlyRuntime } from '../src/platform/operations.js'
 import { DEFAULT_EVENT_RECOVERY_POLL_INTERVAL_MS } from '../src/events/runtime.js'
 import { DEFAULT_WORKFLOW_RECOVERY_POLL_INTERVAL_MS } from '../src/workflow/runtime.js'
@@ -189,6 +190,17 @@ for (const filename of files) {
   if (ownerModule?.layer === 'contract'
     && /(?:\bextends\s+Service\b|\bexport\s+(?:async\s+)?function\s+apply\s*\()/.test(source)) {
     violations.push(`${from} is executable plugin/service code owned by contract module ${ownerModule.id}`)
+  }
+  if (ownerModule?.layer === 'contract' && /from\s+['"]node:/.test(source)) {
+    violations.push(`${from} imports a Node runtime API inside contract module ${ownerModule.id}`)
+  }
+  if ((ownerModule?.id === 'policy-contracts' || ownerModule?.id === 'policy-runtime')
+    && /(channel\.chatType|message\.mentionsOwner|settleMinutes|urgentSuppressedCount)/.test(source)) {
+    violations.push(`${from} hard-codes product policy vocabulary inside skeleton module ${ownerModule.id}`)
+  }
+  if (startsWithAny(from, ['src/storage/sqlite.ts', 'src/storage/postgres.ts', 'src/storage/service.ts'])
+    && /(eventToPolicySample|recentPolicySamples|message\.received)/.test(source)) {
+    violations.push(`${from} interprets assistant policy semantics inside a replaceable storage provider`)
   }
   if (ownerModule?.classification === 'skeleton'
     && /(im\.message\.receive_v1|card\.action\.trigger|claude-code|dsh-native|\b(?:feishu|lark|dida|ticktick|blacklake|codex|claude|xiaowei|takeover|nativecutover)\b|常东旭|任永强|张以宁)/i.test(source)) {

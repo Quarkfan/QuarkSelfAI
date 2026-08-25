@@ -3,6 +3,7 @@ import { CollaborationLearningEngine } from './engine.js'
 import type { CollaborationLearningConfig, CollaborationMessage, CollaborationPolicyProposal, CollaborationTaskDecision } from './types.js'
 import type { DurableStatePort } from '../storage/service-contract.js'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
+import { eventToPolicySample } from './policy-samples.js'
 import type { DurableWorkflowRuntime } from '../workflow/runtime.js'
 import {
   COLLABORATION_EFFECTS, COLLABORATION_POLICY_APPROVAL_KIND, COLLABORATION_SCHEDULE_ID,
@@ -34,7 +35,7 @@ export class CollaborationLearningService extends Service {
       recentSignals: (kind, limit) => this.state.recentSignals(kind, limit),
       readCheckpoint: (namespace, key) => this.state.readFeatureCheckpoint(namespace, key),
       writeCheckpoint: (namespace, key, value) => this.state.writeFeatureCheckpoint(namespace, key, value),
-      recentPolicySamples: limit => this.state.recentPolicySamples(limit),
+      recentPolicySamples: async limit => (await this.state.recentEventPayloads('message.received', limit)).map(eventToPolicySample),
       savePolicyDraft: input => this.state.savePolicyDraft(input),
       publishProposal: proposal => this.openApproval(proposal),
     }, config)

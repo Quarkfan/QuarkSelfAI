@@ -3,6 +3,7 @@ import type { ManagedComponent } from '../platform/lifecycle.js'
 import type {
   KernelStatusProvider, OperationalReadinessProvider, RuntimeStatusProvider,
 } from '../platform/operations.js'
+import type { ModuleCatalogProvider } from '../platform/modules.js'
 import type { ConsoleStorePort } from '../storage/types.js'
 import type { ConsoleServerConfig } from './config.js'
 import { createConsoleServer } from './server.js'
@@ -13,8 +14,9 @@ export function createControlConsoleComponent(
   runtime: RuntimeStatusProvider,
   kernel: KernelStatusProvider,
   readiness: OperationalReadinessProvider,
+  catalog: ModuleCatalogProvider,
 ): ManagedComponent {
-  const server = createConsoleServer(store, config, runtime, kernel, readiness)
+  const server = createConsoleServer(store, config, runtime, kernel, readiness, catalog)
   return {
     id: 'control-console',
     kind: 'surface',

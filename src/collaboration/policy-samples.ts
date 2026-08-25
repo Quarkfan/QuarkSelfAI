@@ -1,4 +1,4 @@
-import type { PolicySample } from './types.js'
+import type { PolicySample } from '../policy/types.js'
 
 export interface PolicyEventSampleInput {
   readonly id: string

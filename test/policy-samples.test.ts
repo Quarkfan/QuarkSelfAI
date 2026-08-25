@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { eventToPolicySample } from '../src/policy/samples.js'
+import { eventToPolicySample } from '../src/collaboration/policy-samples.js'
 
 test('policy samples consume only channel-neutral text', () => {
   const sample = eventToPolicySample({

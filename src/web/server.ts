@@ -8,10 +8,11 @@ import {
   ControlOnlyKernel, ControlOnlyRuntime, UnconfiguredReadiness,
   type KernelStatusProvider, type OperationalReadinessProvider, type RuntimeStatusProvider,
 } from '../platform/operations.js'
-import { PolicyAuthoringService, policyProposalId } from '../policy/authoring.js'
+import { PolicyAuthoringService, policyProposalId } from '../collaboration/policy-authoring.js'
 import { matchesPolicy } from '../policy/engine.js'
-import type { PolicyDocument } from '../policy/types.js'
-import { loadModuleCatalog, summarizeModules } from '../platform/modules.js'
+import type { AssistantPolicyDocument } from '../collaboration/policy-model.js'
+import { eventToPolicySample } from '../collaboration/policy-samples.js'
+import { EmptyModuleCatalogProvider, summarizeModules, type ModuleCatalogProvider } from '../platform/modules.js'
 import type { ConsoleServerConfig } from './config.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
@@ -79,7 +80,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, config: ConsoleConfig) {
+async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, catalogProvider: ModuleCatalogProvider, config: ConsoleConfig) {
   const [overview, events, matters, actions, approvals, policies, readiness, diagnostics, moduleCatalog] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
@@ -89,7 +90,7 @@ async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusPr
     store.policies(20),
     readinessProvider.inspect(),
     runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
-    loadModuleCatalog(),
+    catalogProvider.load(),
   ])
   const worker = runtimeStatus.snapshot()
   return {
@@ -149,6 +150,7 @@ export function createConsoleServer(
   runtimeStatus: RuntimeStatusProvider = new ControlOnlyRuntime(),
   kernelStatus: KernelStatusProvider = new ControlOnlyKernel(),
   readiness: OperationalReadinessProvider = new UnconfiguredReadiness(),
+  catalogProvider: ModuleCatalogProvider = new EmptyModuleCatalogProvider(),
 ): Server {
   const policyAuthoring = new PolicyAuthoringService(store, {
     async compile() {
@@ -195,12 +197,12 @@ export function createConsoleServer(
             json(response, 400, { ok: false, error: 'sourceText and document are required' })
             return
           }
-          const samples = await store.recentPolicySamples(200)
+          const samples = (await store.recentEventPayloads('message.received', 200)).map(eventToPolicySample)
           const proposal = await policyAuthoring.proposeCompiled(
             input.sourceText,
-            input.document as unknown as PolicyDocument,
+            input.document as unknown as AssistantPolicyDocument,
             samples,
-            policyProposalId(input.sourceText, input.document as unknown as PolicyDocument),
+            policyProposalId(input.sourceText, input.document as unknown as AssistantPolicyDocument),
           )
           json(response, 201, { ok: true, proposal })
           return
@@ -281,7 +283,7 @@ export function createConsoleServer(
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
-          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, readiness, config) })
+          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, readiness, catalogProvider, config) })
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dsh-health') {

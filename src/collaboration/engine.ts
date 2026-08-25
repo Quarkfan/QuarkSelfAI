@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
-import { policyProposalId } from '../policy/authoring.js'
-import { simulatePolicy, validatePolicy } from '../policy/engine.js'
-import type { PolicyDocument, PolicySample } from '../policy/types.js'
+import { policyProposalId } from './policy-authoring.js'
+import { simulateAssistantPolicy, validateAssistantPolicy, type AssistantPolicyDocument } from './policy-model.js'
+import type { PolicySample } from '../policy/types.js'
 import type { DurableSignal, DurableSignalInput, PolicyDraftInput } from '../storage/types.js'
 import type {
   AttentionTier,
@@ -199,7 +199,7 @@ export class CollaborationLearningEngine {
       if (!candidate) return await this.completeEvaluation(now)
       const label = candidate.kind === 'chat' ? '这个飞书会话' : '这位联系人'
       const sourceText = `根据持续协作样本，${label}的普通非紧急消息优先批量汇总；明确紧急、待批准、需要追问或调研的消息仍即时通知。`
-      const document: PolicyDocument = {
+      const document: AssistantPolicyDocument = {
         version: 1,
         name: `${label}普通消息批量汇总`,
         description: `从 ${candidate.sampleCount} 条脱敏协作样本中发现 ${candidate.reducible} 条可合并通知；只限定精确来源，紧急保护由模拟门禁复核。`,
@@ -207,9 +207,9 @@ export class CollaborationLearningEngine {
         when: { fact: candidate.kind === 'chat' ? 'source.chatId' : 'source.senderId', op: 'eq', value: candidate.id },
         effect: { attention: 'batch' },
       }
-      validatePolicy(document)
+      validateAssistantPolicy(document)
       const samples = await this.port.recentPolicySamples(2000)
-      const simulation = simulatePolicy(document, samples)
+      const simulation = simulateAssistantPolicy(document, samples)
       const id = policyProposalId(sourceText, document)
       const revision = await this.port.savePolicyDraft({ id, name: document.name, sourceText, document, simulation })
       const proposal: CollaborationPolicyProposal = {

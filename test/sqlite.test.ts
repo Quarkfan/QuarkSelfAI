@@ -28,6 +28,10 @@ test('SQLite is a zero-configuration durable default with event idempotency', as
     assert.equal((await store.overview()).events, 1)
     assert.equal((await store.recentEvents(10))[0]?.kind, 'message.received')
     assert.equal((await store.recentEvents(10))[0]?.deduplicationKey, 'om-sqlite')
+    assert.deepEqual(await store.recentEventPayloads('message.received', 10), [{
+      id: 'row-1', source: event.source, payload: event.payload,
+    }])
+    assert.deepEqual(await store.recentEventPayloads('card.action', 10), [])
     const signal = {
       id: 'signal-1', kind: 'collaboration.observation.v1', occurredAt: '2026-08-22T09:00:00.000Z',
       scope: { chatId: 'oc-one' }, data: { difference: 'could_batch' },

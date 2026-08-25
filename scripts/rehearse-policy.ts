@@ -2,8 +2,9 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PolicyAuthoringService } from '../src/policy/authoring.js'
-import type { PolicyDocument, PolicySample } from '../src/policy/types.js'
+import { PolicyAuthoringService } from '../src/collaboration/policy-authoring.js'
+import type { PolicySample } from '../src/policy/types.js'
+import type { AssistantPolicyDocument } from '../src/collaboration/policy-model.js'
 import { createSqliteStore } from '../src/storage/sqlite.js'
 
 const migrations = fileURLToPath(new URL('../migrations/sqlite/', import.meta.url))
@@ -16,7 +17,7 @@ const samples: PolicySample[] = Array.from({ length: 20 }, (_, index) => ({
     urgency: 'normal',
   },
 }))
-const revisionOne: PolicyDocument = {
+const revisionOne: AssistantPolicyDocument = {
   version: 1,
   name: '接管演练固定短语汇总',
   description: '只匹配固定合成短语，不影响普通业务消息。',
@@ -24,7 +25,7 @@ const revisionOne: PolicyDocument = {
   when: { fact: 'message.text', op: 'eq', value: 'QUARK_REHEARSAL_NOISE_20260822' },
   effect: { attention: 'batch', addTags: ['接管演练'] },
 }
-const revisionTwo: PolicyDocument = {
+const revisionTwo: AssistantPolicyDocument = {
   ...revisionOne,
   description: '第二 revision：仍只匹配同一个固定合成短语。',
   effect: { attention: 'batch', settleMinutes: 5, addTags: ['接管演练'] },

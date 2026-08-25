@@ -13,6 +13,7 @@ export type {
   DurableSignalInput,
   EventClaimRelease,
   EventJournalStorePort,
+  EventPayloadRecord,
   FeatureCheckpointStorePort,
   PolicyAuthoringStorePort,
   PolicyDraftInput,

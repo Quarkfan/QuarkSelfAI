@@ -1,10 +1,15 @@
 import type { ExecutorRequest, ExecutorResult, NormalizedChannelEvent, SourceRef } from '../domain/contracts.js'
 import type { PolicyDocument, PolicySimulation } from '../policy/types.js'
-import type { PolicySample } from '../policy/types.js'
 
 export interface StoredEvent {
   readonly id: string
   readonly inserted: boolean
+}
+
+export interface EventPayloadRecord {
+  readonly id: string
+  readonly source: Readonly<Record<string, unknown>>
+  readonly payload: Readonly<Record<string, unknown>>
 }
 
 export interface ClaimedChannelEvent {
@@ -196,6 +201,8 @@ export interface EventJournalStorePort {
   settleEvent(consumerName: string, eventId: string, workerId: string, deliveredAt: string): Promise<void>
   releaseEvent(input: EventClaimRelease): Promise<void>
   updateCheckpoint(consumerName: string, eventKey: string, cursor: Readonly<Record<string, unknown>>): Promise<void>
+  /** Generic replay/query surface. Product features own the interpretation of source and payload. */
+  recentEventPayloads(kind: string, limit: number): Promise<readonly EventPayloadRecord[]>
 }
 
 export interface SignalStorePort {
@@ -227,7 +234,6 @@ export interface ControlReadStorePort {
 }
 
 export interface PolicyStorePort {
-  recentPolicySamples(limit: number): Promise<readonly PolicySample[]>
   savePolicyDraft(input: PolicyDraftInput): Promise<number>
   activatePolicy(id: string, revision: number, approvedAt: string): Promise<void>
   policies(limit: number): Promise<readonly PolicySummary[]>
@@ -252,5 +258,8 @@ export interface AssistantStore extends
   PolicyStorePort,
   ActionStorePort {}
 
-export type ConsoleStorePort = Pick<StorageLifecyclePort, 'kind' | 'health'> & ControlReadStorePort & PolicyStorePort
+export type ConsoleStorePort = Pick<StorageLifecyclePort, 'kind' | 'health'>
+  & Pick<EventJournalStorePort, 'recentEventPayloads'>
+  & ControlReadStorePort
+  & PolicyStorePort
 export type PolicyAuthoringStorePort = Pick<PolicyStorePort, 'savePolicyDraft' | 'activatePolicy'>
