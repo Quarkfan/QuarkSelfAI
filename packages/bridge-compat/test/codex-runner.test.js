@@ -101,6 +101,29 @@ print '{"type":"result","session_id":"dddddddd-dddd-dddd-dddd-dddddddddddd","res
   assert.match(job.claudeSessionId, /^[0-9a-f-]{36}$/);
 });
 
+test("preserves both provider failures when the Claude fallback times out", async () => {
+  const fake = await fakeCodex(`print -u2 'request timed out'; exit 1`);
+  const claude = path.join(fake.dir, "claude");
+  await writeFile(claude, `#!/bin/zsh
+cat >/dev/null
+sleep 1
+`, { mode: 0o755 });
+  const runner = new CodexRunner({
+    codexCli: fake.file, claudeCli: claude, codexHome: fake.dir,
+    workspaceRoot: fake.dir, varDir: path.join(fake.dir, "var"), progressIntervalMs: 0,
+    claudeFallbackEnabled: true, claudeSessionTimeoutMs: 10,
+  });
+  const job = { sessionId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", prompt: "继续处理" };
+  await assert.rejects(runner.execute(job), (error) => {
+    assert.match(error.message, /Codex 主执行基础设施失败：request timed out/);
+    assert.match(error.message, /Claude Code 兜底失败：Claude Code 执行超时/);
+    assert.equal(error.executor, "claude");
+    assert.equal(error.retryable, true);
+    assert.equal(error.timedOut, true);
+    return true;
+  });
+});
+
 test("creates a new session and captures its thread id", async () => {
   const fake = await fakeCodex(`
 while IFS= read -r line; do

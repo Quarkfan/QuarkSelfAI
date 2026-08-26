@@ -6,6 +6,17 @@ import { run } from "./util.js";
 
 const INFRASTRUCTURE_ERROR = /(timed? out|timeout|temporar|reconnect|connection|network|transport|websocket|dns|no such host|econn|socket|rate.?limit|too many requests|401 unauthorized|incorrect api key|429|502|503|504|enoent|failed to connect|service unavailable)/i;
 
+export class ExecutorFailure extends Error {
+  constructor(message, options = {}) {
+    super(message, options.cause ? { cause: options.cause } : undefined);
+    this.name = "ExecutorFailure";
+    this.executor = options.executor || null;
+    this.retryable = Boolean(options.retryable);
+    this.timedOut = Boolean(options.timedOut);
+    this.exitCode = options.exitCode ?? null;
+  }
+}
+
 export function isCodexInfrastructureFailure(value) {
   if (value?.timedOut) return true;
   const detail = typeof value === "string"
@@ -230,8 +241,21 @@ export async function runClaudeSession(config, job, prompt, options = {}) {
     timeoutMs: options.timeoutMs,
     onSpawn: options.onSpawn,
   });
-  if (result.timedOut) throw new Error("Claude Code 执行超时，任务已保留并将续接重试。");
-  if (result.code !== 0) throw new Error(`Claude Code 执行失败（exit ${result.code}）：\n${(result.stderr || result.stdout).trim().slice(-4000)}`);
+  if (result.timedOut) {
+    const timeoutMinutes = options.timeoutMs ? Math.round(options.timeoutMs / 60_000) : null;
+    throw new ExecutorFailure(
+      `Claude Code 执行超时${timeoutMinutes ? `（${timeoutMinutes} 分钟）` : ""}`,
+      { executor: "claude", retryable: true, timedOut: true, exitCode: result.code },
+    );
+  }
+  if (result.code !== 0) {
+    const detail = (result.stderr || result.stdout).trim().slice(-4000);
+    throw new ExecutorFailure(`Claude Code 执行失败（exit ${result.code}）：\n${detail}`, {
+      executor: "claude",
+      retryable: result.code === 143 || INFRASTRUCTURE_ERROR.test(detail),
+      exitCode: result.code,
+    });
+  }
   const output = parseClaudeJson(result.stdout);
   return { final: output.final || "任务已执行完成，但 Claude Code 未返回最终文本。", sessionId: claudeSessionId, provider: "claude" };
 }

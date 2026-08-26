@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { run, shortId } from "./util.js";
 import { createVisibleThread } from "./codex-app-server-client.js";
-import { codexEnvironment, isCodexInfrastructureFailure, runClaudeSession } from "./cli-failover.js";
+import { codexEnvironment, ExecutorFailure, isCodexInfrastructureFailure, runClaudeSession } from "./cli-failover.js";
 
 const SAFETY_CONTEXT = `
 
@@ -167,6 +167,17 @@ export class CodexRunner {
             onSpawn: (child) => this.running.set(job.sessionId, child),
           });
           return fallback.final;
+        } catch (fallbackError) {
+          throw new ExecutorFailure(
+            `Codex 主执行基础设施失败：${detail.slice(-1500)}\n\nClaude Code 兜底失败：${fallbackError.message}`,
+            {
+              cause: fallbackError,
+              executor: "claude",
+              retryable: Boolean(fallbackError.retryable) || isCodexInfrastructureFailure(fallbackError),
+              timedOut: Boolean(fallbackError.timedOut),
+              exitCode: fallbackError.exitCode,
+            },
+          );
         } finally {
           this.running.delete(job.sessionId);
         }

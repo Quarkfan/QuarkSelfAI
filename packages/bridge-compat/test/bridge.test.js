@@ -114,6 +114,28 @@ test("retains exit 143 executor failures for retry", async () => {
   assert.equal(harness.state.state.queue[0].attempts, 1);
 });
 
+test("retains localized Claude timeout after fallback and restarts from the requested executor", async () => {
+  const harness = createHarness([]);
+  harness.bridge.runner.execute = async (job) => {
+    job.executor = "claude";
+    const error = new Error("Claude Code 执行超时（20 分钟）");
+    error.executor = "claude";
+    error.retryable = true;
+    error.timedOut = true;
+    throw error;
+  };
+  harness.bridge.logger = { error() {} };
+  await harness.bridge.handle(event("m-claude-timeout", "继续处理"));
+  await new Promise((resolve) => setImmediate(resolve));
+  const job = harness.state.state.queue[0];
+  assert.equal(harness.state.state.queue.length, 1);
+  assert.equal(job.requestedExecutor, "codex");
+  assert.equal(job.actualExecutor, "claude");
+  assert.equal(job.executor, "codex");
+  assert.equal(job.fallbackUsed, true);
+  assert.equal(job.failureReason, "retryable_transient");
+});
+
 test("session-targeting language is preserved for the Codex controller to resolve", async () => {
   const matches = [
     { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", title: "对象任务 A", updatedAt: "2026-08-13" },

@@ -8,8 +8,14 @@ function formatSession(session, index) {
 }
 
 function isRetryableSessionError(error) {
-  return /(timed? out|timeout|temporar|reconnect|connection|network|transport|websocket|dns|no such host|econn|socket|rate.?limit|429|502|503|504|exit\s+143|sigterm|terminated)/i
+  if (error?.retryable === true || error?.timedOut === true) return true;
+  return /(timed? out|timeout|超时|temporar|暂时|重试|reconnect|connection|network|transport|websocket|dns|no such host|econn|socket|rate.?limit|429|502|503|504|exit\s+143|sigterm|terminated)/i
     .test(String(error?.message || error));
+}
+
+function applyExecutionFailure(job, error) {
+  job.actualExecutor = error?.executor || job.executor || job.requestedExecutor;
+  if (job.actualExecutor !== job.requestedExecutor) job.fallbackUsed = true;
 }
 
 function executorLabel(executor) {
@@ -353,6 +359,7 @@ export class Bridge {
           delete job.lastError;
           await this.state.save();
         } catch (error) {
+          applyExecutionFailure(job, error);
           if (error instanceof SessionBusyError) {
             job.nextAttemptAt = new Date(Date.now() + 15_000).toISOString();
             job.lastError = error.message;
@@ -396,6 +403,9 @@ export class Bridge {
     const maxMs = this.config.sessionRetryMaxMs || 300_000;
     const delayMs = Math.min(maxMs, baseMs * (2 ** Math.min(job.attempts - 1, 6)));
     job.nextAttemptAt = new Date(Date.now() + delayMs).toISOString();
+    // A failed fallback mutates the active executor. Start the next attempt from
+    // the originally requested provider, then apply the normal fallback chain.
+    if (stage === "会话执行") job.executor = job.requestedExecutor || job.executor;
     await this.state.save();
     this.logger.error(`${stage} failed; retained for retry`, error);
     if (job.attempts === 1 || job.attempts % 5 === 0) {
