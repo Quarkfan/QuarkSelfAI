@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MentionMonitor, isDelegationJoinSystemMessage, isLarkRateLimitError, isLowSignalAcknowledgement, isSyntheticTestMessage, userFacingError } from "../src/mention-monitor.js";
+import { conversationPendingBatch, MentionMonitor, isDelegationJoinSystemMessage, isLarkRateLimitError, isLowSignalAcknowledgement, isSyntheticTestMessage, userFacingError } from "../src/mention-monitor.js";
 
 function stateHarness() {
   return {
@@ -112,6 +112,40 @@ test("merges mentions, watched group messages, and incoming direct messages by m
   assert.deepEqual(created.find((message) => message.message_id === "om_watch").intakeReasons, ["@常东旭", "特别关注：任永强"]);
   assert.deepEqual(created.find((message) => message.message_id === "om_dm").intakeReasons, ["他人私聊"]);
   assert.equal(created.some((message) => message.message_id === "om_own"), false);
+});
+
+test("coalesces due non-mention messages from one conversation into one task decision", async () => {
+  const state = stateHarness();
+  state.state.mentionPending = [
+    {
+      discoveredAt: "2026-08-26T03:30:00Z", readyAt: "2026-08-26T03:40:00Z", attempts: 0,
+      message: { message_id: "om_batch_1", chat_id: "oc_batch", chat_type: "p2p", create_time: "2026-08-26 11:30", content: "先确认灾备方式", sender: { name: "同事" }, intakeReasons: ["他人私聊"] },
+    },
+    {
+      discoveredAt: "2026-08-26T03:31:00Z", readyAt: "2026-08-26T04:00:00Z", attempts: 0,
+      message: { message_id: "om_batch_2", chat_id: "oc_batch", chat_type: "p2p", create_time: "2026-08-26 11:31", content: "再确认监控归属", sender: { name: "常东旭" }, intakeReasons: ["本人主动参与"] },
+    },
+  ];
+  assert.equal(conversationPendingBatch(state.state.mentionPending, 0, new Date("2026-08-26T03:41:00Z")).length, 2);
+  const decisions = [];
+  const monitor = new MentionMonitor({
+    config: { mentionContextMinutes: 30, mentionConversationBatchWindowMs: 15 * 60_000 },
+    state,
+    lark: { async getMentionContext() { return []; }, async send() {} },
+    taskCreator: { async createFromMention(message) {
+      decisions.push(message);
+      return { taskId: "task_batch", taskAction: "ignored" };
+    } },
+  });
+
+  await monitor.processPending();
+
+  assert.equal(decisions.length, 1);
+  assert.match(decisions[0].content, /先确认灾备方式/);
+  assert.match(decisions[0].content, /再确认监控归属/);
+  assert.deepEqual(decisions[0].batchedMessageIds, ["om_batch_1", "om_batch_2"]);
+  assert.deepEqual(state.state.mentionProcessedMessageIds, ["om_batch_1", "om_batch_2"]);
+  assert.equal(state.state.mentionPending.length, 0);
 });
 
 test("syncs active flag chats and monitors their new messages", async () => {

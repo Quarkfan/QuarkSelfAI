@@ -94,6 +94,7 @@ npm run register:compat-state
 
 ## 文档入口
 
+- [“分身会话”自治运营契约](docs/operations/autonomous-twin-session.md)
 - [总体架构](docs/architecture.md)
 - [骨架、功能与迁移层边界](docs/architecture-skeleton.md)
 - [本地优先个人助手决策](docs/adr/0003-local-first-personal-assistant.md)

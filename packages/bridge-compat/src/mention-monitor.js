@@ -69,6 +69,57 @@ function normalizeEventTime(value) {
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
 
+function isExplicitOwnerMention(message) {
+  return (message?.intakeReasons || []).some((reason) => String(reason).startsWith("@常东旭"));
+}
+
+function pendingIsDue(item, now) {
+  return (!item.readyAt || Date.parse(item.readyAt) <= now.getTime())
+    && (!item.nextAttemptAt || Date.parse(item.nextAttemptAt) <= now.getTime());
+}
+
+function messageTimestamp(message) {
+  const parsed = Date.parse(`${String(message?.create_time || "").replace(" ", "T")}+08:00`);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+export function conversationPendingBatch(items, seedIndex, now = new Date(), windowMs = 15 * 60_000) {
+  const seed = items[seedIndex];
+  if (!seed || !pendingIsDue(seed, now)) return seed ? [seed] : [];
+  const seedTime = messageTimestamp(seed.message) || Date.parse(seed.discoveredAt || 0);
+  const seedIsExplicitMention = isExplicitOwnerMention(seed.message);
+  return items.filter((item) => {
+    if (!seed.message?.chat_id || item.message?.chat_id !== seed.message.chat_id) return false;
+    if (item.nextAttemptAt && Date.parse(item.nextAttemptAt) > now.getTime()) return false;
+    // Explicit mentions keep their short realtime delay. Ordinary signals that
+    // are already visible may join a due conversation batch even when their
+    // longer owner-engagement settle timer has not elapsed yet.
+    if ((seedIsExplicitMention || isExplicitOwnerMention(item.message)) && !pendingIsDue(item, now)) return false;
+    const itemTime = messageTimestamp(item.message) || Date.parse(item.discoveredAt || 0);
+    return !seedTime || !itemTime || Math.abs(itemTime - seedTime) <= windowMs;
+  });
+}
+
+function combineConversationBatch(batch) {
+  if (batch.length <= 1) return batch[0].message;
+  const ordered = [...batch].sort((left, right) => (
+    messageTimestamp(left.message) - messageTimestamp(right.message)
+    || Number(left.message?.message_position || 0) - Number(right.message?.message_position || 0)
+  ));
+  const latest = ordered.at(-1).message;
+  const intakeReasons = [...new Set(ordered.flatMap((item) => item.message.intakeReasons || []))];
+  const content = ordered.map((item) => {
+    const sender = item.message.sender?.name || "未知发送人";
+    return `[${item.message.create_time || "未知时间"}] ${sender}: ${String(item.message.content || "").slice(0, 800)}`;
+  }).join("\n").slice(-6000);
+  return {
+    ...latest,
+    content: `同一会话在短时间内形成的一组连续消息，请作为一个事项整体判断，不得逐条建单：\n${content}`,
+    intakeReasons,
+    batchedMessageIds: ordered.map((item) => item.message.message_id),
+  };
+}
+
 export class MentionMonitor {
   constructor({ config, state, lark, taskCreator, runner = null, xiaoweiResearch = null, shadowCollaboration = null, collaborationLearning = null, policyManager = null, logger = console }) {
     this.config = config;
@@ -434,47 +485,64 @@ export class MentionMonitor {
   async processPending() {
     for (let index = 0; index < this.state.state.mentionPending.length;) {
       const pending = this.state.state.mentionPending[index];
-      if (pending.readyAt && new Date(pending.readyAt) > new Date()) { index += 1; continue; }
-      if (pending.nextAttemptAt && new Date(pending.nextAttemptAt) > new Date()) { index += 1; continue; }
+      const now = new Date();
+      if (!pendingIsDue(pending, now)) { index += 1; continue; }
+      const batch = conversationPendingBatch(
+        this.state.state.mentionPending,
+        index,
+        now,
+        Number(this.config.mentionConversationBatchWindowMs || 15 * 60_000),
+      );
+      const batchMessage = combineConversationBatch(batch);
+      const batchIds = new Set(batch.map((item) => item.message.message_id));
+      const finishBatch = () => {
+        for (const messageId of batchIds) {
+          if (!this.state.state.mentionProcessedMessageIds.includes(messageId)) {
+            this.state.state.mentionProcessedMessageIds.push(messageId);
+          }
+        }
+        this.state.state.mentionPending = this.state.state.mentionPending.filter(
+          (item) => !batchIds.has(item.message.message_id),
+        );
+      };
       try {
-        const context = await this.lark.getMentionContext(pending.message, this.config.mentionContextMinutes);
+        const context = await this.lark.getMentionContext(batchMessage, this.config.mentionContextMinutes);
         const task = await this.taskCreator.createFromMention(
-          pending.message,
+          batchMessage,
           context,
           this.state.state.researchDecisionHistory,
-          this.collaborationLearning?.guidanceFor?.(pending.message) || "暂无协作模式样本。",
+          this.collaborationLearning?.guidanceFor?.(batchMessage) || "暂无协作模式样本。",
         );
         if (this.collaborationLearning) {
-          try { await this.collaborationLearning.observe(pending.message, task); }
+          try { await this.collaborationLearning.observe(batchMessage, task); }
           catch (error) { this.logger.error("collaboration learning observe failed", error); }
         }
         if (this.shadowCollaboration) {
-          try { await this.shadowCollaboration.observe(pending.message, context, task); }
+          try { await this.shadowCollaboration.observe(batchMessage, context, task); }
           catch (error) { this.logger.error("shadow collaboration observe failed", error); }
         }
         if (task.taskAction === "ignored") {
-          this.state.state.mentionProcessedMessageIds.push(pending.message.message_id);
-          this.state.state.mentionPending.splice(index, 1);
+          finishBatch();
           await this.state.save();
           continue;
         }
         let userNotified = false;
         let clarification = this.state.state.mentionClarifications.find((item) => (
-          item.sourceMessageId === pending.message.message_id || item.taskId === task.taskId
+          item.sourceMessageId === batchMessage.message_id || item.taskId === task.taskId
         ));
         if (task.needsClarification && !clarification) {
-          const interaction = await this.interactionPolicy(pending.message);
+          const interaction = await this.interactionPolicy(batchMessage);
           if (interaction.allowed) {
             const reply = await this.lark.replyAsUser(
-              pending.message.message_id,
+              batchMessage.message_id,
               `**我是常东旭的 AI 分身。** 为了避免理解偏差，需要确认一个会影响后续处理的问题：\n\n${task.clarificationQuestion}`,
-              `clarify:${pending.message.message_id}`,
+              `clarify:${batchMessage.message_id}`,
             );
             clarification = {
-              sourceMessageId: pending.message.message_id,
+              sourceMessageId: batchMessage.message_id,
               questionMessageId: reply?.message_id || reply?.messageId || null,
-              chatId: pending.message.chat_id,
-              senderId: pending.message.sender?.id,
+              chatId: batchMessage.chat_id,
+              senderId: batchMessage.sender?.id,
               askedAt: new Date().toISOString(),
               taskId: task.taskId,
               researchSessionId: null,
@@ -483,26 +551,26 @@ export class MentionMonitor {
             await this.state.save();
           } else {
             await this.safeSend(
-              `该重点消息存在需要澄清的信息，但未向对方发送：${interaction.reason}\n\n建议问题：${task.clarificationQuestion}\n来源：${pending.message.chat_name || pending.message.chat_id}`,
-              `clarify-blocked:${pending.message.message_id}`,
+              `该重点消息存在需要澄清的信息，但未向对方发送：${interaction.reason}\n\n建议问题：${task.clarificationQuestion}\n来源：${batchMessage.chat_name || batchMessage.chat_id}`,
+              `clarify-blocked:${batchMessage.message_id}`,
             );
             userNotified = true;
           }
         }
         const existingResearch = this.state.state.mentionResearchSessions.find((item) => (
-          item.sourceMessageId === pending.message.message_id || item.taskId === task.taskId
+          item.sourceMessageId === batchMessage.message_id || item.taskId === task.taskId
         )) || this.xiaoweiResearch?.hasActiveRequest(task.taskId);
         const existingConfirmation = this.state.state.mentionResearchConfirmations.find((item) => (
-          item.sourceMessageId === pending.message.message_id || item.task?.taskId === task.taskId
+          item.sourceMessageId === batchMessage.message_id || item.task?.taskId === task.taskId
         ));
         if (task.researchDecision === "start" && task.researchPrompt && !existingResearch && this.runner) {
           const channel = task.researchChannel || "codex";
           if (channel === "xiaowei" && !existingConfirmation) {
-            await this.requestResearchApproval(task, pending.message, clarification);
+            await this.requestResearchApproval(task, batchMessage, clarification);
             userNotified = true;
           } else if (channel !== "xiaowei") {
             try {
-              await this.startResearch(task, pending.message, clarification, pending.researchSessionId);
+              await this.startResearch(task, batchMessage, clarification, pending.researchSessionId);
             } catch (error) {
               if (error.sessionId) pending.researchSessionId = error.sessionId;
               throw error;
@@ -511,47 +579,48 @@ export class MentionMonitor {
             userNotified = true;
           }
         } else if (task.researchDecision === "confirm" && task.researchPrompt && !existingConfirmation && !existingResearch) {
-          await this.requestResearchApproval(task, pending.message, clarification);
+          await this.requestResearchApproval(task, batchMessage, clarification);
           userNotified = true;
         } else if (task.researchDecision === "skip") {
           this.recordResearchDecision(task, "skip");
         }
-        this.state.state.mentionProcessedMessageIds.push(pending.message.message_id);
-        this.state.state.mentionPending.splice(index, 1);
+        finishBatch();
         await this.state.save();
         const taskAction = task.taskAction || (task.created === false ? "unchanged" : "created");
         const notificationDecision = task.notificationDecision || "notify";
         const policyEvaluation = notificationDecision === "notify"
-          ? await this.evaluateNotificationPolicy(pending.message, task)
+          ? await this.evaluateNotificationPolicy(batchMessage, task)
           : { effect: {}, matches: [] };
         if (policyEvaluation.effect?.attention === "batch" && !userNotified) {
-          await this.queueDigestNotification(pending.message, task, taskAction, policyEvaluation);
+          await this.queueDigestNotification(batchMessage, task, taskAction, policyEvaluation);
           userNotified = true;
         } else if (policyEvaluation.effect?.attention === "silent" && !userNotified) {
           userNotified = true;
         }
         if (notificationDecision === "notify" && !userNotified) {
           const actionText = taskAction === "updated" ? "更新了已有自动化待办" : "创建了自动化待办";
-          const details = `已根据飞书重点消息${actionText}：**${task.title}**\n\n${task.approvalRequired ? `待批准：${task.approvalSummary}\n` : ""}${task.materialChangeSummary ? `变化：${task.materialChangeSummary}\n` : ""}通知原因：${task.notificationReason || "需要你关注或处理"}\n纳入原因：${pending.message.intakeReasons?.join("、") || "@常东旭"}\n来源：${pending.message.chat_name || pending.message.chat_id} · ${pending.message.sender?.name || "未知发送人"}\n识别：${task.urgencyLabel}${task.keyItem ? " · 关键事项" : ""} · 滴答优先级 ${task.priority}\n标签：${task.tags?.join("、") || "无"}${task.dueDate ? ` · 截止：${task.dueDate}` : ""}\n与你的关联：${task.relationshipSummary}\n任务 ID：${task.taskId}${task.url ? `\n${task.url}` : ""}`;
+          const details = `已根据飞书重点消息${actionText}：**${task.title}**\n\n${task.approvalRequired ? `待批准：${task.approvalSummary}\n` : ""}${task.materialChangeSummary ? `变化：${task.materialChangeSummary}\n` : ""}通知原因：${task.notificationReason || "需要你关注或处理"}\n纳入原因：${batchMessage.intakeReasons?.join("、") || "@常东旭"}\n来源：${batchMessage.chat_name || batchMessage.chat_id} · ${batchMessage.sender?.name || "未知发送人"}\n识别：${task.urgencyLabel}${task.keyItem ? " · 关键事项" : ""} · 滴答优先级 ${task.priority}\n标签：${task.tags?.join("、") || "无"}${task.dueDate ? ` · 截止：${task.dueDate}` : ""}\n与你的关联：${task.relationshipSummary}\n任务 ID：${task.taskId}${task.url ? `\n${task.url}` : ""}`;
           if (task.approvalRequired) {
             const actions = [];
-            if (pending.message.message_app_link) actions.push({ text: "打开原消息", url: pending.message.message_app_link });
+            if (batchMessage.message_app_link) actions.push({ text: "打开原消息", url: batchMessage.message_app_link });
             if (task.url) actions.push({ text: "打开滴答任务", url: task.url });
             if (actions.length) {
-              await this.safeSendInteractive(details, actions, { title: "需要你批准", tone: "yellow" }, `mention:${pending.message.message_id}:${taskAction}`);
+              await this.safeSendInteractive(details, actions, { title: "需要你批准", tone: "yellow" }, `mention:${batchMessage.message_id}:${taskAction}`);
             } else {
-              await this.safeSend(details, `mention:${pending.message.message_id}:${taskAction}`);
+              await this.safeSend(details, `mention:${batchMessage.message_id}:${taskAction}`);
             }
           } else {
-            await this.safeSend(details, `mention:${pending.message.message_id}:${taskAction}`);
+            await this.safeSend(details, `mention:${batchMessage.message_id}:${taskAction}`);
           }
         }
       } catch (error) {
         this.logger.error("focus message processing failed", error);
-        pending.attempts += 1;
-        pending.lastError = error.message;
-        const delayMinutes = Math.min(60, 2 ** Math.min(pending.attempts, 6));
-        pending.nextAttemptAt = new Date(Date.now() + delayMinutes * 60_000).toISOString();
+        for (const item of batch) {
+          item.attempts += 1;
+          item.lastError = error.message;
+          const delayMinutes = Math.min(60, 2 ** Math.min(item.attempts, 6));
+          item.nextAttemptAt = new Date(Date.now() + delayMinutes * 60_000).toISOString();
+        }
         await this.state.save();
         await this.recordProcessingFailure(error);
         index += 1;

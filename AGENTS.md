@@ -1,5 +1,9 @@
 # Feishu Work Assistant 协作规则
 
+- “分身会话”是助手自治维护入口。完整授权、执行闭环、数据治理和确认边界见
+  `docs/operations/autonomous-twin-session.md`；收到以该词开头的反馈时必须按该文档推进到验证和上线，
+  不得只解释问题或等待用户提供实现指令。
+
 - 架构真源见 `docs/architecture.md` 与 `docs/adr/`。
 - 骨架、功能和迁移代码的机器真源为 `config/module-catalog.json`。新能力先登记分类和依赖并通过
   `npm run architecture:check`：skeleton 不得依赖 feature/migration，feature 不得依赖 migration；迁移模块
