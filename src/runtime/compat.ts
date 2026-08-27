@@ -104,6 +104,23 @@ export class CompatRuntime implements RuntimeStatusProvider {
       const value = (current as Record<string, unknown>)[field]
       return typeof value === 'number' ? value : 0
     }
+    const stateObjectValue = (key: string, field: string): string | null => {
+      const current = state[key]
+      if (!current || typeof current !== 'object') return null
+      const nested = (current as Record<string, unknown>)[field]
+      return typeof nested === 'string' ? nested : null
+    }
+    const stateObjectFailure = (key: string, field: string): string | null => {
+      const current = state[key]
+      if (!current || typeof current !== 'object') return null
+      const nested = (current as Record<string, unknown>)[field]
+      if (typeof nested === 'string') return nested
+      if (!nested || typeof nested !== 'object') return null
+      const record = nested as Record<string, unknown>
+      return typeof record.message === 'string' ? record.message
+        : typeof record.lastError === 'string' ? record.lastError
+          : typeof record.error === 'string' ? record.error : null
+    }
     const sourceFailures = (key: string): string | null => {
       const current = state[key]
       if (!Array.isArray(current) || current.length === 0) return null
@@ -130,6 +147,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
         { id: 'session-cleanup', name: '调研会话清理', enabled: document.sessionCleanupEnabled !== false, intervalMs: number('sessionCleanupIntervalMs'), pending: arrayCount('mentionResearchSessions') },
         { id: 'collaboration-learning', name: '协作模式学习', enabled: document.collaborationLearningEnabled !== false, intervalMs: number('collaborationLearningIntervalMs'), lastRunAt: typeof learning.lastEvaluatedAt === 'string' ? learning.lastEvaluatedAt : null, pending: Array.isArray(learning.candidates) ? learning.candidates.filter((item) => item && typeof item === 'object' && (item as Record<string, unknown>).status === 'proposed').length : 0 },
         { id: 'notification-digest', name: '协作事项汇总', enabled: true, intervalMs: number('notificationDigestPollIntervalMs'), lastRunAt: value('notificationDigestLastSentAt'), failure: failure('notificationDigestFailure'), pending: arrayCount('notificationDigestPending') },
+        { id: 'xiaowei-insight-digest', name: '小维对话洞察周报', enabled: document.xiaoweiInsightDigestEnabled !== false, intervalMs: number('xiaoweiInsightDigestPollIntervalMs'), lastRunAt: stateObjectValue('xiaoweiInsightDigest', 'lastAttemptAt'), failure: stateObjectFailure('xiaoweiInsightDigest', 'failure'), pending: 0 },
       ],
       queues: {
         commands: arrayCount('queue'),
@@ -160,6 +178,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
       'session-cleanup': { enabled: 'sessionCleanupEnabled', interval: 'sessionCleanupIntervalMs' },
       'collaboration-learning': { enabled: 'collaborationLearningEnabled', interval: 'collaborationLearningIntervalMs' },
       'notification-digest': { interval: 'notificationDigestPollIntervalMs' },
+      'xiaowei-insight-digest': { enabled: 'xiaoweiInsightDigestEnabled', interval: 'xiaoweiInsightDigestPollIntervalMs' },
     }
     const target = mapping[id]
     if (!target) throw new Error(`monitor ${id} is read-only or unknown`)

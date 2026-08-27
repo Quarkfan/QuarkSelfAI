@@ -29,6 +29,7 @@
 | 从长期协作中挖掘模式，每日自我回顾、自主决定是否调整并发送简报 | collaboration-learning, natural-language-policy | 每日一次脱敏质量简报；同日幂等；8 条/85% 安全弱信号自动 guidance 校准；20/8/75% 高影响策略门槛；@、特别关注、紧急、审批和调研保护；每周单一建议、精确 revision 批准测试 | complete：兼容现网与 DSH-native 使用同一安全边界，低风险提示可自行调整，高影响变化仍逐项批准 |
 | BlackLake 问题先按参考项目和 skills 路由，再决定 start/confirm/skip | blacklake-routing | 三源动态哈希、skill/operation-chain 门禁；合成用例 route→ledger→approval→claim | complete |
 | 智造湖小维作为慢速排查工具，调用前必须本人批准，结果回灌且不重复建任务 | xiaowei-channel | 授权/持久等待测试；现网 3 个请求完成且均关联回复 | complete |
+| 周期总结“小维监控群”中有趣、有思考或独特的问题 | xiaowei-insight-digest | 内部群属性只读核验；问题链聚合去重、周五单次发送、空摘要静默、Claude→Codex→本地规则降级测试；控制台独立监控 | implemented：首次真实周报将在下一个周五 17:30 生成并留存聚合计数，不创建滴答任务、不在原群发言 |
 | Claude Code 优先、Codex 兜底、同一 action 只能一个执行者 | executor-routing | 官方 providers、基础设施错误分类、串行 dispose、action lease；Claude start/ENOENT 后串行 handoff；真实 Codex task 固定回执 | complete；第三方 Claude 成本通道仍是可选未配置项 |
 | Claude Code 与 Codex 共享 skills、Agent 约定、参考项目，不产生信息差 | blacklake-routing, executor-routing | 根 AGENTS/CLAUDE 同步约束、三源 router、DSH profile provider 配置 | implemented；持续运行同步校验 |
 | 飞书 CLI 快速升级适配，不让业务规则依赖 CLI 参数 | lark-event-adapter | version/schema/capability discovery、未知字段保留、升级 banner 测试和升级手册 | complete |

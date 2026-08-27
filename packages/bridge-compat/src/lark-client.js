@@ -483,6 +483,22 @@ export class LarkClient {
     return envelope.data?.messages ?? [];
   }
 
+  async getChatMessagesRange(chatId, start, end, { pageLimit = 200, includeReactions = false } = {}) {
+    const result = await this.run([
+      "im", "+chat-messages-list", "--as", "user", "--chat-id", chatId,
+      "--start", start, "--end", end, "--order", "asc", "--page-all",
+      "--page-size", "50", "--page-limit", String(pageLimit),
+      ...(includeReactions ? [] : ["--no-reactions"]), "--format", "json",
+    ]);
+    if (result.code !== 0) throw new Error(`飞书群消息读取失败: ${result.stderr || result.stdout}`);
+    const envelope = parseCliJson(result.stdout);
+    if (envelope.ok !== true) throw new Error(`飞书群消息读取失败: ${result.stdout}`);
+    if (envelope.data?.has_more === true || envelope.meta?.pagination?.complete === false) {
+      throw new Error(`飞书群消息分页未完成（已读取 ${envelope.data?.messages?.length || 0} 条），保留上次摘要游标并重试。`);
+    }
+    return envelope.data?.messages ?? [];
+  }
+
   async getChatInfo(chatId) {
     const result = await this.run([
       "im", "chats", "get", "--as", "user", "--chat-id", chatId, "--format", "json",

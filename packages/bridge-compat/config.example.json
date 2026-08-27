@@ -95,5 +95,15 @@
   "collaborationLearningProposalCooldownMs": 604800000,
   "notificationDigestPollIntervalMs": 600000,
   "notificationDigestMaxDelayMs": 21600000,
-  "notificationDigestMaxItems": 20
+  "notificationDigestMaxItems": 20,
+  "xiaoweiInsightDigestEnabled": false,
+  "xiaoweiInsightDigestChatId": null,
+  "xiaoweiInsightDigestPollIntervalMs": 3600000,
+  "xiaoweiInsightDigestTimeZone": "Asia/Shanghai",
+  "xiaoweiInsightDigestWeekday": 5,
+  "xiaoweiInsightDigestHour": 17,
+  "xiaoweiInsightDigestMinute": 30,
+  "xiaoweiInsightDigestLookbackDays": 7,
+  "xiaoweiInsightDigestMaxItems": 6,
+  "xiaoweiInsightDigestCandidateLimit": 60
 }

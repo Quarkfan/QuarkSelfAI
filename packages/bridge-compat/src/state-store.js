@@ -68,6 +68,7 @@ const EMPTY_STATE = {
   notificationDigestPending: [],
   notificationDigestLastSentAt: null,
   notificationDigestFailure: null,
+  xiaoweiInsightDigest: null,
 };
 
 function firstCompleteJsonObject(text) {
@@ -183,6 +184,9 @@ export class StateStore {
         this.state.collaborationLearning.reviews = (this.state.collaborationLearning.reviews || []).slice(-90);
       }
       this.state.notificationDigestPending = (this.state.notificationDigestPending || []).slice(-500);
+      if (this.state.xiaoweiInsightDigest) {
+        this.state.xiaoweiInsightDigest.reports = (this.state.xiaoweiInsightDigest.reports || []).slice(-26);
+      }
       const temporary = `${this.path}.tmp`;
       await writeFile(temporary, `${JSON.stringify(this.state, null, 2)}\n`, { mode: 0o600 });
       await rename(temporary, this.path);

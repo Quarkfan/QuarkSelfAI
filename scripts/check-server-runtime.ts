@@ -40,7 +40,10 @@ await access(entrypointPath, constants.X_OK)
 const entrypoint = await readFile(entrypointPath, 'utf8')
 assert.match(entrypoint, /dsh plugin --profile|"\$\{dsh_executable\}" plugin --profile/)
 assert.match(entrypoint, /link:\$\{project_root\}/)
-assert.match(entrypoint, /exec node dist\/app\.js/)
+assert.match(entrypoint, /application_mode="\$\{QUARK_APPLICATION_MODE:-compatibility\}"/)
+assert.match(entrypoint, /compatibility\)[\s\S]*application_entry="dist\/app\.js"/)
+assert.match(entrypoint, /native\)[\s\S]*application_entry="dist\/product\/app\.js"/)
+assert.match(entrypoint, /exec node "\$\{application_entry\}"/)
 const mode = (await stat(entrypointPath)).mode & 0o777
 assert.equal(mode, 0o755)
 

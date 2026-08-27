@@ -19,6 +19,7 @@ import { formatUserTime } from "./util.js";
 import { QuarkControlPlaneClient } from "./quark-control-plane-client.js";
 import { CollaborationLearningMonitor } from "./collaboration-learning.js";
 import { OwnerEngagementMonitor } from "./owner-engagement-monitor.js";
+import { XiaoweiInsightDigestMonitor } from "./xiaowei-insight-digest.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -127,6 +128,16 @@ async function loadConfig() {
     notificationDigestPollIntervalMs: 600000,
     notificationDigestMaxDelayMs: 21600000,
     notificationDigestMaxItems: 20,
+    xiaoweiInsightDigestEnabled: true,
+    xiaoweiInsightDigestChatId: null,
+    xiaoweiInsightDigestPollIntervalMs: 3600000,
+    xiaoweiInsightDigestTimeZone: "Asia/Shanghai",
+    xiaoweiInsightDigestWeekday: 5,
+    xiaoweiInsightDigestHour: 17,
+    xiaoweiInsightDigestMinute: 30,
+    xiaoweiInsightDigestLookbackDays: 7,
+    xiaoweiInsightDigestMaxItems: 6,
+    xiaoweiInsightDigestCandidateLimit: 60,
     ...config,
     varDir: config.varDir || path.join(projectRoot, "var"),
     didaResultSchemaPath: config.didaResultSchemaPath || path.join(projectRoot, "schemas", "dida-task-result.schema.json"),
@@ -165,6 +176,7 @@ const ownerEngagementMonitor = new OwnerEngagementMonitor({
 });
 const overdueMonitor = new DidaOverdueMonitor({ config, state, lark, taskCreator });
 const didaCompletedCleanupMonitor = new DidaCompletedCleanupMonitor({ config, state, lark, taskCreator });
+const xiaoweiInsightDigest = new XiaoweiInsightDigestMonitor({ config, state, lark });
 const sessionJanitor = new SessionJanitor({ config, state, lark, runner, taskCreator });
 const listener = lark.listen((event) => {
   if (event.chat_type === "p2p" && event.sender_id === config.allowedOpenId) {
@@ -305,6 +317,10 @@ const notificationDigestTimer = setInterval(
   () => void mentionMonitor.flushNotificationDigest(), config.notificationDigestPollIntervalMs,
 );
 void mentionMonitor.flushNotificationDigest();
+const xiaoweiInsightDigestTimer = setInterval(
+  () => void xiaoweiInsightDigest.poll(), config.xiaoweiInsightDigestPollIntervalMs,
+);
+void xiaoweiInsightDigest.poll();
 async function recordListenerFailure(detail) {
   if (stopping) return;
   if (!state.state.mentionHealthFailure) {
@@ -338,6 +354,7 @@ function shutdown(signal) {
   clearInterval(shadowTimer);
   clearInterval(collaborationLearningTimer);
   clearInterval(notificationDigestTimer);
+  clearInterval(xiaoweiInsightDigestTimer);
   clearTimeout(cardReconnectTimer);
   listener.stdin.end();
   membershipListener?.stdin.end();
