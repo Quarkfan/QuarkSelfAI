@@ -119,3 +119,4 @@
 - 首次真实摘要将在下一个调度窗口检验内容质量；后续依据常东旭反馈调整选择偏好和篇幅，不把当前评分固化成不可变业务规则。
 - 完整测试、架构检查、Lark CLI 兼容检查通过后，独立 compatibility provider 审计哈希更新为 `4caa865c3d4d381894e2bdd729d6dd49494fc048f10fcce1fd3589c0d5ee908f`，文件数为 31。
 - 服务器兼容检查曾仍断言旧的固定 `dist/app.js` 入口，与已提交的显式 compatibility/native 入口选择器不一致；本次只修正验证器，使其同时核对两个允许入口和最终受控变量执行，不改变部署脚本或运行模式。
+- 2026-08-27 19:33（北京时间）确认没有活动 Codex/Claude 子任务后重启同一 LaunchAgent；DSH kernel 与 compatibility worker 均为 ready，五条飞书事件消费者恢复。控制台诊断显示“小维对话洞察周报”已启用、每小时检查一次、无失败；`lastRunAt=null` 是尚未到周五 17:30 首个窗口的预期状态。
