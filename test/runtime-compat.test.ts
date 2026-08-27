@@ -91,3 +91,22 @@ test('surfaces aggregated focus-processing failures in compatibility diagnostics
   assert.equal(focus?.failure, '请求超时')
   assert.equal(focus?.pending, 1)
 })
+
+test('surfaces Feishu attention inventory and partial source failures in diagnostics', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-attention-diagnostics-'))
+  const varDir = join(directory, 'var')
+  const config = join(directory, 'config.json')
+  await mkdir(varDir)
+  await writeFile(config, JSON.stringify({ varDir, conversationAttentionEnabled: true, conversationAttentionSyncIntervalMs: 21_600_000 }))
+  await writeFile(join(varDir, 'state.json'), JSON.stringify({
+    conversationAttentionLastSyncAt: '2026-08-27T02:52:49Z',
+    conversationAttentionInventory: { watched: 10, muted: 39 },
+    conversationAttentionSourceErrors: [{ source: 'pinned', error: '缺少只读权限' }],
+  }))
+  const runtime = new CompatRuntime(config, { cwd: directory })
+
+  const diagnostics = await runtime.diagnostics()
+  const attention = diagnostics.monitors.find((monitor) => monitor.id === 'attention-signals')
+  assert.equal(attention?.pending, 10)
+  assert.match(attention?.failure || '', /pinned: 缺少只读权限/)
+})

@@ -220,6 +220,11 @@ export class LarkClient {
     return this.searchConversationMessages(start, end, chatIds, "飞书标记会话消息搜索");
   }
 
+  async searchAttentionConversationMessages(start, end, chatIds) {
+    if (!chatIds.length) return [];
+    return this.searchConversationMessages(start, end, chatIds, "飞书关注会话消息搜索");
+  }
+
   async searchDelegatedGroupMessages(start, end, chatIds) {
     if (!chatIds.length) return [];
     return this.searchConversationMessages(start, end, chatIds, "任永强交接群消息搜索");
@@ -273,6 +278,115 @@ export class LarkClient {
       if (message?.chat_id) chatIds.add(message.chat_id);
     }
     return [...chatIds].sort();
+  }
+
+  async listFeedShortcutConversations() {
+    const chatIds = new Set();
+    let pageToken = null;
+    for (let page = 0; page < 100; page += 1) {
+      const result = await this.run([
+        "im", "+feed-shortcut-list", "--as", "user", "--no-detail",
+        ...(pageToken ? ["--page-token", pageToken] : []), "--format", "json",
+      ]);
+      if (result.code !== 0) throw new Error(`飞书置顶会话读取失败: ${result.stderr || result.stdout}`);
+      const envelope = parseCliJson(result.stdout);
+      if (envelope.ok !== true) throw new Error(`飞书置顶会话读取失败: ${result.stdout}`);
+      for (const shortcut of envelope.data?.shortcuts ?? []) {
+        if (shortcut.type === 1 && shortcut.feed_card_id) chatIds.add(shortcut.feed_card_id);
+      }
+      if (envelope.data?.has_more !== true) return [...chatIds].sort();
+      pageToken = envelope.data?.page_token;
+      if (!pageToken) throw new Error("飞书置顶会话返回 has_more=true 但缺少 page_token。");
+    }
+    throw new Error("飞书置顶会话分页超过安全上限，保留上次同步结果。");
+  }
+
+  async listFeedGroupConversations() {
+    const result = await this.run([
+      "im", "+feed-group-list", "--as", "user", "--page-all", "--page-limit", "1000", "--format", "json",
+    ]);
+    if (result.code !== 0) throw new Error(`飞书会话分组读取失败: ${result.stderr || result.stdout}`);
+    const envelope = parseCliJson(result.stdout);
+    if (envelope.ok !== true) throw new Error(`飞书会话分组读取失败: ${result.stdout}`);
+    if (envelope.data?.has_more === true) throw new Error("飞书会话分组分页未完成，保留上次同步结果。");
+    const memberships = [];
+    for (const group of envelope.data?.groups ?? []) {
+      const itemsResult = await this.run([
+        "im", "+feed-group-list-item", "--as", "user", "--feed-group-id", group.group_id,
+        "--page-all", "--page-limit", "1000", "--format", "json",
+      ]);
+      if (itemsResult.code !== 0) throw new Error(`飞书会话分组成员读取失败: ${itemsResult.stderr || itemsResult.stdout}`);
+      const itemsEnvelope = parseCliJson(itemsResult.stdout);
+      if (itemsEnvelope.ok !== true) throw new Error(`飞书会话分组成员读取失败: ${itemsResult.stdout}`);
+      if (itemsEnvelope.data?.has_more === true) throw new Error(`飞书会话分组「${group.name}」分页未完成。`);
+      for (const item of itemsEnvelope.data?.items ?? []) {
+        if (item.feed_type === "chat" && item.feed_id) {
+          memberships.push({ chatId: item.feed_id, groupId: group.group_id, groupName: group.name, groupType: group.type });
+        }
+      }
+    }
+    return memberships;
+  }
+
+  async listGroupNotificationSettings(groupChats = null) {
+    const chats = groupChats || await this.listGroupChats();
+    const settings = [];
+    for (let index = 0; index < chats.length; index += 10) {
+      const result = await this.run([
+        "im", "chat.user_setting", "batch_query", "--as", "user",
+        "--data", JSON.stringify({ chat_ids: chats.slice(index, index + 10).map((chat) => chat.chat_id) }),
+        "--format", "json",
+      ]);
+      if (result.code !== 0) throw new Error(`飞书群通知设置读取失败: ${result.stderr || result.stdout}`);
+      const envelope = parseCliJson(result.stdout);
+      if (envelope.ok !== true) throw new Error(`飞书群通知设置读取失败: ${result.stdout}`);
+      settings.push(...(envelope.data?.items ?? []));
+    }
+    return settings;
+  }
+
+  async listConversationAttentionSignals() {
+    const profiles = new Map();
+    const sourceErrors = [];
+    const chats = await this.listGroupChats();
+    const chatById = new Map(chats.map((chat) => [chat.chat_id, chat]));
+    const ensure = (chatId) => {
+      const chat = chatById.get(chatId) || {};
+      if (!profiles.has(chatId)) profiles.set(chatId, {
+        chatId, chatName: chat.name || "", external: chat.external === true,
+        sources: [], feedGroups: [], muted: false, muteAtAll: false,
+      });
+      return profiles.get(chatId);
+    };
+    try {
+      for (const chatId of await this.listFeedShortcutConversations()) ensure(chatId).sources.push("pinned");
+    } catch (error) {
+      sourceErrors.push({ source: "pinned", error: error.message });
+    }
+    try {
+      for (const membership of await this.listFeedGroupConversations()) {
+        const profile = ensure(membership.chatId);
+        if (!profile.sources.includes("feed_group")) profile.sources.push("feed_group");
+        profile.feedGroups.push({ id: membership.groupId, name: membership.groupName, type: membership.groupType });
+      }
+    } catch (error) {
+      sourceErrors.push({ source: "feed_group", error: error.message });
+    }
+    try {
+      for (const setting of await this.listGroupNotificationSettings(chats)) {
+        if (!setting.is_muted && !setting.is_mute_at_all) continue;
+        const profile = ensure(setting.chat_id);
+        profile.muted = setting.is_muted === true;
+        profile.muteAtAll = setting.is_mute_at_all === true;
+      }
+    } catch (error) {
+      sourceErrors.push({ source: "notification_setting", error: error.message });
+    }
+    return {
+      profiles: [...profiles.values()].sort((left, right) => left.chatId.localeCompare(right.chatId)),
+      sourceErrors,
+      inventory: { groupChats: chats.length },
+    };
   }
 
   async listGroupChats() {

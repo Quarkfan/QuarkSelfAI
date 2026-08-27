@@ -98,12 +98,28 @@ export class CompatRuntime implements RuntimeStatusProvider {
       return null
     }
     const number = (key: string): number | undefined => typeof document[key] === 'number' ? document[key] : undefined
+    const stateObjectNumber = (key: string, field: string): number => {
+      const current = state[key]
+      if (!current || typeof current !== 'object') return 0
+      const value = (current as Record<string, unknown>)[field]
+      return typeof value === 'number' ? value : 0
+    }
+    const sourceFailures = (key: string): string | null => {
+      const current = state[key]
+      if (!Array.isArray(current) || current.length === 0) return null
+      return current.map((item) => {
+        if (!item || typeof item !== 'object') return '未知来源异常'
+        const record = item as Record<string, unknown>
+        return `${String(record.source ?? 'unknown')}: ${String(record.error ?? '读取失败')}`
+      }).join('; ')
+    }
     const learning = state.collaborationLearning && typeof state.collaborationLearning === 'object'
       ? state.collaborationLearning as Record<string, unknown> : {}
     return {
       monitors: [
         { id: 'focus', name: '飞书重点消息', enabled: document.mentionMonitorEnabled !== false, intervalMs: number('mentionPollIntervalMs'), lastRunAt: value('mentionLastPollAt'), nextRunAt: value('mentionNextPollAt'), failure: failure('mentionHealthFailure') ?? failure('mentionProcessingFailure'), pending: arrayCount('mentionPending') },
         { id: 'flags', name: '标记会话同步', enabled: document.monitorFlaggedConversations !== false, intervalMs: number('flaggedConversationSyncIntervalMs'), lastRunAt: value('flaggedConversationLastSyncAt'), failure: failure('flaggedConversationHealthFailure'), pending: arrayCount('flaggedConversationChatIds') },
+        { id: 'attention-signals', name: '飞书注意力画像', enabled: document.conversationAttentionEnabled !== false, intervalMs: number('conversationAttentionSyncIntervalMs'), lastRunAt: value('conversationAttentionLastSyncAt'), failure: failure('conversationAttentionHealthFailure') ?? sourceFailures('conversationAttentionSourceErrors'), pending: stateObjectNumber('conversationAttentionInventory', 'watched') },
         { id: 'delegated-groups', name: '任永强交接群', enabled: document.groupMembershipMonitorEnabled !== false, intervalMs: number('groupMembershipSyncIntervalMs'), lastRunAt: value('groupMembershipLastSyncAt'), failure: failure('groupMembershipHealthFailure'), pending: arrayCount('delegatedGroupChatIds') },
         { id: 'owner-engagement', name: '本人参与与表情信号', enabled: document.ownerEngagementEnabled !== false, intervalMs: number('ownerEngagementPollIntervalMs'), lastRunAt: value('ownerEngagementLastPollAt'), failure: failure('ownerEngagementHealthFailure'), pending: arrayCount('ownerEngagedConversations') + arrayCount('reactionPendingEvents') },
         { id: 'cards', name: '交互卡片回调', enabled: true, intervalMs: undefined, failure: failure('cardActionHealthFailure'), pending: arrayCount('mentionResearchConfirmations') + arrayCount('followupOutreachRequests') },
@@ -134,6 +150,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
     const mapping: Record<string, { enabled?: string; interval?: string }> = {
       focus: { enabled: 'mentionMonitorEnabled', interval: 'mentionPollIntervalMs' },
       flags: { enabled: 'monitorFlaggedConversations', interval: 'flaggedConversationSyncIntervalMs' },
+      'attention-signals': { enabled: 'conversationAttentionEnabled', interval: 'conversationAttentionSyncIntervalMs' },
       'delegated-groups': { enabled: 'groupMembershipMonitorEnabled', interval: 'groupMembershipSyncIntervalMs' },
       'owner-engagement': { enabled: 'ownerEngagementEnabled', interval: 'ownerEngagementPollIntervalMs' },
       overdue: { enabled: 'overdueMonitorEnabled', interval: 'overduePollIntervalMs' },

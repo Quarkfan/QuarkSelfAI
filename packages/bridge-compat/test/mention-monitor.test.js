@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { conversationPendingBatch, MentionMonitor, isDelegationJoinSystemMessage, isLarkRateLimitError, isLowSignalAcknowledgement, isSyntheticTestMessage, userFacingError } from "../src/mention-monitor.js";
+import { conversationPendingBatch, deriveConversationAttention, MentionMonitor, isDelegationJoinSystemMessage, isLarkRateLimitError, isLowSignalAcknowledgement, isSyntheticTestMessage, userFacingError } from "../src/mention-monitor.js";
 
 function stateHarness() {
   return {
@@ -182,12 +182,79 @@ test("syncs active flag chats and monitors their new messages", async () => {
   });
 
   await monitor.poll();
+  assert.equal(state.state.mentionPending.length, 1);
+  state.state.mentionPending[0].readyAt = "2026-08-14T00:00:00Z";
+  await monitor.processLocalQueues();
   await monitor.poll();
 
   assert.equal(flagSyncs, 1);
   assert.equal(created.length, 1);
   assert.deepEqual(created[0].intakeReasons, ["飞书标记会话"]);
   assert.deepEqual(state.state.flaggedConversationChatIds, ["oc_flagged"]);
+});
+
+test("derives latency from combined user attention signals without overriding explicit urgency", () => {
+  const focused = deriveConversationAttention({
+    sources: ["pinned", "feed_group"], feedGroups: [{ name: "AI方向" }], muted: false,
+  });
+  assert.equal(focused.tier, "high");
+  assert.equal(focused.settleDelayMs, 10 * 60_000);
+  assert.equal(focused.notificationMode, "digest");
+
+  const muted = deriveConversationAttention({
+    sources: ["feed_group"], feedGroups: [{ name: "斜杠" }], muted: true,
+  });
+  assert.equal(muted.tier, "low");
+  assert.equal(muted.settleDelayMs, 30 * 60_000);
+});
+
+test("watches pinned and feed-group chats while carrying mute state into the decision", async () => {
+  const message = {
+    message_id: "om_attention", chat_id: "oc_attention", chat_name: "重点项目群", chat_type: "group",
+    create_time: "2026-08-27 10:00", content: "项目有一项待确认变更", sender: { id: "ou_other", name: "同事" },
+  };
+  const state = stateHarness();
+  const decisions = [];
+  const monitor = new MentionMonitor({
+    config: {
+      mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, mentionContextMinutes: 30,
+      allowedOpenId: "ou_me", flaggedConversationSyncIntervalMs: 300000,
+      conversationAttentionSyncIntervalMs: 300000, specialAttentionUsers: [],
+    },
+    state,
+    lark: {
+      async listFlaggedConversations() { return []; },
+      async listConversationAttentionSignals() {
+        return {
+          profiles: [{
+            chatId: "oc_attention", chatName: "重点项目群", external: false,
+            sources: ["pinned", "feed_group"], feedGroups: [{ id: "ofg_1", name: "任务", type: "normal" }],
+            muted: true, muteAtAll: false,
+          }],
+          sourceErrors: [], inventory: { groupChats: 1 },
+        };
+      },
+      async searchMentions() { return []; },
+      async searchSpecialAttentionMessages() { return []; },
+      async searchDirectMessages() { return []; },
+      async searchAttentionConversationMessages(_start, _end, chatIds) {
+        assert.deepEqual(chatIds, ["oc_attention"]);
+        return [message];
+      },
+      async getMentionContext() { return [message]; },
+      async send() {},
+    },
+    taskCreator: { async createFromMention(candidate) { decisions.push(candidate); return { taskId: "", taskAction: "ignored" }; } },
+  });
+
+  await monitor.poll();
+  assert.equal(state.state.mentionPending.length, 1);
+  assert.equal(state.state.mentionPending[0].message.assistantAttention.notificationMode, "digest");
+  assert.equal(state.state.mentionPending[0].message.assistantAttention.settleDelayMs, 15 * 60_000);
+  assert.deepEqual(state.state.mentionPending[0].message.intakeReasons, [
+    "飞书置顶会话", "飞书分组：任务", "群通知免打扰（降低打扰）",
+  ]);
+  assert.equal(decisions.length, 0);
 });
 
 test("keeps failed mentions pending with backoff", async () => {

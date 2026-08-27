@@ -3,6 +3,8 @@
 - “分身会话”是助手自治维护入口。完整授权、执行闭环、数据治理和确认边界见
   `docs/operations/autonomous-twin-session.md`；收到以该词开头的反馈时必须按该文档推进到验证和上线，
   不得只解释问题或等待用户提供实现指令。
+- 飞书注意力策略必须综合置顶、有效标记、会话分组和通知免打扰设置，按 `docs/operations/autonomous-twin-session.md`
+  的动态规则决定 10–30 分钟聚合时效和简报方式；这些偏好信号不得替代任务准入、责任和风险证据。
 
 - 架构真源见 `docs/architecture.md` 与 `docs/adr/`。
 - 骨架、功能和迁移代码的机器真源为 `config/module-catalog.json`。新能力先登记分类和依赖并通过

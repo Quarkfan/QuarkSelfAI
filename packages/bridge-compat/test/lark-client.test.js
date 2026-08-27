@@ -84,6 +84,34 @@ test("reads a complete user group list and rejects incomplete pagination", async
   await assert.rejects(() => client.listGroupChats(), /分页未完成/);
 });
 
+test("paginates feed shortcuts and keeps only chat entries", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli" });
+  const calls = [];
+  client.run = async (args) => {
+    calls.push(args);
+    const second = args.includes("next");
+    return { code: 0, stderr: "", stdout: JSON.stringify({ ok: true, data: second
+      ? { shortcuts: [{ type: 1, feed_card_id: "oc_2" }, { type: 2, feed_card_id: "doc_1" }], has_more: false }
+      : { shortcuts: [{ type: 1, feed_card_id: "oc_1" }], has_more: true, page_token: "next" } }) };
+  };
+  assert.deepEqual(await client.listFeedShortcutConversations(), ["oc_1", "oc_2"]);
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1].includes("--page-token"));
+});
+
+test("batches user notification settings in groups of ten", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli" });
+  const batchSizes = [];
+  client.run = async (args) => {
+    const body = JSON.parse(args[args.indexOf("--data") + 1]);
+    batchSizes.push(body.chat_ids.length);
+    return { code: 0, stderr: "", stdout: JSON.stringify({ ok: true, data: { items: body.chat_ids.map((chat_id) => ({ chat_id, is_muted: false })) } }) };
+  };
+  const chats = Array.from({ length: 23 }, (_, index) => ({ chat_id: `oc_${index}` }));
+  assert.equal((await client.listGroupNotificationSettings(chats)).length, 23);
+  assert.deepEqual(batchSizes, [10, 10, 3]);
+});
+
 test("reaction listeners use separate native V2 event streams", () => {
   const client = new LarkClient({ larkCli: "lark-cli" });
   const calls = [];

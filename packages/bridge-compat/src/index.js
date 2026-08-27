@@ -75,6 +75,8 @@ async function loadConfig() {
     monitorFlaggedConversations: true,
     flaggedConversationSyncIntervalMs: 1800000,
     flagPageLimit: 1000,
+    conversationAttentionEnabled: true,
+    conversationAttentionSyncIntervalMs: 21600000,
     didaExecutionTimeoutMs: 300000,
     didaCli: "dida",
     didaCliTimeoutMs: 30000,

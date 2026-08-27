@@ -1,5 +1,7 @@
 import { formatUserTime } from "./util.js";
 
+const CONVERSATION_ATTENTION_STRATEGY_VERSION = 1;
+
 function isoWithOffset(date) {
   const shifted = new Date(date.getTime() + 8 * 60 * 60 * 1000);
   return shifted.toISOString().replace("Z", "+08:00").replace(/\.\d{3}/, "");
@@ -73,6 +75,48 @@ function isExplicitOwnerMention(message) {
   return (message?.intakeReasons || []).some((reason) => String(reason).startsWith("@常东旭"));
 }
 
+function isSpecialAttention(message) {
+  return (message?.intakeReasons || []).some((reason) => String(reason).startsWith("特别关注："));
+}
+
+export function deriveConversationAttention(profile = {}) {
+  const sources = new Set(profile.sources || []);
+  const groupNames = (profile.feedGroups || []).map((group) => String(group.name || ""));
+  let score = 0;
+  if (sources.has("pinned")) score += 4;
+  if (sources.has("active_flag")) score += 3;
+  if (sources.has("feed_group")) score += 2;
+  if (groupNames.some((name) => /任务|值班|待办|项目|AI方向/i.test(name))) score += 1;
+  if (profile.muted) score -= 2;
+  if (profile.muteAtAll) score -= 1;
+  const tier = score >= 4 ? "high" : score >= 2 ? "medium" : "low";
+  const settleDelayMs = profile.muted
+    ? (score >= 4 ? 15 : 30) * 60_000
+    : tier === "high" ? 10 * 60_000 : tier === "medium" ? 15 * 60_000 : 30 * 60_000;
+  return {
+    tier,
+    score,
+    settleDelayMs,
+    notificationMode: "digest",
+    rationale: [
+      sources.has("pinned") ? "置顶" : null,
+      sources.has("active_flag") ? "有当前标记" : null,
+      groupNames.length ? `分组:${groupNames.join("/")}` : null,
+      profile.muted ? "普通消息免打扰" : null,
+      profile.muteAtAll ? "@所有人免打扰" : null,
+    ].filter(Boolean).join("、") || "无主动关注信号",
+  };
+}
+
+function attentionReasons(profile = {}) {
+  const reasons = [];
+  if ((profile.sources || []).includes("pinned")) reasons.push("飞书置顶会话");
+  if ((profile.sources || []).includes("active_flag")) reasons.push("飞书标记会话");
+  for (const group of profile.feedGroups || []) reasons.push(`飞书分组：${group.name}`);
+  if (profile.muted) reasons.push("群通知免打扰（降低打扰）");
+  return reasons;
+}
+
 function pendingIsDue(item, now) {
   return (!item.readyAt || Date.parse(item.readyAt) <= now.getTime())
     && (!item.nextAttemptAt || Date.parse(item.nextAttemptAt) <= now.getTime());
@@ -143,6 +187,8 @@ export class MentionMonitor {
     this.state.state.mentionResearchConfirmations ??= [];
     this.state.state.researchDecisionHistory ??= [];
     this.state.state.flaggedConversationChatIds ??= [];
+    this.state.state.conversationAttentionProfiles ??= [];
+    this.state.state.conversationAttentionSourceErrors ??= [];
     this.state.state.mentionPending ??= [];
     this.state.state.mentionProcessedMessageIds ??= [];
     this.state.state.mentionProcessingFailure ??= null;
@@ -338,6 +384,7 @@ export class MentionMonitor {
       this.initializeState();
       const now = new Date();
       await this.syncFlaggedConversations(now);
+      await this.syncConversationAttention(now);
       await this.syncGroupMemberships(now);
       const previous = this.state.state.mentionLastPollAt
         ? new Date(this.state.state.mentionLastPollAt)
@@ -350,8 +397,11 @@ export class MentionMonitor {
       const mentions = await this.lark.searchMentions(startText, endText);
       const specialAttention = await (this.lark.searchSpecialAttentionMessages?.(startText, endText) ?? []);
       const directMessages = await (this.lark.searchDirectMessages?.(startText, endText) ?? []);
-      const flaggedConversationMessages = await (this.lark.searchFlaggedConversationMessages?.(
-        startText, endText, this.state.state.flaggedConversationChatIds,
+      const attentionProfiles = this.conversationAttentionProfiles();
+      const attentionConversationMessages = await (this.lark.searchAttentionConversationMessages?.(
+        startText, endText, [...attentionProfiles.keys()],
+      ) ?? this.lark.searchFlaggedConversationMessages?.(
+        startText, endText, [...attentionProfiles.keys()],
       ) ?? []);
       const delegatedGroupMessages = await (this.lark.searchDelegatedGroupMessages?.(
         startText, endText, this.state.state.delegatedGroupChatIds,
@@ -359,7 +409,7 @@ export class MentionMonitor {
       const specialIds = new Set((this.config.specialAttentionUsers || []).map((user) => user.openId));
       const foundById = new Map();
       const lowSignalIds = new Set();
-      const addFound = (message, reason) => {
+      const addFound = (message, reason, attentionProfile = null) => {
         if (!message.message_id || message.deleted === true || message.sender?.id === this.config.allowedOpenId) return;
         if (message.sender?.id === this.config.xiaoweiAgent?.openId) return;
         if (isLowSignalAcknowledgement(message.content) || isSyntheticTestMessage(message.content)) {
@@ -369,9 +419,14 @@ export class MentionMonitor {
         const existing = foundById.get(message.message_id);
         if (existing) {
           if (!existing.intakeReasons.includes(reason)) existing.intakeReasons.push(reason);
+          if (attentionProfile) existing.assistantAttention = attentionProfile;
           return;
         }
-        foundById.set(message.message_id, { ...message, intakeReasons: [reason] });
+        foundById.set(message.message_id, {
+          ...message,
+          intakeReasons: [reason],
+          ...(attentionProfile ? { assistantAttention: attentionProfile } : {}),
+        });
       };
       for (const message of mentions) addFound(message, "@常东旭");
       for (const message of specialAttention) {
@@ -383,7 +438,12 @@ export class MentionMonitor {
       for (const message of directMessages) {
         if (message.chat_type === "p2p") addFound(message, "他人私聊");
       }
-      for (const message of flaggedConversationMessages) addFound(message, "飞书标记会话");
+      for (const message of attentionConversationMessages) {
+        const profile = attentionProfiles.get(message.chat_id);
+        const strategy = deriveConversationAttention(profile);
+        const enriched = { ...profile, ...strategy };
+        for (const reason of attentionReasons(profile)) addFound(message, reason, enriched);
+      }
       for (const message of delegatedGroupMessages) addFound(message, "任永强交接群");
       const processed = new Set(this.state.state.mentionProcessedMessageIds);
       for (const messageId of lowSignalIds) {
@@ -397,7 +457,11 @@ export class MentionMonitor {
         if (!message.message_id || processed.has(message.message_id) || pendingIds.has(message.message_id)) continue;
         if (message.sender?.id === this.config.allowedOpenId) continue;
         const discoveredAt = new Date().toISOString();
-        const settleDelayMs = Number(this.config.mentionSettleDelayMs || 0);
+        const settleDelayMs = isExplicitOwnerMention(message)
+          ? Number(this.config.mentionRealtimeSettleDelayMs || 0)
+          : isSpecialAttention(message)
+            ? Number(this.config.mentionSettleDelayMs || 0)
+            : Number(message.assistantAttention?.settleDelayMs ?? this.config.mentionSettleDelayMs ?? 0);
         this.state.state.mentionPending.push({
           message,
           discoveredAt,
@@ -591,7 +655,13 @@ export class MentionMonitor {
         const policyEvaluation = notificationDecision === "notify"
           ? await this.evaluateNotificationPolicy(batchMessage, task)
           : { effect: {}, matches: [] };
-        if (policyEvaluation.effect?.attention === "batch" && !userNotified) {
+        const attentionDigest = batchMessage.assistantAttention?.notificationMode === "digest"
+          && !isExplicitOwnerMention(batchMessage)
+          && !isSpecialAttention(batchMessage)
+          && !task.approvalRequired
+          && !task.keyItem
+          && task.researchDecision === "skip";
+        if ((policyEvaluation.effect?.attention === "batch" || attentionDigest) && !userNotified) {
           await this.queueDigestNotification(batchMessage, task, taskAction, policyEvaluation);
           userNotified = true;
         } else if (policyEvaluation.effect?.attention === "silent" && !userNotified) {
@@ -799,6 +869,73 @@ export class MentionMonitor {
         );
       }
       this.logger.error("flagged conversation sync failed", error);
+    }
+  }
+
+  conversationAttentionProfiles() {
+    const profiles = new Map((this.state.state.conversationAttentionProfiles || []).map((profile) => [profile.chatId, {
+      ...profile,
+      sources: [...(profile.sources || [])],
+      feedGroups: [...(profile.feedGroups || [])],
+    }]));
+    for (const chatId of this.state.state.flaggedConversationChatIds || []) {
+      const profile = profiles.get(chatId) || { chatId, chatName: "", external: false, sources: [], feedGroups: [], muted: false, muteAtAll: false };
+      if (!profile.sources.includes("active_flag")) profile.sources.push("active_flag");
+      profiles.set(chatId, profile);
+    }
+    return new Map([...profiles].filter(([, profile]) => (
+      (profile.sources || []).some((source) => ["pinned", "active_flag", "feed_group"].includes(source))
+    )));
+  }
+
+  async syncConversationAttention(now = new Date()) {
+    if (this.config.conversationAttentionEnabled === false || !this.lark.listConversationAttentionSignals) return;
+    const lastSync = this.state.state.conversationAttentionLastSyncAt
+      ? new Date(this.state.state.conversationAttentionLastSyncAt)
+      : null;
+    const intervalMs = Number(this.config.conversationAttentionSyncIntervalMs || 6 * 60 * 60_000);
+    const strategyCurrent = this.state.state.conversationAttentionStrategyVersion === CONVERSATION_ATTENTION_STRATEGY_VERSION;
+    if (strategyCurrent && lastSync && now.getTime() - lastSync.getTime() < intervalMs) return;
+    try {
+      const previous = this.state.state.conversationAttentionProfiles || [];
+      const result = await this.lark.listConversationAttentionSignals();
+      const failedSources = new Set((result.sourceErrors || []).map((item) => item.source));
+      const next = new Map((result.profiles || []).map((profile) => [profile.chatId, profile]));
+      for (const old of previous) {
+        const current = next.get(old.chatId) || { ...old, sources: [], feedGroups: [], muted: false, muteAtAll: false };
+        if (failedSources.has("pinned") && old.sources?.includes("pinned") && !current.sources.includes("pinned")) current.sources.push("pinned");
+        if (failedSources.has("feed_group") && old.sources?.includes("feed_group")) {
+          if (!current.sources.includes("feed_group")) current.sources.push("feed_group");
+          current.feedGroups = old.feedGroups || [];
+        }
+        if (failedSources.has("notification_setting")) {
+          current.muted = old.muted === true;
+          current.muteAtAll = old.muteAtAll === true;
+        }
+        if (current.sources.length || current.muted || current.muteAtAll) next.set(old.chatId, current);
+      }
+      this.state.state.conversationAttentionProfiles = [...next.values()].sort((left, right) => left.chatId.localeCompare(right.chatId));
+      this.state.state.conversationAttentionSourceErrors = result.sourceErrors || [];
+      const watchedIds = new Set([
+        ...[...next.values()].filter((profile) => profile.sources?.length).map((profile) => profile.chatId),
+        ...(this.state.state.flaggedConversationChatIds || []),
+      ]);
+      this.state.state.conversationAttentionInventory = {
+        ...(result.inventory || {}),
+        profiles: this.state.state.conversationAttentionProfiles.length,
+        watched: watchedIds.size,
+        activeFlags: (this.state.state.flaggedConversationChatIds || []).length,
+        muted: [...next.values()].filter((profile) => profile.muted).length,
+      };
+      this.state.state.conversationAttentionLastSyncAt = now.toISOString();
+      this.state.state.conversationAttentionStrategyVersion = CONVERSATION_ATTENTION_STRATEGY_VERSION;
+      this.state.state.conversationAttentionHealthFailure = null;
+      await this.state.save();
+      for (const sourceError of result.sourceErrors || []) this.logger.warn?.("conversation attention source unavailable", sourceError);
+    } catch (error) {
+      this.state.state.conversationAttentionHealthFailure ||= { at: now.toISOString(), error: error.message };
+      await this.state.save();
+      this.logger.error("conversation attention sync failed; retaining last successful profiles", error);
     }
   }
 
