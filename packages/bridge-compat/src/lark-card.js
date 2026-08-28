@@ -78,7 +78,7 @@ function footer() {
     tag: "div",
     text: {
       tag: "plain_text",
-      content: "由 Codex 自动化助手发送",
+      content: "QuarkSelfAI · 你的个人协作助手",
       text_size: "notation",
       text_color: "grey",
       lines: 1,

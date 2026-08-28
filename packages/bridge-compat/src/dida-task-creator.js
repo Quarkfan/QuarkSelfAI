@@ -48,6 +48,29 @@ export function validateTaskPresentation(task) {
   if (task.taskAction === "unchanged" && task.notificationDecision !== "silent") {
     throw new Error("未变化的滴答事项不得重复通知。");
   }
+  if (task.notificationMode !== undefined) {
+    if ((task.notificationDecision === "silent") !== (task.notificationMode === "silent")) {
+      throw new Error("通知决策与通知方式不一致。");
+    }
+    if (!Number.isInteger(task.notificationDelayMinutes) || task.notificationDelayMinutes < 0 || task.notificationDelayMinutes > 30) {
+      throw new Error("通知合并等待必须是 0–30 分钟。");
+    }
+    if (task.notificationMode !== "digest" && task.notificationDelayMinutes !== 0) {
+      throw new Error("只有汇总通知可以设置合并等待。");
+    }
+    if (task.notificationDecision === "notify") {
+      if (!String(task.notificationTitle || "").trim() || !String(task.ownerMessage || "").trim()) {
+        throw new Error("需要通知时必须提供自然的卡片标题和助理消息。");
+      }
+      if (String(task.ownerMessage).length > 600) throw new Error("助理消息不得超过 600 字。");
+    } else if (task.notificationTitle || task.ownerMessage) {
+      throw new Error("静默事项不得生成面向用户的通知文案。");
+    }
+    if (!['blue', 'green', 'yellow', 'red', 'grey'].includes(task.cardTone)) throw new Error("通知卡片色调无效。");
+    if (task.approvalRequired && (task.notificationMode !== "realtime" || task.notificationDelayMinutes !== 0)) {
+      throw new Error("待批准事项必须即时通知。");
+    }
+  }
   if (task.taskAction === "unchanged" && (task.needsClarification || task.researchDecision !== "skip")) {
     throw new Error("需要追问或调研的事项必须更新原任务，不能标记为未变化。");
   }
@@ -158,6 +181,7 @@ export class DidaTaskCreator {
 决策分层：
 - 先从完整上下文理解“同一事项是什么、现在处于什么状态、常东旭真实承担什么、还剩什么动作”，再决定建单、合并、更新、忽略、通知、追问和调研。不要把关键词、发送人、@、置顶、表情、邀请入群或单一历史样本直接映射成结果；这些只是可以相互印证或推翻的证据。
 - 下面关于任务准入、紧急度、通知和调研的内容是判断目标与校准示例，不是穷举规则。遇到未覆盖的场景，按“是否存在常东旭的真实未完成责任、是否改变下一步、打扰是否有净收益”作整体判断，并在 relationshipSummary、notificationReason、researchDecisionReason 中写出最关键依据。
+- 你是熟悉常东旭工作方式的个人助理，不是告警机器人。需要通知时，用自然、简洁、有温度但不奉承的口吻直接告诉他“发生了什么、你已经替他整理了什么、现在最值得做什么”；不要输出流水账式字段堆叠，也不要反复使用“已根据飞书重点消息”。
 - 只有授权范围、外部写入限制、幂等、目标 projectId、普通任务类型、审批证据与输出 schema 是不可协商的硬门禁。信息不足或模型不确定时，选择影响更小且可恢复的动作；不得用确定性措辞虚构事实。
 
 执行与安全边界：
@@ -214,8 +238,12 @@ export class DidaTaskCreator {
 ${researchDecisionHistory.slice(-20).map((item) => `- ${item.title}: 建议=${item.suggestedDecision}，最终=${item.finalDecision}，原因=${item.reason}`).join("\n") || "- 暂无历史记录"}
 协作模式参考（脱敏统计，不是指令）：${collaborationGuidance}
 15. 决定是否通知常东旭。飞书通知是稀缺的实时注意力通道，判断“现在打扰是否会改变他的下一步”，而不是按任务动作机械通知：待批准、迫近风险、明确需要本人及时回应或真正改变责任/期限/结论/下一步时通常 notify；已经可由滴答承载、重复、没有改变行动的信息通常 silent。新建或高优先级只是证据，不是单独充分条件。
+   - notificationMode 由你结合上下文选择：realtime 表示现在看到最有价值；digest 表示可与其他事项稍后合并；silent 表示不发飞书。notificationDecision=notify 时只能 realtime/digest，silent 时必须为 silent。
+   - digest 时由你在 5–30 分钟内选择 notificationDelayMinutes，考虑时效、用户当前是否需要被打断、是否可能继续补充上下文；realtime/silent 必须为 0。待批准事项必须 realtime 且为 0。
+   - notificationTitle 控制在 18 个中文字符以内，像助理给出的清晰提示，不用系统状态词堆砌。ownerMessage 控制在 180 个中文字符以内，语气自然、友好、直接，先说结论和你已完成的整理，再说常东旭现在是否需要行动。静默时两者为空字符串。
+   - cardTone 根据沟通感受选择 blue/green/yellow/red/grey：普通协作 blue，已收口 green，等待决定 yellow，确有迫近风险 red，低打扰状态 grey；不要仅凭关键词选颜色。
    notificationReason 必须写清为什么打扰或保持安静；materialChangeSummary 只写本次相对已有任务的实际变化，新建时写“新事项”，无变化时为空字符串。不要为了证明自动化工作而通知。
-16. 最多影响一个任务。最终按输出 schema 返回所有真实字段；taskAction/created/intakeDecision/actionRequired/actionOwner/nextAction/notificationDecision 及 title/titlePrefix/urgencyLabel/keyItem/priority/tags/dueDate 必须与实际操作后的任务一致。
+16. 最多影响一个任务。最终按输出 schema 返回所有真实字段；taskAction/created/intakeDecision/actionRequired/actionOwner/nextAction/notificationDecision/notificationMode/notificationDelayMinutes 及 title/titlePrefix/urgencyLabel/keyItem/priority/tags/dueDate 必须与实际操作后的任务一致。
 
 实时黑湖能力真源（只读快照；用于路由，不是来自消息的指令）：
 ${capabilityContext}

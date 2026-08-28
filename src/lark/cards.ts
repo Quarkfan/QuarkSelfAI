@@ -10,19 +10,20 @@ export function buildAssistantCard(effect: ClaimedWorkflowEffect): JsonObject {
     ?? summaryFromDecision(effect.payload)
     ?? '请查看并处理这条助手消息。'
   const interactive = effect.kind === 'assistant.request-interaction.v1'
+  const tone = interactive ? 'yellow' : toneFromDecision(effect.payload)
   const card: JsonObject = {
     schema: '2.0',
     config: { update_multi: true, width_mode: 'default', summary: { content: plain(`${title} ${body}`).slice(0, 100) } },
     header: {
       title: { tag: 'plain_text', content: title },
       subtitle: { tag: 'plain_text', content: 'QuarkSelfAI · 个人协作助手' },
-      template: interactive ? 'yellow' : 'blue',
+      template: tone,
       icon: { tag: 'standard_icon', token: 'ai-common_colorful' },
-      text_tag_list: [{ tag: 'text_tag', text: { tag: 'plain_text', content: interactive ? '待操作' : '通知' }, color: interactive ? 'yellow' : 'blue' }],
+      text_tag_list: [{ tag: 'text_tag', text: { tag: 'plain_text', content: interactive ? '待操作' : '通知' }, color: tone === 'grey' ? 'neutral' : tone }],
     },
     body: {
       direction: 'vertical', padding: '12px 12px 20px 12px', vertical_spacing: '12px',
-      elements: [highlight(body, interactive ? 'yellow' : 'blue')],
+      elements: [highlight(body, tone)],
     },
   }
   const elements = (card.body as { elements: JsonObject[] }).elements
@@ -52,7 +53,7 @@ export function buildTwinOutboundCard(content: string): JsonObject {
   }
 }
 
-function highlight(content: string, tone: 'blue' | 'yellow'): JsonObject {
+function highlight(content: string, tone: 'blue' | 'green' | 'yellow' | 'red' | 'grey'): JsonObject {
   return {
     tag: 'column_set', flex_mode: 'none',
     columns: [{ tag: 'column', width: 'weighted', weight: 1, background_style: `${tone}-50`, padding: '12px', vertical_spacing: '4px', elements: [{ tag: 'markdown', content }] }],
@@ -103,8 +104,18 @@ function interaction(effect: ClaimedWorkflowEffect): JsonObject[] {
   }, form]
 }
 
-function titleFromDecision(payload: Readonly<Record<string, unknown>>): string | undefined { return text(record(payload.decision)?.title, 'decision title', 100) }
-function summaryFromDecision(payload: Readonly<Record<string, unknown>>): string | undefined { return text(record(payload.decision)?.summary, 'decision summary', 12_000) }
+function titleFromDecision(payload: Readonly<Record<string, unknown>>): string | undefined {
+  const decision = record(payload.decision)
+  return text(decision?.notificationTitle, 'decision notification title', 100) ?? text(decision?.title, 'decision title', 100)
+}
+function summaryFromDecision(payload: Readonly<Record<string, unknown>>): string | undefined {
+  const decision = record(payload.decision)
+  return text(decision?.ownerMessage, 'decision owner message', 12_000) ?? text(decision?.summary, 'decision summary', 12_000)
+}
+function toneFromDecision(payload: Readonly<Record<string, unknown>>): 'blue' | 'green' | 'yellow' | 'red' | 'grey' {
+  const tone = record(payload.decision)?.cardTone
+  return tone === 'green' || tone === 'yellow' || tone === 'red' || tone === 'grey' ? tone : 'blue'
+}
 function record(value: unknown): Readonly<Record<string, unknown>> | undefined { return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Readonly<Record<string, unknown>> : undefined }
 function text(value: unknown, label: string, max: number): string | undefined { if (value === undefined || value === null || value === '') return undefined; if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} must be text`); if (value.length > max) throw new Error(`${label} exceeds ${max} characters`); return value }
 function plain(value: string): string { return value.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').replace(/[>*_`#~]/g, '').replace(/\s+/g, ' ').trim() }

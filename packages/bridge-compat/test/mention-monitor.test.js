@@ -669,6 +669,8 @@ test("updates one existing task and only notifies for a material change", async 
       return {
         taskId: "task_existing", title: "【紧急·关键】今天确认客户方案", taskAction: "updated", created: false,
         notificationDecision: "notify", notificationReason: "截止时间提前到今天", materialChangeSummary: "截止时间提前且优先级升高",
+        notificationMode: "realtime", notificationDelayMinutes: 0, notificationTitle: "客户方案今天要定",
+        ownerMessage: "客户把截止时间提前到今天了，我已经更新进原待办；现在需要你确认方案。", cardTone: "red",
         urgencyLabel: "紧急", keyItem: true, priority: 5, tags: ["飞书", "紧急", "关键事项"], dueDate: "2026-08-14",
         relationshipSummary: "需要常东旭确认", needsClarification: false, researchDecision: "skip", researchDecisionReason: "无需代码调研",
       };
@@ -677,8 +679,29 @@ test("updates one existing task and only notifies for a material change", async 
 
   await monitor.poll();
   assert.equal(sent.length, 1);
-  assert.match(sent[0], /更新了已有自动化待办/);
+  assert.match(sent[0], /我已经更新进原待办/);
   assert.match(sent[0], /截止时间提前且优先级升高/);
+});
+
+test("honors a model-selected digest delay before sending", async () => {
+  const state = stateHarness();
+  const sent = [];
+  const monitor = new MentionMonitor({
+    config: { digestNotificationStartHour: 0, digestNotificationEndHour: 24, notificationDigestMaxDelayMs: 6 * 60 * 60_000 },
+    state, lark: { async send(text, suffix, options) { sent.push({ text, suffix, options }); } }, taskCreator: {},
+  });
+  await monitor.queueDigestNotification(
+    { message_id: "om_adaptive", chat_id: "oc_1", chat_name: "项目群", sender: { name: "同事" } },
+    { taskId: "task_adaptive", title: "【跟进】查看进展", notificationDelayMinutes: 15,
+      notificationTitle: "进展我先帮你收着", ownerMessage: "这条更新不急，我先并到待办里。", cardTone: "grey" },
+    "updated", { matches: [] }, new Date("2026-08-28T02:00:00Z"),
+  );
+  await monitor.flushNotificationDigest(new Date("2026-08-28T02:14:00Z"));
+  assert.equal(sent.length, 0);
+  await monitor.flushNotificationDigest(new Date("2026-08-28T02:15:00Z"));
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].text, /这条更新不急/);
+  assert.equal(sent[0].options.tone, "grey");
 });
 
 test("batches ordinary notifications only after an enabled policy matches", async () => {
@@ -717,7 +740,7 @@ test("batches ordinary notifications only after an enabled policy matches", asyn
   state.state.notificationDigestPending[0].queuedAt = new Date(0).toISOString();
   await monitor.flushNotificationDigest(new Date("2026-08-23T11:00:00Z"));
   assert.equal(sent.length, 1);
-  assert.match(sent[0], /协作事项汇总/);
+  assert.match(sent[0], /我把刚才几条不需要立刻打断你的信息合在一起了/);
   assert.equal(state.state.notificationDigestPending.length, 0);
 });
 

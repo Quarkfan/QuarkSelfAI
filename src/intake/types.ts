@@ -25,6 +25,11 @@ export interface IntakeDecision {
   readonly summary: string
   readonly materialChange: boolean
   readonly notifyOwner: boolean
+  readonly notificationMode?: 'realtime' | 'digest' | 'silent'
+  readonly notificationDelayMinutes?: number
+  readonly notificationTitle?: string
+  readonly ownerMessage?: string
+  readonly cardTone?: 'blue' | 'green' | 'yellow' | 'red' | 'grey'
   readonly approvalRequired: boolean
   readonly priority?: 0 | 1 | 3 | 5
   readonly title?: string
@@ -80,6 +85,16 @@ export function validateIntakeDecision(value: unknown): IntakeDecision {
   if (outcome === 'ignored' && (value.notifyOwner || value.approvalRequired)) throw new Error('ignored intake cannot notify or request approval')
   if (!value.materialChange && value.notifyOwner) throw new Error('unchanged intake must remain silent')
   if (value.approvalRequired && !value.notifyOwner) throw new Error('approval-required intake must notify the owner')
+  if (value.notificationMode !== undefined) {
+    if (!['realtime', 'digest', 'silent'].includes(String(value.notificationMode))) throw new Error('invalid intake notification mode')
+    if ((value.notifyOwner === false) !== (value.notificationMode === 'silent')) throw new Error('intake notification mode conflicts with notifyOwner')
+    if (!Number.isSafeInteger(value.notificationDelayMinutes) || Number(value.notificationDelayMinutes) < 0 || Number(value.notificationDelayMinutes) > 30) throw new Error('invalid intake notification delay')
+    if (value.notificationMode !== 'digest' && value.notificationDelayMinutes !== 0) throw new Error('only digest intake may be delayed')
+    if (value.notifyOwner && (typeof value.notificationTitle !== 'string' || !value.notificationTitle.trim() || typeof value.ownerMessage !== 'string' || !value.ownerMessage.trim())) throw new Error('notified intake requires owner-facing copy')
+    if (!value.notifyOwner && (value.notificationTitle || value.ownerMessage)) throw new Error('silent intake cannot contain owner-facing copy')
+    if (!['blue', 'green', 'yellow', 'red', 'grey'].includes(String(value.cardTone))) throw new Error('invalid intake card tone')
+    if (value.approvalRequired && (value.notificationMode !== 'realtime' || value.notificationDelayMinutes !== 0)) throw new Error('approval-required intake must be realtime')
+  }
   if (outcome === 'task') {
     if (typeof value.title !== 'string' || !value.title.trim()) throw new Error('task intake title is required')
     if (![1, 3, 5].includes(Number(value.priority))) throw new Error('actionable task priority must be 1, 3, or 5')

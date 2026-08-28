@@ -110,8 +110,8 @@ export class LarkClient {
     return last?.data ?? last;
   }
 
-  async send(markdown, suffix = String(Date.now())) {
-    return this.sendCard((chunk) => buildNotificationCard(chunk), markdown, suffix);
+  async send(markdown, suffix = String(Date.now()), options = {}) {
+    return this.sendCard((chunk) => buildNotificationCard(chunk, options), markdown, suffix);
   }
 
   async sendInteractive(markdown, actions, options = {}, suffix = String(Date.now())) {

@@ -653,12 +653,14 @@ export class MentionMonitor {
         const policyEvaluation = notificationDecision === "notify"
           ? await this.evaluateNotificationPolicy(batchMessage, task)
           : { effect: {}, matches: [] };
-        const attentionDigest = batchMessage.assistantAttention?.notificationMode === "digest"
+        const modelDigest = task.notificationMode === "digest";
+        const attentionDigest = modelDigest || (task.notificationMode === undefined
+          && batchMessage.assistantAttention?.notificationMode === "digest"
           && !isExplicitOwnerMention(batchMessage)
           && !isSpecialAttention(batchMessage)
           && !task.approvalRequired
           && !task.keyItem
-          && task.researchDecision === "skip";
+          && task.researchDecision === "skip");
         const quietHoursDigest = notificationDecision === "notify"
           && !isWithinLocalHourWindow(
             new Date(), this.config.notificationTimeZone || "Asia/Shanghai",
@@ -673,19 +675,25 @@ export class MentionMonitor {
           userNotified = true;
         }
         if (notificationDecision === "notify" && !userNotified) {
-          const actionText = taskAction === "updated" ? "更新了已有自动化待办" : "创建了自动化待办";
-          const details = `已根据飞书重点消息${actionText}：**${task.title}**\n\n${task.approvalRequired ? `待批准：${task.approvalSummary}\n` : ""}${task.materialChangeSummary ? `变化：${task.materialChangeSummary}\n` : ""}通知原因：${task.notificationReason || "需要你关注或处理"}\n纳入原因：${batchMessage.intakeReasons?.join("、") || "@常东旭"}\n来源：${batchMessage.chat_name || batchMessage.chat_id} · ${batchMessage.sender?.name || "未知发送人"}\n识别：${task.urgencyLabel}${task.keyItem ? " · 关键事项" : ""} · 滴答优先级 ${task.priority}\n标签：${task.tags?.join("、") || "无"}${task.dueDate ? ` · 截止：${task.dueDate}` : ""}\n与你的关联：${task.relationshipSummary}\n任务 ID：${task.taskId}${task.url ? `\n${task.url}` : ""}`;
+          const actionText = taskAction === "updated" ? "更新进原来的待办" : "整理成一条待办";
+          const lead = task.ownerMessage || `我把这件事${actionText}了。${task.nextAction ? `下一步是：${task.nextAction}` : "你暂时不用额外处理。"}`;
+          const details = `${lead}\n\n**${task.title}**\n${task.approvalRequired ? `\n需要你决定：${task.approvalSummary}\n` : ""}${task.materialChangeSummary ? `\n这次变化：${task.materialChangeSummary}\n` : ""}\n我替你保留的信息：${batchMessage.chat_name || batchMessage.chat_id} · ${batchMessage.sender?.name || "未知发送人"}${task.dueDate ? ` · 截止 ${task.dueDate}` : ""}\n${task.relationshipSummary}${task.url ? `\n\n${task.url}` : ""}`;
+          const cardOptions = {
+            title: task.notificationTitle || (task.approvalRequired ? "这件事需要你定一下" : "我帮你整理了一件事"),
+            tone: task.cardTone || (task.approvalRequired ? "yellow" : "blue"),
+            subtitle: "QuarkSelfAI · 你的个人协作助手",
+          };
           if (task.approvalRequired) {
             const actions = [];
             if (batchMessage.message_app_link) actions.push({ text: "打开原消息", url: batchMessage.message_app_link });
             if (task.url) actions.push({ text: "打开滴答任务", url: task.url });
             if (actions.length) {
-              await this.safeSendInteractive(details, actions, { title: "需要你批准", tone: "yellow" }, `mention:${batchMessage.message_id}:${taskAction}`);
+              await this.safeSendInteractive(details, actions, cardOptions, `mention:${batchMessage.message_id}:${taskAction}`);
             } else {
-              await this.safeSend(details, `mention:${batchMessage.message_id}:${taskAction}`);
+              await this.safeSend(details, `mention:${batchMessage.message_id}:${taskAction}`, cardOptions);
             }
           } else {
-            await this.safeSend(details, `mention:${batchMessage.message_id}:${taskAction}`);
+            await this.safeSend(details, `mention:${batchMessage.message_id}:${taskAction}`, cardOptions);
           }
         }
       } catch (error) {
@@ -777,6 +785,12 @@ export class MentionMonitor {
       url: task.url || null,
       queuedAt: now.toISOString(),
       policyIds: (policyEvaluation.matches || []).map((match) => match.id),
+      ownerMessage: task.ownerMessage || "",
+      notificationTitle: task.notificationTitle || "",
+      cardTone: task.cardTone || "blue",
+      deliverAfter: Number.isInteger(task.notificationDelayMinutes)
+        ? new Date(now.getTime() + task.notificationDelayMinutes * 60_000).toISOString()
+        : null,
     };
     if (existing) Object.assign(existing, item);
     else this.state.state.notificationDigestPending.push(item);
@@ -794,18 +808,22 @@ export class MentionMonitor {
     )) return;
     if (this.state.state.notificationDigestFailure?.nextAttemptAt
       && new Date(this.state.state.notificationDigestFailure.nextAttemptAt) > now) return;
-    const oldest = new Date(pending[0].queuedAt);
     const maxDelay = Number(this.config.notificationDigestMaxDelayMs || 6 * 60 * 60_000);
-    if (now - oldest < maxDelay) return;
+    const due = pending.filter((item) => (
+      (item.deliverAfter && new Date(item.deliverAfter) <= now)
+      || now - new Date(item.queuedAt) >= maxDelay
+    ));
+    if (!due.length) return;
     this.digestFlushing = true;
     try {
-      const items = pending.slice(0, Number(this.config.notificationDigestMaxItems || 20));
+      const items = due.slice(0, Number(this.config.notificationDigestMaxItems || 20));
       const lines = items.map((item) => (
-        `- **${item.title}**${item.materialChange ? `：${item.materialChange}` : item.nextAction ? `：${item.nextAction}` : ""}\n  ${item.source} · ${item.sender}${item.url ? ` · ${item.url}` : ""}`
+        `- **${item.title}**${item.ownerMessage ? `：${item.ownerMessage}` : item.materialChange ? `：${item.materialChange}` : item.nextAction ? `：${item.nextAction}` : ""}\n  ${item.source} · ${item.sender}${item.url ? ` · ${item.url}` : ""}`
       ));
       await this.lark.send(
-        `**协作事项汇总**\n\n我合并了 ${items.length} 条不需要立即打断你的更新：\n\n${lines.join("\n")}\n\n紧急、明确 @、待批准、特别关注和调研事项不会进入这里。`,
+        `我把刚才几条不需要立刻打断你的信息合在一起了，共 ${items.length} 件。你有空时扫一眼就行：\n\n${lines.join("\n")}\n\n需要你马上决定的事情，我会单独告诉你。`,
         `notification-digest:${items[0].queuedAt}:${items.at(-1).messageId}`,
+        { title: items.length === 1 && items[0].notificationTitle ? items[0].notificationTitle : "我帮你归拢了几件事", tone: "grey", subtitle: "QuarkSelfAI · 你的个人协作助手" },
       );
       const ids = new Set(items.map((item) => item.messageId));
       this.state.state.notificationDigestPending = pending.filter((item) => !ids.has(item.messageId));
@@ -1142,8 +1160,8 @@ export class MentionMonitor {
     }
   }
 
-  async safeSend(markdown, suffix) {
-    try { return await this.lark.send(markdown, suffix); }
+  async safeSend(markdown, suffix, options = {}) {
+    try { return await this.lark.send(markdown, suffix, options); }
     catch (error) { this.logger.error("lark notification failed", error); return null; }
   }
 

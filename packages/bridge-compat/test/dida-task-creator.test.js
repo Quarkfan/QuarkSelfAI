@@ -15,7 +15,7 @@ while (( $# )); do
   shift
 done
 cat >/dev/null
-print -r -- '{"taskId":"task_1","projectId":"project_1","title":"【重要·关键】确认客户方案","titlePrefix":"【重要·关键】","urgencyLabel":"重要","keyItem":true,"url":null,"created":true,"taskAction":"created","intakeDecision":"task","actionRequired":true,"actionOwner":"changdongxu","nextAction":"确认客户方案","notificationDecision":"notify","notificationReason":"需要确认客户方案","materialChangeSummary":"新事项","summary":"ok","priority":3,"tags":["飞书","重要","关键事项"],"needsClarification":false,"blacklakeRelated":false,"researchDecision":"skip","researchChannel":"none"}' > "$out"
+print -r -- '{"taskId":"task_1","projectId":"project_1","title":"【重要·关键】确认客户方案","titlePrefix":"【重要·关键】","urgencyLabel":"重要","keyItem":true,"url":null,"created":true,"taskAction":"created","intakeDecision":"task","actionRequired":true,"actionOwner":"changdongxu","nextAction":"确认客户方案","notificationDecision":"notify","notificationMode":"realtime","notificationDelayMinutes":0,"notificationTitle":"客户方案等你确认","ownerMessage":"我把客户方案整理成待办了，现在只差你确认一下。","cardTone":"yellow","notificationReason":"需要确认客户方案","materialChangeSummary":"新事项","summary":"ok","priority":3,"tags":["飞书","重要","关键事项"],"needsClarification":false,"blacklakeRelated":false,"researchDecision":"skip","researchChannel":"none"}' > "$out"
 `, { mode: 0o755 });
   const creator = new DidaTaskCreator({
     codexCli: fake, workspaceRoot: dir, varDir: path.join(dir, "var"), didaProjectId: "project_1",
@@ -89,6 +89,24 @@ test("requires approval tasks to notify with a concrete approval summary", () =>
     priority: 1, urgencyLabel: "跟进", keyItem: false,
     titlePrefix: "【跟进】", title: "【跟进】审批扩容申请", tags: ["飞书", "跟进", "待批准"],
   }), /批准对象/);
+});
+
+test("accepts model-selected communication parameters but keeps approval realtime", () => {
+  assert.doesNotThrow(() => validateTaskPresentation({
+    created: false, taskAction: "updated", intakeDecision: "task", actionRequired: true,
+    actionOwner: "changdongxu", nextAction: "查看整理结果", requestType: "execution", approvalRequired: false,
+    notificationDecision: "notify", notificationMode: "digest", notificationDelayMinutes: 15,
+    notificationTitle: "我帮你归拢好了", ownerMessage: "这件事我已经整理进原待办，晚点看就行。", cardTone: "grey",
+    priority: 1, urgencyLabel: "跟进", keyItem: false,
+    titlePrefix: "【跟进】", title: "【跟进】查看整理结果", tags: ["飞书", "跟进"],
+  }));
+  assert.throws(() => validateTaskPresentation({
+    created: false, taskAction: "updated", requestType: "approval", approvalRequired: true,
+    notificationDecision: "notify", notificationMode: "digest", notificationDelayMinutes: 10,
+    notificationTitle: "需要决定", ownerMessage: "请确认。", cardTone: "yellow",
+    priority: 1, urgencyLabel: "跟进", keyItem: false,
+    titlePrefix: "【跟进】", title: "【跟进】确认方案", tags: ["飞书", "跟进", "待批准"],
+  }), /必须即时通知/);
 });
 
 test("keeps the latest user reply when formatting a long context", () => {
