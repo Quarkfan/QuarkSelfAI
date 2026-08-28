@@ -48,6 +48,7 @@ const EMPTY_STATE = {
   reactionStates: {},
   cardActionHealthFailure: null,
   overdueNotified: {},
+  overdueLastNotifiedAt: {},
   overdueHealthFailure: null,
   didaCompletedCleanupLastDay: null,
   didaCompletedCleanupLastAt: null,

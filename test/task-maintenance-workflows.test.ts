@@ -7,6 +7,7 @@ import { ASSISTANT_EFFECTS } from '../src/workflow/effects.js'
 
 const config = {
   projectId: 'project-automation', failureNotifyThreshold: 2,
+  overdueNotificationStartHour: 0, overdueNotificationEndHour: 0,
   cleanupAuthorization: {
     id: 'owner-policy:dida-cleanup:v1', grantedBy: 'owner' as const, grantedAt: '2026-08-20T00:00:00Z',
     scope: 'dida.completed-task-cleanup', revision: 1, source: 'owner-directive:periodic-cleanup',
@@ -14,7 +15,7 @@ const config = {
   },
 }
 
-test('overdue workflow emits stable notifications only when a task fingerprint changes', () => {
+test('overdue workflow suppresses same-day changes for 24 hours and later emits a stable reminder', () => {
   const definition = overdueWorkflow(config)
   const initialized = definition.initialize({}, '2026-08-24T00:00:00.000Z')
   const scanning = definition.reduce(initialized.state, {
@@ -41,8 +42,16 @@ test('overdue workflow emits stable notifications only when a task fingerprint c
     id: 'effect:scan-three:delivered', type: 'effect.delivered', occurredAt: '2026-08-24T01:00:04.000Z',
     payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 3 }] },
   })
-  assert.equal(changed.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length, 1)
-  assert.notEqual(changed.effects?.[0]?.id, first.effects?.[0]?.id)
+  assert.equal(changed.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length ?? 0, 0)
+  const laterScan = definition.reduce(changed.state, {
+    id: 'timer:four', type: 'timer', occurredAt: '2026-08-25T01:00:03.000Z', payload: { scheduledAt: changed.wakeAt },
+  })
+  const later = definition.reduce(laterScan.state, {
+    id: 'effect:scan-four:delivered', type: 'effect.delivered', occurredAt: '2026-08-25T01:00:04.000Z',
+    payload: { effectKind: TASK_STORE_EFFECTS.listOverdue, tasks: [{ taskId: 'task-1', title: '处理客户阻塞', dueDate: '2026-08-23', priority: 3 }] },
+  })
+  assert.equal(later.effects?.filter(effect => effect.kind === ASSISTANT_EFFECTS.notifyOwner).length, 1)
+  assert.notEqual(later.effects?.[0]?.id, first.effects?.[0]?.id)
   assert.match(String(first.effects?.[0]?.payload.body), /https:\/\/dida365\.com\/webapp\/#p\/project-automation\/tasks\/task-1/)
   assert.doesNotMatch(String(first.effects?.[0]?.payload.body), /didadao/)
 })

@@ -20,6 +20,10 @@ interface OverdueState extends Record<string, unknown> {
   readonly intervalMs: number
   readonly retryMs: number
   readonly failureThreshold: number
+  readonly notificationTimeZone: string
+  readonly notificationStartHour: number
+  readonly notificationEndHour: number
+  readonly reminderMinimumIntervalMs: number
   readonly phase: 'scheduled' | 'scanning'
   readonly notified: Readonly<Record<string, { readonly fingerprint: string; readonly at: string }>>
   readonly failure?: FailureState
@@ -70,6 +74,19 @@ function localSlot(now: string, timeZone: string, scheduledHour: number): { read
   return { day: `${parts.year}-${parts.month}-${parts.day}`, due: Number(parts.hour) >= scheduledHour }
 }
 
+function localWindow(now: string, timeZone: string, startHour: number, endHour: number): boolean {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(now))
+  const hour = Number(parts.find(part => part.type === 'hour')?.value)
+  return startHour === endHour || (startHour < endHour ? hour >= startHour && hour < endHour : hour >= startHour || hour < endHour)
+}
+
+function localDay(value: string, timeZone: string): string {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(value)).filter(part => part.type !== 'literal').map(part => [part.type, part.value]))
+  return `${parts.year}-${parts.month}-${parts.day}`
+}
+
 function notificationEffect(effectId: string, title: string, body: string, availableAt: string) {
   return { id: effectId, kind: ASSISTANT_EFFECTS.notifyOwner, availableAt, payload: { title, body, idempotencyKey: effectId } }
 }
@@ -87,10 +104,19 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
   const intervalMs = positiveInteger(config.overdueIntervalMs, 30 * MINUTE_MS, 'overdueIntervalMs', MINUTE_MS)
   const retryMs = positiveInteger(config.overdueRetryMs, 10 * MINUTE_MS, 'overdueRetryMs', MINUTE_MS)
   const failureThreshold = positiveInteger(config.failureNotifyThreshold, 3, 'failureNotifyThreshold')
+  const notificationTimeZone = config.overdueNotificationTimeZone ?? 'Asia/Shanghai'
+  const notificationStartHour = positiveInteger(config.overdueNotificationStartHour, 9, 'overdueNotificationStartHour', 0)
+  const notificationEndHour = positiveInteger(config.overdueNotificationEndHour, 19, 'overdueNotificationEndHour', 0)
+  if (notificationStartHour > 23 || notificationEndHour > 23) throw new Error('overdue notification hours must be at most 23')
+  const reminderMinimumIntervalMs = positiveInteger(config.overdueReminderMinimumIntervalMs, DAY_MS, 'overdueReminderMinimumIntervalMs', MINUTE_MS)
+  localWindow(new Date().toISOString(), notificationTimeZone, notificationStartHour, notificationEndHour)
   return {
     kind: 'dida.overdue-monitor', version: 1,
     initialize(_input, now): WorkflowDecision {
-      const state: OverdueState = { projectId, intervalMs, retryMs, failureThreshold, phase: 'scheduled', notified: {} }
+      const state: OverdueState = {
+        projectId, intervalMs, retryMs, failureThreshold, notificationTimeZone, notificationStartHour,
+        notificationEndHour, reminderMinimumIntervalMs, phase: 'scheduled', notified: {},
+      }
       return { status: 'waiting', state, wakeAt: now }
     },
     reduce(rawState, event): WorkflowDecision {
@@ -110,7 +136,15 @@ export function overdueWorkflow(config: DidaMaintenanceConfig): WorkflowDefiniti
         const effects = []
         for (const task of tasks) {
           const fingerprint = `${task.dueDate}:${task.priority}`
-          if (nextNotified[task.taskId]?.fingerprint === fingerprint) continue
+          const previous = nextNotified[task.taskId]
+          const separator = previous ? previous.fingerprint.lastIndexOf(':') : -1
+          const previousDueDate = previous && separator >= 0 ? previous.fingerprint.slice(0, separator) : undefined
+          const previousPriority = previous && separator >= 0 ? Number(previous.fingerprint.slice(separator + 1)) : undefined
+          const sameLocalDueDay = previousDueDate && previousPriority === task.priority
+            && localDay(previousDueDate, state.notificationTimeZone) === localDay(task.dueDate, state.notificationTimeZone)
+          const recentlyNotified = previous && new Date(event.occurredAt).getTime() - new Date(previous.at).getTime() < state.reminderMinimumIntervalMs
+          if (previous?.fingerprint === fingerprint || sameLocalDueDay || recentlyNotified
+            || !localWindow(event.occurredAt, state.notificationTimeZone, state.notificationStartHour, state.notificationEndHour)) continue
           const effectId = id('dida-overdue-notification', task.taskId, fingerprint)
           const taskUrl = `https://dida365.com/webapp/#p/${encodeURIComponent(state.projectId)}/tasks/${encodeURIComponent(task.taskId)}`
           effects.push(notificationEffect(effectId, `自动化待办已超期：${task.title}`,

@@ -121,14 +121,12 @@ test("records owner continuity and policy decisions as learning signals", async 
   assert.equal(h.state.state.collaborationLearning.candidates[0].status, "declined");
 });
 
-test("sends one concise daily review and does not duplicate it after another poll", async () => {
+test("records a no-change daily review without interrupting the owner", async () => {
   const h = harness({ collaborationLearningMinimumSamples: 100 });
   await h.monitor.observe(message(1), ordinaryTask(), new Date("2026-08-24T00:00:00Z"));
   await h.monitor.poll(new Date("2026-08-25T00:00:00Z"));
   await h.monitor.poll(new Date("2026-08-25T01:00:00Z"));
-  assert.equal(h.briefs.length, 1);
-  assert.match(h.briefs[0][0], /任务判断/);
-  assert.match(h.briefs[0][0], /可能打扰/);
+  assert.equal(h.briefs.length, 0);
   assert.equal(h.state.state.collaborationLearning.reviews.length, 1);
 });
 

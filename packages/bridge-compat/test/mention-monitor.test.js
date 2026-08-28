@@ -340,10 +340,9 @@ test("backs off transient Feishu rate limits without sending a generic failure a
   assert.ok(new Date(state.state.mentionNextPollAt) > new Date());
 });
 
-test("persists an undelivered failure until the combined recovery notification succeeds", async () => {
+test("silently clears a transient monitoring failure that never crossed the notification threshold", async () => {
   const state = stateHarness();
   let searchFails = true;
-  let sendFails = true;
   const messages = [];
   const monitor = new MentionMonitor({
     config: {
@@ -356,7 +355,7 @@ test("persists an undelivered failure until the combined recovery notification s
       async searchSpecialAttentionMessages() { return []; },
       async searchDirectMessages() { return []; },
       async searchFlaggedConversationMessages() { return []; },
-      async send(message) { if (sendFails) throw new Error("connection unavailable"); messages.push(message); },
+      async send(message) { messages.push(message); },
     },
     taskCreator: {}, logger: { error() {} },
   });
@@ -366,12 +365,7 @@ test("persists an undelivered failure until the combined recovery notification s
   assert.equal(state.state.mentionHealthFailure.notifiedAt, null);
   searchFails = false;
   await monitor.poll();
-  assert.ok(state.state.mentionHealthFailure);
-  sendFails = false;
-  await monitor.poll();
-  await monitor.poll();
-  assert.equal(messages.length, 1);
-  assert.match(messages[0], /曾发生异常，现已恢复/);
+  assert.equal(messages.length, 0);
   assert.equal(state.state.mentionHealthFailure, null);
 });
 
@@ -626,7 +620,7 @@ test("batches ordinary notifications only after an enabled policy matches", asyn
   assert.equal(sent.length, 0);
   assert.equal(state.state.notificationDigestPending.length, 1);
   state.state.notificationDigestPending[0].queuedAt = new Date(0).toISOString();
-  await monitor.flushNotificationDigest(new Date("2026-08-23T12:00:00Z"));
+  await monitor.flushNotificationDigest(new Date("2026-08-23T11:00:00Z"));
   assert.equal(sent.length, 1);
   assert.match(sent[0], /协作事项汇总/);
   assert.equal(state.state.notificationDigestPending.length, 0);

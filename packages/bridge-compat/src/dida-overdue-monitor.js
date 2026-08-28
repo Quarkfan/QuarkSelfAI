@@ -1,4 +1,4 @@
-import { formatUserTime } from "./util.js";
+import { formatUserTime, isWithinLocalHourWindow } from "./util.js";
 
 function normalizedDueDate(value) {
   const parsed = new Date(value);
@@ -10,11 +10,24 @@ export function overdueFingerprint(task) {
   return `${normalizedDueDate(task.dueDate)}:${Number(task.priority)}`;
 }
 
-function equivalentStoredFingerprint(stored, task) {
+function localDay(value, timeZone) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(parsed).filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function equivalentStoredFingerprint(stored, task, timeZone = "Asia/Shanghai") {
   if (typeof stored !== "string") return false;
   const separator = stored.lastIndexOf(":");
   if (separator < 0 || Number(stored.slice(separator + 1)) !== Number(task.priority)) return false;
-  try { return normalizedDueDate(stored.slice(0, separator)) === normalizedDueDate(task.dueDate); }
+  try {
+    const previous = normalizedDueDate(stored.slice(0, separator));
+    const current = normalizedDueDate(task.dueDate);
+    return previous === current || localDay(previous, timeZone) === localDay(current, timeZone);
+  }
   catch { return false; }
 }
 
@@ -34,7 +47,7 @@ export class DidaOverdueMonitor {
     this.retryTimer = null;
   }
 
-  async poll() {
+  async poll(now = new Date()) {
     if (this.polling) return;
     this.polling = true;
     try {
@@ -42,22 +55,42 @@ export class DidaOverdueMonitor {
       if (this.retryTimer) clearTimeout(this.retryTimer);
       this.retryTimer = null;
       const notifications = this.state.state.overdueNotified;
+      const lastNotifiedAt = this.state.state.overdueLastNotifiedAt ??= {};
+      const timeZone = this.config.notificationTimeZone || "Asia/Shanghai";
+      const canNotify = isWithinLocalHourWindow(
+        now, timeZone,
+        Number(this.config.overdueNotificationStartHour ?? 9),
+        Number(this.config.overdueNotificationEndHour ?? 19),
+      );
+      const minimumIntervalMs = Number(this.config.overdueReminderMinimumIntervalMs ?? 24 * 60 * 60_000);
+      const pending = [];
       for (const task of result.tasks) {
         const dueDate = normalizedDueDate(task.dueDate);
         const fingerprint = overdueFingerprint(task);
-        if (notifications[task.taskId] === fingerprint || equivalentStoredFingerprint(notifications[task.taskId], task)) {
+        if (notifications[task.taskId] === fingerprint || equivalentStoredFingerprint(notifications[task.taskId], task, timeZone)) {
           if (notifications[task.taskId] !== fingerprint) {
             notifications[task.taskId] = fingerprint;
             await this.state.save();
           }
           continue;
         }
+        const previousNotification = Date.parse(lastNotifiedAt[task.taskId] || "");
+        if (!canNotify || (Number.isFinite(previousNotification) && now.getTime() - previousNotification < minimumIntervalMs)) continue;
         const url = trustedTaskUrl(this.config.didaProjectId, task.taskId);
+        pending.push({ task, dueDate, fingerprint, url });
+      }
+      if (pending.length) {
+        const lines = pending.map(({ task, dueDate, url }) => (
+          `- **${task.title}**\n  截止：${formatUserTime(dueDate, timeZone)} · 优先级 ${task.priority}${url ? ` · ${url}` : ""}`
+        ));
         await this.lark.send(
-          `**自动化待办已超期：${task.title}**\n\n截止：${formatUserTime(dueDate, this.config.notificationTimeZone)}（北京时间）\n优先级：${task.priority}${url ? `\n${url}` : ""}`,
-          `overdue:${task.taskId}:${fingerprint}`,
+          `**自动化待办超期汇总**\n\n${lines.join("\n")}\n\n同一任务 24 小时内不重复提醒；完成后将自动停止提醒。`,
+          `overdue-digest:${now.toISOString().slice(0, 10)}:${pending.map((item) => item.task.taskId).sort().join(":")}`,
         );
-        notifications[task.taskId] = fingerprint;
+        for (const { task, fingerprint } of pending) {
+          notifications[task.taskId] = fingerprint;
+          lastNotifiedAt[task.taskId] = now.toISOString();
+        }
         await this.state.save();
       }
       if (this.state.state.overdueHealthFailure) {

@@ -406,7 +406,7 @@ export class ShadowCollaborationMonitor {
       reportState.metrics = report.metrics;
       reportState.markdown = report.markdown;
     }
-    if (this.config.shadowNotifyOnComplete === false || reportState.sentAt) return;
+    if (this.config.shadowNotifyOnComplete !== true || reportState.sentAt) return;
     try {
       const m = reportState.metrics;
       await this.lark.send(

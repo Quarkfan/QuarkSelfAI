@@ -198,7 +198,9 @@ export class CollaborationLearningMonitor {
           `**今日决定**：${adjustmentText}`,
           "边界不变：不会自动对外回复、外联、启动调研或执行高影响操作。",
         ].join("\n\n");
-        await this.lark.send(body, `collaboration-daily-review:${day}`);
+        if (proposalMade || autoAdjustments.length) {
+          await this.lark.send(body, `collaboration-daily-review:${day}`);
+        }
         learning.lastBriefDay = day;
         learning.reviews.push({ at: now.toISOString(), day, sampleCount: window.length, possibleNoise: count("difference", "possible_noise") + count("difference", "could_batch"), possibleMisses: count("difference", "possible_miss"), decision: proposalMade ? "approval-proposed" : autoAdjustments.length ? "auto-tuned" : "no-change" });
         learning.reviews = learning.reviews.slice(-90);

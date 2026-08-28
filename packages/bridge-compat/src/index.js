@@ -15,7 +15,7 @@ import { SessionJanitor } from "./session-janitor.js";
 import { WorkdayFollowupMonitor } from "./weekly-followup-monitor.js";
 import { XiaoweiResearchChannel } from "./xiaowei-research-channel.js";
 import { ShadowCollaborationMonitor } from "./shadow-collaboration.js";
-import { formatUserTime } from "./util.js";
+import { formatUserTime, isExplicitCardActionConfigurationFailure } from "./util.js";
 import { QuarkControlPlaneClient } from "./quark-control-plane-client.js";
 import { CollaborationLearningMonitor } from "./collaboration-learning.js";
 import { OwnerEngagementMonitor } from "./owner-engagement-monitor.js";
@@ -48,8 +48,9 @@ async function loadConfig() {
     mentionRateLimitBaseMs: 120000,
     mentionRateLimitMaxMs: 1800000,
     mentionRateLimitNotifyAfterMs: 1800000,
+    mentionHealthFailureNotifyAfterMs: 1800000,
     mentionProcessingFailureNotifyThreshold: 5,
-    mentionProcessingFailureNotifyAfterMs: 1800000,
+    mentionProcessingFailureNotifyAfterMs: 3600000,
     mentionInitialLookbackMinutes: 30,
     mentionOverlapMinutes: 10,
     mentionContextMinutes: 30,
@@ -89,6 +90,9 @@ async function loadConfig() {
     overdueMonitorEnabled: true,
     overdueRetryIntervalMs: 120000,
     overdueFailureNotifyThreshold: 3,
+    overdueNotificationStartHour: 9,
+    overdueNotificationEndHour: 19,
+    overdueReminderMinimumIntervalMs: 86400000,
     didaCompletedCleanupEnabled: true,
     didaCompletedRetentionDays: 30,
     didaCompletedCleanupMaxPerRun: 50,
@@ -101,6 +105,7 @@ async function loadConfig() {
     xiaoweiPollIntervalMs: 600000,
     xiaoweiMonitorEnabled: true,
     xiaoweiInitialLookbackMinutes: 180,
+    xiaoweiFailureNotifyAfterMs: 3600000,
     sessionCleanupIntervalMs: 21600000,
     sessionCleanupEnabled: true,
     sessionDeleteAfterDays: 7,
@@ -115,7 +120,7 @@ async function loadConfig() {
     shadowCalendarPollIntervalMs: 1800000,
     shadowCalendarLookaheadDays: 8,
     shadowTaskFeedbackPollIntervalMs: 21600000,
-    shadowNotifyOnComplete: true,
+    shadowNotifyOnComplete: false,
     collaborationLearningEnabled: true,
     collaborationLearningIntervalMs: 86400000,
     collaborationLearningMinimumSamples: 20,
@@ -128,6 +133,10 @@ async function loadConfig() {
     notificationDigestPollIntervalMs: 600000,
     notificationDigestMaxDelayMs: 21600000,
     notificationDigestMaxItems: 20,
+    ownerNotificationStartHour: 8,
+    ownerNotificationEndHour: 20,
+    digestNotificationStartHour: 8,
+    digestNotificationEndHour: 20,
     xiaoweiInsightDigestEnabled: true,
     xiaoweiInsightDigestChatId: null,
     xiaoweiInsightDigestPollIntervalMs: 3600000,
@@ -196,11 +205,12 @@ async function recordCardListenerFailure(detail) {
   const setupNotificationVersion = 2;
   if (stopping) return;
   console.error(`card action listener unavailable: ${detail}`);
-  const setupUrl = detail.match(/https:\/\/[^"\s]+/)?.[0] || null;
+  const explicitConfigurationFailure = isExplicitCardActionConfigurationFailure(detail);
+  const setupUrl = explicitConfigurationFailure ? detail.match(/https:\/\/[^"\s]+/)?.[0] || null : null;
   const firstFailure = !state.state.cardActionHealthFailure;
-  const shouldNotify = firstFailure
+  const shouldNotify = explicitConfigurationFailure && (firstFailure
     || (setupUrl && setupUrl !== state.state.cardActionHealthFailure?.setupUrl)
-    || (setupUrl && state.state.cardActionHealthFailure?.setupNotificationVersion !== setupNotificationVersion);
+    || (setupUrl && state.state.cardActionHealthFailure?.setupNotificationVersion !== setupNotificationVersion));
   if (firstFailure) {
     state.state.cardActionHealthFailure = { at: new Date().toISOString(), error: detail };
   } else {
@@ -244,12 +254,16 @@ function startCardListener() {
     if (String(data).includes("[event] ready event_key=card.action.trigger")) {
       ready = true;
       if (state.state.cardActionHealthFailure) {
-        const failedAt = state.state.cardActionHealthFailure.at;
+        const failure = state.state.cardActionHealthFailure;
+        const failedAt = failure.at;
         state.state.cardActionHealthFailure = null;
-        void state.save().then(() => lark.send(
-          `飞书交互卡片回调已恢复。故障始于：${formatUserTime(failedAt, config.notificationTimeZone)}（北京时间）`,
-          `card-listener-recovered:${failedAt}`,
-        )).catch(() => {});
+        void state.save().then(() => {
+          if (!failure.notificationMessageId) return null;
+          return lark.send(
+            `飞书交互卡片回调已恢复。故障始于：${formatUserTime(failedAt, config.notificationTimeZone)}（北京时间）`,
+            `card-listener-recovered:${failedAt}`,
+          );
+        }).catch(() => {});
       }
     }
   });
@@ -327,9 +341,6 @@ async function recordListenerFailure(detail) {
     state.state.mentionHealthFailure = { at: new Date().toISOString(), error: detail };
     await state.save();
   }
-  try {
-    await lark.send(`飞书实时指令连接已中断，服务将自动重启并恢复。\n\n${detail}`, `listener-failed:${state.state.mentionHealthFailure.at}`);
-  } catch {}
   process.exit(1);
 }
 

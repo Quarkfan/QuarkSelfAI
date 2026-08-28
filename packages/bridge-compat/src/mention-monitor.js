@@ -1,4 +1,4 @@
-import { formatUserTime } from "./util.js";
+import { formatUserTime, isWithinLocalHourWindow } from "./util.js";
 
 const CONVERSATION_ATTENTION_STRATEGY_VERSION = 1;
 
@@ -25,6 +25,14 @@ function userFacingError(error) {
 export function isLarkRateLimitError(error) {
   const text = String(error?.message || error || "");
   return /"code"\s*:\s*9499\b|too many request/i.test(text);
+}
+
+function requiresImmediateOwnerAttention(task) {
+  if (task.approvalRequired || Number(task.priority) >= 5) return true;
+  const tags = (task.tags || []).map((tag) => String(tag).toLowerCase());
+  return Boolean(task.keyItem) && tags.some((tag) => (
+    tag.includes("生产") || tag.includes("安全") || tag.includes("客户阻塞") || /^p[01]$/.test(tag)
+  ));
 }
 
 const LOW_SIGNAL_ACKNOWLEDGEMENTS = new Set([
@@ -488,15 +496,18 @@ export class MentionMonitor {
       if (this.state.state.mentionHealthFailure) {
         const failure = this.state.state.mentionHealthFailure;
         const failedAt = failure.at;
-        const recoveredNotified = await this.safeSendStatus(
-          failure.notifiedAt
-            ? `飞书重点消息监控已恢复。故障始于：${formatUserTime(failedAt, this.config.notificationTimeZone)}（北京时间）`
-            : `飞书重点消息监控曾发生异常，现已恢复。故障始于：${formatUserTime(failedAt, this.config.notificationTimeZone)}（北京时间）。故障期间通知因飞书连接不可用未能送达，现已补发。`,
-          `mention-recovered:${failedAt}`,
-        );
-        if (recoveredNotified) {
+        if (!failure.notifiedAt) {
           this.state.state.mentionHealthFailure = null;
           await this.state.save();
+        } else {
+          const recoveredNotified = await this.safeSendStatus(
+            `飞书重点消息监控已恢复。故障始于：${formatUserTime(failedAt, this.config.notificationTimeZone)}（北京时间）`,
+            `mention-recovered:${failedAt}`,
+          );
+          if (recoveredNotified) {
+            this.state.state.mentionHealthFailure = null;
+            await this.state.save();
+          }
         }
       }
     } catch (error) {
@@ -505,11 +516,17 @@ export class MentionMonitor {
         await this.handleRateLimit(error);
         return;
       }
-      if (!this.state.state.mentionHealthFailure) {
-        this.state.state.mentionHealthFailure = { at: new Date().toISOString(), error: error.message, notifiedAt: null };
-        await this.state.save();
-      }
-      if (!this.state.state.mentionHealthFailure.notifiedAt) {
+      const failure = this.state.state.mentionHealthFailure || {
+        at: new Date().toISOString(), count: 0, notifiedAt: null,
+      };
+      failure.count = Number(failure.count || 0) + 1;
+      failure.lastAt = new Date().toISOString();
+      failure.error = error.message;
+      this.state.state.mentionHealthFailure = failure;
+      await this.state.save();
+      const notifyAfterMs = Number(this.config.mentionHealthFailureNotifyAfterMs ?? 30 * 60_000);
+      const sustained = Date.now() - Date.parse(failure.at) >= notifyAfterMs;
+      if (sustained && !failure.notifiedAt) {
         const sent = await this.safeSendStatus(`飞书重点消息监控异常，后台会持续重试；如果飞书连接本身不可用，会在恢复后补发通知。\n\n${userFacingError(error)}`, `mention-failed:${this.state.state.mentionHealthFailure.at}`);
         if (sent) {
           this.state.state.mentionHealthFailure.notifiedAt = new Date().toISOString();
@@ -661,7 +678,14 @@ export class MentionMonitor {
           && !task.approvalRequired
           && !task.keyItem
           && task.researchDecision === "skip";
-        if ((policyEvaluation.effect?.attention === "batch" || attentionDigest) && !userNotified) {
+        const quietHoursDigest = notificationDecision === "notify"
+          && !isWithinLocalHourWindow(
+            new Date(), this.config.notificationTimeZone || "Asia/Shanghai",
+            Number(this.config.ownerNotificationStartHour ?? 8),
+            Number(this.config.ownerNotificationEndHour ?? 20),
+          )
+          && !requiresImmediateOwnerAttention(task);
+        if ((policyEvaluation.effect?.attention === "batch" || attentionDigest || quietHoursDigest) && !userNotified) {
           await this.queueDigestNotification(batchMessage, task, taskAction, policyEvaluation);
           userNotified = true;
         } else if (policyEvaluation.effect?.attention === "silent" && !userNotified) {
@@ -782,6 +806,11 @@ export class MentionMonitor {
     if (this.digestFlushing) return;
     const pending = this.state.state.notificationDigestPending || [];
     if (!pending.length) return;
+    if (!isWithinLocalHourWindow(
+      now, this.config.notificationTimeZone || "Asia/Shanghai",
+      Number(this.config.digestNotificationStartHour ?? 8),
+      Number(this.config.digestNotificationEndHour ?? 20),
+    )) return;
     if (this.state.state.notificationDigestFailure?.nextAttemptAt
       && new Date(this.state.state.notificationDigestFailure.nextAttemptAt) > now) return;
     const oldest = new Date(pending[0].queuedAt);
@@ -853,20 +882,11 @@ export class MentionMonitor {
       const failure = this.state.state.flaggedConversationHealthFailure;
       this.state.state.flaggedConversationHealthFailure = null;
       await this.state.save();
-      if (failure) {
-        await this.safeSend(
-          `飞书标记会话同步已恢复。故障始于：${formatUserTime(failure.at, this.config.notificationTimeZone)}（北京时间）`,
-          `flag-sync-recovered:${failure.at}`,
-        );
-      }
+      if (failure) this.logger.info?.("flagged conversation sync recovered", { failedAt: failure.at });
     } catch (error) {
       if (!this.state.state.flaggedConversationHealthFailure) {
         this.state.state.flaggedConversationHealthFailure = { at: now.toISOString(), error: error.message };
         await this.state.save();
-        await this.safeSend(
-          `飞书标记会话同步失败，将保留上次成功的关注清单并自动重试。\n\n${userFacingError(error)}`,
-          `flag-sync-failed:${now.toISOString()}`,
-        );
       }
       this.logger.error("flagged conversation sync failed", error);
     }

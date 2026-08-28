@@ -57,3 +57,18 @@ test("correlates a slow reply, notifies the user, and keeps it out of normal int
   assert.equal(h.sentToUser.length, 1);
   assert.match(h.sentToUser[0], /First Bad Hop/);
 });
+
+test("does not mirror replies from the owner's manual Xiaowei conversation", async () => {
+  const h = harness();
+  h.lark.getChatMessagesSince = async () => [{
+    message_id: "om_manual", chat_id: "oc_xiaowei", content: "现在创建",
+    sender: { id: "ou_me", name: "常东旭" }, create_time: "2026-08-28 09:00",
+  }, {
+    message_id: "om_manual_answer", chat_id: "oc_xiaowei", reply_to: "om_manual", content: "已经创建完成",
+    sender: { id: "ou_xiaowei", name: "智造湖小维" }, create_time: "2026-08-28 09:05",
+  }];
+  await h.channel.poll(new Date("2026-08-28T01:06:00Z"));
+  assert.equal(h.sentToUser.length, 0);
+  assert.equal(h.state.state.xiaoweiResearchRequests[0].status, "completed");
+  assert.ok(h.state.state.xiaoweiProcessedMessageIds.includes("om_manual_answer"));
+});

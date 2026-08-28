@@ -18,6 +18,27 @@ export function formatUserTime(value, timeZone = "Asia/Shanghai") {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
+export function localHour(value = new Date(), timeZone = "Asia/Shanghai") {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) throw new RangeError("invalid date");
+  return Number(new Intl.DateTimeFormat("en-US", {
+    timeZone, hour: "2-digit", hourCycle: "h23",
+  }).formatToParts(date).find((part) => part.type === "hour")?.value);
+}
+
+export function isWithinLocalHourWindow(value, timeZone = "Asia/Shanghai", startHour = 8, endHour = 20) {
+  const hour = localHour(value, timeZone);
+  if (startHour === endHour) return true;
+  if (startHour < endHour) return hour >= startHour && hour < endHour;
+  return hour >= startHour || hour < endHour;
+}
+
+export function isExplicitCardActionConfigurationFailure(detail) {
+  const text = String(detail || "");
+  return /card\.action\.trigger/i.test(text)
+    && /(not enabled|not configured|not subscribed|enable|configure|subscribe|missing[_ -]?scope|permission)/i.test(text);
+}
+
 export function splitMessage(text, maxChars) {
   if (text.length <= maxChars) return [text];
   const chunks = [];

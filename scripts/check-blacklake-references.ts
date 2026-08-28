@@ -5,6 +5,7 @@ import { BlacklakeReferenceService } from '../src/blacklake/references.js'
 const workspaceRoot = resolve(process.cwd(), process.env.BLACKLAKE_WORKSPACE_ROOT ?? '../..')
 const ctx = new Context()
 try {
+  ctx.reflect.provide('quarkActionLedger', { async enqueue() { throw new Error('compatibility inspection must not enqueue') } })
   const fiber = ctx.plugin(BlacklakeReferenceService, { workspaceRoot })
   await fiber
   const snapshot = await ctx.blacklakeReferences.inspect()

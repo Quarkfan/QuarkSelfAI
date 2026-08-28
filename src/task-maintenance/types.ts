@@ -20,6 +20,10 @@ export interface DidaMaintenanceConfig {
   readonly overdueIntervalMs?: number
   readonly overdueRetryMs?: number
   readonly failureNotifyThreshold?: number
+  readonly overdueNotificationTimeZone?: string
+  readonly overdueNotificationStartHour?: number
+  readonly overdueNotificationEndHour?: number
+  readonly overdueReminderMinimumIntervalMs?: number
   readonly cleanupTimeZone?: string
   readonly cleanupHour?: number
   readonly cleanupPollIntervalMs?: number

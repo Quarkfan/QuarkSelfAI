@@ -92,7 +92,7 @@ export class CollaborationLearningService extends Service {
     if (!review) return { reviewed: false, evaluatedAt, briefEnabled: false }
     return {
       reviewed: true, evaluatedAt, proposed: review.proposal !== undefined,
-      briefEnabled: this.config.dailyBriefEnabled !== false,
+      briefEnabled: this.config.dailyBriefEnabled !== false && review.decision !== 'no-change',
       briefTitle: review.briefTitle, briefBody: review.briefBody, reviewedAt: review.reviewedAt,
       decision: review.decision, sampleCount: review.sampleCount,
     }

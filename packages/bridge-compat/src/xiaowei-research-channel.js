@@ -78,21 +78,23 @@ export class XiaoweiResearchChannel {
       const failure = this.state.state.xiaoweiHealthFailure;
       this.state.state.xiaoweiHealthFailure = null;
       await this.state.save();
-      if (failure?.notified) {
+      if (failure?.notifiedAt) {
         await this.lark.send(`智造湖小维调研通道已恢复。故障始于：${formatUserTime(failure.at, this.config.notificationTimeZone)}（北京时间）`,
           `xiaowei-recovered:${failure.at}`);
       }
     } catch (error) {
       this.logger.error("xiaowei research poll failed", error);
       const failure = this.state.state.xiaoweiHealthFailure || {
-        at: now.toISOString(), count: 0, notified: false,
+        at: now.toISOString(), count: 0, notifiedAt: null,
       };
       failure.count += 1;
       failure.error = error.message;
       this.state.state.xiaoweiHealthFailure = failure;
       await this.state.save();
-      if (!failure.notified && failure.count >= 3) {
-        failure.notified = true;
+      const notifyAfterMs = Number(this.config.xiaoweiFailureNotifyAfterMs ?? 60 * 60_000);
+      const sustained = now.getTime() - Date.parse(failure.at) >= notifyAfterMs;
+      if (!failure.notifiedAt && failure.count >= 3 && sustained) {
+        failure.notifiedAt = now.toISOString();
         await this.state.save();
         try {
           await this.lark.send(`智造湖小维调研通道连续 ${failure.count} 次检查失败，后台会继续重试。\n\n${error.message}`,
@@ -177,15 +179,16 @@ ${item.prompt}
         request.replyContent = content;
         request.replyUrl = message.message_app_link || null;
         request.completedAt = request.taskId ? null : now.toISOString();
-        await this.lark.send(
-          `**${this.agent.name} 已返回调研结果**\n\n事项：${request.title}\n请求编号：${request.id}\n\n${content}${request.replyUrl ? `\n\n原消息：${request.replyUrl}` : ""}`,
-          `xiaowei-result:${request.id}:${message.message_id}`,
-        );
+        if (request.taskId) {
+          await this.lark.send(
+            `**${this.agent.name} 已返回调研结果**\n\n事项：${request.title}\n请求编号：${request.id}\n\n${content}${request.replyUrl ? `\n\n原消息：${request.replyUrl}` : ""}`,
+            `xiaowei-result:${request.id}:${message.message_id}`,
+          );
+        }
       } else {
-        await this.lark.send(
-          `**${this.agent.name} 发来一条未关联的黑湖排查更新**\n\n${content}${message.message_app_link ? `\n\n原消息：${message.message_app_link}` : ""}`,
-          `xiaowei-unmatched:${message.message_id}`,
-        );
+        this.logger.info?.("ignored unmatched Xiaowei update already visible in the owner's direct chat", {
+          messageId: message.message_id,
+        });
       }
       this.state.state.xiaoweiProcessedMessageIds.push(message.message_id);
       processed.add(message.message_id);
