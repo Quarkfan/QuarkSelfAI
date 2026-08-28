@@ -182,3 +182,4 @@
 - 使用正式 DSH checkout 与现有 OpenAI 兼容端点做一次隔离 headless 只读调用，返回 `DSH_ISOLATED_OK`；沙箱内 DNS 失败而沙箱外成功，确认是测试隔离限制，不是守护进程网络故障。核验产生的 3 个内嵌 profile 测试 session 已精确删除，不能恢复；隔离 profile 的核验 session 按 7 天策略保留。
 - 完整检查和 Lark/DSH/BlackLake/服务器兼容检查通过后，独立 compatibility provider 审计哈希更新为 `6f216bc3fa4c2f345509088803c350eb1034063a242a4e389da30587aa14baed`，文件数保持 31。
 - 回滚只需设置 `dshFallbackEnabled=false` 并恢复 `cordis.patch.yml` 的 Claude Code → Codex 路由；无需迁移数据库、修改飞书订阅或停止内嵌 DSH。剩余风险是第三方模型端点与 Codex/Claude 可能同时不可用，此时任务继续保留在原队列并按既有退避策略重试。
+- 变更以 `2976b64` 推送到 `main`。2026-08-28 11:35（北京时间）确认控制队列为 0、无 Codex/Claude/小维活动子任务后，重启同一 `com.quarkfan.quark-self-ai` LaunchAgent；健康接口返回 `ok=true`，DSH kernel 与 compatibility worker 均为 ready，消息、卡片、成员加入和两条表情事件共 5 个消费者全部恢复。
