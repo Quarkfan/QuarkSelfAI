@@ -1,9 +1,59 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { runCodexWithClaudeFallback } from "../src/cli-failover.js";
+import { pruneDshFallbackSessions, runCodexWithClaudeFallback, runDshSession } from "../src/cli-failover.js";
+
+test("runs a one-shot DSH task without exposing the request in process arguments", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "cli-dsh-fallback-"));
+  const dsh = path.join(dir, "dsh");
+  await writeFile(dsh, [
+    "#!/usr/bin/env node",
+    "const fs = require('node:fs');",
+    "const args = process.argv.slice(2);",
+    "fs.writeFileSync(process.env.ARGS_PATH, JSON.stringify({args,dshHome:process.env.DSH_HOME}));",
+    "const instruction = args.at(-1);",
+    "const requestPath = /读取 (.+) 中的任务要求/.exec(instruction)?.[1];",
+    "if (!requestPath) process.exit(7);",
+    "const request = fs.readFileSync(requestPath, 'utf8');",
+    "process.stdout.write(request.includes('只在请求文件出现') ? 'DSH 已完成' : '');",
+  ].join("\n"), { mode: 0o755 });
+  const argsPath = path.join(dir, "args.json");
+  const job = { sessionId: null, executor: "codex" };
+  const result = await runDshSession({
+    dshExecutable: dsh,
+    dshHome: path.join(dir, "dsh-home"),
+    dshFallbackHome: path.join(dir, "fallback-home"),
+    workspaceRoot: dir,
+    varDir: path.join(dir, "var"),
+  }, job, "只在请求文件出现", { env: { ...process.env, ARGS_PATH: argsPath } });
+  assert.equal(result.final, "DSH 已完成");
+  assert.equal(job.executor, "dsh-native");
+  const invocation = JSON.parse(await readFile(argsPath, "utf8"));
+  const args = invocation.args;
+  assert.equal(args.join(" ").includes("只在请求文件出现"), false);
+  assert.equal(invocation.dshHome, path.join(dir, "fallback-home"));
+});
+
+test("prunes only seven-day-old sessions from the isolated DSH fallback home", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "cli-dsh-prune-"));
+  const fallbackHome = path.join(dir, "fallback-home");
+  const workspace = path.join(fallbackHome, "sessions", "--workspace--");
+  const oldSession = path.join(workspace, "session-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+  const recentSession = path.join(workspace, "session-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+  await mkdir(oldSession, { recursive: true });
+  await mkdir(recentSession, { recursive: true });
+  const now = new Date("2026-08-28T03:00:00Z");
+  await utimes(oldSession, new Date("2026-08-20T03:00:00Z"), new Date("2026-08-20T03:00:00Z"));
+  const removed = await pruneDshFallbackSessions({
+    dshHome: path.join(dir, "embedded-home"), fallbackHome, dshFallbackHome: fallbackHome,
+    dshFallbackSessionRetentionDays: 7,
+  }, now);
+  assert.equal(removed, 1);
+  await assert.rejects(stat(oldSession), /ENOENT/);
+  assert.equal((await stat(recentSession)).isDirectory(), true);
+});
 
 test("falls back to Claude Code for a Codex infrastructure failure and preserves structured output", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "cli-failover-"));

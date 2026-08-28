@@ -1,5 +1,6 @@
 import { formatUserTime, run } from "./util.js";
 import path from "node:path";
+import { pruneDshFallbackSessions } from "./cli-failover.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -142,6 +143,7 @@ export class SessionJanitor {
     if (this.running) return;
     this.running = true;
     try {
+      await pruneDshFallbackSessions(this.config, now);
       await this.deleteExpired(now);
       const waitingIds = new Set(this.state.state.mentionClarifications.map((item) => item.researchSessionId).filter(Boolean));
       const candidates = this.state.state.mentionResearchSessions.filter((session) =>

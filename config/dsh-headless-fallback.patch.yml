@@ -1,0 +1,18 @@
+# One-shot DSH fallback profile. It reuses the same model endpoint contract as
+# the embedded web profile without loading Feishu consumers or Quark workflows.
+- id: llm-pi-ai
+  config:
+    providers:
+      blacklake-deepseek:
+        displayName: BlackLake DeepSeek
+        api: openai-completions
+        apiKeyEnv: QUARK_INFERENCE_API_KEY
+        baseURL: !!js process.env.QUARK_INFERENCE_BASE_URL
+        models:
+          - id: deepseek/openai/deepseek-v4-pro
+            name: DeepSeek V4 Pro
+
+- id: agent-default-model
+  config:
+    provider: blacklake-deepseek
+    model: deepseek/openai/deepseek-v4-pro

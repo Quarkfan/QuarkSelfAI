@@ -21,6 +21,11 @@ PostgreSQL 和 systemd 是未来服务器部署的兼容形态，不代表默认
 兼容期遗留的 `DSH_PROFILE` 不会覆盖原生选择。内核退出会使父守护进程失败退出，交给
 launchd、systemd 或容器 restart policy 退避恢复。`ASSISTANT_KERNEL=off` 只允许用于测试/诊断，不满足生产接管门禁。
 
+兼容期的本人私聊总控在 Codex 与 Claude Code 都发生基础设施故障时，使用 DSH `headless` profile 做最后兜底。
+该一次性 profile 使用 `var/dsh-fallback`（或配置的 `dshFallbackHome`），不得与内嵌 Web profile 共用
+`DSH_HOME`；原始要求写入 `0600` 临时文件而不进入进程参数，完成后立即删除。兜底 session 只保留 7 天，
+由现有 session cleanup 周期清理。明确指定 Codex session 和结构化滴答写入不进入这条链路。
+
 ## 容器部署
 
 SQLite 单实例：

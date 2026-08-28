@@ -124,6 +124,51 @@ sleep 1
   });
 });
 
+test("uses DSH native after Codex and Claude infrastructure failures for the owner controller", async () => {
+  const fake = await fakeCodex(`print -u2 'request timed out'; exit 1`);
+  const claude = path.join(fake.dir, "claude");
+  const dsh = path.join(fake.dir, "dsh");
+  await writeFile(claude, "#!/bin/zsh\ncat >/dev/null\nprint -u2 'connection reset'\nexit 1\n", { mode: 0o755 });
+  await writeFile(dsh, [
+    "#!/usr/bin/env node",
+    "const fs = require('node:fs');",
+    "const instruction = process.argv.at(-1);",
+    "const requestPath = /读取 (.+) 中的任务要求/.exec(instruction)?.[1];",
+    "if (!requestPath || !fs.readFileSync(requestPath, 'utf8').includes('继续处理')) process.exit(9);",
+    "console.log('DSH 已兜底处理');",
+  ].join("\n"), { mode: 0o755 });
+  const runner = new CodexRunner({
+    codexCli: fake.file, claudeCli: claude, codexHome: fake.dir,
+    dshExecutable: dsh, dshHome: path.join(fake.dir, "dsh-home"), dshFallbackHome: path.join(fake.dir, "fallback-home"), dshFallbackEnabled: true,
+    workspaceRoot: fake.dir, varDir: path.join(fake.dir, "var"), progressIntervalMs: 0,
+    claudeFallbackEnabled: true,
+  });
+  const job = { sessionId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", prompt: "继续处理", controller: true };
+  const result = await runner.execute(job);
+  assert.equal(result, "DSH 已兜底处理");
+  assert.equal(job.executor, "dsh-native");
+});
+
+test("does not move an explicitly targeted Codex session to DSH native", async () => {
+  const fake = await fakeCodex(`print -u2 'request timed out'; exit 1`);
+  const claude = path.join(fake.dir, "claude");
+  const dsh = path.join(fake.dir, "dsh");
+  await writeFile(claude, "#!/bin/zsh\ncat >/dev/null\nprint -u2 'connection reset'\nexit 1\n", { mode: 0o755 });
+  await writeFile(dsh, "#!/bin/zsh\nprint 'must not run'\n", { mode: 0o755 });
+  const runner = new CodexRunner({
+    codexCli: fake.file, claudeCli: claude, codexHome: fake.dir,
+    dshExecutable: dsh, dshHome: path.join(fake.dir, "dsh-home"), dshFallbackHome: path.join(fake.dir, "fallback-home"), dshFallbackEnabled: true,
+    workspaceRoot: fake.dir, varDir: path.join(fake.dir, "var"), progressIntervalMs: 0,
+    claudeFallbackEnabled: true,
+  });
+  const job = { sessionId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", prompt: "继续指定会话", controller: false };
+  await assert.rejects(runner.execute(job), (error) => {
+    assert.equal(error.executor, "claude");
+    assert.doesNotMatch(error.message, /DSH native/);
+    return true;
+  });
+});
+
 test("creates a new session and captures its thread id", async () => {
   const fake = await fakeCodex(`
 while IFS= read -r line; do

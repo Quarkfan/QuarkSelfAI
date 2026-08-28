@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { run, shortId } from "./util.js";
 import { createVisibleThread } from "./codex-app-server-client.js";
-import { codexEnvironment, ExecutorFailure, isCodexInfrastructureFailure, runClaudeSession } from "./cli-failover.js";
+import { codexEnvironment, ExecutorFailure, isCodexInfrastructureFailure, runClaudeSession, runDshSession } from "./cli-failover.js";
 
 const SAFETY_CONTEXT = `
 
@@ -97,6 +97,18 @@ export class CodexRunner {
     await mkdir(runDir, { recursive: true });
     const finalPath = path.join(runDir, "final.md");
     const prompt = `${job.prompt}${buildConversationContinuityContext(job.conversationContext)}${SAFETY_CONTEXT}${job.controller ? CONTROLLER_CONTEXT : ""}`;
+    const allowDshFallback = job.controller === true && this.config.dshFallbackEnabled !== false;
+    if (job.executor === "dsh-native") {
+      try {
+        const result = await runDshSession(this.config, job, prompt, {
+          timeoutMs: this.config.dshSessionTimeoutMs || 20 * 60_000,
+          onSpawn: (child) => this.running.set(job.sessionId, child),
+        });
+        return result.final;
+      } finally {
+        this.running.delete(job.sessionId);
+      }
+    }
     if (job.executor === "claude") {
       try {
         const result = await runClaudeSession(this.config, job, prompt, {
@@ -104,6 +116,13 @@ export class CodexRunner {
           onSpawn: (child) => this.running.set(job.sessionId, child),
         });
         return result.final;
+      } catch (error) {
+        if (!allowDshFallback || !isCodexInfrastructureFailure(error)) throw error;
+        const fallback = await runDshSession(this.config, job, prompt, {
+          timeoutMs: this.config.dshSessionTimeoutMs || 20 * 60_000,
+          onSpawn: (child) => this.running.set(job.sessionId, child),
+        });
+        return fallback.final;
       } finally {
         this.running.delete(job.sessionId);
       }
@@ -160,14 +179,44 @@ export class CodexRunner {
       if (/writer.*lock|thread.*lock|already.*running|session.*busy|resource busy/i.test(detail)) {
         throw new SessionBusyError(detail);
       }
-      if (this.config.claudeFallbackEnabled !== false && isCodexInfrastructureFailure(result)) {
-        try {
-          const fallback = await runClaudeSession(this.config, job, prompt, {
-            timeoutMs: this.config.claudeSessionTimeoutMs || 20 * 60_000,
-            onSpawn: (child) => this.running.set(job.sessionId, child),
-          });
-          return fallback.final;
-        } catch (fallbackError) {
+      if (isCodexInfrastructureFailure(result)) {
+        let fallbackError = null;
+        if (this.config.claudeFallbackEnabled !== false) {
+          try {
+            const fallback = await runClaudeSession(this.config, job, prompt, {
+              timeoutMs: this.config.claudeSessionTimeoutMs || 20 * 60_000,
+              onSpawn: (child) => this.running.set(job.sessionId, child),
+            });
+            return fallback.final;
+          } catch (error) {
+            fallbackError = error;
+          } finally {
+            this.running.delete(job.sessionId);
+          }
+        }
+        if (allowDshFallback && (!fallbackError || isCodexInfrastructureFailure(fallbackError))) {
+          try {
+            const fallback = await runDshSession(this.config, job, prompt, {
+              timeoutMs: this.config.dshSessionTimeoutMs || 20 * 60_000,
+              onSpawn: (child) => this.running.set(job.sessionId, child),
+            });
+            return fallback.final;
+          } catch (dshError) {
+            throw new ExecutorFailure(
+              `Codex 主执行基础设施失败：${detail.slice(-1500)}${fallbackError ? `\n\nClaude Code 兜底失败：${fallbackError.message}` : ""}\n\nDSH native 兜底失败：${dshError.message}`,
+              {
+                cause: dshError,
+                executor: "dsh-native",
+                retryable: Boolean(dshError.retryable) || isCodexInfrastructureFailure(dshError),
+                timedOut: Boolean(dshError.timedOut),
+                exitCode: dshError.exitCode,
+              },
+            );
+          } finally {
+            this.running.delete(job.sessionId);
+          }
+        }
+        if (fallbackError) {
           throw new ExecutorFailure(
             `Codex 主执行基础设施失败：${detail.slice(-1500)}\n\nClaude Code 兜底失败：${fallbackError.message}`,
             {
@@ -178,8 +227,6 @@ export class CodexRunner {
               exitCode: fallbackError.exitCode,
             },
           );
-        } finally {
-          this.running.delete(job.sessionId);
         }
       }
       throw new Error(`Codex 会话执行失败（exit ${result.code}）：\n${detail}`);

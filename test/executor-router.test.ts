@@ -14,7 +14,7 @@ const providers = {
   codex: { readOnly: 'quark-codex-read', write: 'quark-codex-write' },
   'dsh-native': { readOnly: 'spawn', write: 'spawn' },
 }
-const routes = { 'claude-code': ['claude-code', 'codex'], codex: ['codex'], 'dsh-native': ['dsh-native'] }
+const routes = { 'claude-code': ['claude-code', 'dsh-native', 'codex'], codex: ['codex'], 'dsh-native': ['dsh-native'] }
 
 function parent(cwd: string): Agent {
   return { session: { header: { cwd } } } as unknown as Agent
@@ -62,16 +62,27 @@ test('uses Claude first and disposes its run before returning', async () => {
   assert.deepEqual(h.disposed, ['session-1'])
 })
 
-test('falls back to Codex only after a Claude infrastructure failure', async () => {
+test('falls back through DSH native before Codex after infrastructure failures', async () => {
   const h = await harness([
     { stopReason: 'error', diagnostic: 'transport connection timeout', output: [] },
+    { stopReason: 'error', diagnostic: 'model endpoint connection timeout', output: [] },
     { stopReason: 'completed', output: [{ type: 'text', text: 'done by Codex' }] },
   ])
   const result = await h.router.execute(request(h.workspace), new AbortController().signal)
   assert.equal(result.executor, 'codex')
-  assert.deepEqual(h.calls, ['quark-claude-code-read', 'quark-codex-read'])
-  assert.deepEqual(h.disposed, ['session-1', 'session-2'])
+  assert.deepEqual(h.calls, ['quark-claude-code-read', 'spawn', 'quark-codex-read'])
+  assert.deepEqual(h.disposed, ['session-1', 'session-2', 'session-3'])
   assert.equal(result.attempts[0]?.failureStage, 'run')
+})
+
+test('uses DSH native as the first successful fallback for generic actions', async () => {
+  const h = await harness([
+    { stopReason: 'error', diagnostic: 'transport connection timeout', output: [] },
+    { stopReason: 'completed', output: [{ type: 'text', text: 'done by DSH' }] },
+  ])
+  const result = await h.router.execute(request(h.workspace), new AbortController().signal)
+  assert.equal(result.executor, 'dsh-native')
+  assert.deepEqual(h.calls, ['quark-claude-code-read', 'spawn'])
 })
 
 test('does not duplicate deterministic Claude failures on Codex', async () => {

@@ -77,7 +77,7 @@
           codex: { readOnly: quark-codex-read, write: quark-codex-write }
           dsh-native: { readOnly: spawn, write: spawn }
         routes:
-          claude-code: [claude-code, codex]
+          claude-code: [claude-code, dsh-native, codex]
           codex: [codex]
           dsh-native: [dsh-native]
     - id: quark-durable-state

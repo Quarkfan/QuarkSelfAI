@@ -11,7 +11,7 @@
 2. **Channel adapters**：飞书 CLI、滴答 CLI/MCP、日历等外部协议；只负责能力发现、传输和规范化。
 3. **Assistant domain**：matter、action、approval、follow-up、deduplication、settlement；不依赖 CLI 参数。
 4. **Policy plugins**：本人私聊直办、外部群禁言、正式回复审批、重点联系人、黑湖路由等规则。
-5. **Executor providers**：Claude Code 优先，Codex 异常兜底，DSH native 可选；同一 action 只能有一个实际执行者。
+5. **Executor providers**：普通原生 action 使用 Claude Code → DSH native → Codex 的基础设施故障串行兜底；同一 action 只能有一个实际执行者。
 6. **Projections**：滴答任务、飞书卡片、Codex 任务侧栏都是领域状态的投影，不是真源。
 7. **Console surface**：3210 提供带登录门禁的运维控制面，3211 承载仅回环可达的 DSH 原生会话 UI；
    DSH 会话嵌入统一导航，但不会扩大到远程网络。
@@ -47,8 +47,11 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 只读实例使用 `dontAsk`/`never`，只有从已批准 durable action claim 签发的单次 capability 才能让写请求进入
 `acceptEdits`/`approve-for-me`。
 默认先调用隔离命名的官方 Claude Code Provider；
-只有启动、网络、传输、额度等基础设施故障才在前一 run 完全 dispose 后调用 Codex，schema/业务拒绝等确定性
-错误不重复执行。DSH native `spawn` 仅在明确选择时使用。相同 actionId 的并发调用被拒绝，本地 workspace
+只有启动、网络、传输、额度等基础设施故障才在前一 run 完全 dispose 后依次调用 DSH native 与 Codex，
+schema/业务拒绝等确定性错误不重复执行。DSH native `spawn` 既可被明确选择，也可作为普通 action 的第二执行通道；明确指定 Codex
+session 或依赖原 provider 会话连续性的任务不进入该通用路由。兼容期本人私聊总控仍先延续原 Codex session，
+仅在 Codex 与 Claude Code 都发生基础设施故障时调用隔离 `DSH_HOME` 的 headless profile；结构化滴答写入继续
+使用原有 schema-aware provider 链路。相同 actionId 的并发调用被拒绝，本地 workspace
 必须等于父 DSH session 的 cwd 且落在白名单内。workspace/external write capability 绑定 actionId、完整请求与
 workspace，只能使用一次；伪造、修改或重放都会在 Provider 启动前失败。该 capability 和内存互斥只是进程内
 最后一道防线，正式执行仍必须先由 action ledger 原子 claim；具体 approval grantor 由发起 action 的 feature 决定，

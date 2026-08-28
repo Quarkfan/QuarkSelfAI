@@ -19,7 +19,9 @@ function applyExecutionFailure(job, error) {
 }
 
 function executorLabel(executor) {
-  return executor === "claude" ? "Claude Code" : "Codex";
+  if (executor === "claude") return "Claude Code";
+  if (executor === "dsh-native") return "DSH native";
+  return "Codex";
 }
 
 function executionChannel(job) {

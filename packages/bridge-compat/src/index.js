@@ -22,6 +22,7 @@ import { OwnerEngagementMonitor } from "./owner-engagement-monitor.js";
 import { XiaoweiInsightDigestMonitor } from "./xiaowei-insight-digest.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const assistantRoot = path.resolve(projectRoot, "../..");
 
 async function loadConfig() {
   const configPath = process.env.CODEX_LARK_CONFIG || path.join(projectRoot, "config.json");
@@ -37,6 +38,10 @@ async function loadConfig() {
     claudeUseSubscriptionAuth: true,
     claudeExecutionTimeoutMs: 600000,
     claudeSessionTimeoutMs: 1200000,
+    dshFallbackEnabled: true,
+    dshSessionTimeoutMs: 1200000,
+    dshHeadlessProfile: "headless",
+    dshFallbackSessionRetentionDays: 7,
     maxCandidates: 5,
     maxReplyChars: 12000,
     notificationTimeZone: "Asia/Shanghai",
@@ -148,6 +153,11 @@ async function loadConfig() {
     xiaoweiInsightDigestMaxItems: 6,
     xiaoweiInsightDigestCandidateLimit: 60,
     ...config,
+    dshExecutable: config.dshExecutable || process.env.DSH_EXECUTABLE || null,
+    dshCheckout: config.dshCheckout || process.env.DSH_CHECKOUT || path.resolve(assistantRoot, "../deepseek-harness"),
+    dshHome: path.resolve(assistantRoot, config.dshHome || process.env.DSH_HOME || "var/dsh"),
+    dshFallbackHome: path.resolve(assistantRoot, config.dshFallbackHome || "var/dsh-fallback"),
+    dshHeadlessPatchPath: config.dshHeadlessPatchPath || path.join(assistantRoot, "config", "dsh-headless-fallback.patch.yml"),
     varDir: config.varDir || path.join(projectRoot, "var"),
     didaResultSchemaPath: config.didaResultSchemaPath || path.join(projectRoot, "schemas", "dida-task-result.schema.json"),
     didaOverdueSchemaPath: config.didaOverdueSchemaPath || path.join(projectRoot, "schemas", "dida-overdue-result.schema.json"),

@@ -161,3 +161,24 @@
 - `deploy/network/magicnet-safe.sh` 只允许 root 执行，严格校验 `blacklake`、DHCP 来源网段、无手工 DNS和目标网段；重复启停幂等，部分写入失败会回滚，`off` 拒绝覆盖不属于它的手动配置。
 - 完整 `npm run check` 通过。预备模块保持 `implementation=partial,runtime=inactive`，未挂入 Cordis profile，未重启守护进程，也未执行任何网络修改。
 - 激活前仍需：实现并安装 root-owned 固定子命令 helper、精确恢复原 Wi-Fi/Clash 状态、接入持久失败通知、本地通知兜底，并在维护窗口完成逐阶段故障与回滚演练。回滚为保持模块不挂载并删除相关激活配置；当前现网行为没有变化。
+
+## 2026-08-28 DSH native 任务兜底
+
+### 目标与边界
+
+- 内嵌 DSH 不只承担 Cordis 生命周期和控制台会话，也作为可执行任务通道。普通原生 durable action 的配置路由改为 Claude Code → DSH native → Codex，仅在基础设施故障时串行切换，确定性 schema、业务拒绝和权限错误不重复执行。
+- 当前兼容期本人飞书私聊总控仍优先延续原 Codex session；只有 Codex 与 Claude Code 都发生基础设施故障时才启动一次性 DSH headless。明确指定其他 Codex session、创建左侧栏可见 Codex 会话、结构化滴答写入和需要原 provider 连续性的任务不允许静默改走 DSH。
+- 该变更复用既有 executor/provider 插件 seam，不修改 DSH/Cordis 内核、不新增飞书消费者、不改变 durable 状态真源，也不调用智造湖小维。
+
+### 实现、数据与安全
+
+- compatibility adapter 通过正式 DSH CLI 启动 `headless` profile，并使用独立 `var/dsh-fallback`，避免与内嵌 Web profile 并发写 session 存储。模型端点和模型名由独立 patch 复用 `QUARK_INFERENCE_BASE_URL`、`QUARK_INFERENCE_API_KEY` 与 `deepseek/openai/deepseek-v4-pro`，密钥不写入仓库或命令参数。
+- 飞书原始要求先写入 `0600` 随机临时文件，进程参数只携带文件路径；执行结束无论成功失败都会删除请求文件。DSH fallback session 保留至少 7 天，既有 session cleanup 周期只清理隔离目录中到期且匹配 UUID 目录形状的记录，每次最多 50 条。
+- 执行结果与实际 provider 继续写入原队列和 execution history；飞书最终卡片能显示 `Codex -> DSH native 兜底`，重试仍从 originally requested provider 开始，避免把瞬时兜底固化为主路由。
+
+### 验证、回滚与风险
+
+- 单元回归覆盖请求正文不进入 argv、独立 DSH_HOME、7 天清理边界、Codex/Claude 双故障后 DSH 成功、显式 Codex session 禁止跨 provider，以及 native 路由的 DSH/Codex 串行顺序。
+- 使用正式 DSH checkout 与现有 OpenAI 兼容端点做一次隔离 headless 只读调用，返回 `DSH_ISOLATED_OK`；沙箱内 DNS 失败而沙箱外成功，确认是测试隔离限制，不是守护进程网络故障。核验产生的 3 个内嵌 profile 测试 session 已精确删除，不能恢复；隔离 profile 的核验 session 按 7 天策略保留。
+- 完整检查和 Lark/DSH/BlackLake/服务器兼容检查通过后，独立 compatibility provider 审计哈希更新为 `6f216bc3fa4c2f345509088803c350eb1034063a242a4e389da30587aa14baed`，文件数保持 31。
+- 回滚只需设置 `dshFallbackEnabled=false` 并恢复 `cordis.patch.yml` 的 Claude Code → Codex 路由；无需迁移数据库、修改飞书订阅或停止内嵌 DSH。剩余风险是第三方模型端点与 Codex/Claude 可能同时不可用，此时任务继续保留在原队列并按既有退避策略重试。
