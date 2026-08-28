@@ -145,3 +145,19 @@
 - 回滚可恢复各监控原先的即时 `send` 分支并移除时段配置；无需迁移数据库或修改 DSH/Cordis 核心边界。状态新增的 `overdueLastNotifiedAt` 是向后兼容字段，旧状态可直接加载。
 - 待上线后只读观察真实事件流和控制会话，不创建测试飞书消息或测试滴答任务。长时间全局网络故障期间飞书本身可能无法送达降级通知，仍依赖本地持久化并在服务恢复后从队列补处理业务消息。
 - 2026-08-28 10:30（北京时间）确认无活动 Codex、Claude 或小维调研后，优雅重启同一 `com.quarkfan.quark-self-ai` LaunchAgent；父进程保持 running，消息、卡片、成员加入和两条表情事件共 5 个消费者全部 ready，健康状态为空。重启后只读检查控制会话未产生新的基础设施故障或恢复消息。
+
+## 2026-08-28 本地网络恢复预备实现
+
+### 目标、证据与决策
+
+- 用户提供的 `/Users/edy/Downloads/magicnet.sh` 语法有效，但不连接或校验 `blacklake`，`off` 会覆盖既有手动配置，后台执行依赖交互式 sudo，且修改 IP 后的中途失败没有回滚。
+- 本机只读核对确认已记住 `Calvin-TProxy_5G` 与 `blacklake`；Clash Verge 2.5.2 使用 `verge-mihomo` 控制 socket，系统 HTTP/HTTPS/SOCKS 代理均关闭，因此不能把系统代理开关等同于 Clash/TUN 状态。
+- 网络恢复只接受同一 durable action 至少连续两次的连接类失败，并排除鉴权、权限、配额/限流、schema、模型和业务错误。Google 当前路径/显式直连路径用于定位代理问题，Codex 与飞书端点共同决定恢复是否成功。
+- 顺序固定为 Clash、`Calvin-TProxy_5G`、`blacklake`、blacklake 静态路由；30 分钟内单实例执行，避免多个失败任务同时切网。
+
+### 变更、验证、回滚与未决风险
+
+- 新增 `network-recovery-adapter` 预备模块、纯策略、只读探针、allowlisted helper 协议及回归测试；action worker 只发出通用基础设施失败信号，不依赖该 feature，不改变 DSH/Cordis 核心边界。
+- `deploy/network/magicnet-safe.sh` 只允许 root 执行，严格校验 `blacklake`、DHCP 来源网段、无手工 DNS和目标网段；重复启停幂等，部分写入失败会回滚，`off` 拒绝覆盖不属于它的手动配置。
+- 完整 `npm run check` 通过。预备模块保持 `implementation=partial,runtime=inactive`，未挂入 Cordis profile，未重启守护进程，也未执行任何网络修改。
+- 激活前仍需：实现并安装 root-owned 固定子命令 helper、精确恢复原 Wi-Fi/Clash 状态、接入持久失败通知、本地通知兜底，并在维护窗口完成逐阶段故障与回滚演练。回滚为保持模块不挂载并删除相关激活配置；当前现网行为没有变化。

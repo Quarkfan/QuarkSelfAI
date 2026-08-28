@@ -60,7 +60,14 @@ export class ActionWorkerService extends Service {
     if (this.running) return []
     this.running = true
     try {
-      return await Promise.all(this.workers.map(worker => worker.runOnce(this.controller.signal, now)))
+      const results = await Promise.all(this.workers.map(worker => worker.runOnce(this.controller.signal, now)))
+      for (const result of results) {
+        if (result.status !== 'deferred' || !result.actionId || !result.attempt || !result.error) continue
+        this.ctx.emit('quark/executor-infrastructure-failure', {
+          actionId: result.actionId, attempt: result.attempt, error: result.error, occurredAt: now.toISOString(),
+        })
+      }
+      return results
     } finally { this.running = false }
   }
 }
