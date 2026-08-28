@@ -88,6 +88,18 @@ test("carries recent owner DM and reply metadata for continuity judgment", async
   assert.equal(executed[1].prompt, "继续处理这个");
 });
 
+test("marks an explicit reply to a proactive question as owner knowledge rather than implicit authorization", async () => {
+  const harness = createHarness([]);
+  let executed = null;
+  harness.bridge.proactiveConversation = {
+    async recordReplyIfMatched() { return { question: "什么情况下进度同步要建任务？", knowledgeKey: "task-admission" }; },
+  };
+  harness.bridge.runner.execute = async (job) => { executed = job; return "已记住"; };
+  await harness.bridge.handle({ ...event("m-proactive-reply", "没有明确下一步就不用建"), reply_to: "om_proactive_question" });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(executed.conversationContext.proactiveQuestion.knowledgeKey, "task-admission");
+});
+
 test("retains a private message when direct Codex execution is temporarily unavailable", async () => {
   const harness = createHarness([]);
   harness.bridge.config.sessionRetryBaseMs = 30_000;
@@ -210,6 +222,24 @@ test("handles a research decision from an interactive card once", async () => {
   await harness.bridge.handleCardAction(action);
   assert.equal(harness.state.state.mentionResearchConfirmations[0].status, "approved");
   assert.deepEqual(harness.state.state.processedCardEventIds, ["event-1"]);
+});
+
+test("records a proactive conversation answer from the card without treating it as a command", async () => {
+  const harness = createHarness([]);
+  harness.state.state.processedCardEventIds = [];
+  let recorded = null;
+  harness.bridge.proactiveConversation = {
+    async recordAnswer(answer, options) { recorded = { answer, options }; return { status: "answered" }; },
+  };
+  const action = {
+    event_id: "proactive-answer-1", operator_id: "ou_me", token: "token-proactive", message_id: "card-proactive",
+    action_tag: "button", action_name: "proactive_learning_submit", form_value: JSON.stringify({ prompt: "进度同步先不要建任务" }),
+  };
+  await harness.bridge.handleCardAction(action);
+  assert.equal(recorded.answer, "进度同步先不要建任务");
+  assert.equal(recorded.options.source, "card");
+  assert.deepEqual(harness.state.state.queue, []);
+  assert.deepEqual(harness.state.state.processedCardEventIds, ["proactive-answer-1"]);
 });
 
 test("delegates follow-up card actions and deduplicates the callback", async () => {

@@ -33,7 +33,7 @@ function executionChannel(job) {
 }
 
 export class Bridge {
-  constructor({ config, sessions, state, lark, runner, followupManager = null, mentionMonitor = null, policyManager = null, collaborationLearning = null, logger = console }) {
+  constructor({ config, sessions, state, lark, runner, followupManager = null, mentionMonitor = null, policyManager = null, collaborationLearning = null, proactiveConversation = null, logger = console }) {
     this.config = config;
     this.sessions = sessions;
     this.state = state;
@@ -43,6 +43,7 @@ export class Bridge {
     this.mentionMonitor = mentionMonitor;
     this.policyManager = policyManager;
     this.collaborationLearning = collaborationLearning;
+    this.proactiveConversation = proactiveConversation;
     this.logger = logger;
     this.draining = false;
   }
@@ -63,6 +64,9 @@ export class Bridge {
     if (this.state.hasProcessed(event.message_id)) return;
     if (this.state.state.queue.some((item) => item.id === event.message_id)) return;
     if (this.collaborationLearning) await this.collaborationLearning.recordOwnerMessage(event);
+    const proactiveReply = this.proactiveConversation
+      ? await this.proactiveConversation.recordReplyIfMatched(event)
+      : null;
     // A reply to an outstanding approval is a safety-state transition, not a
     // general intent category, so it remains program-enforced.
     if (await this.handleResearchConfirmation(event)) return;
@@ -87,7 +91,13 @@ export class Bridge {
     try {
       await this.enqueue(controllerSessionId, event.content, event, {
         controller: true,
-        conversationContext: { previousMessages, currentMessage },
+        conversationContext: {
+          previousMessages, currentMessage,
+          ...(proactiveReply ? { proactiveQuestion: {
+            question: proactiveReply.question,
+            knowledgeKey: proactiveReply.knowledgeKey,
+          } } : {}),
+        },
       });
     } catch (error) {
       // markProcessed prevents the Feishu event from duplicating the request;
@@ -166,6 +176,21 @@ export class Bridge {
         title: "会话已选择", tone: "green", status: "已处理",
       }));
       await this.select(sessionId, event.message_id);
+      return;
+    } else if (event.action_tag === "button" && event.action_name === "proactive_learning_submit" && event.form_value) {
+      let values;
+      try { values = JSON.parse(event.form_value); } catch { values = {}; }
+      const answer = String(values.prompt || "").trim();
+      if (!answer) throw new Error("没有收到有效内容，请重新填写。");
+      if (!this.proactiveConversation) throw new Error("主动交流记录器当前不可用，请直接回复文字。");
+      const question = await this.proactiveConversation.recordAnswer(answer, { source: "card", messageId: event.message_id });
+      if (!question) throw new Error("这个问题已经回答过或已过期；你可以直接发消息继续聊。");
+      this.state.state.processedCardEventIds.push(event.event_id);
+      await this.state.save();
+      await this.lark.updateCard(event.token, buildNotificationCard(
+        `谢谢，这条我记住了。以后遇到相关场景，我会把它作为判断依据；如果事实或你的想法变了，随时纠正我。\n\n**你告诉我：** ${answer}`,
+        { title: "又更懂你一点了", tone: "green", status: "已记住", subtitle: "QuarkSelfAI · 你的个人协作助手" },
+      ));
       return;
     } else if (event.action_tag === "button" && event.form_value) {
       let values;

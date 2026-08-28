@@ -82,13 +82,18 @@ export class CollaborationLearningMonitor {
 
   guidanceFor(message) {
     const signal = message?.collaborationSignal;
-    if (!signal?.type) return "暂无同类协作信号样本；按当前上下文保守判断。";
+    const insights = (this.ensureState().proactiveInsights || []).slice(-3)
+      .map((item) => `${item.knowledgeKey}：${String(item.answer || "").slice(0, 300)}`);
+    const insightText = insights.length
+      ? `主动交流中得到的本人信息（仅作上下文证据，可被最新事实纠正）：${insights.join("；")}`
+      : "";
+    if (!signal?.type) return insightText || "暂无同类协作信号样本；按当前上下文保守判断。";
     const observations = this.ensureState().observations
       .filter((item) => item.signalType === signal.type)
       .filter((item) => !signal.emojiType || item.emojiType === signal.emojiType)
       .filter((item) => signal.ownerOperated === undefined || item.ownerOperated === signal.ownerOperated)
       .slice(-20);
-    if (!observations.length) return "暂无同类协作信号样本；按当前上下文保守判断。";
+    if (!observations.length) return ["暂无同类协作信号样本；按当前上下文保守判断。", insightText].filter(Boolean).join("；");
     const count = (field, value) => observations.filter((item) => item[field] === value).length;
     const profile = this.ensureState().guidanceProfiles.find((item) => item.key === guidanceKey(signal));
     return [
@@ -99,7 +104,8 @@ export class CollaborationLearningMonitor {
       `建单 ${count("taskAction", "created")}、更新 ${count("taskAction", "updated")}、忽略 ${count("taskAction", "ignored")}`,
       `即时通知 ${count("actualNotification", "notify")}、静默 ${count("actualNotification", "silent")}`,
       `本人责任 ${count("actionOwner", "changdongxu")}、共同责任 ${count("actionOwner", "shared")}、他人责任 ${count("actionOwner", "other")}`,
-    ].join("；");
+      insightText,
+    ].filter(Boolean).join("；");
   }
 
   async recordOwnerMessage(event, now = new Date()) {

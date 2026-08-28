@@ -9,6 +9,8 @@ export interface CollaborationLearningHandoff {
     readonly observations: number
     readonly ownerSignals: number
     readonly candidates: number
+    readonly proactiveInsights: number
+    readonly proactiveQuestions: number
   }
 }
 
@@ -45,18 +47,19 @@ function timestamp(value: unknown, label: string): string {
 }
 
 /**
- * Converts only privacy-bounded learning metadata. It never carries message
- * content, context excerpts, credentials, or executable instructions.
+ * Converts privacy-bounded learning metadata plus explicit owner-stated
+ * insights. It never carries ambient message content, context excerpts or credentials.
  */
 export function prepareCollaborationLearningHandoff(legacyRoot: unknown): CollaborationLearningHandoff {
   const root = record(legacyRoot)
   const learning = record(root?.collaborationLearning)
-  if (!learning) return {
+  const proactive = record(root?.proactiveConversation)
+  if (!learning && !proactive) return {
     signals: [], checkpoints: {}, digest: createHash('sha256').update('[]').digest('hex'),
-    counts: { observations: 0, ownerSignals: 0, candidates: 0 },
+    counts: { observations: 0, ownerSignals: 0, candidates: 0, proactiveInsights: 0, proactiveQuestions: 0 },
   }
   const signals: DurableSignalInput[] = []
-  const observations = array(learning.observations).map((value, index) => {
+  const observations = array(learning?.observations).map((value, index) => {
     const item = record(value)
     if (!item || typeof item.messageId !== 'string') throw new Error(`collaboration observation ${index} has no messageId`)
     const occurredAt = timestamp(item.at, `collaboration observation ${index}`)
@@ -70,7 +73,7 @@ export function prepareCollaborationLearningHandoff(legacyRoot: unknown): Collab
       data,
     } satisfies DurableSignalInput
   })
-  const ownerSignals = array(learning.ownerSignals).map((value, index) => {
+  const ownerSignals = array(learning?.ownerSignals).map((value, index) => {
     const item = record(value)
     if (!item) throw new Error(`collaboration owner signal ${index} is invalid`)
     const occurredAt = timestamp(item.at, `collaboration owner signal ${index}`)
@@ -80,7 +83,7 @@ export function prepareCollaborationLearningHandoff(legacyRoot: unknown): Collab
       scope: typeof item.policyId === 'string' ? { policyId: item.policyId } : {}, data: item,
     } satisfies DurableSignalInput
   })
-  const candidateRecords = array(learning.candidates)
+  const candidateRecords = array(learning?.candidates)
   const candidates = candidateRecords.flatMap((value, index) => {
     const item = record(value)
     if (!item || typeof item.policyId !== 'string') throw new Error(`collaboration candidate ${index} has no policyId`)
@@ -98,17 +101,37 @@ export function prepareCollaborationLearningHandoff(legacyRoot: unknown): Collab
       data: { scopeKey: item.scopeKey, policyId: item.policyId, revision: item.revision, legacyStatus: item.status },
     } satisfies DurableSignalInput]
   })
-  signals.push(...observations, ...ownerSignals, ...candidates)
+  const proactiveInsights = array(learning?.proactiveInsights).map((value, index) => {
+    const item = record(value)
+    if (!item || typeof item.questionId !== 'string' || typeof item.knowledgeKey !== 'string' || typeof item.answer !== 'string') throw new Error(`proactive insight ${index} is invalid`)
+    const occurredAt = timestamp(item.at, `proactive insight ${index}`)
+    return { id: stableId('legacy-proactive-insight', { questionId: item.questionId, occurredAt }), kind: 'collaboration.owner-insight.v1', occurredAt,
+      scope: { knowledgeKey: item.knowledgeKey }, data: { questionId: item.questionId, knowledgeKey: item.knowledgeKey, answer: item.answer.slice(0, 2000), status: 'owner-stated' } } satisfies DurableSignalInput
+  })
+  const proactiveQuestions = array(proactive?.questions).map((value, index) => {
+    const item = record(value)
+    if (!item || typeof item.id !== 'string' || typeof item.question !== 'string') throw new Error(`proactive question ${index} is invalid`)
+    const occurredAt = timestamp(item.askedAt, `proactive question ${index}`)
+    return { id: stableId('legacy-proactive-question', { id: item.id, occurredAt }), kind: 'collaboration.proactive-question.v1', occurredAt,
+      scope: typeof item.knowledgeKey === 'string' ? { knowledgeKey: item.knowledgeKey } : {}, data: { id: item.id, question: item.question.slice(0, 180),
+        knowledgeKey: item.knowledgeKey, status: item.status, messageId: item.messageId ?? null, answeredAt: item.answeredAt ?? null } } satisfies DurableSignalInput
+  })
+  signals.push(...observations, ...ownerSignals, ...candidates, ...proactiveInsights, ...proactiveQuestions)
   const ids = signals.map(signal => signal.id)
   if (new Set(ids).size !== ids.length) throw new Error('legacy collaboration state contains duplicate durable signal ids')
   const checkpoints: Record<string, Readonly<Record<string, unknown>>> = {}
-  if (typeof learning.lastEvaluatedAt === 'string') checkpoints.evaluation = { lastEvaluatedAt: timestamp(learning.lastEvaluatedAt, 'lastEvaluatedAt') }
-  if (typeof learning.lastProposalAt === 'string') checkpoints.proposal = { lastProposalAt: timestamp(learning.lastProposalAt, 'lastProposalAt') }
+  if (typeof learning?.lastEvaluatedAt === 'string') checkpoints.evaluation = { lastEvaluatedAt: timestamp(learning.lastEvaluatedAt, 'lastEvaluatedAt') }
+  if (typeof learning?.lastProposalAt === 'string') checkpoints.proposal = { lastProposalAt: timestamp(learning.lastProposalAt, 'lastProposalAt') }
+  if (proactive && (typeof proactive.lastEvaluatedAt === 'string' || typeof proactive.nextEvaluateAt === 'string')) checkpoints['proactive-dialogue'] = {
+    ...(typeof proactive.lastEvaluatedAt === 'string' ? { lastEvaluatedAt: timestamp(proactive.lastEvaluatedAt, 'proactive lastEvaluatedAt') } : {}),
+    ...(typeof proactive.nextEvaluateAt === 'string' ? { nextEvaluateAt: timestamp(proactive.nextEvaluateAt, 'proactive nextEvaluateAt') } : {}),
+  }
   return {
     signals,
     checkpoints,
     digest: createHash('sha256').update(canonical({ signals, checkpoints })).digest('hex'),
-    counts: { observations: observations.length, ownerSignals: ownerSignals.length, candidates: candidateRecords.length },
+    counts: { observations: observations.length, ownerSignals: ownerSignals.length, candidates: candidateRecords.length,
+      proactiveInsights: proactiveInsights.length, proactiveQuestions: proactiveQuestions.length },
   }
 }
 

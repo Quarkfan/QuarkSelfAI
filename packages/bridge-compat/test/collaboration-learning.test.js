@@ -80,6 +80,18 @@ test("turns matching interaction history into non-binding privacy-bounded guidan
   assert.match(h.monitor.guidanceFor(message(4)), /当前上下文保守判断/);
 });
 
+test("uses explicit proactive answers as revisable owner context", () => {
+  const h = harness();
+  h.monitor.ensureState().proactiveInsights = [{
+    at: "2026-08-28T02:00:00Z", knowledgeKey: "task-admission",
+    answer: "没有明确下一步时不要为进度同步建单", status: "owner-stated",
+  }];
+  const guidance = h.monitor.guidanceFor(message(5));
+  assert.match(guidance, /主动交流中得到的本人信息/);
+  assert.match(guidance, /没有明确下一步/);
+  assert.match(guidance, /可被最新事实纠正/);
+});
+
 test("proposes one exact-scope batching policy only after repeated safe evidence", async () => {
   const h = harness();
   for (let index = 0; index < 20; index += 1) {

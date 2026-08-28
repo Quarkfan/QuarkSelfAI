@@ -34,18 +34,21 @@ export function buildConversationContinuityContext(conversationContext) {
   const previous = (conversationContext.previousMessages || []).slice(-6).map((message) => ({
     messageId: message.messageId,
     content: String(message.content || "").slice(0, 800),
+    role: message.role === "assistant" ? "assistant" : "owner",
     receivedAt: message.receivedAt || null,
     replyTo: message.replyTo || null,
     rootId: message.rootId || null,
     threadId: message.threadId || null,
   }));
   const current = conversationContext.currentMessage || {};
+  const proactive = conversationContext.proactiveQuestion;
   return `
 
 [飞书私聊上下文连贯性]
 请判断当前消息是否在继续、修正、确认或补充前文。优先使用 replyTo、rootId、threadId 的明确关联，其次使用时间邻近且主题相容的前文；不要把无关事项强行串联，也不要从含糊短句推断高影响操作的批准。当前消息仍是唯一待执行要求，以下历史只用于消歧。
 当前消息元数据：${JSON.stringify({ messageId: current.messageId, replyTo: current.replyTo || null, rootId: current.rootId || null, threadId: current.threadId || null })}
 最近本人私聊：${JSON.stringify(previous)}
+${proactive ? `当前消息明确回复了助手先前主动提出的问题：${JSON.stringify(proactive)}。优先把它理解为可沉淀、可被后续纠正的本人信息；除非回答本身明确要求执行某个动作，否则不要把它扩张成新的执行授权。` : ""}
 `;
 }
 

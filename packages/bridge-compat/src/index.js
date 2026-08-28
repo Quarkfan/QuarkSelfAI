@@ -20,6 +20,7 @@ import { QuarkControlPlaneClient } from "./quark-control-plane-client.js";
 import { CollaborationLearningMonitor } from "./collaboration-learning.js";
 import { OwnerEngagementMonitor } from "./owner-engagement-monitor.js";
 import { XiaoweiInsightDigestMonitor } from "./xiaowei-insight-digest.js";
+import { ProactiveConversationMonitor } from "./proactive-conversation-monitor.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const assistantRoot = path.resolve(projectRoot, "../..");
@@ -135,6 +136,14 @@ async function loadConfig() {
     collaborationDailyBriefEnabled: true,
     collaborationAutoTuneMinimumSamples: 8,
     collaborationAutoTuneConfidence: 0.85,
+    proactiveConversationEnabled: true,
+    proactiveConversationPollIntervalMs: 21600000,
+    proactiveConversationMinimumCooldownMs: 172800000,
+    proactiveConversationAnswerWindowMs: 259200000,
+    proactiveConversationModelTimeoutMs: 180000,
+    proactiveConversationTimeZone: "Asia/Shanghai",
+    proactiveConversationStartHour: 9,
+    proactiveConversationEndHour: 19,
     notificationDigestPollIntervalMs: 600000,
     notificationDigestMaxDelayMs: 21600000,
     notificationDigestMaxItems: 20,
@@ -165,6 +174,7 @@ async function loadConfig() {
     didaCleanupSchemaPath: config.didaCleanupSchemaPath || path.join(projectRoot, "schemas", "dida-cleanup-result.schema.json"),
     didaFollowupSchemaPath: config.didaFollowupSchemaPath || path.join(projectRoot, "schemas", "dida-followup-result.schema.json"),
     didaFollowupUpdateSchemaPath: config.didaFollowupUpdateSchemaPath || path.join(projectRoot, "schemas", "dida-followup-update-result.schema.json"),
+    proactiveConversationSchemaPath: config.proactiveConversationSchemaPath || path.join(projectRoot, "schemas", "proactive-conversation-result.schema.json"),
   };
 }
 
@@ -184,11 +194,12 @@ const xiaoweiResearch = new XiaoweiResearchChannel({ config, state, lark, taskCr
 const shadowCollaboration = new ShadowCollaborationMonitor({ config, state, lark });
 const policyManager = new QuarkControlPlaneClient();
 const collaborationLearning = new CollaborationLearningMonitor({ config, state, lark, policyManager });
+const proactiveConversation = new ProactiveConversationMonitor({ config, state, lark });
 const mentionMonitor = new MentionMonitor({
   config, state, lark, taskCreator, runner, xiaoweiResearch, shadowCollaboration, collaborationLearning, policyManager,
 });
 const bridge = new Bridge({
-  config, sessions, state, lark, runner, followupManager: followupMonitor, mentionMonitor, policyManager, collaborationLearning,
+  config, sessions, state, lark, runner, followupManager: followupMonitor, mentionMonitor, policyManager, collaborationLearning, proactiveConversation,
 });
 const ownerEngagementMonitor = new OwnerEngagementMonitor({
   config, state, lark, mentionMonitor, collaborationLearning,
@@ -337,6 +348,10 @@ const collaborationLearningTimer = setInterval(
   () => void collaborationLearning.poll(), config.collaborationLearningIntervalMs,
 );
 void collaborationLearning.poll();
+const proactiveConversationTimer = setInterval(
+  () => void proactiveConversation.poll(), config.proactiveConversationPollIntervalMs,
+);
+void proactiveConversation.poll();
 const notificationDigestTimer = setInterval(
   () => void mentionMonitor.flushNotificationDigest(), config.notificationDigestPollIntervalMs,
 );
@@ -374,6 +389,7 @@ function shutdown(signal) {
   clearInterval(xiaoweiTimer);
   clearInterval(shadowTimer);
   clearInterval(collaborationLearningTimer);
+  clearInterval(proactiveConversationTimer);
   clearInterval(notificationDigestTimer);
   clearInterval(xiaoweiInsightDigestTimer);
   clearTimeout(cardReconnectTimer);

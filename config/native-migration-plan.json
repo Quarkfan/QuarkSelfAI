@@ -61,10 +61,10 @@
       "id": "collaboration-learning",
       "buildOrder": 1,
       "cutoverAfter": ["message-intake-and-projection"],
-      "modules": ["collaboration-learning"],
-      "targetModules": ["collaboration-learning-policy", "collaboration-learning-native"],
+      "modules": ["collaboration-learning", "proactive-owner-dialogue"],
+      "targetModules": ["proactive-dialogue-policy", "collaboration-learning-policy", "collaboration-learning-native", "dsh-reasoning-effects", "feishu-workflow-effects"],
       "stateOwner": "managed compatibility handoff state.json",
-      "cutoverBoundary": "Pause learning evaluation, import privacy-bounded observations and proposal cooldowns, then enable native policy learning.",
+      "cutoverBoundary": "Pause learning and proactive-dialogue evaluation, import privacy-bounded observations, owner-stated insights, open question correlation and proposal cooldowns, then enable one native scheduler.",
       "rollback": "Disable native evaluation and restore only observations newer than the frozen compat checkpoint by stable sample id.",
       "requiresMaintenanceWindow": true
     },

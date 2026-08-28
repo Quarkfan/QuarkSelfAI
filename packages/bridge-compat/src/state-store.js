@@ -67,6 +67,7 @@ const EMPTY_STATE = {
   shadowFeedback: [],
   shadowReport: null,
   collaborationLearning: null,
+  proactiveConversation: null,
   notificationDigestPending: [],
   notificationDigestLastSentAt: null,
   notificationDigestFailure: null,
@@ -184,7 +185,9 @@ export class StateStore {
         this.state.collaborationLearning.candidates = (this.state.collaborationLearning.candidates || []).slice(-100);
         this.state.collaborationLearning.guidanceProfiles = (this.state.collaborationLearning.guidanceProfiles || []).slice(-100);
         this.state.collaborationLearning.reviews = (this.state.collaborationLearning.reviews || []).slice(-90);
+        this.state.collaborationLearning.proactiveInsights = (this.state.collaborationLearning.proactiveInsights || []).slice(-100);
       }
+      if (this.state.proactiveConversation) this.state.proactiveConversation.questions = (this.state.proactiveConversation.questions || []).slice(-50);
       this.state.notificationDigestPending = (this.state.notificationDigestPending || []).slice(-500);
       if (this.state.xiaoweiInsightDigest) {
         this.state.xiaoweiInsightDigest.reports = (this.state.xiaoweiInsightDigest.reports || []).slice(-26);

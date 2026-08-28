@@ -7,14 +7,15 @@ test('prepares a privacy-bounded content-addressed collaboration handoff', () =>
     observations: [{ at: '2026-08-23T00:00:00Z', messageId: 'om_1', chatId: 'oc_1', content: 'must not migrate', difference: 'could_batch', intakeReasons: [] }],
     ownerSignals: [{ at: '2026-08-23T01:00:00Z', type: 'direct_message', messageId: 'om_owner', correctionCue: true }],
     candidates: [{ proposedAt: '2026-08-23T02:00:00Z', policyId: 'policy-1', scopeKey: 'chat:oc_1', status: 'proposed' }],
+    proactiveInsights: [{ at: '2026-08-23T02:30:00Z', questionId: 'question-1', knowledgeKey: 'task-admission', answer: '没有明确下一步就不要建单' }],
     lastEvaluatedAt: '2026-08-23T03:00:00Z', lastProposalAt: '2026-08-23T02:00:00Z',
-  } }
+  }, proactiveConversation: { questions: [{ id: 'question-1', askedAt: '2026-08-23T02:00:00Z', question: '什么时候需要建单？', knowledgeKey: 'task-admission', status: 'answered', messageId: 'om_question', answeredAt: '2026-08-23T02:30:00Z' }], lastEvaluatedAt: '2026-08-23T02:00:00Z', nextEvaluateAt: '2026-08-26T02:00:00Z' } }
   const first = prepareCollaborationLearningHandoff(state)
   const second = prepareCollaborationLearningHandoff(state)
-  assert.deepEqual(first.counts, { observations: 1, ownerSignals: 1, candidates: 1 })
+  assert.deepEqual(first.counts, { observations: 1, ownerSignals: 1, candidates: 1, proactiveInsights: 1, proactiveQuestions: 1 })
   assert.equal(first.digest, second.digest)
   assert.equal(first.signals.some(signal => 'content' in signal.data), false)
-  assert.deepEqual(Object.keys(first.checkpoints).sort(), ['evaluation', 'proposal'])
+  assert.deepEqual(Object.keys(first.checkpoints).sort(), ['evaluation', 'proactive-dialogue', 'proposal'])
 })
 
 test('rejects malformed legacy collaboration state instead of silently dropping it', () => {

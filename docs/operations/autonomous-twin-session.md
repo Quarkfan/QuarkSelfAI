@@ -97,6 +97,20 @@
   LaunchAgent 后健康接口 `ok=true`，DSH kernel ready、compatibility worker ready，5 个飞书消费者全部恢复。
   既有 2 条汇总与 5 条重点消息保留续接，未创建测试飞书消息或滴答任务。
 
+## 2026-08-28 主动了解与协作对话
+
+- 新增受限主动交流：模型仅在问题确实能减少未来误判、补齐责任或关系信息时提问，不做每日打卡和泛泛寒暄；
+  Claude Code 主判断，Codex 只在基础设施失败时兜底。
+- 模型输出问题、自然措辞、用途、知识键和 12–168 小时复查建议；运行时强制价值分至少 75、工作时段、至少
+  48 小时冷却、同一时间一个未答问题、72 小时未答静默过期。没有高价值问题时完全静默。
+- 问题通过 Card 2.0 输入框发送，明确回复也关联原问题。回答持久化为可纠正的 `owner-stated` insight，后续只
+  作为语义证据；不自动授权调研、外联、发布、配置或业务写入。
+- 长期判断核心位于原生 `proactive-dialogue-policy`，compatibility adapter 只保留模型和飞书接线；已登记随
+  collaboration-learning 同冻结点迁移，避免未来 DSH-native 切换时产生双调度和重复提问。
+- 完整测试、架构检查及 Lark/DSH/BlackLake/服务器兼容检查通过；原生测试 257 项通过、3 项因 sandbox 跳过，
+  compatibility 测试 175 项通过。独立 compatibility provider 审计哈希为
+  `d07716b1e8f68daffa060ee357cee79cc9ea07495f7130596145902a8f540c3e`，文件数为 33。
+
 ## 2026-08-26 首次执行记录
 
 - 发现自动化待办 19 条中，桂苗排期事项被拆成 9 条，public 切库事项重复 2 条；另有已完成未关闭、无明确行动依据和责任过度推断问题。

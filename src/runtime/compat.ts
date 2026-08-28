@@ -132,6 +132,8 @@ export class CompatRuntime implements RuntimeStatusProvider {
     }
     const learning = state.collaborationLearning && typeof state.collaborationLearning === 'object'
       ? state.collaborationLearning as Record<string, unknown> : {}
+    const proactive = state.proactiveConversation && typeof state.proactiveConversation === 'object'
+      ? state.proactiveConversation as Record<string, unknown> : {}
     return {
       monitors: [
         { id: 'focus', name: '飞书重点消息', enabled: document.mentionMonitorEnabled !== false, intervalMs: number('mentionPollIntervalMs'), lastRunAt: value('mentionLastPollAt'), nextRunAt: value('mentionNextPollAt'), failure: failure('mentionHealthFailure') ?? failure('mentionProcessingFailure'), pending: arrayCount('mentionPending') },
@@ -146,6 +148,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
         { id: 'task-cleanup', name: '已完成待办清理', enabled: document.didaCompletedCleanupEnabled === true, intervalMs: number('didaCompletedCleanupIntervalMs'), lastRunAt: value('didaCompletedCleanupLastAt'), failure: failure('didaCompletedCleanupHealthFailure') },
         { id: 'session-cleanup', name: '调研会话清理', enabled: document.sessionCleanupEnabled !== false, intervalMs: number('sessionCleanupIntervalMs'), pending: arrayCount('mentionResearchSessions') },
         { id: 'collaboration-learning', name: '协作模式学习', enabled: document.collaborationLearningEnabled !== false, intervalMs: number('collaborationLearningIntervalMs'), lastRunAt: typeof learning.lastEvaluatedAt === 'string' ? learning.lastEvaluatedAt : null, pending: Array.isArray(learning.candidates) ? learning.candidates.filter((item) => item && typeof item === 'object' && (item as Record<string, unknown>).status === 'proposed').length : 0 },
+        { id: 'proactive-conversation', name: '主动了解与协作对话', enabled: document.proactiveConversationEnabled !== false, intervalMs: number('proactiveConversationPollIntervalMs'), lastRunAt: typeof proactive.lastEvaluatedAt === 'string' ? proactive.lastEvaluatedAt : null, nextRunAt: typeof proactive.nextEvaluateAt === 'string' ? proactive.nextEvaluateAt : null, failure: stateObjectFailure('proactiveConversation', 'failure'), pending: Array.isArray(proactive.questions) ? proactive.questions.filter((item) => item && typeof item === 'object' && (item as Record<string, unknown>).status === 'asked').length : 0 },
         { id: 'notification-digest', name: '协作事项汇总', enabled: true, intervalMs: number('notificationDigestPollIntervalMs'), lastRunAt: value('notificationDigestLastSentAt'), failure: failure('notificationDigestFailure'), pending: arrayCount('notificationDigestPending') },
         { id: 'xiaowei-insight-digest', name: '小维对话洞察周报', enabled: document.xiaoweiInsightDigestEnabled !== false, intervalMs: number('xiaoweiInsightDigestPollIntervalMs'), lastRunAt: stateObjectValue('xiaoweiInsightDigest', 'lastAttemptAt'), failure: stateObjectFailure('xiaoweiInsightDigest', 'failure'), pending: 0 },
       ],
@@ -177,6 +180,7 @@ export class CompatRuntime implements RuntimeStatusProvider {
       'task-cleanup': { enabled: 'didaCompletedCleanupEnabled', interval: 'didaCompletedCleanupIntervalMs' },
       'session-cleanup': { enabled: 'sessionCleanupEnabled', interval: 'sessionCleanupIntervalMs' },
       'collaboration-learning': { enabled: 'collaborationLearningEnabled', interval: 'collaborationLearningIntervalMs' },
+      'proactive-conversation': { enabled: 'proactiveConversationEnabled', interval: 'proactiveConversationPollIntervalMs' },
       'notification-digest': { interval: 'notificationDigestPollIntervalMs' },
       'xiaowei-insight-digest': { enabled: 'xiaoweiInsightDigestEnabled', interval: 'xiaoweiInsightDigestPollIntervalMs' },
     }

@@ -1,8 +1,8 @@
 {
   "liveHash": "df41ca1a70cf6a96193858045a1abd811ac43d3349ad6d5e55127b3c50b391b0",
-  "compatHash": "1b83282d47b3350355876838ff015fb617a7b43e2415b3734559621600a92521",
+  "compatHash": "d07716b1e8f68daffa060ee357cee79cc9ea07495f7130596145902a8f540c3e",
   "liveFileCount": 27,
-  "compatFileCount": 31,
+  "compatFileCount": 33,
   "differences": [
     "package.json",
     "src/bridge.js",
