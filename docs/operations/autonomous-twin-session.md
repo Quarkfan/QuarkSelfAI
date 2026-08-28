@@ -77,6 +77,9 @@
   不得用弹性判断绕过批准、越权写入或制造重复任务。
 - 完整测试、架构检查及 Lark/DSH/BlackLake/服务器兼容检查通过后，独立 compatibility provider 审计哈希更新为
   `d04542e04d7b0111338ee67dad2a5ccb3e9f4c69fafacefc229f483d72e69f69`，文件数保持 31。
+- 变更以 `8b056f7` 推送到 `main`。确认控制队列和运行中 Codex/Claude/小维任务均为 0 后重启同一 LaunchAgent；
+  持久队列中的 11 条待判断消息保留并续接。健康接口返回 `ok=true`，DSH kernel 和 compatibility worker ready，
+  消息、卡片、成员加入与两条表情事件共 5 个消费者全部恢复；未创建测试飞书消息或滴答任务。
 
 ## 2026-08-26 首次执行记录
 
