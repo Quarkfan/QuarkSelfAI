@@ -33,13 +33,14 @@ function executionChannel(job) {
 }
 
 export class Bridge {
-  constructor({ config, sessions, state, lark, runner, followupManager = null, policyManager = null, collaborationLearning = null, logger = console }) {
+  constructor({ config, sessions, state, lark, runner, followupManager = null, mentionMonitor = null, policyManager = null, collaborationLearning = null, logger = console }) {
     this.config = config;
     this.sessions = sessions;
     this.state = state;
     this.lark = lark;
     this.runner = runner;
     this.followupManager = followupManager;
+    this.mentionMonitor = mentionMonitor;
     this.policyManager = policyManager;
     this.collaborationLearning = collaborationLearning;
     this.logger = logger;
@@ -119,6 +120,11 @@ export class Bridge {
     let tone = "green";
     if (action.type === "acknowledge") {
       result = String(action.message || "已确认收到。").slice(0, 500);
+    } else if (action.type === "clarification_decision") {
+      if (!this.mentionMonitor) throw new Error("重点消息确认处理器当前不可用，请稍后重试。");
+      const decision = await this.mentionMonitor.applyClarificationDecision(action);
+      result = decision.result;
+      tone = decision.tone;
     } else if (action.type === "research_decision") {
       const item = (this.state.state.mentionResearchConfirmations || [])
         .find((entry) => entry.sourceMessageId === action.sourceMessageId && entry.status === "pending");
@@ -232,7 +238,11 @@ export class Bridge {
     item.status = decision === "approve" ? "approved" : "declined";
     item.decidedAt = new Date().toISOString();
     item.nextAttemptAt = null;
-    if (decision === "approve") item.task.researchChannel = channel || item.task.researchChannel || "codex";
+    if (decision === "approve") {
+      item.task.researchChannel = channel || item.task.researchChannel || "codex";
+      item.task.approvalId = `research:${item.sourceMessageId}:${item.task.taskId}`;
+      item.task.approvedAt = item.decidedAt;
+    }
     if (decision === "decline") {
       this.state.state.researchDecisionHistory.push({
         at: item.decidedAt,

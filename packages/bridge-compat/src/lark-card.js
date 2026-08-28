@@ -92,6 +92,27 @@ export function buildNotificationCard(markdown, options = {}) {
   return card;
 }
 
+export function buildTwinOutboundCard(markdown, options = {}) {
+  const { card } = baseCard(markdown, {
+    title: options.title || "常东旭的 AI 分身",
+    subtitle: "经常东旭确认后发送",
+    tone: "blue",
+    status: "AI 分身",
+    statusColor: "blue",
+  });
+  card.body.elements.push({
+    tag: "div",
+    text: {
+      tag: "plain_text",
+      content: "我是常东旭的 AI 分身。本消息已获得他的明确确认；你的回复会由我整理后反馈给他。",
+      text_size: "notation",
+      text_color: "grey",
+      lines: 2,
+    },
+  });
+  return card;
+}
+
 export function buildActionCard(markdown, actions, options = {}) {
   const { card } = baseCard(markdown, { ...options, interactive: true });
   card.body.elements.push({

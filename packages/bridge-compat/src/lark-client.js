@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { parseCliJson, run, splitMessage } from "./util.js";
-import { buildActionCard, buildInputCard, buildNotificationCard, buildSelectionCard } from "./lark-card.js";
+import { buildActionCard, buildInputCard, buildNotificationCard, buildSelectionCard, buildTwinOutboundCard } from "./lark-card.js";
 
 export function buildPriorityMessageFilter(allowedOpenId) {
   const owner = JSON.stringify(String(allowedOpenId));
@@ -147,22 +147,26 @@ export class LarkClient {
     return parseCliJson(result.stdout);
   }
 
-  async replyAsUser(messageId, markdown, suffix = "assistant-reply") {
+  async replyAsUser(messageId, markdown, approval, suffix = "assistant-reply") {
+    requireApproval(approval);
     const key = createHash("sha256").update(`${messageId}:${suffix}`).digest("hex").slice(0, 48);
     const result = await this.run([
       "im", "+messages-reply", "--as", "user", "--message-id", messageId,
-      "--markdown", markdown, "--idempotency-key", key, "--json",
+      "--msg-type", "interactive", "--content", JSON.stringify(buildTwinOutboundCard(markdown)),
+      "--idempotency-key", key, "--json",
     ]);
     if (result.code !== 0) throw new Error(`飞书分身追问失败: ${result.stderr || result.stdout}`);
     const envelope = parseCliJson(result.stdout);
     return envelope.data ?? envelope;
   }
 
-  async sendAsUser(userId, markdown, suffix = String(Date.now())) {
+  async sendAsUser(userId, markdown, approval, suffix = String(Date.now())) {
+    requireApproval(approval);
     const key = createHash("sha256").update(suffix).digest("hex").slice(0, 48);
     const result = await this.run([
       "im", "+messages-send", "--as", "user", "--user-id", userId,
-      "--markdown", markdown, "--idempotency-key", key, "--json",
+      "--msg-type", "interactive", "--content", JSON.stringify(buildTwinOutboundCard(markdown)),
+      "--idempotency-key", key, "--json",
     ]);
     if (result.code !== 0) throw new Error(`飞书分身私聊发送失败: ${result.stderr || result.stdout}`);
     const envelope = parseCliJson(result.stdout);
@@ -523,5 +527,11 @@ export class LarkClient {
     const envelope = parseCliJson(result.stdout);
     if (envelope.ok !== true) throw new Error(`飞书群属性读取失败: ${result.stdout}`);
     return envelope.data;
+  }
+}
+
+function requireApproval(approval) {
+  if (!approval?.approvalId || !approval?.approvedAt || Number.isNaN(new Date(approval.approvedAt).getTime())) {
+    throw new Error("飞书分身消息缺少与当前事项精确关联的用户确认");
   }
 }

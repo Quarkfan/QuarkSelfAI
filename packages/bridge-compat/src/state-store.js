@@ -15,6 +15,7 @@ const EMPTY_STATE = {
   mentionPending: [],
   mentionProcessedMessageIds: [],
   mentionClarifications: [],
+  mentionClarificationConfirmations: [],
   mentionResearchSessions: [],
   mentionResearchConfirmations: [],
   researchDecisionHistory: [],

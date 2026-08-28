@@ -525,6 +525,67 @@ test("asks the user before starting uncertain research", async () => {
   assert.equal(state.state.mentionResearchConfirmations[0].questionMessageId, "question-1");
 });
 
+test("requires owner confirmation even for a high-value start recommendation", async () => {
+  const message = {
+    message_id: "om_start", chat_id: "oc_group", chat_name: "内部项目群", chat_type: "group",
+    create_time: "2026-08-14 10:00", content: "@常东旭 生产客户阻塞", sender: { id: "ou_other", name: "同事" },
+  };
+  const state = stateHarness();
+  let researchStarts = 0;
+  const monitor = new MentionMonitor({
+    config: { mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, mentionContextMinutes: 30, allowedOpenId: "ou_me" },
+    state,
+    lark: {
+      async searchMentions() { return [message]; },
+      async getMentionContext() { return [message]; },
+      async sendInteractive() { return { message_id: "approval-start" }; },
+    },
+    taskCreator: { async createFromMention() {
+      return { taskId: "task_start", title: "生产客户阻塞", blacklakeRelated: true,
+        researchDecision: "start", researchDecisionReason: "高风险且需要证据", researchPrompt: "只读核验" };
+    } },
+    runner: { async create() { researchStarts += 1; } },
+  });
+  await monitor.poll();
+  assert.equal(researchStarts, 0);
+  assert.equal(state.state.mentionResearchConfirmations[0].status, "pending");
+});
+
+test("clarification is proposed to the owner before an approved AI twin card is sent", async () => {
+  const message = {
+    message_id: "om_clarify", chat_id: "oc_dm", chat_name: "姜臣轩", chat_type: "p2p",
+    create_time: "2026-08-14 10:00", content: "加个字段", sender: { id: "ou_other", name: "姜臣轩" },
+  };
+  const state = stateHarness();
+  const proposals = [];
+  const replies = [];
+  const monitor = new MentionMonitor({
+    config: { mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, mentionContextMinutes: 30, allowedOpenId: "ou_me" },
+    state,
+    lark: {
+      async searchMentions() { return [message]; },
+      async getMentionContext() { return [message]; },
+      async sendInteractive(markdown, actions) { proposals.push({ markdown, actions }); return { message_id: "approval-clarify" }; },
+      async replyAsUser(messageId, markdown, approval) { replies.push({ messageId, markdown, approval }); return { message_id: "om_question" }; },
+    },
+    taskCreator: { async createFromMention() {
+      return { taskId: "task_clarify", title: "确认同步字段", taskAction: "created", notificationDecision: "silent",
+        needsClarification: true, clarificationQuestion: "请确认目标对象和字段名。", researchDecision: "skip" };
+    } },
+  });
+  await monitor.poll();
+  assert.equal(proposals.length, 1);
+  assert.equal(replies.length, 0);
+  const pending = state.state.mentionClarificationConfirmations[0];
+  const result = await monitor.applyClarificationDecision({
+    type: "clarification_decision", sourceMessageId: message.message_id, approvalId: pending.approvalId, decision: "approve",
+  });
+  assert.equal(result.tone, "green");
+  assert.equal(replies.length, 1);
+  assert.equal(replies[0].approval.approvalId, pending.approvalId);
+  assert.match(replies[0].markdown, /目标对象和字段名/);
+});
+
 test("keeps repeated information silent when the existing task is unchanged", async () => {
   const message = {
     message_id: "om_repeat", chat_id: "oc_group", chat_name: "项目群", chat_type: "group",

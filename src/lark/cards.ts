@@ -31,6 +31,27 @@ export function buildAssistantCard(effect: ClaimedWorkflowEffect): JsonObject {
   return card
 }
 
+export function buildTwinOutboundCard(content: string): JsonObject {
+  return {
+    schema: '2.0',
+    config: { update_multi: true, width_mode: 'default', summary: { content: plain(`常东旭的 AI 分身 ${content}`).slice(0, 100) } },
+    header: {
+      title: { tag: 'plain_text', content: '常东旭的 AI 分身' },
+      subtitle: { tag: 'plain_text', content: '经常东旭确认后发送' },
+      template: 'blue',
+      icon: { tag: 'standard_icon', token: 'ai-common_colorful' },
+      text_tag_list: [{ tag: 'text_tag', text: { tag: 'plain_text', content: 'AI 分身' }, color: 'blue' }],
+    },
+    body: {
+      direction: 'vertical', padding: '12px 12px 20px 12px', vertical_spacing: '12px',
+      elements: [highlight(content, 'blue'), {
+        tag: 'div',
+        text: { tag: 'plain_text', content: '我是常东旭的 AI 分身。本消息已获得他的明确确认；你的回复会由我整理后反馈给他。', text_size: 'notation', text_color: 'grey', lines: 2 },
+      }],
+    },
+  }
+}
+
 function highlight(content: string, tone: 'blue' | 'yellow'): JsonObject {
   return {
     tag: 'column_set', flex_mode: 'none',

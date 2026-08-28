@@ -113,7 +113,7 @@ test('refuses send-as-user without durable approval evidence', async () => {
   assert.equal(runner.calls.length, 0)
 })
 
-test('sends approved external messages as the user and preserves formatted content', async () => {
+test('sends approved external messages as an explicit AI twin Card 2.0', async () => {
   const runner = new RecordingRunner()
   const adapter = new FeishuWorkflowEffectAdapter({ ownerOpenId: 'ou_owner', executable: 'lark-cli-next' }, runner)
   const output = await adapter.execute(effect('feishu.send-as-user.v1', {
@@ -125,7 +125,12 @@ test('sends approved external messages as the user and preserves formatted conte
   const args = runner.calls[0]!.args
   assert.equal(args[args.indexOf('--as') + 1], 'user')
   assert.equal(args[args.indexOf('--user-id') + 1], 'ou_contact')
-  assert.equal(args[args.indexOf('--markdown') + 1], '**我是常东旭的 AI 分身。**\n\n请确认进度。')
+  assert.equal(args[args.indexOf('--msg-type') + 1], 'interactive')
+  const card = JSON.parse(args[args.indexOf('--content') + 1]!) as { schema: string; header: { title: { content: string }; subtitle: { content: string } }; body: { elements: Array<Record<string, unknown>> } }
+  assert.equal(card.schema, '2.0')
+  assert.equal(card.header.title.content, '常东旭的 AI 分身')
+  assert.equal(card.header.subtitle.content, '经常东旭确认后发送')
+  assert.match(JSON.stringify(card.body), /请确认进度/)
 })
 
 test('resolves contact candidates read-only without choosing an ambiguous person', async () => {

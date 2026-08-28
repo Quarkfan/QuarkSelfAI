@@ -191,6 +191,7 @@ export class MentionMonitor {
 
   initializeState() {
     this.state.state.mentionClarifications ??= [];
+    this.state.state.mentionClarificationConfirmations ??= [];
     this.state.state.mentionResearchSessions ??= [];
     this.state.state.mentionResearchConfirmations ??= [];
     this.state.state.researchDecisionHistory ??= [];
@@ -611,25 +612,14 @@ export class MentionMonitor {
         let clarification = this.state.state.mentionClarifications.find((item) => (
           item.sourceMessageId === batchMessage.message_id || item.taskId === task.taskId
         ));
-        if (task.needsClarification && !clarification) {
+        const clarificationConfirmation = this.state.state.mentionClarificationConfirmations.find((item) => (
+          item.sourceMessageId === batchMessage.message_id || item.taskId === task.taskId
+        ));
+        if (task.needsClarification && !clarification && !clarificationConfirmation) {
           const interaction = await this.interactionPolicy(batchMessage);
           if (interaction.allowed) {
-            const reply = await this.lark.replyAsUser(
-              batchMessage.message_id,
-              `**我是常东旭的 AI 分身。** 为了避免理解偏差，需要确认一个会影响后续处理的问题：\n\n${task.clarificationQuestion}`,
-              `clarify:${batchMessage.message_id}`,
-            );
-            clarification = {
-              sourceMessageId: batchMessage.message_id,
-              questionMessageId: reply?.message_id || reply?.messageId || null,
-              chatId: batchMessage.chat_id,
-              senderId: batchMessage.sender?.id,
-              askedAt: new Date().toISOString(),
-              taskId: task.taskId,
-              researchSessionId: null,
-            };
-            this.state.state.mentionClarifications.push(clarification);
-            await this.state.save();
+            await this.requestClarificationApproval(task, batchMessage);
+            userNotified = true;
           } else {
             await this.safeSend(
               `该重点消息存在需要澄清的信息，但未向对方发送：${interaction.reason}\n\n建议问题：${task.clarificationQuestion}\n来源：${batchMessage.chat_name || batchMessage.chat_id}`,
@@ -644,21 +634,9 @@ export class MentionMonitor {
         const existingConfirmation = this.state.state.mentionResearchConfirmations.find((item) => (
           item.sourceMessageId === batchMessage.message_id || item.task?.taskId === task.taskId
         ));
-        if (task.researchDecision === "start" && task.researchPrompt && !existingResearch && this.runner) {
-          const channel = task.researchChannel || "codex";
-          if (channel === "xiaowei" && !existingConfirmation) {
-            await this.requestResearchApproval(task, batchMessage, clarification);
-            userNotified = true;
-          } else if (channel !== "xiaowei") {
-            try {
-              await this.startResearch(task, batchMessage, clarification, pending.researchSessionId);
-            } catch (error) {
-              if (error.sessionId) pending.researchSessionId = error.sessionId;
-              throw error;
-            }
-            this.recordResearchDecision(task, "start");
-            userNotified = true;
-          }
+        if (task.researchDecision === "start" && task.researchPrompt && !existingResearch && !existingConfirmation && this.runner) {
+          await this.requestResearchApproval(task, batchMessage, clarification);
+          userNotified = true;
         } else if (task.researchDecision === "confirm" && task.researchPrompt && !existingConfirmation && !existingResearch) {
           await this.requestResearchApproval(task, batchMessage, clarification);
           userNotified = true;
@@ -972,7 +950,10 @@ export class MentionMonitor {
 
   async startResearch(task, message, clarification = null, existingSessionId = null) {
     if ((task.researchChannel || "codex") === "xiaowei" && this.xiaoweiResearch) {
-      const request = await this.xiaoweiResearch.request(task, message);
+      const request = await this.xiaoweiResearch.request(task, message, {
+        approvalId: task.approvalId,
+        approvedAt: task.approvedAt,
+      });
       await this.safeSend(
         `**已交给智造湖小维进行慢速只读排查**\n\n事项：${task.title}\n请求编号：${request.id}\n\n它会重点核对生产日志、Trace、运行版本和环境证据；后台会持续等待回复，不会因响应较慢中断。`,
         `xiaowei-requested:${request.id}`,
@@ -1015,6 +996,10 @@ export class MentionMonitor {
         continue;
       }
       try {
+        if (!item.task.approvalId || !item.task.approvedAt) {
+          item.task.approvalId = `research:${item.sourceMessageId}:${item.task.taskId}`;
+          item.task.approvedAt = item.decidedAt || item.askedAt;
+        }
         const clarification = this.state.state.mentionClarifications.find((entry) => entry.taskId === item.clarificationTaskId);
         await this.startResearch(item.task, item.message, clarification, item.researchSessionId);
         this.recordResearchDecision(item.task, "start");
@@ -1067,6 +1052,62 @@ export class MentionMonitor {
       nextAttemptAt: null,
     });
     await this.state.save();
+  }
+
+  async requestClarificationApproval(task, message) {
+    const approvalId = `clarification:${message.message_id}:${task.taskId}`;
+    const sent = await this.safeSendInteractive(
+      `**发现一个确实会影响后续处理的信息缺口，但我不会直接联系对方。**\n\n事项：${task.title}\n目标：${message.sender?.name || "消息发送人"}\n会话：${message.chat_name || message.chat_id}\n\n拟询问：${task.clarificationQuestion}`,
+      [{
+        text: "同意并询问",
+        value: { type: "clarification_decision", sourceMessageId: message.message_id, approvalId, decision: "approve" },
+      }, {
+        text: "暂不询问",
+        value: { type: "clarification_decision", sourceMessageId: message.message_id, approvalId, decision: "decline" },
+      }],
+      { title: "确认是否向对方追问", tone: "yellow" },
+      `clarification-approval:${message.message_id}:${task.taskId}`,
+    );
+    this.state.state.mentionClarificationConfirmations.push({
+      sourceMessageId: message.message_id, taskId: task.taskId, approvalId, task, message,
+      status: "pending", askedAt: new Date().toISOString(), approvalMessageId: sent?.message_id || sent?.messageId || null,
+    });
+    await this.state.save();
+  }
+
+  async applyClarificationDecision(action) {
+    const item = this.state.state.mentionClarificationConfirmations.find((entry) => (
+      entry.sourceMessageId === action.sourceMessageId && entry.approvalId === action.approvalId && entry.status === "pending"
+    ));
+    if (!item) return { result: "这项询问确认已经处理过或已失效。", tone: "grey" };
+    if (action.decision !== "approve") {
+      item.status = "declined";
+      item.decidedAt = new Date().toISOString();
+      await this.state.save();
+      return { result: `已记录暂不向 **${item.message.sender?.name || "对方"}** 询问。`, tone: "grey" };
+    }
+    const interaction = await this.interactionPolicy(item.message);
+    if (!interaction.allowed) throw new Error(`无法发送询问：${interaction.reason}`);
+    const approvedAt = new Date().toISOString();
+    const reply = await this.lark.replyAsUser(
+      item.message.message_id,
+      `为了避免理解偏差，需要确认一个会影响后续处理的问题：\n\n${item.task.clarificationQuestion}`,
+      { approvalId: item.approvalId, approvedAt },
+      `clarify:${item.message.message_id}`,
+    );
+    this.state.state.mentionClarifications.push({
+      sourceMessageId: item.message.message_id,
+      questionMessageId: reply?.message_id || reply?.messageId || null,
+      chatId: item.message.chat_id,
+      senderId: item.message.sender?.id,
+      askedAt: approvedAt,
+      taskId: item.taskId,
+      researchSessionId: null,
+    });
+    item.status = "sent";
+    item.decidedAt = approvedAt;
+    await this.state.save();
+    return { result: `已按你的确认向 **${item.message.sender?.name || "对方"}** 发送 AI 分身询问卡片。`, tone: "green" };
   }
 
   async processClarificationReplies() {

@@ -10,8 +10,8 @@ function harness() {
     async save() {},
   };
   const lark = {
-    async sendAsUser(userId, message) {
-      sentToAgent.push({ userId, message });
+    async sendAsUser(userId, message, approval) {
+      sentToAgent.push({ userId, message, approval });
       return { message_id: "om_request", chat_id: "oc_xiaowei" };
     },
     async send(message) { sentToUser.push(message); },
@@ -32,12 +32,14 @@ test("sends a read-only BlackLake research request once and waits persistently",
   const h = harness();
   const task = { taskId: "task_1", title: "【重要】排查生产超时", researchPrompt: "核对生产日志和 Trace" };
   const message = { message_id: "om_source", chat_name: "内部群", sender: { name: "同事" } };
-  const first = await h.channel.request(task, message);
-  const second = await h.channel.request(task, message);
+  const approval = { approvalId: "research:task_1", approvedAt: "2026-08-16T08:00:00Z" };
+  const first = await h.channel.request(task, message, approval);
+  const second = await h.channel.request(task, message, approval);
   assert.equal(first.id, second.id);
   assert.equal(h.sentToAgent.length, 1);
   assert.equal(first.status, "waiting_reply");
   assert.match(h.sentToAgent[0].message, /只读排查/);
+  assert.deepEqual(h.sentToAgent[0].approval, approval);
 });
 
 test("correlates a slow reply, notifies the user, and keeps it out of normal intake", async () => {
@@ -45,6 +47,7 @@ test("correlates a slow reply, notifies the user, and keeps it out of normal int
   const request = await h.channel.request(
     { taskId: "task_1", title: "排查问题", researchPrompt: "查日志" },
     { message_id: "om_source", chat_name: "内部群", sender: { name: "同事" } },
+    { approvalId: "research:task_1", approvedAt: "2026-08-16T08:00:00Z" },
   );
   h.lark.getChatMessagesSince = async () => [{
     message_id: "om_answer", chat_id: "oc_xiaowei", reply_to: "om_request",

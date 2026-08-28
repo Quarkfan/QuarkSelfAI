@@ -184,11 +184,11 @@ const xiaoweiResearch = new XiaoweiResearchChannel({ config, state, lark, taskCr
 const shadowCollaboration = new ShadowCollaborationMonitor({ config, state, lark });
 const policyManager = new QuarkControlPlaneClient();
 const collaborationLearning = new CollaborationLearningMonitor({ config, state, lark, policyManager });
-const bridge = new Bridge({
-  config, sessions, state, lark, runner, followupManager: followupMonitor, policyManager, collaborationLearning,
-});
 const mentionMonitor = new MentionMonitor({
   config, state, lark, taskCreator, runner, xiaoweiResearch, shadowCollaboration, collaborationLearning, policyManager,
+});
+const bridge = new Bridge({
+  config, sessions, state, lark, runner, followupManager: followupMonitor, mentionMonitor, policyManager, collaborationLearning,
 });
 const ownerEngagementMonitor = new OwnerEngagementMonitor({
   config, state, lark, mentionMonitor, collaborationLearning,

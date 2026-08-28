@@ -202,3 +202,12 @@
 - 曾误将助手案例写入参考知识仓库，提交 `ca870ea` 已由 `142a039` 完整撤回；最终案例真源仅保存在 `/Users/edy/BlackLakeWork/docs/knowledge/assistant`，参考仓库保持只读且工作树干净。
 - 完整 `npm run check` 与 Lark/BlackLake compatibility 检查通过后，独立 compatibility provider 审计哈希更新为 `b355ae09e2d1967e5a852cb6134ca91f75eee943a5460c10e4b9673b63524f78`，文件数保持 31。
 - 常东旭随后明确确认本次字段配置已经完成；后续任务投影不得继续保留“待配置字段”，但客户是否升级和是否仍需补同步必须按新的明确事实分别判断，不能从配置完成自动推断。
+
+## 2026-08-28 对外执行确认与 AI 分身卡片门禁
+
+- 他人提出或重点消息识别出的任务只允许先做只读上下文收集、分析、滴答投影和向常东旭申请确认；本人飞书私聊中的直接指令本身视为该指令范围内的明确确认。
+- 取消“必要追问可自动发送”和“高价值 `researchDecision=start` 可直接启动”的例外。追问、Codex/小维调研、配置或代码修改、数据写入、发布及承诺都必须绑定本事项的持久审批证据。
+- 澄清问题先给常东旭发送审批卡；批准时再次核验群属性，外部群或属性未知仍禁止发送。拒绝或失效审批不得产生对外消息。
+- `feishu.send-as-user.v1` 及兼容层 `replyAsUser` / `sendAsUser` 在适配器底层校验 `approvalId + approvedAt`；缺失时在调用飞书前失败关闭。
+- 代表常东旭发送给他人的消息统一改为 Card 2.0：蓝色身份 header、`AI 分身` 标签、`经常东旭确认后发送` 副标题、正文高亮块和固定身份说明。普通 Markdown 对外发送入口不再使用。
+- 完整测试与 Lark/BlackLake compatibility 检查通过后，独立 compatibility provider 审计哈希更新为 `573c57526c64225739b6fef6c39d58f583e64a1a1089498fbf46e22d2b88a158`，文件数保持 31。

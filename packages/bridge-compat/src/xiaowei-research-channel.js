@@ -31,7 +31,8 @@ export class XiaoweiResearchChannel {
     ));
   }
 
-  async request(task, message) {
+  async request(task, message, approval) {
+    if (!approval?.approvalId || !approval?.approvedAt) throw new Error("智造湖小维请求缺少用户确认");
     this.initializeState();
     const existing = this.state.state.xiaoweiResearchRequests.find((item) => (
       item.taskId === task.taskId && !["completed", "cancelled"].includes(item.status)
@@ -49,6 +50,8 @@ export class XiaoweiResearchChannel {
       createdAt: new Date().toISOString(),
       attempts: 0,
       nextAttemptAt: null,
+      approvalId: approval.approvalId,
+      approvedAt: approval.approvedAt,
     };
     this.state.state.xiaoweiResearchRequests.push(item);
     await this.state.save();
@@ -125,7 +128,10 @@ ${item.prompt}
 **来源：** ${item.sourceChat || "自动化待办"} · ${item.sourceSender || "未知"}
 
 请优先核对生产日志、Trace、实际运行版本和对应版本源码，区分已验证事实、推断和证据缺口；不要修改代码、配置、数据库或生产环境。回复时请保留请求编号 ${item.id}。`;
-      const sent = await this.lark.sendAsUser(this.agent.openId, message, `xiaowei-request:${item.id}`);
+      const sent = await this.lark.sendAsUser(this.agent.openId, message, {
+        approvalId: item.approvalId,
+        approvedAt: item.approvedAt,
+      }, `xiaowei-request:${item.id}`);
       item.status = "waiting_reply";
       item.sentAt = new Date().toISOString();
       item.sentMessageId = sent?.message_id || sent?.messageId || null;

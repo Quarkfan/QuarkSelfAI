@@ -229,9 +229,13 @@ export class WorkdayFollowupMonitor {
         return;
       }
       const message = `**我是常东旭的 AI 分身。** 受他授权，我正在协助跟进事项“${request.title}”。\n\n想向你确认：${request.question}\n\n背景：${request.context}\n\n你的回复会由我整理后反馈给常东旭，并同步到对应的跟进任务中。`;
-      const sent = await this.lark.sendAsUser(request.contact.openId, message, `followup-outreach:${request.id}`);
+      const approvedAt = new Date().toISOString();
+      const sent = await this.lark.sendAsUser(request.contact.openId, message, {
+        approvalId: `followup:${request.id}`,
+        approvedAt,
+      }, `followup-outreach:${request.id}`);
       request.status = "waiting_reply";
-      request.sentAt = new Date().toISOString();
+      request.sentAt = approvedAt;
       request.sentMessageId = sent?.message_id || sent?.messageId || null;
       request.chatId = sent?.chat_id || sent?.chatId || null;
       request.nextReplyCheckAt = request.sentAt;

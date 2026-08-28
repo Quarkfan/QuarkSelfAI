@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildActionCard, buildInputCard, buildNotificationCard, buildSelectionCard } from "../src/lark-card.js";
+import { buildActionCard, buildInputCard, buildNotificationCard, buildSelectionCard, buildTwinOutboundCard } from "../src/lark-card.js";
 
 test("notification card has Card 2.0 hierarchy and structured body", () => {
   const card = buildNotificationCard("**任务完成**\n\n结果已保存。");
@@ -41,4 +41,13 @@ test("input and selection cards expose native interactive controls", () => {
   const selection = buildSelectionCard("请选择", [{ text: "会话 A", value: "session-a" }]);
   assert.equal(selection.body.elements[1].tag, "select_static");
   assert.equal(selection.body.elements[1].options[0].value, "session-a");
+});
+
+test("outbound twin card makes identity and owner approval explicit", () => {
+  const card = buildTwinOutboundCard("请确认当前进度。");
+  assert.equal(card.schema, "2.0");
+  assert.equal(card.header.title.content, "常东旭的 AI 分身");
+  assert.equal(card.header.subtitle.content, "经常东旭确认后发送");
+  assert.equal(card.header.text_tag_list[0].text.content, "AI 分身");
+  assert.match(card.body.elements.at(-1).text.content, /明确确认/);
 });

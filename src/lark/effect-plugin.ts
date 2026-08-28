@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import type { ClaimedWorkflowEffect } from '../storage/types.js'
 import type {} from '../workflow/contracts.js'
 import { ASSISTANT_EFFECTS } from '../workflow/effects.js'
-import { buildAssistantCard } from './cards.js'
+import { buildAssistantCard, buildTwinOutboundCard } from './cards.js'
 import { LARK_EFFECTS } from './effects.js'
 import { ProcessCommandRunner, runJson, type CommandRunner } from './runner.js'
 
@@ -65,7 +65,8 @@ export class FeishuWorkflowEffectAdapter {
     if (!chatId && !openId) throw new Error('send-as-user requires chatId or openId')
     const content = required(effect.payload.content, 'send content', 12_000)
     const data = await this.send([
-      ...(chatId ? ['--chat-id', chatId] : ['--user-id', openId!]), '--as', 'user', '--markdown', content,
+      ...(chatId ? ['--chat-id', chatId] : ['--user-id', openId!]), '--as', 'user', '--msg-type', 'interactive',
+      '--content', JSON.stringify(buildTwinOutboundCard(content)),
       '--idempotency-key', key(effect.payload.idempotencyKey ?? effect.id),
     ])
     return { ...result(data), sentAt: new Date().toISOString() }

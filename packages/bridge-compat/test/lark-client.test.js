@@ -33,6 +33,25 @@ test("rejects a calendar API error even when the CLI process exits zero", async 
   await assert.rejects(() => client.listAgenda("2026-08-20", "2026-08-28"), /日程读取失败/);
 });
 
+test("external twin messages require approval and use Card 2.0", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli", maxReplyChars: 3000 });
+  const calls = [];
+  client.run = async (args) => {
+    calls.push(args);
+    return { code: 0, stderr: "", stdout: '{"ok":true,"data":{"message_id":"om_sent","chat_id":"oc_dm"}}' };
+  };
+  await assert.rejects(() => client.sendAsUser("ou_other", "请确认", null), /缺少.*用户确认/);
+  assert.equal(calls.length, 0);
+  await client.sendAsUser("ou_other", "请确认", {
+    approvalId: "approval:1", approvedAt: "2026-08-28T08:00:00Z",
+  }, "outbound:1");
+  const args = calls[0];
+  assert.equal(args[args.indexOf("--msg-type") + 1], "interactive");
+  const card = JSON.parse(args[args.indexOf("--content") + 1]);
+  assert.equal(card.schema, "2.0");
+  assert.equal(card.header.title.content, "常东旭的 AI 分身");
+});
+
 test("reads both nearby context and the newest conversation tail for stale messages", async () => {
   const client = new LarkClient({ larkCli: "lark-cli" });
   const calls = [];
