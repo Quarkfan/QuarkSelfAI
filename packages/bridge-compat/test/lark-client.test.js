@@ -54,6 +54,26 @@ test("reads both nearby context and the newest conversation tail for stale messa
   assert.ok(calls[1].includes("desc"));
 });
 
+test("expands recent direct-message history before clarifying a terse follow-up", async () => {
+  const client = new LarkClient({ larkCli: "lark-cli" });
+  const calls = [];
+  client.run = async (args) => {
+    calls.push(args);
+    const descending = args.includes("desc");
+    return {
+      code: 0, stderr: "",
+      stdout: JSON.stringify({ ok: true, data: { messages: descending
+        ? [{ message_id: "history", content: "边缘数据同步库存对象补充批次字段", sender: { id: "ou_other" } }]
+        : [{ message_id: "target", content: "加个字段，大佬", sender: { id: "ou_other" } }] } }),
+    };
+  };
+  const messages = await client.getMentionContext({
+    message_id: "target", chat_id: "oc_1", chat_type: "p2p", content: "加个字段，大佬", create_time: "2099-08-28 14:00",
+  }, 30);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(messages.map((item) => item.message_id), ["history", "target"]);
+});
+
 test("builds an exact membership listener filter for Ren inviting the owner", () => {
   const client = new LarkClient({
     larkCli: "lark-cli", allowedOpenId: "ou_me",

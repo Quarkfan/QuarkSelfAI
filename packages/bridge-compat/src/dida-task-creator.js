@@ -10,7 +10,7 @@ function truncate(value, max) {
 }
 
 const URGENCY_BY_PRIORITY = { 5: "紧急", 3: "重要", 1: "跟进", 0: "关注" };
-const EXECUTION_FAILURE = /(oauth|授权未完成|未授权|无法执行(?:搜索|创建|更新|写入)|未调用[^。]*(?:create_task|update_task|search_task)|mcp[^。]*(?:失败|不可用)|额度(?:耗尽|不足)|quota|rate.?limit)/i;
+const EXECUTION_FAILURE = /(oauth|授权未完成|未授权|无法执行(?:搜索|创建|更新|写入)|未调用[^。]*(?:create_task|update_task|search_task)|mcp[^。]*(?:失败|不可用|未连接|没有连接|连接不上|拒绝|denied|permission)|(?:bash|read|工具)[^。]*(?:权限[^。]*拒绝|permission denied)|额度(?:耗尽|不足)|quota|rate.?limit)/i;
 const CLOSED_NO_ACTION = /(无需(?:进一步)?行动|无需(?:继续)?(?:处理|跟进)|事项已收敛|已经收敛|最终确认维持现状|已有明确结论[^。]*(?:无需|不需要)|下一步\s*[:：]?\s*(?:无|知悉即可|仅需知悉|持续关注即可)|只是(?:信息|通知|资料|参考|状态)同步|仅供参考)/;
 
 export function normalizeTaskResult(task) {
@@ -146,8 +146,9 @@ export class DidaTaskCreator {
     const sender = message.sender?.name || message.sender?.id || "未知发送人";
     const marker = `[feishu:${message.message_id}]`;
     const intakeReasons = message.intakeReasons?.join("、") || "@常东旭";
+    const capabilityQuery = [message.content, ...contextMessages.map((item) => item.content)].filter(Boolean).join("\n");
     const capabilityContext = this.config.blacklakeCapabilityContext
-      || await loadBlacklakeCapabilityContext(this.config.workspaceRoot);
+      || await loadBlacklakeCapabilityContext(this.config.workspaceRoot, { query: capabilityQuery });
     const prompt = `用户已明确授权：把飞书重点消息（@常东旭、特别关注联系人在共同群的发言、他人发给常东旭的私聊、有效标记或置顶所属会话的新消息、飞书会话分组中的工作消息、任永强邀请常东旭加入的工作交接群、常东旭主动参与的工作沟通及相关表情回应）自动转成滴答清单任务，并根据消息与常东旭的关系自动填写优先级、标签、明确的时间信息。你必须使用 dida365 MCP，不能只描述操作。
 
 目标清单：自动化待办
@@ -195,7 +196,7 @@ export class DidaTaskCreator {
 9. taskAction=created 时调用 create_task；taskAction=updated 时先读取原任务并调用 update_task；taskAction=unchanged 时禁止写操作。写操作的 projectId 必须精确为 ${this.config.didaProjectId}。更新时必须保留原任务仍有效的信息，不得覆盖掉历史上下文，不得把已完成任务改回未完成。
 10. created/updated 的 content 顶部必须维护唯一的“当前摘要”区，控制在 300 个中文字符以内，至少写清当前状态、最新结论、常东旭的下一步，以及已知负责人和截止时间（未知就明确写“未明确”）。每次 updated 都根据原任务和新消息重写这个摘要，不能在旧摘要后继续堆叠摘要；保证打开任务第一屏即可了解最新情况。
 11. “当前摘要”之后保留“进展记录”区。created/updated 必须包含：纳入原因、紧急度和关键性判断依据、与常东旭的关系及为什么需要他处理、来源群/私聊、发送人、消息时间、原消息链接、目标消息原文、必要上下文、幂等标记。updated 以带时间的“飞书进展”追加，并明确这次真正变化了什么；历史记录只追加不覆盖，不要复制无关闲聊。
-12. 仅当缺失的信息会实质阻塞下一步，并且无法从上下文可靠推断时，needsClarification=true，给出一个具体、一次问清的 clarificationQuestion；否则必须为 false 且问题和原因返回空字符串。
+12. 仅当缺失的信息会实质阻塞下一步，并且无法从上下文、回复对象、同会话近期历史和命中的知识详情可靠推断时，needsClarification=true，给出一个具体、一次问清的 clarificationQuestion；否则必须为 false 且问题和原因返回空字符串。短句、截图或“这个/那个/加字段”之类省略表达，必须先结合上述来源恢复业务对象，不能直接退化成泛化追问。
 13. blacklakeRelated 只表示内容涉及黑湖，不等于应该启动调研。必须额外给出 researchDecision：
    - start：只有生产/安全/客户阻塞等高风险问题，目标清晰、证据仍需代码或日志核验、常东旭明显需要结论，且一次 20 分钟只读调研预期有直接价值时才使用。
    - confirm：可能值得调研，但范围宽、信息不足、主要是同步、已有他人负责、已有结论可能够用、是否需要常东旭投入不清楚，或成本收益不确定时使用。先征得常东旭确认，绝不能直接启动。

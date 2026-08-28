@@ -459,16 +459,32 @@ export class LarkClient {
       return envelope.data?.messages ?? [];
     };
     const nearby = await fetchRange(start, contextEnd, "asc", 3);
-    if (now <= contextEnd) return nearby;
+    const referenceIds = [...new Set([message.reply_to, message.parent_id, message.root_id].filter(Boolean))];
+    let references = [];
+    if (referenceIds.length) {
+      try { references = await this.getMessagesByIds(referenceIds); }
+      catch (error) { this.logger.warn?.("reply context unavailable", error); }
+    }
+    const terse = String(message.content || "").replace(/!\[[^\]]*\]\([^)]*\)|\[[^\]]*\]/g, "").trim().length <= 80;
+    let history = [];
+    if (message.chat_type === "p2p" && (terse || referenceIds.length)) {
+      try {
+        const historyStart = new Date(targetTime.getTime() - 7 * 24 * 60 * 60_000);
+        history = (await fetchRange(historyStart, targetTime, "desc", 2)).reverse();
+      } catch (error) { this.logger.warn?.("direct-message history unavailable", error); }
+    }
+    const merge = (...groups) => {
+      const byId = new Map();
+      for (const item of groups.flat()) if (item?.message_id) byId.set(item.message_id, item);
+      return [...byId.values()];
+    };
+    if (now <= contextEnd) return merge(history, references, nearby);
 
     // A retry may happen hours or days after the target message. Read the newest
     // tail separately in descending order so a busy group cannot hide the user's
     // later reply behind the first pages of an old backlog.
     const latestDescending = await fetchRange(targetTime, now, "desc", 3);
-    const byId = new Map();
-    for (const item of nearby) byId.set(item.message_id, item);
-    for (const item of latestDescending.reverse()) byId.set(item.message_id, item);
-    return [...byId.values()];
+    return merge(history, references, nearby, latestDescending.reverse());
   }
 
   async getChatMessagesSince(chatId, start) {

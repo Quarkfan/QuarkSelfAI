@@ -124,6 +124,11 @@ test("rejects a schema-shaped result that admits the Dida operation did not run"
     needsClarification: false, researchDecision: "skip", researchChannel: "none",
     materialChangeSummary: "", summary: "滴答 MCP OAuth 授权未完成，无法执行搜索和创建操作",
   }), /未实际完成/);
+  assert.throws(() => normalizeTaskResult({
+    taskId: "", created: false, taskAction: "ignored", notificationDecision: "silent",
+    needsClarification: false, researchDecision: "skip", researchChannel: "none",
+    materialChangeSummary: "", summary: "执行失败：dida365 MCP 服务器未连接到此会话，Bash 和 Read 权限均被拒绝",
+  }), /未实际完成/);
 });
 
 test("deletes a newly-created NOTE and normalizes a closed item to ignored", async () => {
