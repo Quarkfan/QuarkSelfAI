@@ -72,6 +72,35 @@ test("ignores a realtime group event that does not explicitly mention the owner"
   assert.equal(state.state.mentionPending.length, 0);
 });
 
+test("sends a short acknowledgement to contextual reasoning instead of keyword-dropping it", async () => {
+  const state = stateHarness();
+  let received = null;
+  const monitor = new MentionMonitor({
+    config: { allowedOpenId: "ou_me", mentionRealtimeSettleDelayMs: 0, mentionContextMinutes: 30 },
+    state,
+    lark: {
+      async getMentionContext(message) {
+        return [
+          { message_id: "om_request", content: "今天可以完成客户发布吗？", sender: { id: "ou_me" } },
+          message,
+        ];
+      },
+      async send() {},
+    },
+    taskCreator: { async createFromMention(message, context) {
+      received = { message, context };
+      return { taskAction: "ignored", notificationDecision: "silent", researchDecision: "skip" };
+    } },
+  });
+  const accepted = await monitor.ingestRealtime({
+    message_id: "om_ok", chat_id: "oc_group", chat_type: "group", content: "@常东旭 ok",
+    sender_id: "ou_other", sender_type: "user", mentions: [{ id: "ou_me", name: "常东旭" }],
+  });
+  assert.equal(accepted, true);
+  assert.equal(received.message.message_id, "om_ok");
+  assert.match(received.context[0].content, /客户发布/);
+});
+
 test("merges mentions, watched group messages, and incoming direct messages by message id", async () => {
   const watchedGroupMessage = {
     message_id: "om_watch", chat_id: "oc_group", chat_name: "共同群", chat_type: "group",
@@ -437,7 +466,7 @@ test("waits for the conversation settle window before creating a task", async ()
   assert.equal(creates, 1);
 });
 
-test("silently marks new low-signal messages processed without calling the task worker", async () => {
+test("lets contextual reasoning decide a new short acknowledgement", async () => {
   const message = {
     message_id: "om_ack", chat_id: "oc_dm", chat_type: "p2p", content: "ok",
     sender: { id: "ou_other", name: "同事" },
@@ -450,28 +479,33 @@ test("silently marks new low-signal messages processed without calling the task 
     lark: {
       async searchMentions() { return []; },
       async searchDirectMessages() { return [message]; },
+      async getMentionContext() { return [{ content: "今天完成发布吗？" }, message]; },
       async send() { throw new Error("must remain silent"); },
     },
-    taskCreator: { async createFromMention() { creates += 1; } },
+    taskCreator: { async createFromMention() {
+      creates += 1;
+      return { taskAction: "ignored", notificationDecision: "silent", researchDecision: "skip" };
+    } },
   });
 
   await monitor.poll();
-  assert.equal(creates, 0);
+  assert.equal(creates, 1);
   assert.deepEqual(state.state.mentionProcessedMessageIds, ["om_ack"]);
   assert.equal(state.state.mentionPending.length, 0);
 });
 
-test("clears stale low-signal retries while retaining real pending work", async () => {
+test("clears only synthetic fixture retries while retaining acknowledgements for reasoning", async () => {
   const state = stateHarness();
   state.state.mentionPending = [
+    { message: { message_id: "om_test_fixture", content: "测试任务勿回" }, attempts: 5 },
     { message: { message_id: "om_stale_ack", content: "ok" }, attempts: 5 },
     { message: { message_id: "om_real", content: "OK，但今天要发布" }, attempts: 5 },
   ];
   const monitor = new MentionMonitor({ config: {}, state, lark: {}, taskCreator: {}, logger: { info() {} } });
 
   await monitor.discardLowSignalPending();
-  assert.deepEqual(state.state.mentionProcessedMessageIds, ["om_stale_ack"]);
-  assert.deepEqual(state.state.mentionPending.map((item) => item.message.message_id), ["om_real"]);
+  assert.deepEqual(state.state.mentionProcessedMessageIds, ["om_test_fixture"]);
+  assert.deepEqual(state.state.mentionPending.map((item) => item.message.message_id), ["om_stale_ack", "om_real"]);
 });
 
 test("summarizes worker errors without leaking prompts into Feishu notifications", () => {

@@ -328,7 +328,10 @@ export class MentionMonitor {
       sender: { id: event.sender_id, name: event.sender_name || null },
       intakeReasons: ["@常东旭"],
     };
-    if (isLowSignalAcknowledgement(message.content) || isSyntheticTestMessage(message.content)) {
+    // Synthetic fixtures are transport noise. Short acknowledgements are not:
+    // their reply target and surrounding conversation can change task state, so
+    // they must reach semantic reasoning instead of being keyword-filtered here.
+    if (isSyntheticTestMessage(message.content)) {
       if (!this.state.state.mentionProcessedMessageIds.includes(message.message_id)) {
         this.state.state.mentionProcessedMessageIds.push(message.message_id);
         await this.state.save();
@@ -421,7 +424,7 @@ export class MentionMonitor {
       const addFound = (message, reason, attentionProfile = null) => {
         if (!message.message_id || message.deleted === true || message.sender?.id === this.config.allowedOpenId) return;
         if (message.sender?.id === this.config.xiaoweiAgent?.openId) return;
-        if (isLowSignalAcknowledgement(message.content) || isSyntheticTestMessage(message.content)) {
+        if (isSyntheticTestMessage(message.content)) {
           lowSignalIds.add(message.message_id);
           return;
         }
@@ -830,7 +833,7 @@ export class MentionMonitor {
     const retained = [];
     let changed = false;
     for (const pending of this.state.state.mentionPending) {
-      if (!isLowSignalAcknowledgement(pending.message?.content) && !isSyntheticTestMessage(pending.message?.content)) {
+      if (!isSyntheticTestMessage(pending.message?.content)) {
         retained.push(pending);
         continue;
       }
