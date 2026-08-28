@@ -42,4 +42,4 @@
 - 执行器兜底必须保持能力与会话语义：native 普通 durable action 使用 Claude Code → DSH native → Codex；当前本人私聊总控延续原 Codex 会话，只有 Codex 与 Claude Code 都发生基础设施故障时才使用隔离的 DSH headless 兜底。明确指定的 Codex session、结构化滴答写入和需要原 provider 会话连续性的任务不得静默切换到 DSH。DSH headless 使用独立 `DSH_HOME`，不得与内嵌 Web profile 并发写同一 session 存储。
 - 主动通知必须遵守 `docs/operations/autonomous-twin-session.md` 的降噪门禁：瞬时基础设施故障静默、恢复只对应已通知故障、普通消息与简报限于 08:00–20:00、超期汇总限于 09:00–19:00 且任务级 24 小时去重；本人手工小维会话不镜像到控制会话。
 - 本地网络恢复遵循 `docs/adr/0045-local-network-recovery.md`：仅连续连接类失败可触发诊断，Google 不是唯一健康依据；自动停 Clash、切 Wi-Fi 或修改 IP/DNS 必须通过独立、受限、已批准的特权 helper，未完成安装、回滚和通知演练前不得挂载运行。
-- 黑湖短消息追问前必须先读取回复对象、同一私聊最近 7 天的有界历史，并按目标消息与上下文检索 `ai/ai-devops-knowledge-base` 的 confirmed case/rule；命中知识只用于恢复业务对象和可能路径，不能替代当前版本、租户、字段和状态核验，也不能授权任何配置写入。
+- 黑湖短消息追问前必须先读取回复对象、同一私聊最近 7 天的有界历史，并优先检索 `${BLACKLAKE_WORKSPACE_ROOT}/docs/knowledge/assistant` 下的助手自有知识；三个 BlackLake 参考项目只读使用，不得写入助手自身案例。命中知识只用于恢复业务对象和可能路径，不能替代当前版本、租户、字段和状态核验，也不能授权任何配置写入。
