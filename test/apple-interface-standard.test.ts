@@ -25,7 +25,22 @@ test('enforces the Apple HIG inspired accessibility and interaction contract', a
   assert.match(baseline, /prefers-reduced-motion:\s*reduce/)
   assert.match(baseline, /forced-colors:\s*active/)
   assert.match(baseline, /max-width:\s*900px/)
+  assert.doesNotMatch(baseline, /\.metric-grid,\s*\.halves/)
   assert.match(document, /aria-label="主导航"/)
   assert.match(document, /aria-label="退出登录"/)
   assert.match(application, /setAttribute\('aria-current','page'\)/)
+})
+
+test('presents the console as a quiet attention-first operating layer', async () => {
+  const [document, redesign] = await Promise.all([
+    readFile(new URL('../web/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../web/console-redesign.css', import.meta.url), 'utf8'),
+  ])
+  assert.match(document, /今天，需要你关注的事情/)
+  assert.match(document, /只把决定、风险与下一步带到这里/)
+  assert.equal((document.match(/class="nav-icon"/g) ?? []).length, 8)
+  assert.ok(document.indexOf('/console-redesign.css') < document.indexOf('/interface-baseline.css'))
+  assert.match(redesign, /Quiet Intelligence/)
+  assert.match(redesign, /\.metric-grid article\.attention/)
+  assert.match(redesign, /@media \(max-width: 560px\)/)
 })

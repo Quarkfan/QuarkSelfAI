@@ -73,7 +73,7 @@ button, a, input, select, textarea {
   .topbar { top: 61px; height: auto; min-height: 88px; padding: 14px 18px; gap: 14px; }
   .top-actions { gap: 10px; }
   .view { padding: 18px; }
-  .metric-grid, .halves, .evolution-boundaries { grid-template-columns: 1fr; }
+  .halves, .evolution-boundaries { grid-template-columns: 1fr; }
   .evolution-hero { align-items: flex-start; }
   .evolution-orbit { display: none; }
 }
