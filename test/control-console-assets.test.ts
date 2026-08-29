@@ -22,3 +22,17 @@ test('renders source, runtime assets, and module dependencies as separate consol
   assert.match(document, /点击模块查看源码、运行资产与依赖/)
   assert.match(document, /<th>依赖<\/th>/)
 })
+
+test('exposes capability evolution as a read-only console workspace', async () => {
+  const [application, document, styles] = await Promise.all([
+    readFile(new URL('../web/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../web/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../web/evolution.css', import.meta.url), 'utf8'),
+  ])
+  assert.match(document, /data-view="evolution"/)
+  assert.match(document, /实际自动化配置，不复制调度/)
+  assert.match(document, /必须由你决定/)
+  assert.match(application, /renderEvolution\(data\.evolution\)/)
+  assert.match(application, /data-evolution-report/)
+  assert.match(styles, /evolution-hero/)
+})

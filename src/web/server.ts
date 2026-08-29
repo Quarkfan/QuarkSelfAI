@@ -14,6 +14,7 @@ import type { AssistantPolicyDocument } from '../collaboration/policy-model.js'
 import { eventToPolicySample } from '../collaboration/policy-samples.js'
 import { analyzeModuleRuntimeGraph, summarizeModules, type ModuleCatalogProvider } from '../platform/modules.js'
 import type { ConsoleServerConfig } from './config.js'
+import { FileCapabilityEvolutionProvider, type CapabilityEvolutionProvider } from '../capability-evolution/provider.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
@@ -80,8 +81,8 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
   return text ? JSON.parse(text) as Record<string, unknown> : {}
 }
 
-async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, catalogProvider: ModuleCatalogProvider, config: ConsoleConfig) {
-  const [overview, events, matters, actions, approvals, policies, readiness, diagnostics, moduleCatalog] = await Promise.all([
+async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, catalogProvider: ModuleCatalogProvider, evolutionProvider: CapabilityEvolutionProvider, config: ConsoleConfig) {
+  const [overview, events, matters, actions, approvals, policies, readiness, diagnostics, moduleCatalog, evolution] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
     store.recentMatters(12),
@@ -91,6 +92,7 @@ async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusPr
     readinessProvider.inspect(),
     runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
     catalogProvider.load(),
+    evolutionProvider.inspect(),
   ])
   const worker = runtimeStatus.snapshot()
   return {
@@ -120,6 +122,7 @@ async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusPr
       modules: moduleCatalog.modules,
       runtimeGraph: analyzeModuleRuntimeGraph(moduleCatalog),
     },
+    evolution,
     generatedAt: new Date().toISOString(),
   }
 }
@@ -152,6 +155,7 @@ export function createConsoleServer(
   kernelStatus: KernelStatusProvider = new ControlOnlyKernel(),
   readiness: OperationalReadinessProvider = new UnconfiguredReadiness(),
   catalogProvider: ModuleCatalogProvider = new EmptyModuleCatalogProvider(),
+  evolutionProvider: CapabilityEvolutionProvider = new FileCapabilityEvolutionProvider(),
 ): Server {
   const policyAuthoring = new PolicyAuthoringService(store, {
     async compile() {
@@ -284,7 +288,7 @@ export function createConsoleServer(
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dashboard') {
-          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, readiness, catalogProvider, config) })
+          json(response, 200, { ok: true, data: await dashboard(store, runtimeStatus, kernelStatus, readiness, catalogProvider, evolutionProvider, config) })
           return
         }
         if (request.method === 'GET' && url.pathname === '/api/dsh-health') {

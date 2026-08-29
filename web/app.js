@@ -71,6 +71,22 @@ function actionRows(actions, limit) {
   return values.length ? values.map((a) => `<tr class="clickable" data-detail="action" data-id="${esc(a.id)}"><td><b>${esc(a.intent)}</b><small>${esc(a.matterId)}</small></td><td>${esc(a.executor ?? '待分配')}</td><td>${status(a.state)}</td><td>${esc(fmt(a.updatedAt))}</td></tr>`).join('') : emptyRow('暂无执行记录')
 }
 
+function renderEvolution(evolution) {
+  const labels = { active:'运行中', paused:'已暂停', missing:'未配置', invalid:'配置异常', running:'执行中', 'no-change':'无实质变化', upgraded:'能力已升级', candidate:'待决候选', failed:'执行失败' }
+  $('#evolution-state').innerHTML = status(evolution.state, labels[evolution.state] ?? evolution.state)
+  $('#evolution-orbit-state').textContent = evolution.state === 'active' ? '自主巡检已启用' : labels[evolution.state] ?? evolution.state
+  $('#evolution-orbit-cadence').textContent = evolution.scheduleLabel ?? '尚未排期'
+  $('#evolution-definition').innerHTML = [
+    ['运行形态', evolution.mode === 'cron' ? '独立 Codex 任务' : evolution.mode ?? '—'],
+    ['模型', [evolution.model, evolution.reasoningEffort].filter(Boolean).join(' / ') || '—'],
+    ['自动化标识', evolution.automationId],
+    ['项目', evolution.workspace ?? '本机默认项目'],
+  ].map(([key,value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')
+  const run = evolution.latestRun
+  $('#evolution-latest').innerHTML = run ? `<div class="evolution-run-kicker">${status(run.outcome,labels[run.outcome]??run.outcome)}<time>${esc(fmt(run.completedAt??run.startedAt))}</time></div><h3>${esc(run.title)}</h3><p>${esc(run.summary)}</p><footer>${run.taskId?`TASK ${esc(run.taskId)}`:'独立任务标识将在首次巡检后记录'}</footer>` : `<div class="empty-card"><span>↗</span><h3>等待首次独立巡检</h3><p>自动化配置已经接入；首次运行后会在这里留下脱敏审计。</p></div>`
+  $('#evolution-report-table').innerHTML = evolution.reports?.length ? evolution.reports.map((item,index) => `<tr class="clickable" data-evolution-report="${index}"><td><b>${esc(item.title)}</b></td><td>${status(item.outcome,labels[item.outcome]??item.outcome)}</td><td>${esc(item.summary)}</td><td><small>${esc(item.commit??item.taskId??'—')}</small></td><td>${esc(fmt(item.recordedAt))}</td></tr>`).join('') : emptyRow('还没有需要打扰你的升级或候选；普通空巡检不会出现在这里',5)
+}
+
 function render(data) {
   dashboard = data
   const { runtime, overview, diagnostics, readiness } = data
@@ -109,6 +125,7 @@ function render(data) {
   $('#architecture-table').innerHTML = architecture?.modules?.length
     ? architecture.modules.map((m) => `<tr class="clickable" data-detail="module" data-id="${esc(m.id)}"><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'static' ? '静态契约' : m.runtime === 'active' ? '原生' : '—'))}</td><td><small>源码 ${esc(m.dependsOn?.length ?? 0)} · Service ${esc(m.requiresServices?.length ?? 0)}/${esc(m.providesServices?.length ?? 0)} · Effect ${esc(m.requiresEffects?.length ?? 0)}/${esc(m.providesEffects?.length ?? 0)} · 挂载 ${esc(m.mounts?.length ?? 0)} · 资产 ${esc(m.assets?.length ?? 0)}</small></td></tr>`).join('')
     : emptyRow('暂无模块目录', 7)
+  renderEvolution(data.evolution)
   if (runtime.conversationUrl) {
     dshUrl = runtime.conversationUrl
     $('#open-dsh').href = dshUrl
@@ -154,10 +171,10 @@ async function refresh() {
   } catch (error) { $('#health-dot').className = 'error'; $('#health-text').textContent = error instanceof Error ? error.message : String(error) }
 }
 
-const pageMeta = { overview:['协作总览','飞书、滴答清单与执行通道的统一运行视图'], monitors:['监控中心','检查后台任务的状态、频率与积压'], work:['事项与执行','从事实聚合到可恢复动作'], approvals:['批准台','所有高影响动作等待你的明确确认'], policies:['策略库','把自然语言偏好沉淀为可审计规则'], capabilities:['能力矩阵','查看当前 readiness gate 与实现证据'], conversation:['DSH 会话','在统一控制台使用 DeepSeek Harness'] }
+const pageMeta = { overview:['协作总览','飞书、滴答清单与执行通道的统一运行视图'], monitors:['监控中心','检查后台任务的状态、频率与积压'], work:['事项与执行','从事实聚合到可恢复动作'], approvals:['批准台','所有高影响动作等待你的明确确认'], policies:['策略库','把自然语言偏好沉淀为可审计规则'], capabilities:['能力矩阵','查看当前 readiness gate 与实现证据'], evolution:['能力进化','查看独立巡检、升级证据与待决候选'], conversation:['DSH 会话','在统一控制台使用 DeepSeek Harness'] }
 function switchView(name) { $$('#navigation button').forEach((b)=>b.classList.toggle('active', b.dataset.view===name)); $$('.view').forEach((v)=>v.classList.toggle('active',v.id===`view-${name}`)); const [title,sub]=pageMeta[name]; $('#page-title').textContent=title; $('#page-subtitle').textContent=sub }
 $('#navigation').addEventListener('click',(e)=>{const b=e.target.closest('[data-view]');if(b)switchView(b.dataset.view)})
-document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){if(row.dataset.detail==='module'){const item=dashboard.architecture?.modules?.find((x)=>x.id===row.dataset.id);if(item)showModule(item);return}const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})
+document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const report=e.target.closest('[data-evolution-report]');if(report&&dashboard){const item=dashboard.evolution?.reports?.[Number(report.dataset.evolutionReport)];if(item)showDetail('CAPABILITY EVOLUTION',item.title,[['结果',item.outcome],['摘要',item.summary],['记录时间',fmt(item.recordedAt)],['提交',item.commit??'—'],['任务',item.taskId??'—']]);return}const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){if(row.dataset.detail==='module'){const item=dashboard.architecture?.modules?.find((x)=>x.id===row.dataset.id);if(item)showModule(item);return}const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})
 document.addEventListener('submit',async(e)=>{if(e.target.id!=='monitor-form')return;e.preventDefault();const form=e.target;const interval=form.elements.interval.disabled?undefined:Number(form.elements.interval.value)*1000;const response=await fetch(`/api/monitors/${encodeURIComponent(form.dataset.id)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({enabled:form.elements.enabled.checked,...interval?{intervalMs:interval}:{}})});const payload=await response.json();if(!response.ok){form.querySelector('.form-error')?.remove();form.insertAdjacentHTML('beforeend',`<p class="form-error">${esc(payload.error??'保存失败')}</p>`);return}$('#detail-dialog').close();$('#health-text').textContent='正在应用配置';setTimeout(refresh,2500)})
 $('#refresh').addEventListener('click',refresh)
 $('#reload-dsh').addEventListener('click',()=>void connectDsh(true))

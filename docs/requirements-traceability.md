@@ -28,7 +28,7 @@
 | 自然语言增加降噪策略，编译、样本模拟、确认后启用和回滚 | natural-language-policy | 受限 DSL、覆盖率/紧急保护、稳定 proposal；现网 Card 2.0 批准；隔离 SQLite 激活与回滚演练 | complete |
 | 从长期协作中挖掘模式，每日自我回顾、自主决定是否调整并发送简报 | collaboration-learning, natural-language-policy | 每日一次脱敏质量简报；同日幂等；8 条/85% 安全弱信号自动 guidance 校准；20/8/75% 高影响策略门槛；@、特别关注、紧急、审批和调研保护；每周单一建议、精确 revision 批准测试 | complete：兼容现网与 DSH-native 使用同一安全边界，低风险提示可自行调整，高影响变化仍逐项批准 |
 | 助手可主动聊天，通过少量高价值问题了解本人并持续沉淀 | proactive-owner-dialogue, collaboration-learning | Claude 主判断、Codex 兜底；单问题、价值阈值、48 小时最短冷却、72 小时回答窗口、工作时段、未答不追问；Card 2.0 自然输入；本人回答进入可纠正的 owner-stated insight | implemented：现网兼容链路先运行；切换 DSH-native 时随 collaboration-learning 一并迁移，行为变化仍受原确认门禁 |
-| 可自主检索和组装开源能力，并不定期提供新能力升级报告 | capability-evolution | 每周独立 Codex 任务；左侧可见且标题唯一；从磁盘真源恢复上下文并写回；许可证/维护/安全/供应链/本地与服务器兼容/DSH-Cordis 边界准入；低风险沉淀与高影响逐项批准；无实质升级静默 | complete：独立任务机制已启用，首次真实升级按价值触发，不制造演示升级 |
+| 可自主检索和组装开源能力，并不定期提供新能力升级报告 | capability-evolution | 每周独立 Codex 任务；左侧可见且标题唯一；从磁盘真源恢复上下文并写回；控制台只读展示真实自动化、最近巡检和脱敏升级/候选账本；许可证/维护/安全/供应链/本地与服务器兼容/DSH-Cordis 边界准入；低风险沉淀与高影响逐项批准；无实质升级静默 | complete：独立任务和控制台观察面已启用，首次真实升级按价值触发，不制造演示升级 |
 | BlackLake 问题先按参考项目和 skills 路由，再决定 start/confirm/skip | blacklake-routing | 三源动态哈希、skill/operation-chain 门禁；合成用例 route→ledger→approval→claim | complete |
 | 智造湖小维作为慢速排查工具，调用前必须本人批准，结果回灌且不重复建任务 | xiaowei-channel | 授权/持久等待测试；现网 3 个请求完成且均关联回复 | complete |
 | 周期总结“小维监控群”中有趣、有思考或独特的问题 | xiaowei-insight-digest | 内部群属性只读核验；问题链聚合去重、周五单次发送、空摘要静默、Claude→Codex→本地规则降级测试；控制台独立监控 | implemented：首次真实周报将在下一个周五 17:30 生成并留存聚合计数，不创建滴答任务、不在原群发言 |
@@ -36,7 +36,7 @@
 | Claude Code 与 Codex 共享 skills、Agent 约定、参考项目，不产生信息差 | blacklake-routing, executor-routing | 根 AGENTS/CLAUDE 同步约束、三源 router、DSH profile provider 配置 | implemented；持续运行同步校验 |
 | 飞书 CLI 快速升级适配，不让业务规则依赖 CLI 参数 | lark-event-adapter | version/schema/capability discovery、未知字段保留、升级 banner 测试和升级手册 | complete |
 | SQLite 与 PostgreSQL 可配置，默认 SQLite | durable-store | 统一存储契约、两套 migration、SQLite/PG 实现 | complete |
-| 本地 Web 控制台可见，未来兼容服务器部署 | web-console, daemon-deployment, server-deployment | 本地 dashboard/LaunchAgent/真实重启已验证；systemd/Compose/runtime lock 已建 | 本地 complete；服务器 partial，发布前补 Docker 实镜像 |
+| 本地 Web 控制台可见，未来兼容服务器部署 | web-console, capability-evolution-observer, daemon-deployment, server-deployment | 本地 dashboard/LaunchAgent；能力进化只读状态、账本与降级测试；systemd/Compose/runtime lock 已建 | 本地 complete；服务器无 Codex 自动化时该页面显示未配置，发布前仍需补 Docker 实镜像 |
 | 个人电脑本地运行并访问授权文件是主形态 | local-first-execution | ADR 0003；默认 local/SQLite/loopback；workspace realpath 与 symlink 防护 | complete |
 | 所有故障、恢复和需要协助的事项可通过飞书通知，时间显示为北京时间 | retry-and-alerting | 持久故障/恢复去重、本地时区格式、错误摘要脱敏；飞书自身不可用后跨重启合并补发演练 | complete |
 | 测试任务不得污染真实待办，低价值消息如“ok”不得建任务 | focus-intake, dida-projection | synthetic artifact、whole-message acknowledgement、priority-zero admission 测试 | observing：影子样本继续核验 |

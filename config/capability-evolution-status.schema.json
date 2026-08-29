@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QuarkSelfAI capability evolution console ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "latestRun", "reports"],
+  "properties": {
+    "version": { "const": 1 },
+    "latestRun": { "$ref": "#/$defs/run" },
+    "reports": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/report" } }
+  },
+  "$defs": {
+    "run": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "startedAt", "outcome", "summary"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 120 }, "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }, "outcome": { "enum": ["running", "no-change", "upgraded", "candidate", "failed"] },
+        "summary": { "type": "string", "maxLength": 320 }, "taskId": { "type": "string", "maxLength": 100 }
+      }
+    },
+    "report": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "summary", "recordedAt", "outcome"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 120 }, "summary": { "type": "string", "maxLength": 320 },
+        "recordedAt": { "type": "string", "format": "date-time" }, "outcome": { "enum": ["upgraded", "candidate", "failed"] },
+        "commit": { "type": "string", "maxLength": 64 }, "taskId": { "type": "string", "maxLength": 100 }
+      }
+    }
+  }
+}
