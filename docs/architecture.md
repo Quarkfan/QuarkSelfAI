@@ -16,6 +16,11 @@
 7. **Console surface**：3210 提供带登录门禁的运维控制面，3211 承载仅回环可达的 DSH 原生会话 UI；
    DSH 会话嵌入统一导航，但不会扩大到远程网络。
 
+控制台和后续助手自有 surface 共享 `web/design-tokens.css` 的语义 token 与 `web/interface-baseline.css` 的交互基线，
+设计治理见 [QuarkSelfAI 界面设计标准](design/apple-human-interface-standard.md) 和
+[ADR 0086](adr/0086-apple-hig-interface-governance.md)。这属于可替换 surface 的质量契约，不进入 DSH/Cordis 内核，
+也不改变运行时数据或审批边界。
+
 DSH 会话显式启用官方 `@deepseek-ai/dsh-tool-cordis`，因此模型可以先检查运行时，再在当前会话中定义、
 启动、更新、停止和回滚临时 Cordis 插件。动态包仅存在于当前 DSH 进程内存中，重启即消失，不会暗中改写
 仓库或 profile。QuarkSelfAI 的 `dynamic-plugin-policy` 补齐安全边界：纯 Host 包在 `cordis_run` 前进入 DSH

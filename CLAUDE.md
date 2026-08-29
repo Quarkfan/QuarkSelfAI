@@ -23,6 +23,10 @@
 - 控制台的“能力进化”页面只读观察 Codex 自动化与 `var/capability-evolution/status.json` 脱敏账本；不得复制调度、
   提供第三方代码安装/激活按钮或读取自动化 prompt。账本只保留最近巡检与最多 12 条升级/候选元数据，不能写入
   飞书正文、业务数据、凭证、绝对文件清单或其他敏感上下文。
+- QuarkSelfAI 和助手自有 UI 必须遵守 `docs/design/apple-human-interface-standard.md` 与 ADR 0086：以 Apple HIG 的
+  目的、掌控感、层级、和谐、一致性和可访问性为质量基线，但保留自身品牌，不复制 Apple 产品外观。新页面必须复用
+  语义 token 和交互基线，验证键盘焦点、状态非纯色表达、44px 默认热区、减少动效、高对比与窄屏；未经真实视觉复核
+  和 `npm run check` 不得宣称完成。
 
 - 架构真源见 `docs/architecture.md` 与 `docs/adr/`。
 - 骨架、功能和迁移代码的机器真源为 `config/module-catalog.json`。新能力先登记分类和依赖并通过

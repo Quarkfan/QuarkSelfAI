@@ -1,0 +1,79 @@
+/* Mandatory interaction and accessibility baseline. Visual personality stays page-owned. */
+:root {
+  --bg: var(--q-color-canvas);
+  --side: var(--q-color-sidebar);
+  --panel: var(--q-color-surface);
+  --panel2: var(--q-color-surface-raised);
+  --line: var(--q-color-separator);
+  --muted: var(--q-color-label-tertiary);
+  --text: var(--q-color-label-primary);
+  --soft: var(--q-color-label-secondary);
+  --accent: var(--q-color-accent);
+  --blue: var(--q-color-link);
+  --red: var(--q-color-danger);
+  --amber: var(--q-color-warning);
+  --radius: var(--q-radius-panel);
+  font-family: var(--q-font-body);
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body { font-family: var(--q-font-body); line-height: 1.45; }
+h1, h2, h3 { font-family: var(--q-font-display); letter-spacing: -.01em; }
+button, input, select, textarea { font: inherit; }
+
+button, a, input, select, textarea {
+  transition:
+    border-color var(--q-motion-fast) var(--q-motion-ease),
+    background-color var(--q-motion-fast) var(--q-motion-ease),
+    color var(--q-motion-fast) var(--q-motion-ease),
+    opacity var(--q-motion-fast) var(--q-motion-ease),
+    transform var(--q-motion-fast) var(--q-motion-ease);
+}
+
+:where(button, .button, [role="button"]) { min-block-size: var(--q-control-hit-size); }
+.icon-button, .dialog-close { min-inline-size: var(--q-control-hit-size); display: inline-grid; place-items: center; }
+.text-button, .row-action { display: inline-flex; align-items: center; }
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--q-color-focus);
+  outline-offset: 3px;
+}
+
+:where(button, .button, [role="button"]):active { transform: scale(.98); }
+.sidebar, .topbar {
+  backdrop-filter: blur(var(--q-material-blur));
+  -webkit-backdrop-filter: blur(var(--q-material-blur));
+}
+.sidebar nav button { min-height: var(--q-control-hit-size); border-radius: var(--q-radius-control); }
+.panel { border-radius: var(--q-radius-panel); }
+.dialog-card { border-radius: var(--q-radius-dialog); box-shadow: var(--q-shadow-dialog); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  :where(button, .button, [role="button"]):active { transform: none; }
+}
+
+@media (forced-colors: active) {
+  .health i, .legend i, .status i { forced-color-adjust: none; background: Highlight; }
+  .sidebar nav button.active { border-inline-start: 3px solid Highlight; }
+}
+
+@media (max-width: 900px) {
+  body { min-width: 0; }
+  .sidebar { position: sticky; inset: 0; width: 100%; height: auto; padding: 8px 12px; flex-direction: row; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .brand, .sidebar-foot { display: none; }
+  .sidebar nav { flex-direction: row; gap: 4px; margin: 0; }
+  .sidebar nav button { flex: 0 0 auto; padding-inline: 12px; }
+  .shell { margin-left: 0; }
+  .topbar { top: 61px; height: auto; min-height: 88px; padding: 14px 18px; gap: 14px; }
+  .top-actions { gap: 10px; }
+  .view { padding: 18px; }
+  .metric-grid, .halves, .evolution-boundaries { grid-template-columns: 1fr; }
+  .evolution-hero { align-items: flex-start; }
+  .evolution-orbit { display: none; }
+}

@@ -287,3 +287,11 @@
 - 完整检查通过且提交 `65bd2aa` 已推送。首次在受限命令沙箱内检查时，`scutil --dns`、外网 DNS 和本机回环均不可见，曾被误记为宿主机网络故障；常东旭指出网络正常后，改用宿主机权限复核，确认飞书可达、DNS 存在、控制台健康且 5 条飞书消费者全部 ready。Google 单点超时未被当作整体故障，也未执行任何 Wi-Fi、代理或 IP/DNS 修改。
 - 宿主机控制台显示 active action 和 research 均为 0；持久批准与小维等待项可跨重启恢复。随后优雅重启同一 `com.quarkfan.quark-self-ai` LaunchAgent，父 PID 更新为 46292，worker PID 46297、DSH PID 46293；健康返回 `ok=true`，没有启动第二消费者。
 - 重启后 `/api/dashboard` 已真实返回能力进化自动化 `active / cron / gpt-5.6-sol / medium / 每周三 14:30`，当前升级报告为空，符合首次真实巡检前不制造演示数据的规则。后续网络判断必须先区分工具沙箱与宿主机，不能再用沙箱 DNS/loopback 失败触发网络恢复或故障通知。
+
+## 2026-08-29 Apple HIG 界面治理
+
+- 核验 Apple 官方 HIG、Design principles、Accessibility、Color、Materials、Motion、Typography 与 Buttons，决定将目的、用户掌控、责任、熟悉度、简洁、精工和层级/和谐/一致性固化为助手自有 UI 的质量基线，而不是机械复制 macOS 外观。
+- 新增 `docs/design/apple-human-interface-standard.md` 与 ADR 0086，明确品牌独立、材质克制、语义颜色、系统字体、功能性动效、默认可访问和可恢复操作；Apple 官方规范变化由能力进化巡检更新，不把当前视觉截图冻结成规则。
+- 控制台新增语义 token 和最后加载的交互基线，统一 44px 默认热区、键盘焦点、按下反馈、减少动效、高对比/强制颜色与窄屏布局；导航图形从辅助技术中隐藏，当前页面同步维护 `aria-current`。
+- 该变更只修改可替换 Web surface、文档和测试，不触碰 DSH/Cordis、飞书消费者、状态真源或审批门禁。回滚视觉实现可移除新增样式入口，但设计治理继续有效；更改原则需要新的 ADR。
+- 完整 `npm run check` 通过：主项目 265 项测试中 262 通过、3 项因沙箱回环限制跳过，compat 175/175 通过；架构检查确认 59 个 Web/运行资产均有唯一模块归属。真实浏览器复核确认 1280px 桌面视图使用系统字体、44px 导航热区和末级基线，780px 窄窗口无横向溢出、导航切换为横向滚动且内容边距归零；无需重启守护进程即可加载静态资源。

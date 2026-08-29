@@ -37,6 +37,7 @@
 | 飞书 CLI 快速升级适配，不让业务规则依赖 CLI 参数 | lark-event-adapter | version/schema/capability discovery、未知字段保留、升级 banner 测试和升级手册 | complete |
 | SQLite 与 PostgreSQL 可配置，默认 SQLite | durable-store | 统一存储契约、两套 migration、SQLite/PG 实现 | complete |
 | 本地 Web 控制台可见，未来兼容服务器部署 | web-console, capability-evolution-observer, daemon-deployment, server-deployment | 本地 dashboard/LaunchAgent；能力进化只读状态、账本与降级测试；systemd/Compose/runtime lock 已建 | 本地 complete；服务器无 Codex 自动化时该页面显示未配置，发布前仍需补 Docker 实镜像 |
+| 助手自有 UI 固化 Apple HIG 设计原则并保持统一风格 | web-console | Apple 官方 HIG 来源；设计标准与 ADR 0086；语义 token、末级交互基线、系统字体、44px 默认热区、焦点/减少动效/高对比/窄屏回归 | complete：控制台已接入，后续页面由协作契约与自动测试强制继承 |
 | 个人电脑本地运行并访问授权文件是主形态 | local-first-execution | ADR 0003；默认 local/SQLite/loopback；workspace realpath 与 symlink 防护 | complete |
 | 所有故障、恢复和需要协助的事项可通过飞书通知，时间显示为北京时间 | retry-and-alerting | 持久故障/恢复去重、本地时区格式、错误摘要脱敏；飞书自身不可用后跨重启合并补发演练 | complete |
 | 测试任务不得污染真实待办，低价值消息如“ok”不得建任务 | focus-intake, dida-projection | synthetic artifact、whole-message acknowledgement、priority-zero admission 测试 | observing：影子样本继续核验 |
