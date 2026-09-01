@@ -88,6 +88,11 @@ Provider 的统一文件边界；已有路径先解析真实路径，新建路�
 `var/capability-evolution/status.json` 中符合固定 schema 的脱敏账本。它不复制定时调度，不读取 prompt，
 也不提供安装或激活第三方代码的写入口；自动化文件或账本缺失时只局部降级该页面，不影响飞书消费者和健康状态。
 
+能力进化内部新增无副作用的 `skill-evolution-compiler` policy 模块，把脱敏 Experience、可失效的 Pattern 与影子 Skill
+candidate 分开。模型负责提出可解释候选，纯函数门禁负责隐私血缘、不同任务证据、目标执行器覆盖、触发质量、效果
+回归以及安全/审批零违规；结果最多到 `eligible-for-review`。它没有调度、存储、外部写入或 Cordis 挂载，不会与
+现有 Codex 巡检、知识库、DSH 会话或 Skill 安装链路形成第二真源，详见 [ADR 0087](adr/0087-evidence-compiled-skill-evolution.md)。
+
 本地文件不是待同步到服务端的附件，而是本机 executor 在当前任务工作区内直接使用的能力。飞书消息只携带
 意图、审批和结果摘要；除非常东旭针对具体文件明确批准上传，否则不得把文件正文、目录清单或绝对路径投影
 到飞书、滴答、远端数据库或服务器。默认白名单是启动目录，推荐个人电脑显式配置多个最小工作区，而不是
