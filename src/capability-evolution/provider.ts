@@ -65,7 +65,15 @@ function scheduleLabel(rrule: string | undefined): string | undefined {
   if (!rrule) return undefined
   const fields = Object.fromEntries(rrule.split(';').map(item => item.split('=', 2)))
   if (fields.FREQ !== 'WEEKLY') return rrule
-  const day = dayLabels[fields.BYDAY ?? ''] ?? fields.BYDAY
+  const days = String(fields.BYDAY ?? '').split(',').filter(Boolean)
+  const workdays = ['MO', 'TU', 'WE', 'TH', 'FR']
+  const everyDay = [...workdays, 'SA', 'SU']
+  const sameDays = (expected: readonly string[]) => days.length === expected.length && expected.every(day => days.includes(day))
+  const day = sameDays(workdays)
+    ? '个工作日'
+    : sameDays(everyDay)
+      ? '天'
+      : days.map(value => dayLabels[value] ?? value).join('、') || undefined
   const hour = String(Number(fields.BYHOUR ?? 0)).padStart(2, '0')
   const minute = String(Number(fields.BYMINUTE ?? 0)).padStart(2, '0')
   return `每${day ?? '周'} ${hour}:${minute}`
