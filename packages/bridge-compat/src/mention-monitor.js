@@ -201,6 +201,7 @@ export class MentionMonitor {
     this.state.state.mentionPending ??= [];
     this.state.state.mentionProcessedMessageIds ??= [];
     this.state.state.mentionProcessingFailure ??= null;
+    this.state.state.mentionClarificationPollFailure ??= null;
     this.state.state.delegatedGroupChatIds ??= [];
     this.state.state.groupMembershipKnownChatIds ??= [];
   }
@@ -1132,31 +1133,49 @@ export class MentionMonitor {
   }
 
   async processClarificationReplies() {
-    for (let index = 0; index < this.state.state.mentionClarifications.length;) {
-      const item = this.state.state.mentionClarifications[index];
-      const messages = await this.lark.getChatMessagesSince(item.chatId, item.askedAt);
-      const answer = messages.find((message) => {
-        if (message.sender?.id !== item.senderId) return false;
-        return message.reply_to === item.questionMessageId ||
-          message.reply_to === item.sourceMessageId ||
-          message.parent_id === item.questionMessageId ||
-          message.parent_id === item.sourceMessageId ||
-          message.root_id === item.sourceMessageId;
-      });
-      if (!answer) { index += 1; continue; }
-      if (item.researchSessionId && this.runner) {
-        const final = await this.runner.execute({
-          id: `clarification:${answer.message_id}`,
-          sessionId: item.researchSessionId,
-          sessionTitle: "飞书追问补充",
-          prompt: `飞书中被追问的人补充了以下信息，请结合它继续原调研，并更新结论：\n\n${answer.content}`,
-        }, (message) => this.safeSend(`追问信息已回灌调研会话，${message}`, `clarification:${answer.message_id}:progress`));
-        await this.safeSend(`飞书追问已收到并完成后续调研：\n\n${final}`, `clarification:${answer.message_id}:final`);
-      } else {
-        await this.safeSend(`飞书追问已收到回复：\n\n${answer.content}\n\n对应任务：${item.taskId}`, `clarification:${answer.message_id}:received`);
+    let index = 0;
+    try {
+      for (; index < this.state.state.mentionClarifications.length;) {
+        const item = this.state.state.mentionClarifications[index];
+        const messages = await this.lark.getChatMessagesSince(item.chatId, item.askedAt);
+        const answer = messages.find((message) => {
+          if (message.sender?.id !== item.senderId) return false;
+          return message.reply_to === item.questionMessageId ||
+            message.reply_to === item.sourceMessageId ||
+            message.parent_id === item.questionMessageId ||
+            message.parent_id === item.sourceMessageId ||
+            message.root_id === item.sourceMessageId;
+        });
+        if (!answer) { index += 1; continue; }
+        if (item.researchSessionId && this.runner) {
+          const final = await this.runner.execute({
+            id: `clarification:${answer.message_id}`,
+            sessionId: item.researchSessionId,
+            sessionTitle: "飞书追问补充",
+            prompt: `飞书中被追问的人补充了以下信息，请结合它继续原调研，并更新结论：\n\n${answer.content}`,
+          }, (message) => this.safeSend(`追问信息已回灌调研会话，${message}`, `clarification:${answer.message_id}:progress`));
+          await this.safeSend(`飞书追问已收到并完成后续调研：\n\n${final}`, `clarification:${answer.message_id}:final`);
+        } else {
+          await this.safeSend(`飞书追问已收到回复：\n\n${answer.content}\n\n对应任务：${item.taskId}`, `clarification:${answer.message_id}:received`);
+        }
+        this.state.state.mentionClarifications.splice(index, 1);
+        await this.state.save();
       }
-      this.state.state.mentionClarifications.splice(index, 1);
+      const failure = this.state.state.mentionClarificationPollFailure;
+      if (failure) {
+        this.state.state.mentionClarificationPollFailure = null;
+        await this.state.save();
+        this.logger.info?.("clarification reply poll recovered", { failedAt: failure.at });
+      }
+    } catch (error) {
+      const now = new Date().toISOString();
+      const failure = this.state.state.mentionClarificationPollFailure || { at: now, count: 0 };
+      failure.count = Number(failure.count || 0) + 1;
+      failure.lastAt = now;
+      failure.error = userFacingError(error);
+      this.state.state.mentionClarificationPollFailure = failure;
       await this.state.save();
+      this.logger.error("clarification reply poll failed", error);
     }
   }
 

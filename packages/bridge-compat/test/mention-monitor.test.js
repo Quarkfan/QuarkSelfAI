@@ -620,6 +620,35 @@ test("clarification is proposed to the owner before an approved AI twin card is 
   assert.match(replies[0].markdown, /目标对象和字段名/);
 });
 
+test("keeps the assistant running when clarification reply polling has a transient network failure", async () => {
+  const state = stateHarness();
+  state.state.mentionClarifications = [{
+    sourceMessageId: "om_source", questionMessageId: "om_question", chatId: "oc_dm",
+    senderId: "ou_other", askedAt: "2026-09-02T06:00:00Z", taskId: "task_clarify",
+  }];
+  const errors = [];
+  const recovered = [];
+  let attempts = 0;
+  const monitor = new MentionMonitor({
+    config: {}, state,
+    lark: { async getChatMessagesSince() {
+      attempts += 1;
+      if (attempts === 1) throw new Error("temporary network failure");
+      return [];
+    } },
+    taskCreator: {}, logger: { error(...args) { errors.push(args); }, info(...args) { recovered.push(args); } },
+  });
+
+  await assert.doesNotReject(() => monitor.processLocalQueues());
+  assert.equal(state.state.mentionClarifications.length, 1);
+  assert.equal(state.state.mentionClarificationPollFailure.count, 1);
+  assert.match(state.state.mentionClarificationPollFailure.error, /后台执行失败/);
+  assert.equal(errors[0][0], "clarification reply poll failed");
+  await monitor.processLocalQueues();
+  assert.equal(state.state.mentionClarificationPollFailure, null);
+  assert.equal(recovered[0][0], "clarification reply poll recovered");
+});
+
 test("keeps repeated information silent when the existing task is unchanged", async () => {
   const message = {
     message_id: "om_repeat", chat_id: "oc_group", chat_name: "项目群", chat_type: "group",

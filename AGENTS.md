@@ -74,6 +74,7 @@
 - DSH 与 lark-cli 升级必须运行构建、契约测试、compat 检查和脱敏回放。
 - 执行器兜底必须保持能力与会话语义：native 普通 durable action 使用 Claude Code → DSH native → Codex；当前本人私聊总控延续原 Codex 会话，只有 Codex 与 Claude Code 都发生基础设施故障时才使用隔离的 DSH headless 兜底。明确指定的 Codex session、结构化滴答写入和需要原 provider 会话连续性的任务不得静默切换到 DSH。DSH headless 使用独立 `DSH_HOME`，不得与内嵌 Web profile 并发写同一 session 存储。
 - 主动通知必须遵守 `docs/operations/autonomous-twin-session.md` 的降噪门禁：瞬时基础设施故障静默、恢复只对应已通知故障、普通消息与简报限于 08:00–20:00、超期汇总限于 09:00–19:00 且任务级 24 小时去重；本人手工小维会话不镜像到控制会话。
+- 已批准追问的回复轮询是独立、可恢复的读取来源；单次网络、DNS、超时或飞书读取失败必须保留待处理项并记录脱敏故障，不得以未捕获异常终止 compatibility host 或其他消费者。后续成功读取时清除该来源故障并继续原事项。
 - 本地网络恢复遵循 `docs/adr/0045-local-network-recovery.md`：仅连续连接类失败可触发诊断，Google 不是唯一健康依据；自动停 Clash、切 Wi-Fi 或修改 IP/DNS 必须通过独立、受限、已批准的特权 helper，未完成安装、回滚和通知演练前不得挂载运行。
 - 黑湖短消息追问前必须先读取回复对象、同一私聊最近 7 天的有界历史，并优先检索 `${BLACKLAKE_WORKSPACE_ROOT}/docs/knowledge/assistant` 下的助手自有知识；三个 BlackLake 参考项目只读使用，不得写入助手自身案例。命中知识只用于恢复业务对象和可能路径，不能替代当前版本、租户、字段和状态核验，也不能授权任何配置写入。
 - 他人提出或重点消息识别出的任何任务，只允许先读取、分析、建/更新助手待办并向常东旭申请确认；未取得与该事项精确关联的明确确认，不得启动调研、联系他人、修改配置/代码/数据、发布或作出承诺。即使建议为 `researchDecision=start` 也只能发送确认卡，不能直接启动。代表常东旭发给他人的所有询问和回复必须使用 Card 2.0，header 明确显示“常东旭的 AI 分身”和“经常东旭确认后发送”；外部群仍禁止发送。

@@ -18,7 +18,7 @@
 | 本人主动参与的工作沟通及相关表情回复应被持续跟进 | focus-intake, collaboration-learning | 本人消息低频检索；低信号仅建立三个工作日临时关注；实质消息进入统一语义链路；reaction created/deleted 双实时流、mget 上下文解析、30 分钟新增事件补偿和幂等测试 | implemented：重启后启用实时表情流和低频兜底；高影响动作仍需明确文字批准 |
 | 读取附近上下文与最新会话尾部，避免迟到任务和已回复后再建任务 | focus-intake, context-and-external-guard | stale message 双窗口读取、settle window、低信号清理；现网 41/41 来源有上下文 | complete |
 | 外部群不追问、不回复；无法确认群属性时 fail closed | context-and-external-guard | external/unknown group 阻断测试；实时只读查询“油脂客户沟通群”返回 `external=true` | complete |
-| 必要追问标注 AI 分身；正式回复必须先由本人确认 | context-and-external-guard, approval-cards | 策略/审批测试；现网 10 个卡片回调无重复、3 个待确认动作跨重启保留 | complete |
+| 必要追问标注 AI 分身；正式回复必须先由本人确认 | context-and-external-guard, approval-cards | 策略/审批测试；现网 10 个卡片回调无重复、3 个待确认动作跨重启保留；追问回复读取网络故障局部降级、保留待处理项并恢复清标，不再终止 compatibility host | complete |
 | 可在 DSH 会话中自然语言创建临时插件，启动需明确批准且可回滚 | dsh-tool-cordis, dynamic-plugin-policy | Cordis 配置兼容校验；Host/Client 单次审批分流与删除门禁单测 | complete |
 | 交互消息使用卡片、按钮和输入框；普通通知格式化 | approval-cards | Card 2.0 hierarchy、button/input/select/navigation 测试及现网卡片回调 | complete |
 | 自动化待办只建真正任务；禁止 NOTE；标题一眼可见紧急/关键；标签、优先级、截止日合理 | dida-projection | task admission/presentation、NOTE/TEXT 删除补偿、实际 kind 核验测试 | gated：当前 schema 真实结果仍为 0/20 |
