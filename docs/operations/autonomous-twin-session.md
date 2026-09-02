@@ -332,3 +332,4 @@
 - 修复把已批准追问的回复读取隔离为可恢复来源：网络或读取错误保留原 `mentionClarifications`，记录脱敏的 `mentionClarificationPollFailure`、次数和时间并静默返回；后续成功读取清除故障并继续原事项。外部群、追问批准、关联回复和单消费者门禁均未变化。
 - 新增回归证明临时网络错误不会从 `processLocalQueues` 逸出，待处理追问不会丢失。`npm run check` 通过：主项目 272 项中 269 通过、3 项仅因沙箱回环限制跳过，compat 176/176；Lark、DSH、BlackLake 与服务器兼容检查全部通过。
 - 本轮未新增依赖、插件、消费者、数据库迁移或写入链路。回滚可删除该故障状态字段、局部异常隔离和对应测试；这会重新暴露整机重启风险，因此只用于定位回归。仓库原有 `package.json`、品牌生成文件与 `.DS_Store` 在途改动均未纳入本轮。
+- 修复提交 `69ecd2f` 已推送到 `origin/main`。确认原生 action/workflow、compat 调研与小维活动项均为 0 后，重启同一 LaunchAgent；跨过一个 30 秒本地队列轮询窗口后 PID 与 runs 未变化、最近退出码为 0、健康仍为 `ok=true`、5 条消费者 ready，1 条待追问仍保留且故障标记为空。14:48 通过机器人私聊发送一次 Card 2.0 升级报告，幂等键为 `cap-evo-20260902-clarification-poll`，未创建滴答任务。
