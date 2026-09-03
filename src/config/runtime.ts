@@ -3,10 +3,12 @@ import { loadExecutionConfig } from '../execution/config.js'
 import { loadAssistantKernelConfig, type AssistantKernelConfig } from '../runtime/kernel-config.js'
 import { loadStorageConfig, type StorageConfig } from '../storage/config.js'
 import { loadConsoleConfig, type ConsoleServerConfig } from '../web/config.js'
+import { loadWorkJournalConfig, type WorkJournalConfig } from '../work-journal/config.js'
 
 /** Temporary top-level selector while the compatibility host owns production traffic. */
 export interface RuntimeConfig extends AssistantKernelConfig, ConsoleServerConfig {
   readonly storage: StorageConfig
+  readonly workJournal: WorkJournalConfig
   readonly runtime:
     | { readonly mode: 'control-only' }
     | { readonly mode: 'compat'; readonly configPath: string }
@@ -16,6 +18,7 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
   const application = loadAssistantKernelConfig(env, cwd, { kernelProfile: 'feishu-assistant' })
   const execution = loadExecutionConfig(env, cwd)
   const console = loadConsoleConfig(env, execution, application.kernel.mode === 'dsh')
+  const workJournal = loadWorkJournalConfig(env, execution.workspaceRoots[0] ?? cwd)
   const runtimeMode = env.ASSISTANT_RUNTIME ?? 'control-only'
   if (runtimeMode !== 'control-only' && runtimeMode !== 'compat') {
     throw new Error(`ASSISTANT_RUNTIME must be control-only or compat, received ${runtimeMode}`)
@@ -40,6 +43,7 @@ export function loadRuntimeConfig(env: NodeJS.ProcessEnv = process.env, cwd = pr
     ...application,
     ...console,
     storage: loadStorageConfig(env, cwd),
+    workJournal,
     runtime: runtimeMode === 'compat'
       ? { mode: runtimeMode, configPath: resolve(cwd, compatConfigPath ?? '') }
       : { mode: 'control-only' },

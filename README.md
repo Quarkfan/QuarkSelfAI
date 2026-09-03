@@ -24,6 +24,7 @@ QuarkSelfAI 是基于 DeepSeek Harness（DSH）的本地优先个人工作助手
 - DSH 官方 Claude Code/Codex Provider、native spawn 与 Claude-primary 串行兜底路由。
 - DSH 原生 durable action ledger：精确批准、数据库租约、崩溃接管、退避和陈旧 worker 防护。
 - 每日协作自我回顾、低风险 guidance 自动校准、同日幂等简报和高影响策略审批闭环。
+- 多源每日工作账本，以及日报、周报、月报和任意日期范围的按需总结。
 
 DSH 的版本基线固定在 `config/dsh-baseline.json`，不把整个 Harness 安装闭包塞进插件的
 开发依赖；profile 验证使用工作区 `github/deepseek-harness` 下的正式 checkout。

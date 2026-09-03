@@ -35,6 +35,11 @@
       "id": "collaboration-learning",
       "required": true,
       "modules": ["assistant-policy-model", "collaboration-learning-policy", "collaboration-learning-native"]
+    },
+    {
+      "id": "work-journal",
+      "required": true,
+      "modules": ["work-journal-contracts", "work-journal", "work-journal-agent-compiler"]
     }
   ],
   "requiredConfiguration": [

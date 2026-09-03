@@ -41,4 +41,9 @@ export class QuarkControlPlaneClient {
     const envelope = await this.request('/internal/policies/evaluate', { facts })
     return envelope.evaluation
   }
+
+  async queryWorkJournal(from, to, limit = 3660) {
+    const envelope = await this.request('/internal/work-journal/query', { from, to, limit })
+    return envelope.result
+  }
 }

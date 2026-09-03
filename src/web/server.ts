@@ -15,12 +15,14 @@ import { eventToPolicySample } from '../collaboration/policy-samples.js'
 import { analyzeModuleRuntimeGraph, summarizeModules, type ModuleCatalogProvider } from '../platform/modules.js'
 import type { ConsoleServerConfig } from './config.js'
 import { FileCapabilityEvolutionProvider, type CapabilityEvolutionProvider } from '../capability-evolution/provider.js'
+import { queryWorkJournal, workJournalDay, WORK_JOURNAL_SIGNAL_KIND } from '../work-journal/contract.js'
+import type { WorkJournalConfig } from '../work-journal/config.js'
 
 const webRoot = fileURLToPath(new URL('../../web/', import.meta.url))
 const startedAt = Date.now()
 const sessionCookie = 'quark_console_session'
 
-export type ConsoleConfig = ConsoleServerConfig
+export type ConsoleConfig = ConsoleServerConfig & { readonly workJournal?: WorkJournalConfig }
 
 const contentTypes: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
@@ -82,7 +84,7 @@ async function body(request: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusProvider, kernelStatus: KernelStatusProvider, readinessProvider: OperationalReadinessProvider, catalogProvider: ModuleCatalogProvider, evolutionProvider: CapabilityEvolutionProvider, config: ConsoleConfig) {
-  const [overview, events, matters, actions, approvals, policies, readiness, diagnostics, moduleCatalog, evolution] = await Promise.all([
+  const [overview, events, matters, actions, approvals, policies, readiness, diagnostics, moduleCatalog, evolution, workJournalSignals, workJournalCheckpoint] = await Promise.all([
     store.overview(),
     store.recentEvents(12),
     store.recentMatters(12),
@@ -93,6 +95,8 @@ async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusPr
     runtimeStatus.diagnostics?.() ?? Promise.resolve(undefined),
     catalogProvider.load(),
     evolutionProvider.inspect(),
+    store.recentSignals(WORK_JOURNAL_SIGNAL_KIND, 31),
+    store.readFeatureCheckpoint('work-journal', 'daily-close'),
   ])
   const worker = runtimeStatus.snapshot()
   return {
@@ -109,7 +113,20 @@ async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusPr
       },
       conversationUrl: config.web.dshUrl,
     },
-    diagnostics,
+    diagnostics: {
+      ...diagnostics,
+      monitors: [
+        ...(diagnostics?.monitors ?? []),
+        {
+          id: 'work-journal', name: '每日工作账本', enabled: config.workJournal?.enabled !== false,
+          intervalMs: config.workJournal?.pollIntervalMs,
+          lastRunAt: typeof workJournalCheckpoint?.lastAttemptAt === 'string' ? workJournalCheckpoint.lastAttemptAt : null,
+          failure: workJournalCheckpoint?.failure && typeof workJournalCheckpoint.failure === 'object'
+            ? String((workJournalCheckpoint.failure as Record<string, unknown>).error ?? '') || null : null,
+          pending: workJournalCheckpoint?.lastClosedDay ? 0 : 1,
+        },
+      ],
+    },
     overview,
     events,
     matters,
@@ -123,6 +140,8 @@ async function dashboard(store: ConsoleStorePort, runtimeStatus: RuntimeStatusPr
       runtimeGraph: analyzeModuleRuntimeGraph(moduleCatalog),
     },
     evolution,
+    workJournal: queryWorkJournal(workJournalSignals, '1970-01-01', '9999-12-31'),
+    workJournalStatus: workJournalCheckpoint ?? {},
     generatedAt: new Date().toISOString(),
   }
 }
@@ -234,6 +253,17 @@ export function createConsoleServer(
               matches: matches.map((policy) => ({ id: policy.id, revision: policy.revision, name: policy.name })),
             },
           })
+          return
+        }
+        if (request.method === 'POST' && url.pathname === '/internal/work-journal/query') {
+          const input = await body(request)
+          const from = workJournalDay(input.from, 'from')
+          const to = workJournalDay(input.to, 'to')
+          if (from > to) throw new Error('from must not be later than to')
+          const limit = input.limit === undefined ? 3660 : Number(input.limit)
+          if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10000) throw new Error('limit must be an integer from 1 to 10000')
+          const records = queryWorkJournal(await store.recentSignals(WORK_JOURNAL_SIGNAL_KIND, limit), from, to)
+          json(response, 200, { ok: true, result: { from, to, count: records.length, records } })
           return
         }
         const activation = /^\/internal\/policies\/([^/]+)\/revisions\/(\d+)\/activate$/.exec(url.pathname)

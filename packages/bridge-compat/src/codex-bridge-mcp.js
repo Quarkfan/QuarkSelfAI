@@ -129,6 +129,34 @@ server.registerTool("codex_bridge_get_status", {
   }
 });
 
+server.registerTool("quark_work_journal_query", {
+  title: "Query Dean's daily work journal",
+  description: "Read the durable daily work journal for any inclusive date range. Use for daily, weekly, monthly, quarterly, annual, or custom-period work summaries. Missing dates and records with partial/unavailable sources must be supplemented with bounded read-only live evidence when needed.",
+  inputSchema: {
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u).describe("Inclusive start date in Asia/Shanghai, YYYY-MM-DD."),
+    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u).describe("Inclusive end date in Asia/Shanghai, YYYY-MM-DD."),
+  },
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+}, async ({ from, to }) => {
+  try {
+    if (from > to) throw new Error("开始日期不能晚于结束日期。");
+    const result = await controlPlane.queryWorkJournal(from, to);
+    const recorded = new Set((result.records || []).map((record) => record.day));
+    const missing = [];
+    for (let cursor = new Date(`${from}T12:00:00Z`), end = new Date(`${to}T12:00:00Z`); cursor <= end && missing.length < 4000; cursor = new Date(cursor.getTime() + 86400000)) {
+      const day = cursor.toISOString().slice(0, 10);
+      if (!recorded.has(day)) missing.push(day);
+    }
+    const partial = (result.records || []).flatMap((record) => {
+      const unavailable = (record.sources || []).filter((source) => source.status !== "available").map((source) => source.kind);
+      return unavailable.length ? [{ day: record.day, sources: unavailable }] : [];
+    });
+    return toolResult({ ...result, missing_dates: missing, partial_dates: partial, coverage_complete: missing.length === 0 && partial.length === 0 });
+  } catch (error) {
+    return toolError(error, "核对日期范围；缺失日期可通过只读实时来源补齐。\n");
+  }
+});
+
 server.registerTool("codex_bridge_send_to_session", {
   title: "Send work to an existing Codex task",
   description: "Resume one specific existing Codex task with a natural-language requirement and wait for its final result. Use only when the user explicitly targets another task; do not use for work that belongs in the current controller task.",

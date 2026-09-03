@@ -6,11 +6,12 @@ import type {
 import type { ModuleCatalogProvider } from '../platform/modules.js'
 import type { ConsoleStorePort } from '../storage/types.js'
 import type { ConsoleServerConfig } from './config.js'
+import type { WorkJournalConfig } from '../work-journal/config.js'
 import { createConsoleServer } from './server.js'
 
 export function createControlConsoleComponent(
   store: ConsoleStorePort,
-  config: ConsoleServerConfig,
+  config: ConsoleServerConfig & { readonly workJournal?: WorkJournalConfig },
   runtime: RuntimeStatusProvider,
   kernel: KernelStatusProvider,
   readiness: OperationalReadinessProvider,

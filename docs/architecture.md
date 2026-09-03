@@ -187,6 +187,17 @@ DSH profile 只保存环境变量表达式，`--dump-config` 不得出现密钥�
 17:30 最多发送 6 条格式化洞察给 owner，不在原群发言、不创建滴答任务、不持久化完整消息正文。读取分页不完整时
 保留窗口游标并退避，避免用残缺样本生成周报；该监控及失败状态在控制台单独可见。
 
+每日工作账本是原生 feature，不属于 `bridge-compat`。它使用共享 durable wake scheduler 在次日清晨闭合前一个
+北京时间自然日，并以稳定日期 ID 写入现有 `assistant_signal`，因此 SQLite 与 PostgreSQL 不需要两套业务实现。
+现网迁移 composition 只注入一个读取 compatibility 状态快照的窄 evidence provider；调度、不可变日记录、失败退避和
+查询契约仍归原生 `work-journal` 所有。迁移完成后替换 evidence provider，不移动账本真源，也不保留第二个定时器。
+
+编译器把现有事项证据与飞书、日历、滴答、执行会话、Jira、GitLab、本地 Git 的只读核验合并为事项级记录。Jira/GitLab
+先由固定主机、无写接口的参考项目凭证适配器产生有界摘要，避免模型漏用已有登录态；Claude Code 首选，只有基础设施错误
+才进入 Codex 只读兜底；任一来源失败只降低自身覆盖状态。总控通过本地控制面的只读区间查询
+获取任意日期记录，并对当天、启用前历史、缺失日期或 partial/unavailable 来源做显式、有界的实时补齐。控制台只展示最近 31 日及来源缺口，不能
+修改不可变历史。详见 [ADR 0089](adr/0089-source-backed-daily-work-journal.md)。
+
 启用后的 attention 策略由本地控制面只读评估。`batch` 不会丢弃通知，而是写入持久汇总队列，默认最多等待
 6 小时并合成一张卡片；发送失败按 10 分钟起步退避并保留原队列。`silent` 只抑制即时通知，滴答任务和内部
 matter 仍照常创建或更新。策略评估不可用时 fail-open，保留原即时通知，避免控制面故障造成漏报。

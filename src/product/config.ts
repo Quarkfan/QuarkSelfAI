@@ -3,9 +3,11 @@ import { loadAssistantKernelConfig, type AssistantKernelConfig } from '../runtim
 import { loadStorageConfig, type StorageConfig } from '../storage/config.js'
 import { loadConsoleConfig, type ConsoleServerConfig } from '../web/config.js'
 import type { ProductCompositionManifest } from './manifest.js'
+import { loadWorkJournalConfig, type WorkJournalConfig } from '../work-journal/config.js'
 
 export interface NativeProductConfig extends AssistantKernelConfig, ConsoleServerConfig {
   readonly storage: StorageConfig
+  readonly workJournal: WorkJournalConfig
   readonly runtime: { readonly mode: 'native' }
 }
 
@@ -29,6 +31,7 @@ export function loadNativeProductConfig(
     ...kernel,
     ...loadConsoleConfig(env, execution, true),
     storage: loadStorageConfig(env, cwd),
+    workJournal: loadWorkJournalConfig(env, execution.workspaceRoots[0] ?? cwd),
     runtime: { mode: 'native' },
   }
 }

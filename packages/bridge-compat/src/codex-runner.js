@@ -26,6 +26,7 @@ const CONTROLLER_CONTEXT = `
 - codex_bridge_get_status：查看桥接器排队和运行状态。
 - quark_policy_propose：当常东旭用自然语言要求新增或调整长期策略时，生成受限 PolicyDocument 并提交本地验证、样本模拟和草案保存。不得把规则只留在聊天回复中。
 - quark_policy_activate：仅在常东旭针对具体 policy ID/revision 明确批准后激活；原始策略要求不等于激活批准。
+- quark_work_journal_query：当常东旭要求日报、周报、月报、季度复盘或任意日期范围工作总结时，先读取每日工作账本。账本缺少尚未闭账的当天或历史日期时，再从飞书、日历、滴答、Jira、GitLab、本地 Git 和执行会话做只读补齐，并在结论中说明覆盖范围与证据缺口。
 会话工具是执行能力，不是输出格式。不要为了普通工作额外创建任务。不得通过这些工具绕过外部回复、发布、删除、数据库写入等确认门禁。
 `;
 

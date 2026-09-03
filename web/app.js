@@ -19,7 +19,7 @@ function showDetail(kicker, title, rows) {
 function showMonitor(m) {
   $('#detail-kicker').textContent = 'MONITOR CONFIG'
   $('#detail-title').textContent = m.name
-  const editable = m.id !== 'cards'
+  const editable = !['cards', 'work-journal'].includes(m.id)
   $('#detail-body').innerHTML = `<form id="monitor-form" class="monitor-form" data-id="${esc(m.id)}"><label><span>启用监控</span><input name="enabled" type="checkbox" ${m.enabled ? 'checked' : ''} ${editable ? '' : 'disabled'}></label><label><span>检查周期（秒）</span><input name="interval" type="number" min="15" max="86400" value="${m.intervalMs ? Math.round(m.intervalMs/1000) : ''}" ${editable && m.intervalMs ? '' : 'disabled'}></label>${m.failure ? `<p class="form-error">${esc(m.failure)}</p>` : ''}<p class="form-note">保存后守护进程会自动重启，未完成队列和幂等检查点不会丢失。</p>${editable ? '<button class="button primary" type="submit">保存并重启</button>' : '<p class="form-note">交互卡片是核心消费者，只支持查看，不能在运行中停用。</p>'}</form>`
   $('#detail-dialog').showModal()
 }
@@ -87,6 +87,22 @@ function renderEvolution(evolution) {
   $('#evolution-report-table').innerHTML = evolution.reports?.length ? evolution.reports.map((item,index) => `<tr class="clickable" data-evolution-report="${index}"><td><b>${esc(item.title)}</b></td><td>${status(item.outcome,labels[item.outcome]??item.outcome)}</td><td>${esc(item.summary)}</td><td><small>${esc(item.commit??item.taskId??'—')}</small></td><td>${esc(fmt(item.recordedAt))}</td></tr>`).join('') : emptyRow('还没有需要打扰你的升级或候选；普通空巡检不会出现在这里',5)
 }
 
+function renderJournal(records = []) {
+  $('#journal-days').textContent = records.length
+  $('#journal-table').innerHTML = records.length ? [...records].reverse().map((record, index) => {
+    const available = (record.sources ?? []).filter((source) => source.status === 'available').map((source) => source.kind)
+    return `<tr class="clickable" data-journal-record="${records.length - index - 1}"><td><b>${esc(record.day)}</b></td><td>${esc(record.headline)}</td><td><span class="count">${esc(record.highlights?.length ?? 0)}</span></td><td>${available.length ? available.map((kind) => `<span class="journal-source">${esc(kind)}</span>`).join('') : '<span class="journal-source">待补齐</span>'}</td></tr>`
+  }).join('') : emptyRow('还没有完成每日闭账；首条记录将在次日清晨生成', 4)
+}
+
+function showJournal(record) {
+  const section = (title, values) => values?.length ? `<h3>${esc(title)}</h3><ul>${values.map((value) => `<li>${esc(value)}</li>`).join('')}</ul>` : ''
+  $('#detail-kicker').textContent = 'WORK JOURNAL'
+  $('#detail-title').textContent = `${record.day} · ${record.headline}`
+  $('#detail-body').innerHTML = `<div class="journal-detail">${record.highlights?.map((item) => `<h3>${esc(item.title)} · ${esc(item.status)}</h3><p>${esc(item.summary)}</p>${section('结果', item.outcomes)}${section('证据', item.sourceRefs)}`).join('') ?? ''}${section('决定', record.decisions)}${section('交付', record.deliverables)}${section('协作', record.collaboration)}${section('下一步', record.nextSteps)}${section('证据缺口', record.gaps)}</div>`
+  $('#detail-dialog').showModal()
+}
+
 function render(data) {
   dashboard = data
   const { runtime, overview, diagnostics, readiness } = data
@@ -126,6 +142,7 @@ function render(data) {
     ? architecture.modules.map((m) => `<tr class="clickable" data-detail="module" data-id="${esc(m.id)}"><td><b>${esc(m.id)}</b><small>${esc(m.source)}</small></td><td>${status(m.classification, m.classification)}</td><td>${esc(m.layer)}</td><td>${status(m.implementation, m.implementation)}</td><td>${status(m.runtime, m.runtime)}</td><td>${esc(m.hostedBy ?? (m.runtime === 'static' ? '静态契约' : m.runtime === 'active' ? '原生' : '—'))}</td><td><small>源码 ${esc(m.dependsOn?.length ?? 0)} · Service ${esc(m.requiresServices?.length ?? 0)}/${esc(m.providesServices?.length ?? 0)} · Effect ${esc(m.requiresEffects?.length ?? 0)}/${esc(m.providesEffects?.length ?? 0)} · 挂载 ${esc(m.mounts?.length ?? 0)} · 资产 ${esc(m.assets?.length ?? 0)}</small></td></tr>`).join('')
     : emptyRow('暂无模块目录', 7)
   renderEvolution(data.evolution)
+  renderJournal(data.workJournal)
   if (runtime.conversationUrl) {
     dshUrl = runtime.conversationUrl
     $('#open-dsh').href = dshUrl
@@ -171,10 +188,10 @@ async function refresh() {
   } catch (error) { $('#health-dot').className = 'error'; $('#health-text').textContent = error instanceof Error ? error.message : String(error) }
 }
 
-const pageMeta = { overview:['协作总览','飞书、滴答清单与执行通道的统一运行视图'], monitors:['监控中心','检查后台任务的状态、频率与积压'], work:['事项与执行','从事实聚合到可恢复动作'], approvals:['批准台','所有高影响动作等待你的明确确认'], policies:['策略库','把自然语言偏好沉淀为可审计规则'], capabilities:['能力矩阵','查看当前 readiness gate 与实现证据'], evolution:['能力进化','查看独立巡检、升级证据与待决候选'], conversation:['DSH 会话','在统一控制台使用 DeepSeek Harness'] }
+const pageMeta = { overview:['协作总览','飞书、滴答清单与执行通道的统一运行视图'], monitors:['监控中心','检查后台任务的状态、频率与积压'], work:['事项与执行','从事实聚合到可恢复动作'], journal:['工作账本','跨飞书、日历、任务、执行与研发平台的每日事实'], approvals:['批准台','所有高影响动作等待你的明确确认'], policies:['策略库','把自然语言偏好沉淀为可审计规则'], capabilities:['能力矩阵','查看当前 readiness gate 与实现证据'], evolution:['能力进化','查看独立巡检、升级证据与待决候选'], conversation:['DSH 会话','在统一控制台使用 DeepSeek Harness'] }
 function switchView(name) { $$('#navigation button').forEach((b)=>{const active=b.dataset.view===name;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')}); $$('.view').forEach((v)=>v.classList.toggle('active',v.id===`view-${name}`)); const [title,sub]=pageMeta[name]; $('#page-title').textContent=title; $('#page-subtitle').textContent=sub }
 $('#navigation').addEventListener('click',(e)=>{const b=e.target.closest('[data-view]');if(b)switchView(b.dataset.view)})
-document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const report=e.target.closest('[data-evolution-report]');if(report&&dashboard){const item=dashboard.evolution?.reports?.[Number(report.dataset.evolutionReport)];if(item)showDetail('CAPABILITY EVOLUTION',item.title,[['结果',item.outcome],['摘要',item.summary],['记录时间',fmt(item.recordedAt)],['提交',item.commit??'—'],['任务',item.taskId??'—']]);return}const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){if(row.dataset.detail==='module'){const item=dashboard.architecture?.modules?.find((x)=>x.id===row.dataset.id);if(item)showModule(item);return}const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})
+document.addEventListener('click',(e)=>{const jump=e.target.closest('[data-jump]');if(jump)switchView(jump.dataset.jump);const journal=e.target.closest('[data-journal-record]');if(journal&&dashboard){const item=dashboard.workJournal?.[Number(journal.dataset.journalRecord)];if(item)showJournal(item);return}const report=e.target.closest('[data-evolution-report]');if(report&&dashboard){const item=dashboard.evolution?.reports?.[Number(report.dataset.evolutionReport)];if(item)showDetail('CAPABILITY EVOLUTION',item.title,[['结果',item.outcome],['摘要',item.summary],['记录时间',fmt(item.recordedAt)],['提交',item.commit??'—'],['任务',item.taskId??'—']]);return}const monitor=e.target.closest('[data-monitor]');if(monitor)showMonitor(JSON.parse(decodeURIComponent(monitor.dataset.monitor)));const row=e.target.closest('[data-detail]');if(row&&dashboard){if(row.dataset.detail==='module'){const item=dashboard.architecture?.modules?.find((x)=>x.id===row.dataset.id);if(item)showModule(item);return}const list={action:dashboard.actions,matter:dashboard.matters,approval:dashboard.approvals}[row.dataset.detail]??[];const item=list.find((x)=>x.id===row.dataset.id);if(item)showDetail(row.dataset.detail.toUpperCase(),item.intent??item.title??item.prompt,Object.entries(item).filter(([,v])=>typeof v!=='object'))}})
 document.addEventListener('submit',async(e)=>{if(e.target.id!=='monitor-form')return;e.preventDefault();const form=e.target;const interval=form.elements.interval.disabled?undefined:Number(form.elements.interval.value)*1000;const response=await fetch(`/api/monitors/${encodeURIComponent(form.dataset.id)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({enabled:form.elements.enabled.checked,...interval?{intervalMs:interval}:{}})});const payload=await response.json();if(!response.ok){form.querySelector('.form-error')?.remove();form.insertAdjacentHTML('beforeend',`<p class="form-error">${esc(payload.error??'保存失败')}</p>`);return}$('#detail-dialog').close();$('#health-text').textContent='正在应用配置';setTimeout(refresh,2500)})
 $('#refresh').addEventListener('click',refresh)
 $('#reload-dsh').addEventListener('click',()=>void connectDsh(true))

@@ -87,6 +87,24 @@ test('serves a visible dashboard and reports the blocked takeover gate', async (
     const evaluation = await evaluationResponse.json() as { evaluation: { effect: { attention?: string }; matches: unknown[] } }
     assert.equal(evaluation.evaluation.effect.attention, 'realtime')
     assert.equal(evaluation.evaluation.matches.length, 1)
+    const workRecord = {
+      version: 1, day: '2026-09-02', headline: '完成工作账本能力', highlights: [], decisions: [],
+      deliverables: ['工作账本'], collaboration: [], nextSteps: [], sources: [], gaps: [],
+    }
+    await store.appendSignal({
+      id: 'work-journal:daily:2026-09-02', kind: 'assistant.work-journal.daily.v1',
+      occurredAt: '2026-09-02T23:59:59.999+08:00', scope: { day: '2026-09-02' }, data: workRecord,
+    })
+    const journalQuery = await fetch(`http://127.0.0.1:${port}/internal/work-journal/query`, {
+      method: 'POST', headers: { authorization: 'Bearer control-test-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ from: '2026-09-01', to: '2026-09-03' }),
+    })
+    const journal = await journalQuery.json() as { result: { count: number; records: { day: string }[] } }
+    assert.equal(journal.result.count, 1)
+    assert.equal(journal.result.records[0]?.day, '2026-09-02')
+    const dashboardResponse = await fetch(`http://127.0.0.1:${port}/api/dashboard`)
+    const dashboardPayload = await dashboardResponse.json() as { data: { workJournal: { day: string }[] } }
+    assert.equal(dashboardPayload.data.workJournal[0]?.day, '2026-09-02')
     worker = { mode: 'compat', state: 'failed', capabilities: [], lastError: 'fixture failure' }
     const unhealthy = await fetch(`http://127.0.0.1:${port}/api/health`)
     assert.equal(unhealthy.status, 503)

@@ -260,6 +260,8 @@ export interface AssistantStore extends
 
 export type ConsoleStorePort = Pick<StorageLifecyclePort, 'kind' | 'health'>
   & Pick<EventJournalStorePort, 'recentEventPayloads'>
+  & SignalStorePort
+  & FeatureCheckpointStorePort
   & ControlReadStorePort
   & PolicyStorePort
 export type PolicyAuthoringStorePort = Pick<PolicyStorePort, 'savePolicyDraft' | 'activatePolicy'>
