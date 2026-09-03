@@ -80,6 +80,7 @@ async function loadConfig() {
     reactionSettleDelayMs: 120000,
     reactionFallbackLookbackHours: 24,
     specialAttentionUsers: [],
+    explicitAttentionConversations: [],
     monitorFlaggedConversations: true,
     flaggedConversationSyncIntervalMs: 1800000,
     flagPageLimit: 1000,

@@ -369,3 +369,11 @@
 - 实现提交 `2965c54` 已通过本轮全部门禁；代码不改变运行时装配，因此无需重启守护进程。
 - 14:39 通过机器人私聊发送本轮唯一一张 Card 2.0 升级报告，幂等键为 `cap-evo-20260903-jira-gap`，消息 `om_x100b66a52fed08acc3f622cc91cfa56`；未创建滴答任务。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化自动化直接执行；`failureReason=none`、`failureStage=none`。
+
+## 2026-09-03 全栈交流群知识关注与沉淀
+
+- 常东旭要求持续关注“全栈开发学习交流群”，阅读其中的坑和解决方案并沉淀。只读确认该会话为正常内部群；以 user identity 完整翻页读取 2026-06-01 至 2026-09-03 的可见记录，实际覆盖 2026-08-06 至 2026-09-03，共 217 条、5 页、无剩余页且未发现 thread。
+- 将同一问题的启动、追问、处理和复核合并后，沉淀出 release 目标分支与合入时机、feature 重建导致提交消失、生成式多语言链路、非代码模板交付四类可复用检查。对 `bf-main-3` 只读 fetch 后，以 `origin/feature@64daddbab9007fa51542b99ae4880986942d4218` 核验当前 codemod 规则；历史参考规则与近期实践存在时效差异时不覆盖参考项目，执行前回到当前需求、仓库和负责人复核。
+- 新增显式知识关注 profile，复用 compatibility 唯一消费者和既有 30 分钟恢复扫描，不新增消费者、数据库、依赖或写入链路。`purpose=knowledge` 只使普通消息进入模型语义判断和低打扰简报候选，不因单一群来源自动建滴答任务、即时通知或在原群回复；长期由原生 attention policy 接管时删除该 compat 配置。
+- 本地真源写入 `docs/knowledge/assistant/cases/CASE-2026-09-03-fullstack-delivery-pitfalls.md`。群内已有湖小维生成的候选 Skill，本轮只读检查且未调用湖小维、未执行或安装候选；回滚可移除显式 profile 和知识索引，保留历史审计。
+- `npm run check` 通过：主项目 285 项中 282 通过、3 项仅因沙箱回环限制跳过，compat 177/177；根协作入口同步校验通过 `2026-09-03.4`。另以定向回归确认静态关注配置不能覆盖飞书实时返回的外部群属性。确认无运行中的 session 或小维调研后重启同一个 LaunchAgent；健康端点恢复为 `ok=true`，compat worker、DSH kernel 和 5 条飞书消费者均 ready。状态已持久化该内部群的 `owner_configured` / `purpose=knowledge` profile，attention inventory 从 40 个 watched 更新为 41 个；没有发送群消息或创建滴答任务。

@@ -286,6 +286,50 @@ test("watches pinned and feed-group chats while carrying mute state into the dec
   assert.equal(decisions.length, 0);
 });
 
+test("watches an owner-configured knowledge conversation without requiring a Feishu pin", async () => {
+  const message = {
+    message_id: "om_learning", chat_id: "oc_learning", chat_name: "全栈开发学习交流群", chat_type: "group",
+    create_time: "2026-09-03 15:00", content: "Feature 重建后需要重新核验提交", sender: { id: "ou_other", name: "同事" },
+  };
+  const state = stateHarness();
+  const monitor = new MentionMonitor({
+    config: {
+      mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, mentionContextMinutes: 30,
+      allowedOpenId: "ou_me", flaggedConversationSyncIntervalMs: 300000,
+      conversationAttentionSyncIntervalMs: 300000, specialAttentionUsers: [],
+      explicitAttentionConversations: [{ name: "全栈开发学习交流群", chatId: "oc_learning", external: false, purpose: "knowledge" }],
+    },
+    state,
+    lark: {
+      async listFlaggedConversations() { return []; },
+      async listConversationAttentionSignals() {
+        return {
+          profiles: [{ chatId: "oc_learning", chatName: "旧名称", external: true, sources: [], feedGroups: [], muted: false, muteAtAll: false }],
+          sourceErrors: [], inventory: { groupChats: 1 },
+        };
+      },
+      async searchMentions() { return []; },
+      async searchSpecialAttentionMessages() { return []; },
+      async searchDirectMessages() { return []; },
+      async searchAttentionConversationMessages(_start, _end, chatIds) {
+        assert.deepEqual(chatIds, ["oc_learning"]);
+        return [message];
+      },
+      async getMentionContext() { return [message]; },
+      async send() {},
+    },
+    taskCreator: { async createFromMention() { return { taskAction: "ignored", notificationDecision: "silent", researchDecision: "skip" }; } },
+  });
+
+  await monitor.poll();
+  assert.equal(state.state.mentionPending.length, 1);
+  assert.deepEqual(state.state.mentionPending[0].message.intakeReasons, ["用户指定关注群（knowledge）"]);
+  assert.equal(state.state.mentionPending[0].message.assistantAttention.tier, "high");
+  assert.equal(state.state.mentionPending[0].message.assistantAttention.notificationMode, "digest");
+  assert.equal(state.state.conversationAttentionProfiles[0].external, true, "static config must not override live external metadata");
+  assert.equal(state.state.conversationAttentionInventory.watched, 1);
+});
+
 test("keeps failed mentions pending with backoff", async () => {
   const message = { message_id: "om_2", chat_id: "oc_1", content: "@我 跟进", sender: { id: "ou_other" } };
   const state = stateHarness();

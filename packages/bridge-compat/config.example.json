@@ -50,6 +50,9 @@
     { "name": "任永强", "openId": "ou_42f49a29bc7599fe3f47db53fa8eaf94" },
     { "name": "张以宁", "openId": "ou_0e014dee555bda6a127ca43da4966cf4" }
   ],
+  "explicitAttentionConversations": [
+    { "name": "全栈开发学习交流群", "chatId": "oc_example", "purpose": "knowledge" }
+  ],
   "monitorFlaggedConversations": true,
   "flaggedConversationSyncIntervalMs": 1800000,
   "flagPageLimit": 1000,

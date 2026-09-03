@@ -1,6 +1,6 @@
 import { formatUserTime, isWithinLocalHourWindow } from "./util.js";
 
-const CONVERSATION_ATTENTION_STRATEGY_VERSION = 1;
+const CONVERSATION_ATTENTION_STRATEGY_VERSION = 2;
 
 function isoWithOffset(date) {
   const shifted = new Date(date.getTime() + 8 * 60 * 60 * 1000);
@@ -92,6 +92,7 @@ export function deriveConversationAttention(profile = {}) {
   const groupNames = (profile.feedGroups || []).map((group) => String(group.name || ""));
   let score = 0;
   if (sources.has("pinned")) score += 4;
+  if (sources.has("owner_configured")) score += 4;
   if (sources.has("active_flag")) score += 3;
   if (sources.has("feed_group")) score += 2;
   if (groupNames.some((name) => /任务|值班|待办|项目|AI方向/i.test(name))) score += 1;
@@ -108,6 +109,7 @@ export function deriveConversationAttention(profile = {}) {
     notificationMode: "digest",
     rationale: [
       sources.has("pinned") ? "置顶" : null,
+      sources.has("owner_configured") ? "用户指定关注" : null,
       sources.has("active_flag") ? "有当前标记" : null,
       groupNames.length ? `分组:${groupNames.join("/")}` : null,
       profile.muted ? "普通消息免打扰" : null,
@@ -118,6 +120,7 @@ export function deriveConversationAttention(profile = {}) {
 
 function attentionReasons(profile = {}) {
   const reasons = [];
+  if ((profile.sources || []).includes("owner_configured")) reasons.push(`用户指定关注群${profile.purpose ? `（${profile.purpose}）` : ""}`);
   if ((profile.sources || []).includes("pinned")) reasons.push("飞书置顶会话");
   if ((profile.sources || []).includes("active_flag")) reasons.push("飞书标记会话");
   for (const group of profile.feedGroups || []) reasons.push(`飞书分组：${group.name}`);
@@ -903,8 +906,16 @@ export class MentionMonitor {
       if (!profile.sources.includes("active_flag")) profile.sources.push("active_flag");
       profiles.set(chatId, profile);
     }
+    for (const configured of this.config.explicitAttentionConversations || []) {
+      if (!configured?.chatId || !String(configured.chatId).startsWith("oc_")) continue;
+      const profile = profiles.get(configured.chatId) || { chatId: configured.chatId, chatName: "", external: null, sources: [], feedGroups: [], muted: false, muteAtAll: false };
+      if (!profile.sources.includes("owner_configured")) profile.sources.push("owner_configured");
+      profile.chatName = configured.name || profile.chatName;
+      profile.purpose = configured.purpose || profile.purpose;
+      profiles.set(configured.chatId, profile);
+    }
     return new Map([...profiles].filter(([, profile]) => (
-      (profile.sources || []).some((source) => ["pinned", "active_flag", "feed_group"].includes(source))
+      (profile.sources || []).some((source) => ["pinned", "active_flag", "feed_group", "owner_configured"].includes(source))
     )));
   }
 
@@ -921,6 +932,14 @@ export class MentionMonitor {
       const result = await this.lark.listConversationAttentionSignals();
       const failedSources = new Set((result.sourceErrors || []).map((item) => item.source));
       const next = new Map((result.profiles || []).map((profile) => [profile.chatId, profile]));
+      for (const configured of this.config.explicitAttentionConversations || []) {
+        if (!configured?.chatId || !String(configured.chatId).startsWith("oc_")) continue;
+        const profile = next.get(configured.chatId) || { chatId: configured.chatId, chatName: "", external: null, sources: [], feedGroups: [], muted: false, muteAtAll: false };
+        if (!profile.sources.includes("owner_configured")) profile.sources.push("owner_configured");
+        profile.chatName = configured.name || profile.chatName;
+        profile.purpose = configured.purpose || profile.purpose;
+        next.set(configured.chatId, profile);
+      }
       for (const old of previous) {
         const current = next.get(old.chatId) || { ...old, sources: [], feedGroups: [], muted: false, muteAtAll: false };
         if (failedSources.has("pinned") && old.sources?.includes("pinned") && !current.sources.includes("pinned")) current.sources.push("pinned");
