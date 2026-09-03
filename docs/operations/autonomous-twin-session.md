@@ -367,4 +367,5 @@
 - `npm run check` 通过：架构目录 93 个模块归属有效，主项目 285 项中 282 通过、3 项仅因沙箱回环限制跳过，compat 176/176；Lark、DSH、BlackLake 与服务器兼容检查全部通过。宿主 LaunchAgent 保持运行、最近退出码 0，健康端点 `ok=true`，兼容 worker、DSH kernel 和 5 条飞书消费者 ready；代码变更不需要重启。
 - 回滚可移除 `ReferenceRequestError` 的分类及对应测试和文档，恢复通用 HTTP 状态原因；不会改变账本数据、消费者、数据库、凭证或 DSH/Cordis 边界。剩余缺口是 Jira 需要由常东旭在合适时机重新认证，未认证期间只影响 Jira 证据覆盖，不阻断其他来源闭账。
 - 实现提交 `2965c54` 已通过本轮全部门禁；代码不改变运行时装配，因此无需重启守护进程。
+- 14:39 通过机器人私聊发送本轮唯一一张 Card 2.0 升级报告，幂等键为 `cap-evo-20260903-jira-gap`，消息 `om_x100b66a52fed08acc3f622cc91cfa56`；未创建滴答任务。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化自动化直接执行；`failureReason=none`、`failureStage=none`。
