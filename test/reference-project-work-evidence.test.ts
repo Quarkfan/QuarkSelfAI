@@ -38,3 +38,23 @@ test('degrades each unavailable reference source independently', async () => {
   assert.equal(sources.jira.status, 'unavailable')
   assert.equal(sources.gitlab.status, 'unavailable')
 })
+
+test('classifies reference authentication and permission gaps without retaining response bodies', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'work-journal-reference-auth-'))
+  const state = join(root, 'ai', 'devops-virtual-employee', 'state')
+  await mkdir(state, { recursive: true })
+  const cookie = '.example\tTRUE\t/\tFALSE\t0\tsession\tsecret-value\n'
+  await writeFile(join(state, 'jira-session.json'), JSON.stringify({ base_url: 'http://jira2.blacklake.tech', cookie_jar: 'state/jira-cookies.txt' }))
+  await writeFile(join(state, 'jira-cookies.txt'), cookie)
+  await writeFile(join(state, 'gitlab-session.json'), JSON.stringify({ base_url: 'https://gitlab.blacklake.tech', cookie_jar: 'state/gitlab-cookies.txt', user: { id: 482 } }))
+  await writeFile(join(state, 'gitlab-cookies.txt'), cookie)
+  const provider = new ReferenceProjectWorkEvidenceProvider({ async load(day) { return { day } } }, root, async input => {
+    return new Response('sensitive upstream response', { status: String(input).includes('jira2') ? 401 : 403 })
+  })
+
+  const evidence = await provider.load('2026-09-02')
+  const sources = evidence.referenceProjects as Record<string, Record<string, unknown>>
+  assert.deepEqual(sources.jira, { status: 'unavailable', reason: 'authentication-required' })
+  assert.deepEqual(sources.gitlab, { status: 'unavailable', reason: 'permission-required' })
+  assert.doesNotMatch(JSON.stringify(evidence), /sensitive|secret-value/)
+})

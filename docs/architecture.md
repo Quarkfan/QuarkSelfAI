@@ -198,6 +198,10 @@ DSH profile 只保存环境变量表达式，`--dump-config` 不得出现密钥�
 获取任意日期记录，并对当天、启用前历史、缺失日期或 partial/unavailable 来源做显式、有界的实时补齐。控制台只展示最近 31 日及来源缺口，不能
 修改不可变历史。详见 [ADR 0089](adr/0089-source-backed-daily-work-journal.md)。
 
+参考项目证据适配器对认证边界做脱敏分类：HTTP 401、403、429 分别输出 `authentication-required`、
+`permission-required`、`rate-limited`，不把响应正文交给编译器。分类只提高缺口的可操作性，不触发登录、凭证刷新、
+权限申请或跨来源失败传播。
+
 飞书证据采用三层覆盖账本：完整翻页读取本人当日发言与当日 `@我`，再读取两类消息所在会话的当日上下文。只有三层
 均无剩余页才声明 `available`；任何失败、截断或页上限都显式降为 `partial/unavailable`。编译输入只携带每个锚点前后
 有界语境，并与 compatibility 状态中的重点事项、表情和注意力信号合并；这既不启动第二个消费者，也不宣称扫描了所有

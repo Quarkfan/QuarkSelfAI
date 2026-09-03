@@ -4,6 +4,12 @@ import type { WorkJournalEvidenceProvider } from './contract.js'
 
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
+class ReferenceRequestError extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`)
+  }
+}
+
 interface AuthState extends Record<string, unknown> {
   readonly base_url?: string
   readonly cookie_jar?: string
@@ -45,8 +51,17 @@ async function json(fetcher: Fetcher, url: URL, cookie: string): Promise<unknown
     headers: { accept: 'application/json', cookie, 'user-agent': 'QuarkSelfAI-work-journal/1' },
     redirect: 'error', signal: AbortSignal.timeout(20_000),
   })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  if (!response.ok) throw new ReferenceRequestError(response.status)
   return await response.json()
+}
+
+function unavailable(error: unknown): Readonly<Record<string, unknown>> {
+  if (error instanceof ReferenceRequestError) {
+    if (error.status === 401) return { status: 'unavailable', reason: 'authentication-required' }
+    if (error.status === 403) return { status: 'unavailable', reason: 'permission-required' }
+    if (error.status === 429) return { status: 'unavailable', reason: 'rate-limited' }
+  }
+  return { status: 'unavailable', reason: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300) }
 }
 
 function items(value: unknown): readonly Readonly<Record<string, unknown>>[] {
@@ -86,7 +101,7 @@ export class ReferenceProjectWorkEvidenceProvider implements WorkJournalEvidence
         }),
       }
     } catch (error) {
-      return { status: 'unavailable', reason: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300) }
+      return unavailable(error)
     }
   }
 
@@ -127,7 +142,7 @@ export class ReferenceProjectWorkEvidenceProvider implements WorkJournalEvidence
         mergeRequests: [...mergeRequests.values()].slice(0, 100),
       }
     } catch (error) {
-      return { status: 'unavailable', reason: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300) }
+      return unavailable(error)
     }
   }
 }

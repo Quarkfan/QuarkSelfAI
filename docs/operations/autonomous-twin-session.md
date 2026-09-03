@@ -357,3 +357,13 @@
 - 2026-09-02 真实只读验证得到本人发言 97 条、`@我` 12 条、26 个相关会话、339 条上下文，三层均完整；送入归纳的有界语境为 217 条。该口径明确不宣称读取了所有未参与、未被提及群的全部消息，置顶、标记、特别关注、表情和 compatibility 持久事项继续作为补充信号。
 - 变更没有新增飞书消费者、轮询内核、数据库、依赖或外部写入。回滚可移除飞书 evidence wrapper 并保留原有 reference/compat provider；代价是工作账本重新失去可核验的本人飞书参与覆盖。
 - `npm run check` 通过：架构目录 93 个模块归属有效，主项目 284 项中 281 通过、3 项仅因命令沙箱不允许回环监听而跳过，compat 176/176。确认一条在途真实滴答投影的 Claude 子进程自然结束后才重启同一 `com.quarkfan.quark-self-ai` LaunchAgent；父 PID 11120、compat worker 11127、DSH 11121，健康 `ok=true`，原有消息、卡片、成员加入和两条表情事件共 5 个消费者均 ready。
+
+## 2026-09-03 工作账本参考证据缺口分类
+
+- 本轮能力巡检比较三条轨道后选择“现有能力的可测增强”：前一轮已处理运行可靠性，当前没有未决进取型候选；刚上线的多源工作账本仍把 Jira 失败显示为通用 HTTP 401，无法区分凭证、权限、限流和网络问题。
+- 按参考项目路由执行统一只读认证检查，`python3 tools/auth/devops_auth.py check jira` 同样返回 HTTP 401，确认根因是现有 Jira session 已失效而非 QuarkSelfAI 漏用登录态。本轮不自动登录、不读取或修改凭证，也不申请额外权限。
+- 参考证据适配器现在把 HTTP 401、403、429 分别归一为 `authentication-required`、`permission-required`、`rate-limited`，且不保留上游响应正文；其他异常继续返回有界脱敏原因，各来源仍独立降级并允许当天闭账。
+- 新增回归覆盖认证与权限分类、响应正文和 Cookie 不进入证据。宿主只读实测 2026-09-02：Jira 为 `unavailable/authentication-required`，GitLab 同期为 `available` 且 0 个 event/MR，证明不是全局网络故障。
+- `npm run check` 通过：架构目录 93 个模块归属有效，主项目 285 项中 282 通过、3 项仅因沙箱回环限制跳过，compat 176/176；Lark、DSH、BlackLake 与服务器兼容检查全部通过。宿主 LaunchAgent 保持运行、最近退出码 0，健康端点 `ok=true`，兼容 worker、DSH kernel 和 5 条飞书消费者 ready；代码变更不需要重启。
+- 回滚可移除 `ReferenceRequestError` 的分类及对应测试和文档，恢复通用 HTTP 状态原因；不会改变账本数据、消费者、数据库、凭证或 DSH/Cordis 边界。剩余缺口是 Jira 需要由常东旭在合适时机重新认证，未认证期间只影响 Jira 证据覆盖，不阻断其他来源闭账。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化自动化直接执行；`failureReason=none`、`failureStage=none`。

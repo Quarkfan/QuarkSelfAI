@@ -15,7 +15,7 @@
 2. 每日记录使用 `assistant_signal` 的稳定 ID `work-journal:daily:<date>` 保存，SQLite 与 PostgreSQL 共用现有存储契约；同一日期不可被静默改写。
 3. 工作账本只保存事项级事实：完成或推进、决定、交付、协作、阻塞、下一步、来源状态和可复核引用。完整消息、凭证、无关人员隐私和不必要的内部技术标识不进入账本。
 4. 飞书不是可选装饰源。原生只读适配器使用 user identity 分别完整翻页读取本人当日发言、当日 `@我` 消息，再读取两类锚点所在会话的当日上下文；三层都关闭分页游标后才标记 `available`，任一层失败或达到页数上限均为 `partial/unavailable`。持久重点事项、表情与注意力信号只作补充，不能用单一信号伪造完整覆盖。交给编译器的消息只保留锚点前后有界语境，账本仍不保存完整聊天流水。
-5. Claude Code 负责首轮只读取证与编译；仅在基础设施失败时由 Codex 只读兜底。来源失败形成 `partial/unavailable` 缺口，不阻断其他来源闭账。Jira/GitLab 不依赖模型自行发现登录态：原生只读适配器复用 `ai/devops-virtual-employee` 的现有 session，只向固定 BlackLake 主机发送 Cookie，并只把有界 issue/event/MR 摘要交给编译器。
+5. Claude Code 负责首轮只读取证与编译；仅在基础设施失败时由 Codex 只读兜底。来源失败形成 `partial/unavailable` 缺口，不阻断其他来源闭账。Jira/GitLab 不依赖模型自行发现登录态：原生只读适配器复用 `ai/devops-virtual-employee` 的现有 session，只向固定 BlackLake 主机发送 Cookie，并只把有界 issue/event/MR 摘要交给编译器。HTTP 401、403、429 分别归一为 `authentication-required`、`permission-required`、`rate-limited`，不保留响应正文，也不自动登录或刷新凭证。
 6. 现网仍由 compatibility provider 持有部分飞书和滴答事实时，迁移 composition 注入一个只读 evidence provider；工作账本的调度、幂等和持久化仍由原生 feature 拥有。迁移层退出时替换 evidence provider，不迁移账本真源。
 7. 总控通过只读 `quark_work_journal_query` 查询任意日期范围。当天、启用前历史、缺失日期或来源不完整的日期由当前会话按相同来源边界做有界补齐并说明覆盖率，不伪造成已经闭账。
 8. 控制台只读展示最近 31 条日记录和闭账故障，不提供修改历史或绕过来源权限的入口。
