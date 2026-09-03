@@ -377,3 +377,10 @@
 - 新增显式知识关注 profile，复用 compatibility 唯一消费者和既有 30 分钟恢复扫描，不新增消费者、数据库、依赖或写入链路。`purpose=knowledge` 只使普通消息进入模型语义判断和低打扰简报候选，不因单一群来源自动建滴答任务、即时通知或在原群回复；长期由原生 attention policy 接管时删除该 compat 配置。
 - 本地真源写入 `docs/knowledge/assistant/cases/CASE-2026-09-03-fullstack-delivery-pitfalls.md`。群内已有湖小维生成的候选 Skill，本轮只读检查且未调用湖小维、未执行或安装候选；回滚可移除显式 profile 和知识索引，保留历史审计。
 - `npm run check` 通过：主项目 285 项中 282 通过、3 项仅因沙箱回环限制跳过，compat 177/177；根协作入口同步校验通过 `2026-09-03.4`。另以定向回归确认静态关注配置不能覆盖飞书实时返回的外部群属性。确认无运行中的 session 或小维调研后重启同一个 LaunchAgent；健康端点恢复为 `ok=true`，compat worker、DSH kernel 和 5 条飞书消费者均 ready。状态已持久化该内部群的 `owner_configured` / `purpose=knowledge` profile，attention inventory 从 40 个 watched 更新为 41 个；没有发送群消息或创建滴答任务。
+
+## 2026-09-03 Lakers 租户 CS 参考查询能力
+
+- 常东旭要求在询问某项目或租户的 CS 时，从 Lakers 租户“内部负责人”字段查询并用于参考。线上 `v3_lakers.organization` schema 经 Archery 只读核验：`organization_principal varchar(100)`，注释为“租户负责人”；结合本人给定语义，只解释为申请租户环境时登记的 CS 参考，不宣称当前归属。
+- 新增根共享 Skill `blacklake-tenant-cs-lookup`，由 `.agents/skills` 与 `.claude/skills` 的同源符号链接供 Codex、Claude Code 发现；DSH headless 按根 `AGENTS.md` 使用同一入口。确定性脚本仅调用虚拟员工现有 Archery 只读 helper，使用 UTF-8 十六进制 SQL literal，按 orgId、工厂号、租户名、客户名和服务项目有界查询，不直连数据库、不提交工单、不持久化人员结果。
+- 官方 Skill validator、3 项 SQL/结果处理单测、Python 编译与共享链接一致性均通过。线上空负责人样本与有负责人样本均成功返回，多结果/空值/停用环境保留原事实，由上层语义判断是否需要用户补充 orgId 或工厂号。QuarkSelfAI `npm run check` 通过：主项目 285 项中 282 通过、3 项仅因沙箱回环限制跳过，compat 177/177。
+- 本轮不修改 DSH/Cordis 边界、不新增消费者、数据库、依赖、定时器或外部写入，不需要重启守护进程。回滚为删除共享 Skill 及两个链接并恢复协作契约；Archery 会话和 Lakers 数据均未修改。
