@@ -21,7 +21,7 @@ test('persists one immutable daily signal and a durable close checkpoint', async
   }
   const service = new WorkJournalService({
     enabled: true, timeZone: 'Asia/Shanghai', closeHour: 5, pollIntervalMs: 3_600_000,
-    modelTimeoutMs: 60_000, workspace: '/tmp', claudeCli: 'claude', codexCli: 'codex',
+    modelTimeoutMs: 60_000, workspace: '/tmp', claudeCli: 'claude', codexCli: 'codex', larkCli: 'lark-cli', ownerOpenId: undefined,
   }, store, { async load(day) { return { day, matters: 1 } } }, {
     async compile(day) {
       return { version: 1, day, headline: '完成当日工作', highlights: [], decisions: [], deliverables: [], collaboration: [], nextSteps: [], sources: [], gaps: [] }
@@ -50,7 +50,7 @@ test('repairs the checkpoint without recompiling when the daily signal already e
   }
   const service = new WorkJournalService({
     enabled: true, timeZone: 'Asia/Shanghai', closeHour: 5, pollIntervalMs: 3_600_000,
-    modelTimeoutMs: 60_000, workspace: '/tmp', claudeCli: 'claude', codexCli: 'codex',
+    modelTimeoutMs: 60_000, workspace: '/tmp', claudeCli: 'claude', codexCli: 'codex', larkCli: 'lark-cli', ownerOpenId: undefined,
   }, store, { async load(day) { return { day } } }, { async compile() { compileCount += 1; throw new Error('must not compile') } })
   await service.poll(new Date('2026-09-03T00:00:00.000Z'))
   assert.equal(compileCount, 0)

@@ -9,6 +9,7 @@ import { AgentWorkJournalCompiler } from '../work-journal/agent-compiler.js'
 import { NativeStoreWorkEvidenceProvider } from '../work-journal/native-evidence.js'
 import { WorkJournalService } from '../work-journal/service.js'
 import { ReferenceProjectWorkEvidenceProvider } from '../work-journal/reference-project-evidence.js'
+import { FeishuWorkEvidenceProvider } from '../work-journal/feishu-evidence.js'
 import { join } from 'node:path'
 
 /** Long-term product composition. It contains no compatibility selector or legacy state path. */
@@ -26,7 +27,10 @@ export async function createNativeProductApplication(
   const workJournal = new WorkJournalService(
     config.workJournal,
     store,
-    new ReferenceProjectWorkEvidenceProvider(new NativeStoreWorkEvidenceProvider(store), config.workJournal.workspace),
+    new FeishuWorkEvidenceProvider(
+      new ReferenceProjectWorkEvidenceProvider(new NativeStoreWorkEvidenceProvider(store), config.workJournal.workspace),
+      config.workJournal,
+    ),
     new AgentWorkJournalCompiler(config.workJournal, join(process.cwd(), 'var', 'work-journal-runs')),
   )
   try {

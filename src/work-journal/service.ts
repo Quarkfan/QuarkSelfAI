@@ -85,7 +85,7 @@ export class WorkJournalService {
     await this.store.writeFeatureCheckpoint(checkpointNamespace, checkpointKey, attempted)
     this.controller = new AbortController()
     try {
-      const evidence = await this.evidence.load(day)
+      const evidence = await this.evidence.load(day, this.controller.signal)
       const record = dailyWorkJournalRecord(await this.compiler.compile(day, evidence, this.controller.signal))
       if (record.day !== day) throw new Error(`compiled work journal day ${record.day} does not match ${day}`)
       await this.store.appendSignal(workJournalSignal(record))

@@ -10,7 +10,9 @@ import { CompatStateWorkEvidenceProvider } from './compat-work-evidence.js'
 import { AgentWorkJournalCompiler } from '../work-journal/agent-compiler.js'
 import { WorkJournalService } from '../work-journal/service.js'
 import { ReferenceProjectWorkEvidenceProvider } from '../work-journal/reference-project-evidence.js'
+import { FeishuWorkEvidenceProvider } from '../work-journal/feishu-evidence.js'
 import { join } from 'node:path'
+import { readFile } from 'node:fs/promises'
 
 /**
  * Temporary process composition while compatibility features still own live
@@ -21,16 +23,30 @@ export async function createConfiguredAssistantApplication(config: RuntimeConfig
   const runtime = config.runtime.mode === 'compat'
     ? new CompatRuntime(config.runtime.configPath, { workspaceRoots: config.execution.workspaceRoots })
     : new ControlOnlyRuntime()
+  const compatibilityConfig = config.runtime.mode === 'compat'
+    ? JSON.parse(await readFile(config.runtime.configPath, 'utf8')) as Record<string, unknown>
+    : {}
   const store = await createAssistantStore(config)
   const readiness = { inspect: loadNativeCutoverReadiness }
+  const workJournalConfig = {
+    ...config.workJournal,
+    larkCli: typeof compatibilityConfig.larkCli === 'string' && compatibilityConfig.larkCli.trim()
+      ? compatibilityConfig.larkCli.trim() : config.workJournal.larkCli,
+    ownerOpenId: config.workJournal.ownerOpenId
+      ?? (typeof compatibilityConfig.allowedOpenId === 'string' && compatibilityConfig.allowedOpenId.trim()
+        ? compatibilityConfig.allowedOpenId.trim() : undefined),
+  }
   const workJournal = config.runtime.mode === 'compat'
     ? new WorkJournalService(
-        config.workJournal,
+        workJournalConfig,
         store,
-        new ReferenceProjectWorkEvidenceProvider(
-          new CompatStateWorkEvidenceProvider(config.runtime.configPath), config.workJournal.workspace,
+        new FeishuWorkEvidenceProvider(
+          new ReferenceProjectWorkEvidenceProvider(
+            new CompatStateWorkEvidenceProvider(config.runtime.configPath), config.workJournal.workspace,
+          ),
+          workJournalConfig,
         ),
-        new AgentWorkJournalCompiler(config.workJournal, join(process.cwd(), 'var', 'work-journal-runs')),
+        new AgentWorkJournalCompiler(workJournalConfig, join(process.cwd(), 'var', 'work-journal-runs')),
       )
     : undefined
   try {

@@ -64,8 +64,8 @@ export class ReferenceProjectWorkEvidenceProvider implements WorkJournalEvidence
     this.stateRoot = join(workspace, 'ai', 'devops-virtual-employee', 'state')
   }
 
-  async load(day: string): Promise<Readonly<Record<string, unknown>>> {
-    const [local, jira, gitlab] = await Promise.all([this.base.load(day), this.jira(day), this.gitlab(day)])
+  async load(day: string, signal?: AbortSignal): Promise<Readonly<Record<string, unknown>>> {
+    const [local, jira, gitlab] = await Promise.all([this.base.load(day, signal), this.jira(day), this.gitlab(day)])
     return { ...local, referenceProjects: { jira, gitlab } }
   }
 

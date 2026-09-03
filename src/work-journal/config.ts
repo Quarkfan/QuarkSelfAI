@@ -7,6 +7,8 @@ export interface WorkJournalConfig {
   readonly workspace: string
   readonly claudeCli: string
   readonly codexCli: string
+  readonly larkCli: string
+  readonly ownerOpenId: string | undefined
 }
 
 function integer(value: string | undefined, fallback: number, name: string, minimum: number, maximum: number): number {
@@ -25,5 +27,7 @@ export function loadWorkJournalConfig(env: NodeJS.ProcessEnv = process.env, cwd 
     workspace: cwd,
     claudeCli: env.CLAUDE_CLI?.trim() || 'claude',
     codexCli: env.CODEX_CLI?.trim() || 'codex',
+    larkCli: env.WORK_JOURNAL_LARK_CLI?.trim() || env.LARK_CLI?.trim() || 'lark-cli',
+    ownerOpenId: env.QUARK_OWNER_OPEN_ID?.trim() || undefined,
   }
 }

@@ -67,7 +67,7 @@ function sources(value: unknown): readonly Readonly<Record<string, unknown>>[] {
 }
 
 export interface WorkJournalEvidenceProvider {
-  load(day: string): Promise<Readonly<Record<string, unknown>>>
+  load(day: string, signal?: AbortSignal): Promise<Readonly<Record<string, unknown>>>
 }
 
 export interface WorkJournalCompiler {
