@@ -384,3 +384,13 @@
 - 新增根共享 Skill `blacklake-tenant-cs-lookup`，由 `.agents/skills` 与 `.claude/skills` 的同源符号链接供 Codex、Claude Code 发现；DSH headless 按根 `AGENTS.md` 使用同一入口。确定性脚本仅调用虚拟员工现有 Archery 只读 helper，使用 UTF-8 十六进制 SQL literal，按 orgId、工厂号、租户名、客户名和服务项目有界查询，不直连数据库、不提交工单、不持久化人员结果。
 - 官方 Skill validator、3 项 SQL/结果处理单测、Python 编译与共享链接一致性均通过。线上空负责人样本与有负责人样本均成功返回，多结果/空值/停用环境保留原事实，由上层语义判断是否需要用户补充 orgId 或工厂号。QuarkSelfAI `npm run check` 通过：主项目 285 项中 282 通过、3 项仅因沙箱回环限制跳过，compat 177/177。
 - 本轮不修改 DSH/Cordis 边界、不新增消费者、数据库、依赖、定时器或外部写入，不需要重启守护进程。回滚为删除共享 Skill 及两个链接并恢复协作契约；Archery 会话和 Lakers 数据均未修改。
+
+## 2026-09-04 滴答投影执行失败误判修复
+
+- 本轮比较三条能力进化轨道后，原计划优先评估进取型职责接管；运行取证发现重点消息投影已累计 97 次失败，4 个事项仍在退避重试，因此按关键故障优先切换到“运行可靠性与缺陷闭环”。宿主 LaunchAgent 保持 running，健康端点 `ok=true`，兼容 worker、DSH kernel 和 5 条飞书消费者均 ready；故障局限于滴答投影结果校验。
+- 对 2026-09-04 的 81 份普通投影结果做脱敏离线回放：18 份被 `EXECUTION_FAILURE` 拒绝，其中 17 份只因业务摘要含 OAuth；另有 10 份缺少固定 `blacklake-reference-router`，其中部分业务域、专项 Skill 与路由依据已经完整。原实现把裸 `oauth` 当成工具失败信号，并把固定路由常量完全交给模型复述，造成有效写入被删除或已存在事项反复重试。
+- 修复将 OAuth 失败识别收窄为明确的登录、token、failed 或 denied 语境；中文“授权未完成/未授权”、MCP 不可用、工具权限拒绝、额度与限流等既有失败门禁保持不变。对 `blacklakeRelated=true` 的结果只确定性补齐固定总路由并去重，不补业务域、不选择专项 Skill、不改变调研、责任或通知判断。
+- 新增回归证明业务 OAuth 任务不会再被误判，同时真实 MCP OAuth 授权失败仍会拒绝；另证明固定 BlackLake 总路由可恢复且已有专项 Skill 保持原序。脱敏回放经新逻辑后，历史普通结果可通过数从 53/81 提升到 70/81；剩余 11 份均属于缺少业务域/依据、紧急度/标题、重复通知、调研通道或真实 MCP 失败等语义违约，继续失败关闭。
+- 完整 `npm run check` 通过：架构目录 93 个模块归属有效，主项目 285 项中 282 通过、3 项仅因沙箱回环限制跳过，compat 179/179；Lark、DSH、BlackLake 与服务器兼容检查全部通过，根同步门禁更新并通过 `2026-09-04.1`。
+- 本轮不新增依赖、消费者、数据库或外部写入，不修改 DSH/Cordis 边界。代码加载需要在确认无活动子任务后重启同一个 LaunchAgent；回滚可恢复原失败正则并移除固定路由归一化及两项测试，但会重新引入 OAuth 事项永久重试与固定路由漏回问题。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化自动化直接执行；`failureReason=none`、`failureStage=none`。

@@ -149,6 +149,26 @@ test("rejects a schema-shaped result that admits the Dida operation did not run"
   }), /未实际完成/);
 });
 
+test("does not mistake a business OAuth task for an MCP authorization failure", () => {
+  const result = normalizeTaskResult({
+    taskId: "task_1", created: false, taskAction: "unchanged", notificationDecision: "silent",
+    needsClarification: false, researchDecision: "skip", researchChannel: "none",
+    materialChangeSummary: "", summary: "等待客户实例添加 OAuth 认证后复核访问控制",
+  });
+  assert.equal(result.taskAction, "unchanged");
+});
+
+test("restores the mandatory BlackLake router without inventing a semantic skill", () => {
+  const result = normalizeTaskResult({
+    taskId: "task_1", created: false, taskAction: "updated", notificationDecision: "silent",
+    needsClarification: false, researchDecision: "skip", researchChannel: "none",
+    materialChangeSummary: "补充现状", summary: "已更新任务",
+    blacklakeRelated: true, blacklakeDomains: ["发布管理"],
+    recommendedSkills: ["virtual-employee-deployment-version"], skillDecisionReason: "涉及版本核验",
+  });
+  assert.deepEqual(result.recommendedSkills, ["blacklake-reference-router", "virtual-employee-deployment-version"]);
+});
+
 test("deletes a newly-created NOTE and normalizes a closed item to ignored", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-note-"));
   const fakeDida = path.join(dir, "dida");

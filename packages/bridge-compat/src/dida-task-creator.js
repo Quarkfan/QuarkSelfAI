@@ -10,7 +10,7 @@ function truncate(value, max) {
 }
 
 const URGENCY_BY_PRIORITY = { 5: "紧急", 3: "重要", 1: "跟进", 0: "关注" };
-const EXECUTION_FAILURE = /(oauth|授权未完成|未授权|无法执行(?:搜索|创建|更新|写入)|未调用[^。]*(?:create_task|update_task|search_task)|mcp[^。]*(?:失败|不可用|未连接|没有连接|连接不上|拒绝|denied|permission)|(?:bash|read|工具)[^。]*(?:权限[^。]*拒绝|permission denied)|额度(?:耗尽|不足)|quota|rate.?limit)/i;
+const EXECUTION_FAILURE = /(oauth[^。\n]{0,80}(?:authorization required|login required|token expired|failed|denied)|授权未完成|未授权|无法执行(?:搜索|创建|更新|写入)|未调用[^。]*(?:create_task|update_task|search_task)|mcp[^。]*(?:失败|不可用|未连接|没有连接|连接不上|拒绝|denied|permission)|(?:bash|read|工具)[^。]*(?:权限[^。]*拒绝|permission denied)|额度(?:耗尽|不足)|quota|rate.?limit)/i;
 const CLOSED_NO_ACTION = /(无需(?:进一步)?行动|无需(?:继续)?(?:处理|跟进)|事项已收敛|已经收敛|最终确认维持现状|已有明确结论[^。]*(?:无需|不需要)|下一步\s*[:：]?\s*(?:无|知悉即可|仅需知悉|持续关注即可)|只是(?:信息|通知|资料|参考|状态)同步|仅供参考)/;
 
 export function normalizeTaskResult(task) {
@@ -24,15 +24,25 @@ export function normalizeTaskResult(task) {
   if (EXECUTION_FAILURE.test(narrative)) {
     throw new Error("滴答 MCP 未实际完成任务操作，已保留等待重试。");
   }
-  const safeNoop = task.taskAction === "unchanged"
-    && !task.taskId
-    && task.created === false
-    && task.notificationDecision === "silent"
-    && task.needsClarification === false
-    && task.researchDecision === "skip"
-    && task.researchChannel === "none"
-    && !task.materialChangeSummary;
-  return safeNoop ? { ...task, taskAction: "ignored" } : task;
+  const normalized = task.blacklakeRelated === true
+    ? {
+        ...task,
+        recommendedSkills: [
+          "blacklake-reference-router",
+          ...new Set((Array.isArray(task.recommendedSkills) ? task.recommendedSkills : [])
+            .filter((skill) => skill !== "blacklake-reference-router")),
+        ],
+      }
+    : task;
+  const safeNoop = normalized.taskAction === "unchanged"
+    && !normalized.taskId
+    && normalized.created === false
+    && normalized.notificationDecision === "silent"
+    && normalized.needsClarification === false
+    && normalized.researchDecision === "skip"
+    && normalized.researchChannel === "none"
+    && !normalized.materialChangeSummary;
+  return safeNoop ? { ...normalized, taskAction: "ignored" } : normalized;
 }
 
 export function expectedTaskTitlePrefix(priority, keyItem) {
