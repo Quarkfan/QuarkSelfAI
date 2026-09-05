@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "recoveryObjectives": {
+    "rpoHours": 24,
+    "rtoMinutes": 60
+  },
+  "repository": {
+    "origin": "git@github.com:Quarkfan/QuarkSelfAI.git",
+    "requiredTrackedPaths": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "README.md",
+      "package.json",
+      "package-lock.json",
+      "config/dsh-baseline.json",
+      "config/module-catalog.json",
+      "config/recovery-manifest.json",
+      "scripts/audit-recovery-readiness.ts",
+      "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
+      "docs/project/README.md",
+      "docs/project/charter.md",
+      "docs/project/portability-and-recovery.md",
+      "docs/project/data-and-identity-inventory.md",
+      "docs/project/blacklake-boundary.md",
+      "docs/project/resource-request.md"
+    ]
+  },
+  "runtime": {
+    "requiredCommands": [
+      "git",
+      "node",
+      "npm",
+      "lark-cli",
+      "dida-cli",
+      "codex",
+      "claude"
+    ]
+  },
+  "requiredResources": [
+    {
+      "id": "encrypted-off-device-target",
+      "environment": "QUARK_RECOVERY_TARGET",
+      "secret": false,
+      "description": "Versioned off-device backup target URI; a local project path is not sufficient"
+    },
+    {
+      "id": "backup-encryption-recipient",
+      "environment": "QUARK_RECOVERY_AGE_RECIPIENT",
+      "secret": false,
+      "description": "Public age/X25519 recipient; the private key must be stored separately"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "primary-sqlite",
+      "class": "durable-state",
+      "selector": "${PROJECT_ROOT}/var/quarkselfai.sqlite3",
+      "requiredWhen": "sqlite",
+      "backupMethod": "sqlite-online-backup",
+      "sensitivity": "high",
+      "restoreOrder": 30
+    },
+    {
+      "id": "primary-postgres",
+      "class": "durable-state",
+      "selector": "${ENV:DATABASE_URL}",
+      "selectorKind": "environment",
+      "requiredWhen": "postgres",
+      "backupMethod": "pg-dump-custom",
+      "sensitivity": "critical",
+      "restoreOrder": 30
+    },
+    {
+      "id": "dsh-production-profile",
+      "class": "durable-state",
+      "selector": "${PROJECT_ROOT}/var/dsh",
+      "requiredWhen": "always",
+      "backupMethod": "filtered-archive",
+      "sensitivity": "high",
+      "restoreOrder": 40
+    },
+    {
+      "id": "runtime-environment",
+      "class": "secret-config",
+      "selector": "${PROJECT_ROOT}/var/runtime.env",
+      "requiredWhen": "always",
+      "backupMethod": "encrypted-file",
+      "sensitivity": "critical",
+      "restoreOrder": 20
+    },
+    {
+      "id": "compatibility-config",
+      "class": "secret-config",
+      "selector": "${ENV:COMPAT_CONFIG_PATH}",
+      "requiredWhen": "compatibility",
+      "backupMethod": "encrypted-file",
+      "sensitivity": "critical",
+      "restoreOrder": 25
+    },
+    {
+      "id": "compatibility-state",
+      "class": "durable-state",
+      "selector": "${PROJECT_ROOT}/var/handoff",
+      "requiredWhen": "compatibility",
+      "backupMethod": "filtered-archive",
+      "sensitivity": "high",
+      "restoreOrder": 35
+    },
+    {
+      "id": "capability-evolution-state",
+      "class": "durable-state",
+      "selector": "${PROJECT_ROOT}/var/capability-evolution",
+      "requiredWhen": "always",
+      "backupMethod": "filtered-archive",
+      "sensitivity": "medium",
+      "restoreOrder": 50
+    },
+    {
+      "id": "lark-cli-profile",
+      "class": "account-bootstrap",
+      "selector": "${HOME}/.lark-cli/config.json",
+      "requiredWhen": "always",
+      "backupMethod": "encrypted-file-or-reauthenticate",
+      "sensitivity": "critical",
+      "restoreOrder": 10
+    },
+    {
+      "id": "dida-cli-profile",
+      "class": "account-bootstrap",
+      "selector": "${HOME}/.config/dida-cli/config.json",
+      "requiredWhen": "always",
+      "backupMethod": "encrypted-file-or-reauthenticate",
+      "sensitivity": "critical",
+      "restoreOrder": 10
+    },
+    {
+      "id": "codex-personal-rules",
+      "class": "optional-personal-history",
+      "selector": "${HOME}/.codex/memories",
+      "requiredWhen": "optional",
+      "backupMethod": "curated-capability-pack",
+      "sensitivity": "high",
+      "restoreOrder": 60
+    },
+    {
+      "id": "claude-personal-skills",
+      "class": "optional-personal-history",
+      "selector": "${HOME}/.claude/skills",
+      "requiredWhen": "optional",
+      "backupMethod": "curated-capability-pack",
+      "sensitivity": "high",
+      "restoreOrder": 60
+    }
+  ],
+  "excludedClasses": [
+    "build-output",
+    "dependency-cache",
+    "logs",
+    "screenshots",
+    "telemetry",
+    "downloaded-plugins",
+    "full-codex-session-history",
+    "full-claude-session-history",
+    "temporary-locks"
+  ]
+}

@@ -396,3 +396,36 @@
 - 回滚可恢复原失败正则并移除固定路由归一化及两项测试，但会重新引入 OAuth 事项永久重试与固定路由漏回问题。
 - 14:53 按 `lark-im` Card 2.0 工作流准备本轮唯一升级报告；受限环境首次发送因 DNS 不可达失败，宿主重试又因无法独立证明本地状态中的目标会话归属而被安全门禁拒绝。本轮没有绕过门禁或改用其他外发通道；报告以幂等键 `cap-evo-20260904-dida-projection` 保存在忽略版本控制的本地待发送记录，恢复后只允许合并发送一次。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化自动化直接执行；`failureReason=none`、`failureStage=none`。
+
+## 2026-09-05 正式立项与恢复基线
+
+### 目标与证据
+
+- 目标从“当前电脑可运行”提升为“任意受信终端可从 Git、账号登录和加密状态包恢复同一助理能力”，同时把
+  BlackLake 明确降为当前工作的可卸载领域，不再允许进入产品主线。
+- 只读盘点确认代码远端为 `git@github.com:Quarkfan/QuarkSelfAI.git`；当前 `var` 约 16 MiB，其中正式 DSH
+  profile 约 2.4 MiB、handoff 约 9.3 MiB、主 SQLite 与 WAL/SHM 约 420 KiB。它们均被 Git 忽略且没有经验证的
+  异机恢复副本。
+- Codex 与 Claude 本地目录分别约 4.6 GiB 和 850 MiB，主要由 session、遥测、插件与缓存组成，不能把整目录同步
+  当作恢复方案。飞书 user/bot 在联网只读校验中均可用；滴答配置当前只含 access token，所有凭证值均未输出。
+- 当前主线仍跟踪 `src/blacklake/*`、compatibility context 和相关 composition，直接删除会破坏在用路由，因此登记为
+  待迁移耦合而不是伪装已隔离。
+
+### 决策与变更
+
+- 新增 `docs/project/` 立项入口、项目章程、可移植恢复规范、数据/身份清单、BlackLake 边界和资源申请单，并采用
+  ADR 0090 固化 Git/恢复包/秘密真源三分离与 restore-safe 单写切换原则。
+- 新增 `config/recovery-manifest.json` 和只读 `audit:recovery`。审计只检查 Git 跟踪、路径类型和外部资源是否配置，
+  不读取凭证内容；在异机目标或加密接收者缺失时明确保持未就绪。
+- 根与仓库 AGENTS/CLAUDE 增加产品独立性规则：BlackLake 只能迁移为私有 work integration pack；外部 DevOps 设计
+  只有记录 revision/许可、复制入库、去业务化并验证后才可成为主线依赖。
+- 本轮不创建备份、不上传数据、不迁移/删除 BlackLake 模块、不修改 DSH/Cordis composition、不停止或重启现网。
+
+### 验证、回滚与未决项
+
+- 新增测试覆盖 selector 展开、SQLite/PG/compat 条件、Git remote 等价归一和 manifest 无用户绝对路径；
+  `npm run check` 通过，架构目录 94 个模块归属有效，主项目 289 项中 286 通过、3 项仅因沙箱回环限制跳过，
+  compatibility provider 179/179 通过；根同步门禁通过 `2026-09-05.1`。
+- 回滚只需移除 ADR/项目文档、recovery manifest/audit 及对应目录登记；没有数据库 migration 或运行时状态变化。
+- 未决资源是版本化异机存储目标和 age/X25519 公钥接收者。得到选择后进入 Phase 2，实施一致性备份、加密、回读
+  校验和 restore-safe；最终仍需在干净终端完成真实演练后才能宣称目标达成。

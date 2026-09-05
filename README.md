@@ -95,6 +95,12 @@ npm run register:compat-state
 
 ## 文档入口
 
+- [正式立项与恢复入口](docs/project/README.md)
+- [项目章程](docs/project/charter.md)
+- [可移植与灾难恢复规范](docs/project/portability-and-recovery.md)
+- [数据与身份清单](docs/project/data-and-identity-inventory.md)
+- [BlackLake 工作边界](docs/project/blacklake-boundary.md)
+- [异机恢复资源申请单](docs/project/resource-request.md)
 - [“分身会话”自治运营契约](docs/operations/autonomous-twin-session.md)
 - [总体架构](docs/architecture.md)
 - [骨架、功能与迁移层边界](docs/architecture-skeleton.md)

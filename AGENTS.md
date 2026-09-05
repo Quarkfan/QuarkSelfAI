@@ -56,6 +56,14 @@
   语义 token 和交互基线，验证键盘焦点、状态非纯色表达、44px 默认热区、减少动效、高对比与窄屏；未经真实视觉复核
   和 `npm run check` 不得宣称完成。
 
+- QuarkSelfAI 的产品主线是常东旭独立拥有、可异机恢复的通用个人助手。Git 保存程序真源，加密恢复包保存最小
+  持久状态，密码管理器或重新登录保存身份秘密；任何新终端在消费者与外部写 effects 关闭的状态下恢复，只有
+  数据、身份和单写者门禁通过后才允许接管。立项、数据分类和恢复要求见 `docs/project/` 与 ADR 0090。
+- BlackLake 的业务知识、租户/客户/人员数据、内部凭证、公司仓库和绝对工作区路径不得新增为产品主线依赖。
+  现有适配器先按 `docs/project/blacklake-boundary.md` 迁移为私有可卸载 work integration pack，不能为了清理主线
+  直接破坏现网。能力进化可周期性参考外部 DevOps 设计；只有记录来源与许可、复制入库、去业务化并完成测试的
+  内容才可被主线依赖，运行时不得假设参考项目持续可访问。
+
 - 架构真源见 `docs/architecture.md` 与 `docs/adr/`。
 - 骨架、功能和迁移代码的机器真源为 `config/module-catalog.json`。新能力先登记分类和依赖并通过
   `npm run architecture:check`：skeleton 不得依赖 feature/migration，feature 不得依赖 migration；迁移模块
