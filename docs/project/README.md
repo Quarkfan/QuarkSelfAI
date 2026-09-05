@@ -11,6 +11,7 @@
 4. [账号恢复与只读验收](account-bootstrap.md)：新终端登录顺序、脱敏审计与接管边界。
 5. [BlackLake 工作边界](blacklake-boundary.md)：公司工作信息如何与个人助手主线隔离。
 6. [资源申请单](resource-request.md)：实现异机恢复前需要 owner 提供或选择的资源。
+7. [能力进化任务](capability-evolution-task.md)：新终端重建周期巡检时使用的去设备化任务正文。
 
 机器可读真源是 [`config/recovery-manifest.json`](../../config/recovery-manifest.json)。执行
 `npm run audit:recovery` 查看本机清单，执行 `npm run audit:recovery -- --strict` 作为恢复门禁。审计只查看
@@ -19,6 +20,11 @@
 工作域隔离的机器真源是 [`config/work-domain-isolation.json`](../../config/work-domain-isolation.json)。执行
 `npm run audit:work-domain-isolation -- --strict` 验证所有已跟踪的雇主专用引用仍与已复核基线一致；它只输出分类、
 数量和摘要，不输出业务正文。该审计通过表示“现有耦合已完整登记且没有静默扩张”，不表示迁移已经完成。
+
+能力进化调度蓝图位于 [`config/capability-evolution-automation.json`](../../config/capability-evolution-automation.json)。
+`npm run audit:capability-evolution -- --strict` 验证仓库内蓝图、任务摘要、去设备路径和工作域隔离；增加 `--installed`
+时只比较本机 Codex 自动化的脱敏字段与 prompt 摘要，不输出任务正文。新终端必须先创建为暂停状态，绑定该终端上的
+当前项目并取得 owner 对单一调度切换的批准后再启用。
 
 恢复工具提供六个彼此分离的入口：`npm run backup:recovery` 只生成 age 加密包，`npm run backup:publish` 写入已配置
 目标并完成目标回读、密文哈希、解密和 SQLite 校验，`npm run backup:cycle` 在发布成功后执行严格血缘保留，

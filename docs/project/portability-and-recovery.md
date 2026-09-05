@@ -11,6 +11,10 @@
 缺少任一输入时，只能启动开发或只读诊断形态，不能声称恢复了助理能力。
 账号恢复和脱敏验证的唯一手册见[账号恢复与只读验收](account-bootstrap.md)。
 
+周期能力进化不是本机隐藏配置：仓库以 `config/capability-evolution-automation.json` 保存调度、执行器、标题和任务正文摘要，
+任务正文位于 `docs/project/capability-evolution-task.md`。Codex automation 的 host/project 标识仍是设备相关外部状态，
+恢复时必须重新绑定，并先保持暂停。
+
 ## 2. 目标恢复流程
 
 ```text
@@ -189,6 +193,7 @@ custom dump inventory 非空且 bundle migration 与 checkout 精确一致；然
 | 身份可用 | 飞书 user+bot、滴答、Codex/Claude/DSH 逐项只读检查，不输出 token |
 | 控制台 | loopback 登录、健康与关键状态可见 |
 | 连续性 | 未完成事项、审批、幂等 checkpoint、策略和最近能力进化状态可读取 |
+| 能力进化 | 仓库蓝图严格审计通过，本机任务字段和 prompt 摘要一致，且只存在一个经批准的活动调度 |
 | 单写者 | 旧实例停止，新实例唯一 consumer，重复消息/任务保护有效 |
 | 外部效果 | 精确批准后依次放开，写后核验成功 |
 | 回滚 | 新实例停止后旧 checkpoint 可恢复，不产生双写 |

@@ -198,6 +198,7 @@
     "audit:dida-projections": "node scripts/audit-dida-projections.mjs",
     "audit:recovery": "node --import tsx scripts/audit-recovery-readiness.ts",
     "audit:work-domain-isolation": "node --import tsx scripts/audit-work-domain-isolation.ts",
+    "audit:capability-evolution": "node --import tsx scripts/audit-capability-evolution-portability.ts",
     "audit:accounts": "node --import tsx scripts/audit-account-bootstrap.ts",
     "backup:recovery": "node --import tsx scripts/recovery-bundle.ts create",
     "backup:publish": "node --import tsx scripts/recovery-target.ts publish",

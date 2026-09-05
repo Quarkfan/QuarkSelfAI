@@ -13,6 +13,9 @@
 | 运行环境与兼容配置 | `var/runtime.env`、`COMPAT_CONFIG_PATH` | 小于 20 KiB | 极高 | 仅加密备份；新机重写路径和新生成控制令牌 |
 | 能力进化持久状态 | `var/capability-evolution` | 约 8 KiB | 中 | 备份脱敏账本与未决 proposal 关联，不备份消息正文 |
 
+能力进化分为两类真源：调度意图和任务正文进入 Git；最近运行账本进入加密恢复包。本机 Codex automation 的 project id
+属于设备绑定，不进入 Git 或恢复包；新终端登录 Codex 后按仓库蓝图重建为暂停任务，核验后再切换为唯一活动调度。
+
 SQLite 和 DSH 目录中可能同时存在数据库/WAL，备份实现必须先取得一致性边界，不能把表中行数或目录打包成功当成
 一致性证明。
 

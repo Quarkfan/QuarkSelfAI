@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "automationId": "quarkselfai",
+  "name": "QuarkSelfAI 能力进化巡检",
+  "kind": "cron",
+  "desiredStatus": "ACTIVE",
+  "schedule": {
+    "rrule": "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=14;BYMINUTE=30",
+    "timezone": "local"
+  },
+  "executor": {
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "medium"
+  },
+  "target": {
+    "type": "project",
+    "binding": "select-this-clone-on-the-current-host"
+  },
+  "task": {
+    "promptFile": "docs/project/capability-evolution-task.md",
+    "promptSha256": "a160ee89dce3fad74208fc811489e6741d20bac90c4be38b56b97a999b5a58c1",
+    "titlePattern": "能力进化｜YYYY-MM-DD｜主题"
+  },
+  "recovery": {
+    "initialStatus": "PAUSED",
+    "requiresOwnerApprovalToActivate": true,
+    "oneActiveAutomationId": true,
+    "externalState": "recreate-or-update-after-codex-login"
+  }
+}
