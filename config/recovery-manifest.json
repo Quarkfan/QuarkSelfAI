@@ -17,6 +17,7 @@
       "config/module-catalog.json",
       "config/recovery-manifest.json",
       "scripts/audit-recovery-readiness.ts",
+      "scripts/recovery-bundle.ts",
       "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
       "docs/project/README.md",
       "docs/project/charter.md",
@@ -35,6 +36,24 @@
       "dida-cli",
       "codex",
       "claude"
+    ],
+    "recoveryCommands": [
+      {
+        "command": "tar",
+        "requiredWhen": "always"
+      },
+      {
+        "command": "age",
+        "requiredWhen": "always"
+      },
+      {
+        "command": "sqlite3",
+        "requiredWhen": "sqlite"
+      },
+      {
+        "command": "pg_dump",
+        "requiredWhen": "postgres"
+      }
     ]
   },
   "requiredResources": [

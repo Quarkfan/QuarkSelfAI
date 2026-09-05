@@ -432,3 +432,26 @@
 - 回滚只需移除 ADR/项目文档、recovery manifest/audit 及对应目录登记；没有数据库 migration 或运行时状态变化。
 - 未决资源是版本化异机存储目标和 age/X25519 公钥接收者。得到选择后进入 Phase 2，实施一致性备份、加密、回读
   校验和 restore-safe；最终仍需在干净终端完成真实演练后才能宣称目标达成。
+
+## 2026-09-05 加密恢复包与隔离恢复核心
+
+### 决策与实现
+
+- 新增 `scripts/recovery-bundle.ts`，从机器清单驱动 SQLite online backup、PostgreSQL custom dump、DSH/兼容状态
+  筛选归档和秘密配置复制。输出必须以 `.age` 结尾并使用 age/X25519 公钥接收者；明文只存在于权限 `0700` 的短时
+  目录，成功或失败都会清理，最终加密文件强制 `0600`。
+- 恢复命令只允许解密到一个不存在的新 staging 目录，先拒绝绝对路径、父目录逃逸、重复路径、符号链接和未登记文件，
+  再验证内容寻址 bundle identity、每个文件的大小/SHA-256 与 SQLite `PRAGMA integrity_check`。它不会覆盖 live `var`、
+  启动消费者或启用外部写 effect。
+- `audit:recovery` 现在区分普通运行命令与按 SQLite/PostgreSQL 条件启用的恢复命令。当前 SQLite 主形态只要求
+  `tar`、`sqlite3`、`age`；没有配置 PostgreSQL 时不把缺少 `pg_dump` 当成阻塞。
+
+### 验证、边界与回滚
+
+- 无秘密测试使用隔离 fixture 与伪 age 进程验证端到端打包、分阶段恢复、数据库内容、权限、日志排除和明文输出拒绝；
+  6 项恢复定向测试全部通过，架构目录仍为 94 个模块。伪 age 只证明编排与门禁，不证明真实密码学互操作。
+- 没有读取或输出凭证值，没有生成真实运行数据备份、安装第三方程序、上传远端、停止/重启守护进程或修改
+  DSH/Cordis composition。当前新增阻塞项 `missing-recovery-command:age` 与原有异机目标、加密 recipient 一起保持
+  恢复门禁关闭。
+- 回滚可删除恢复脚本/测试/命令，恢复 recovery manifest、审计、模块目录、ADR 和项目文档；没有数据库 migration、
+  运行状态或外部系统写入需要回滚。

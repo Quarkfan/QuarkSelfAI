@@ -197,6 +197,8 @@
     "audit:shadow": "node --import tsx scripts/audit-shadow-state.ts",
     "audit:dida-projections": "node scripts/audit-dida-projections.mjs",
     "audit:recovery": "node --import tsx scripts/audit-recovery-readiness.ts",
+    "backup:recovery": "node --import tsx scripts/recovery-bundle.ts create",
+    "restore:stage": "node --import tsx scripts/recovery-bundle.ts stage",
     "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",
     "rehearse:executor-fallback": "node --import tsx scripts/rehearse-executor-fallback.ts",
     "rehearse:notification-recovery": "node scripts/rehearse-notification-recovery.mjs",

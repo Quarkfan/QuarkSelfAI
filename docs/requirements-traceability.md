@@ -8,7 +8,7 @@
 
 | 原始能力要求 | 对应能力 | 当前证据 | 状态/剩余门禁 |
 | --- | --- | --- | --- |
-| 代码可在任意受信终端 clone，并通过账号登录和数据备份恢复同一助理能力 | recovery-readiness, deployment-packaging, durable-store | 项目章程、ADR 0090、机器 recovery manifest、数据/身份清单与 `audit:recovery`；代码远端已校验 | foundation：代码层可 clone；仍需 owner 提供异机目标和加密接收者，再实现备份/恢复并通过干净终端演练 |
+| 代码可在任意受信终端 clone，并通过账号登录和数据备份恢复同一助理能力 | recovery-readiness, deployment-packaging, durable-store | 项目章程、ADR 0090、机器 recovery manifest、数据/身份清单、`audit:recovery`、age-only 打包与 checksum/SQLite 校验后的隔离恢复；代码远端已校验 | implemented/gated：代码可 clone，本地核心通过无秘密测试；仍需 owner 提供异机目标、age 身份并允许安装工具，再完成上传回读、restore-safe 应用与干净终端演练 |
 | QuarkSelfAI 独立于当前雇主工作，BlackLake 信息不进入产品主线；外部 DevOps 设计采纳后必须复制入库 | work-domain isolation, capability-evolution | ADR 0090、BlackLake 边界与现有耦合清单；采纳要求 provenance/许可/去业务化/本地资产 | gated：当前 BlackLake adapter 仍参与现网，须先建设独立 pack 并在维护窗口切换，不能直接删除 |
 | 正式承担个人 CTO、CIO 与工作助理角色，并具有一定独立性和创造性 | collaboration-learning, capability-evolution, natural-language-policy | ADR 0088；根/仓库 AGENTS 与 CLAUDE 角色真源；目标经营、三重职责、决策优先级、精确 mandate 与硬边界 | complete：角色扩大主动判断与闭环责任，不旁路外联、生产、权限、人员预算合同和核心架构门禁 |
 | 守护进程监听飞书，不依赖循环 sleep；崩溃后恢复 | lark-event-adapter, retry-and-alerting, daemon-deployment | 单一实时消费者；非实时来源默认 10 分钟持久工作流补偿；本地队列与远程搜索分离；launchd；租约/退避；跨进程隔离故障恢复演练 | complete（服务器部署仍为可选项） |

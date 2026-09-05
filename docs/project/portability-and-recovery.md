@@ -65,6 +65,32 @@
 - 首版建议每日一次，保留最近 14 个日备份与 8 个周备份；数据库迁移、关键策略切换前额外生成事件快照。
 - 备份成功以远端对象写入、下载回读、哈希一致和可解密清单为准，不以命令退出码单独判定。
 
+### 5.1 当前本地命令
+
+安装并配置 `age` 后，可以生成只含加密输出的恢复包：
+
+```bash
+npm run backup:recovery -- \
+  --output /受限暂存目录/quarkselfai-YYYYMMDD.age \
+  --recipient age1...
+```
+
+日常在线备份默认标记为 `online-bounded`，SQLite 使用 online backup，目录中的 SQLite 也逐个做一致性快照；锁、日志、
+WAL/SHM、临时文件和完整会话历史被排除。用于迁移或关键切换的最终快照必须先按维护流程停止同一写入者，再增加
+`--quiesced`，不能仅凭这个参数声称已经静默。`--include-optional` 会纳入筛选后的 Codex memory/Claude skill，默认关闭。
+
+恢复只能先落到一个不存在的新目录：
+
+```bash
+npm run restore:stage -- \
+  --input /受限目录/quarkselfai-YYYYMMDD.age \
+  --output-directory /受限暂存目录/quarkselfai-restore \
+  --identity-file /由密码管理器恢复的/age-identity.txt
+```
+
+该命令先解密、拒绝危险归档路径和符号链接，再验证内容寻址 manifest、每个文件的 SHA-256/大小以及 SQLite
+`PRAGMA integrity_check`。成功只代表“恢复包可分阶段读取”，不会把文件写入 live `var`，也不会启动消费者。
+
 ## 6. 恢复安全门禁
 
 恢复实例必须先处于 `restore-safe`：
@@ -94,5 +120,6 @@
 
 ## 8. 当前未完成项
 
-截至 2026-09-05，备份目标、加密接收者、自动备份脚本、远端回读校验和全新终端演练均未完成；因此当前只能证明
-“代码可 clone”，不能证明“助理能力可随时恢复”。
+截至 2026-09-05，加密打包与隔离恢复核心已实现并通过伪 age 的无秘密单元测试；真实 `age` 二进制/公私钥互操作、
+备份目标、自动上传、远端回读校验和全新终端演练仍未完成。因此当前能证明“代码可 clone、恢复机制可测试”，不能
+证明“助理能力可随时恢复”。

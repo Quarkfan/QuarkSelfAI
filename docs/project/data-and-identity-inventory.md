@@ -16,6 +16,10 @@
 SQLite 和 DSH 目录中可能同时存在数据库/WAL，备份实现必须先取得一致性边界，不能把表中行数或目录打包成功当成
 一致性证明。
 
+当前 `scripts/recovery-bundle.ts` 已按 manifest 生成 SQLite online snapshot、PG custom dump 或筛选后的文件树，
+并在离开临时目录前交给 `age` 加密；明文暂存始终在受限临时目录并于成功或失败后清理。恢复端只创建新的 staging，
+验证内容寻址 manifest、文件哈希和 SQLite 完整性，不直接覆盖 live 状态。
+
 ## 2. 可重新登录或从秘密管理器恢复的身份
 
 | 身份 | 当前事实 | 恢复方式 | 是否进入 Git |

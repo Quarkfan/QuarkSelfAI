@@ -21,6 +21,10 @@ type RecoveryManifest = {
   }
   runtime: {
     requiredCommands: string[]
+    recoveryCommands: Array<{
+      command: string
+      requiredWhen: Exclude<RequiredWhen, 'compatibility' | 'optional'>
+    }>
   }
   requiredResources: Array<{
     id: string
@@ -149,6 +153,11 @@ export async function auditRecoveryReadiness(root = projectRoot) {
     command,
     available: commandAvailable(command),
   }))
+  const recoveryCommands = manifest.runtime.recoveryCommands.map(item => ({
+    command: item.command,
+    required: isRequired(item.requiredWhen, runtime),
+    available: commandAvailable(item.command),
+  }))
 
   const artifacts = []
   for (const artifact of manifest.artifacts) {
@@ -179,6 +188,9 @@ export async function auditRecoveryReadiness(root = projectRoot) {
     ...(!source.originMatches ? ['repository-origin-mismatch'] : []),
     ...missingTracked.map(path => `untracked-required-source:${path}`),
     ...commands.filter(item => !item.available).map(item => `missing-runtime-command:${item.command}`),
+    ...recoveryCommands
+      .filter(item => item.required && !item.available)
+      .map(item => `missing-recovery-command:${item.command}`),
     ...artifacts.filter(item => item.required && !item.present).map(item => `missing-required-artifact:${item.id}`),
     ...resources.filter(item => !item.configured).map(item => `missing-resource:${item.id}`),
   ]
@@ -189,10 +201,11 @@ export async function auditRecoveryReadiness(root = projectRoot) {
     runtime,
     source,
     commands,
+    recoveryCommands,
     artifacts,
     resources,
     blockers,
-    note: 'This audit checks inventory and prerequisites only; it never reads credential values and does not prove a backup is restorable.',
+    note: 'This audit checks inventory and prerequisites only; it never reads credential values. A staged restore with checksum and database integrity verification is still required to prove a backup is restorable.',
   }
 }
 
