@@ -18,7 +18,12 @@ import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
-import { expandSelector, isRequired, type RecoveryContext } from './audit-recovery-readiness.js'
+import {
+  expandSelector,
+  isRequired,
+  readRuntimeEnvironment,
+  type RecoveryContext,
+} from './audit-recovery-readiness.js'
 
 const execFile = promisify(execFileCallback)
 const scriptRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -136,6 +141,10 @@ function sqliteQuoted(path: string): string {
   return `"${path.replaceAll('"', '""')}"`
 }
 
+function sqliteImmutableUri(path: string): string {
+  return `file:${encodeURI(resolve(path))}?immutable=1`
+}
+
 async function run(binary: string, args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
   try {
     return await execFile(binary, args, {
@@ -182,6 +191,7 @@ async function copyRegularFile(source: string, destination: string): Promise<voi
 
 function excludedRuntimeFile(name: string): boolean {
   return name === '.DS_Store'
+    || name === 'node_modules'
     || name.endsWith('-wal')
     || name.endsWith('-shm')
     || name.endsWith('.lock')
@@ -192,7 +202,7 @@ function excludedRuntimeFile(name: string): boolean {
 async function snapshotSqlite(source: string, destination: string, binary: string): Promise<void> {
   await mkdir(dirname(destination), { recursive: true, mode: 0o700 })
   await run(binary, [source, `.backup ${sqliteQuoted(destination)}`])
-  const check = await run(binary, ['-readonly', destination, 'PRAGMA integrity_check;'])
+  const check = await run(binary, [sqliteImmutableUri(destination), 'PRAGMA integrity_check;'])
   if (check.stdout.trim() !== 'ok') throw new Error('SQLite snapshot integrity check failed')
   await chmod(destination, 0o600)
 }
@@ -347,7 +357,12 @@ export async function createRecoveryBundle(options: CreateBundleOptions): Promis
         }
         if (artifact.selectorKind !== 'environment') continue
       }
-      await snapshotArtifact(artifact, source, bundleRoot, binaries)
+      try {
+        await snapshotArtifact(artifact, source, bundleRoot, binaries)
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : 'unknown snapshot failure'
+        throw new Error(`recovery artifact snapshot failed (${artifact.id}): ${reason}`)
+      }
     }
 
     const entries = await collectEntries(bundleRoot)
@@ -433,7 +448,7 @@ async function verifyStagedBundle(bundleRoot: string, sqliteBinary: string): Pro
       throw new Error(`recovery bundle entry checksum mismatch: ${entry.path}`)
     }
     if (entry.path.endsWith('.sqlite3')) {
-      const check = await run(sqliteBinary, ['-readonly', fullPath, 'PRAGMA integrity_check;'])
+      const check = await run(sqliteBinary, [sqliteImmutableUri(fullPath), 'PRAGMA integrity_check;'])
       if (check.stdout.trim() !== 'ok') throw new Error(`SQLite recovery entry failed integrity check: ${entry.path}`)
     }
   }
@@ -612,10 +627,11 @@ async function main(): Promise<void> {
     const output = argument('--output') || process.env.QUARK_RECOVERY_BUNDLE_OUTPUT
     const recipient = argument('--recipient') || process.env.QUARK_RECOVERY_AGE_RECIPIENT
     if (!output || !recipient) throw new Error('create requires --output and --recipient (or recovery environment variables)')
+    const runtimeEnvironment = await readRuntimeEnvironment(resolve(scriptRoot, 'var/runtime.env'))
     const document = await createRecoveryBundle({
       projectRoot: scriptRoot,
       home: homedir(),
-      environment: process.env,
+      environment: { ...runtimeEnvironment, ...process.env },
       output,
       recipient,
       includeOptional: process.argv.includes('--include-optional'),

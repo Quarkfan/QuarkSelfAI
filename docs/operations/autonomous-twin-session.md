@@ -468,3 +468,35 @@
   293 项（290 通过、3 项仅因沙箱回环限制跳过）与 compatibility 179/179 通过。空 clone 的 recovery audit 精确列出
   缺失的 `var` 状态、age 和外部资源，账号本地审计精确列出未请求 GitHub 在线验证和未注入 DSH inference 配置；
   证明代码闭包可重建且门禁不会把无状态 clone 误报为已恢复。
+
+## 2026-09-05 age 与 iCloud 恢复目标闭环
+
+### 授权、决策与边界
+
+- owner 明确允许安装和使用 `age`，并允许将大文件或不适合 GitHub 的信息放入自行管理的 iCloud Drive 目录。
+- 采用三分离：GitHub 保存代码、恢复规则与 age 公钥；iCloud Drive 只保存版本化 `.age` 密文和脱敏 receipt；私钥
+  运行副本位于本机权限 `0600` 的独立目录，最终灾备副本由 owner 手工保存到 Apple“密码”。
+- 不自动写 Apple“密码”，不把私钥放入 Git、聊天或 iCloud 恢复目录。File Provider 本机回读不冒充 Apple 云端或
+  异机持久化证明。
+
+### 实现与真实演练
+
+- Homebrew 安装 `age 1.3.2`，生成 X25519 身份；新增 `config/recovery-public.json` 和 Git 忽略的设备目标配置。
+- 新增 `backup:publish`：只创建不可覆盖的 `daily/YYYY/MM` 对象，随后从目标重新读取、校验密文字节数与 SHA-256、
+  真实解密、核对内容寻址 bundle 和 SQLite integrity；全部通过后才写 receipt，失败时只回滚本次精确对象并清除明文。
+- 首份 online-bounded 包 ID 为 `feb841d11001671e7210dd7437321af977d9945acb4cfb1d058a1cc9dc6cc8f2`，
+  密文 3145726 bytes，SHA-256 为 `8384a4caabae7effd09ecf6aa55477aa916149013218eec89f89d2532ae5cda4`；
+  iCloud Drive 挂载回读、真实 age 解密及 SQLite 完整性均通过。
+- 真实数据暴露两个 fixture 未覆盖缺陷：WAL 模式快照不能依赖 CLI `-readonly` 打开，以及 DSH profile 的
+  `node_modules` 包含开发 checkout 符号链接。前者改用 `immutable=1` URI 校验，后者作为可重建依赖整体排除并补测试。
+- 恢复 CLI 同时改为从 `var/runtime.env` 读取受限运行 selector，防止交互 shell 没有 `COMPAT_CONFIG_PATH` 时漏备份。
+
+### 验证、回滚与未决门禁
+
+- 定向 recovery/readiness/provider 测试通过；真实演练没有停止或重启守护进程、启动消费者、修改 live 数据或执行
+  业务系统写入。
+- 回滚可移除 provider 脚本/配置与恢复对象；私钥必须单独吊销或轮换，不能用删除密文代替。
+- 14 日 + 8 周保留算法只接受 receipt、路径、bundle ID、字节数和密文 SHA-256 全部吻合的严格助手血缘；真实目录
+  dry-run 为 1 份有效、1 份保留、0 份删除、0 份忽略，没有执行删除。
+- 尚需 owner 把私钥保存到 Apple“密码”并在另一设备确认可读；另需完成周期调度、跨设备下载、PostgreSQL 空库
+  恢复和完整 restore-safe 接管演练，才能宣称任意终端恢复。

@@ -80,6 +80,32 @@ npm run backup:recovery -- \
 WAL/SHM、临时文件和完整会话历史被排除。用于迁移或关键切换的最终快照必须先按维护流程停止同一写入者，再增加
 `--quiesced`，不能仅凭这个参数声称已经静默。`--include-optional` 会纳入筛选后的 Codex memory/Claude skill，默认关闭。
 
+当前设备的非秘密 recipient 位于 `config/recovery-public.json`，设备相关目标和私钥路径位于 Git 忽略的
+`var/recovery-target.json`。正式日备份使用：
+
+```bash
+npm run backup:publish
+```
+
+该命令只向 `daily/YYYY/MM/` 创建新对象，使用不可覆盖复制；随后重新读取目标对象，校验密文字节数和 SHA-256，
+使用独立私钥解密到受限临时目录，核对内容寻址 bundle manifest 与 SQLite integrity，最后才写入不含业务正文和秘密的
+`.receipt.json`。任一步失败会删除本次精确对象，且临时明文始终清理。
+
+iCloud Drive 是首个 filesystem provider。上述成功只能证明“已写入并从本机 File Provider 挂载回读”，不能单独证明
+Apple 云端已经同步，也不能代替另一设备下载演练。私钥运行副本位于本机受限目录，灾备副本应手工保存到 Apple
+“密码”的独立条目；不得保存到同一个 iCloud Drive 恢复目录。
+
+保留检查默认只生成计划：
+
+```bash
+npm run backup:prune
+npm run backup:prune -- --apply
+```
+
+策略保留最近 14 个有备份的 UTC 日期各一份，并从更早日期保留最近 8 个 ISO 周各一份。只有 receipt 项目身份、对象
+相对路径、bundle ID、密文字节数和 SHA-256 全部与实物一致的对象才进入清理计划；孤立、损坏或未知文件只报告为
+`ignored`，不自动删除。`--apply` 只删除计划中的精确密文/receipt 对。
+
 恢复只能先落到一个不存在的新目录：
 
 ```bash
@@ -143,6 +169,7 @@ npm run start:restore-safe
 
 ## 8. 当前未完成项
 
-截至 2026-09-05，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现并通过伪 age 的无秘密单元测试；
-真实 `age` 二进制/公私钥互操作、PostgreSQL 恢复、备份目标、自动上传、远端回读校验和全新终端演练仍未完成。
-因此当前能证明“代码可 clone、SQLite 恢复机制可测试”，不能证明“助理能力可随时恢复”。
+截至 2026-09-05，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现；真实 `age 1.3.2` 身份与 iCloud
+Drive filesystem provider 已完成一次 online-bounded 写入、挂载回读、密文哈希、解密和 SQLite integrity 闭环。
+仍缺 Apple“密码”私钥副本、另一设备实际下载、保留策略的周期调度、PostgreSQL 空库恢复和全新终端接管演练。
+因此当前能证明“当前设备可生成并回读可恢复密文”，不能证明“助理能力可在任意终端随时恢复”。

@@ -3,11 +3,12 @@
 下面资源是从“代码可 clone”推进到“任意受信终端可恢复”的必要输入。请不要在聊天中发送私钥、token、appSecret
 或数据库密码；只需确认选择，并把秘密放入约定的密码管理器或目标主机 secret store。
 
-## 需要 owner 选择的两项资源
+## 已提供的两项资源
 
 ### 1. 异机备份目标
 
-推荐：一个仅 QuarkSelfAI 使用、启用版本化的 S3 兼容私有 bucket。
+2026-09-05 已授权使用 iCloud Drive，并由助手创建仅 QuarkSelfAI 使用的恢复目录。首版以 filesystem provider
+实现不可覆盖对象、回读与校验；它仍需另一设备下载证明，不能把本机挂载回读称为云端持久化。
 
 需要提供的非秘密信息：
 
@@ -20,20 +21,20 @@
 
 ### 2. 备份加密身份
 
-推荐：提供一个 `age` X25519 **公钥 recipient**。公钥可以写入非秘密配置；对应私钥保存在 1Password/系统钥匙串
-和至少一处离线恢复位置，不进入仓库和备份 bucket。
+已安装 `age 1.3.2` 并生成 X25519 身份。公钥 recipient 已写入非秘密配置；私钥只在本机受限目录保留运行副本，
+不进入仓库和 iCloud Drive 恢复目录。
 
-如果不用 age，请指定具有同等“客户端加密、私钥与存储分离、可脚本化解密”能力的方案。
+待 owner 完成的一次人工动作：把私钥全文保存到 Apple“密码”的独立自定义条目，并在另一已批准设备确认可读取。
+密码条目建议命名 `QuarkSelfAI age recovery identity`；网站可填 `quarkselfai.local`，用户名填 `age-x25519-recovery`，
+私钥放密码字段或受保护备注。不得把私钥粘贴回聊天、GitHub 或 iCloud Drive 备份目录。
 
-当前主机尚未安装 `age`。如果采用推荐方案，还需要明确允许安装 `age`（建议通过 Homebrew），或者提供一个受信、
-固定版本的可执行文件路径。安装第三方二进制不会被默认授权。
-
-## 我将自行完成的后续工作
+## 执行状态与后续工作
 
 资源确认后，助手会：
 
-1. 使用已完成的 SQLite online backup、PG custom dump、筛选归档、SHA-256 manifest 和隔离恢复核心生成真实 age 包。
-2. 实现上传、下载回读、14 日备份 + 8 周备份保留策略。
+1. 已使用 SQLite online backup、筛选归档、SHA-256 manifest 和隔离恢复核心生成真实 age 包。
+2. 已实现 iCloud filesystem provider 写入、挂载下载回读、解密校验和严格血缘的 14 日 + 8 周保留计划；周期调度
+   尚未启用。
 3. 使用已完成的 fresh-clone `restore-safe` 准备命令做 SQLite 演练，并补齐 PostgreSQL 空库恢复门禁。
 4. 把账号登录、密钥注入、路径重写和单消费者切换写成唯一 runbook。
 5. 在一个干净目录先做真实加密同机演练；再约定一台新终端做完整恢复演练。

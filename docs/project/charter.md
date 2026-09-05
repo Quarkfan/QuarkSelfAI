@@ -1,6 +1,6 @@
 # QuarkSelfAI 项目章程
 
-状态：正式立项，Phase 1（真源与恢复基线）
+状态：正式立项，Phase 2（备份与恢复实现）
 
 Owner：常东旭
 
@@ -58,8 +58,8 @@ QuarkSelfAI 把个人助理的长期协作能力从某一台电脑、某一个�
 
 ### Phase 1：真源与恢复基线（当前）
 
-完成独立文档、机器清单、数据分类、账号分类、BlackLake 边界和资源申请。退出条件是 owner 明确选择备份目标与
-加密身份，且 `audit:recovery` 不再报告资源缺口。
+完成独立文档、机器清单、数据分类、账号分类、BlackLake 边界和资源申请。2026-09-05 已选择 iCloud Drive
+filesystem provider 和 age/X25519 身份；代码提交后 `audit:recovery` 应不再报告资源缺口。
 
 ### Phase 2：备份与恢复实现
 

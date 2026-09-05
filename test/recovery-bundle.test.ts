@@ -32,6 +32,8 @@ async function fixture() {
   await exec('sqlite3', [join(project, 'var', 'dsh', 'quarkselfai.sqlite3'), 'CREATE TABLE proof(value TEXT); INSERT INTO proof VALUES ("dsh");'])
   await writeFile(join(project, 'var', 'dsh', 'settings.yaml'), 'profile: fixture\n')
   await writeFile(join(project, 'var', 'dsh', 'ignored.log'), 'ignore me\n')
+  await mkdir(join(project, 'var', 'dsh', 'node_modules'), { recursive: true })
+  await writeFile(join(project, 'var', 'dsh', 'node_modules', 'generated.js'), 'do not preserve\n')
   await writeFile(join(project, 'var', 'handoff', 'state.json'), '{"state":"fixture"}\n')
   await writeFile(join(project, 'var', 'handoff', 'config.json'), '{"config":"fixture"}\n')
   await writeFile(join(project, 'var', 'runtime.env'), 'ASSISTANT_STORAGE=sqlite\n')
@@ -87,6 +89,7 @@ test('creates an encrypted-only recovery artifact and stages a verified restore'
   assert.equal(document.captureMode, 'online-bounded')
   assert.ok(document.entries.some(entry => entry.path === 'artifacts/primary-sqlite/database.sqlite3'))
   assert.equal(document.entries.some(entry => entry.path.endsWith('ignored.log')), false)
+  assert.equal(document.entries.some(entry => entry.path.includes('/node_modules/')), false)
   assert.equal((await stat(output)).mode & 0o777, 0o600)
   assert.match((await readFile(output)).subarray(0, 22).toString('utf8'), /^age-encryption\.org\/v1/)
 

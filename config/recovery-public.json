@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "ageRecipient": "age1cjduhnqfemtgmv6tj4vf6yackj4qvvxrdaqtx8uyn0uqlky6u99qlp0mg3",
+  "retention": {
+    "daily": 14,
+    "weekly": 8
+  }
+}

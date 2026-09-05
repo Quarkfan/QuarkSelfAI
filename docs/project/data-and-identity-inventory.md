@@ -31,6 +31,7 @@ SQLite 和 DSH 目录中可能同时存在数据库/WAL，备份实现必须先�
 | Codex | 本机账号与本地状态在 `~/.codex` | 优先重新登录；只筛选长期规则/Skill，不复制全部历史 | 否 |
 | Claude Code | 本机配置和项目历史在 `~/.claude` | 优先重新登录；供应商 key 由秘密管理器注入 | 否 |
 | 推理端点 | key 通过 `QUARK_INFERENCE_API_KEY` 注入 | 从密码管理器恢复；base URL/model 可用非秘密模板 | key 否 |
+| age 恢复身份 | 本机 `0600` 运行副本；公钥在 `config/recovery-public.json` | 私钥手工保存到 Apple“密码”独立条目并在新机导出到临时受限文件 | 私钥否，公钥是 |
 
 飞书配置实际位于 `~/.lark-cli/config.json`，可能由 macOS Keychain 保存秘密。Keychain 条目不能假定随 Git、文件归档
 或 Time Machine 必然可用，恢复手册应支持重新登录/重新注入。
@@ -56,6 +57,9 @@ SQLite 和 DSH 目录中可能同时存在数据库/WAL，备份实现必须先�
 - stdout/stderr、重启日志、截图、`.DS_Store`、临时请求和锁文件；
 - Codex/Claude session 全历史、遥测、缓存、下载的插件与模型缓存；
 - Git 可重新生成的构建产物和容器镜像层。
+
+DSH profile 内的 `node_modules` 与其中指向源码 checkout 的符号链接属于可重建依赖，真实演练已确认必须排除；它们
+既不进入恢复包，也不能使恢复过程依赖当前 BlackLakeWork 的绝对路径。
 
 日志如因事故需保留，应生成单独、脱敏、短保留期的诊断包，不能混入日常恢复包。
 

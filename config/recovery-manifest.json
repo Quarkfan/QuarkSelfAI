@@ -20,6 +20,8 @@
       "scripts/audit-recovery-readiness.ts",
       "scripts/audit-account-bootstrap.ts",
       "scripts/recovery-bundle.ts",
+      "scripts/recovery-target.ts",
+      "config/recovery-public.json",
       "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
       "docs/project/README.md",
       "docs/project/charter.md",
@@ -63,12 +65,20 @@
     {
       "id": "encrypted-off-device-target",
       "environment": "QUARK_RECOVERY_TARGET",
+      "fallbackConfig": {
+        "path": "var/recovery-target.json",
+        "property": "path"
+      },
       "secret": false,
       "description": "Versioned off-device backup target URI; a local project path is not sufficient"
     },
     {
       "id": "backup-encryption-recipient",
       "environment": "QUARK_RECOVERY_AGE_RECIPIENT",
+      "fallbackConfig": {
+        "path": "config/recovery-public.json",
+        "property": "ageRecipient"
+      },
       "secret": false,
       "description": "Public age/X25519 recipient; the private key must be stored separately"
     }

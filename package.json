@@ -199,6 +199,8 @@
     "audit:recovery": "node --import tsx scripts/audit-recovery-readiness.ts",
     "audit:accounts": "node --import tsx scripts/audit-account-bootstrap.ts",
     "backup:recovery": "node --import tsx scripts/recovery-bundle.ts create",
+    "backup:publish": "node --import tsx scripts/recovery-target.ts publish",
+    "backup:prune": "node --import tsx scripts/recovery-target.ts prune",
     "restore:stage": "node --import tsx scripts/recovery-bundle.ts stage",
     "restore:prepare-safe": "node --import tsx scripts/recovery-bundle.ts prepare",
     "start:restore-safe": "node --env-file=var/restore-safe.env dist/app.js",

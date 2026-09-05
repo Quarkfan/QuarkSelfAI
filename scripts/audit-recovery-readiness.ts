@@ -29,6 +29,10 @@ type RecoveryManifest = {
   requiredResources: Array<{
     id: string
     environment: string
+    fallbackConfig?: {
+      path: string
+      property: string
+    }
     secret: boolean
     description: string
   }>
@@ -75,8 +79,14 @@ export function normalizeGitRemote(value: string): string {
     .replace(/\.git$/, '')
 }
 
-async function readRuntimeEnvironment(path: string): Promise<Record<string, string>> {
-  const allowed = new Set(['ASSISTANT_STORAGE', 'ASSISTANT_RUNTIME', 'QUARK_APPLICATION_MODE', 'COMPAT_CONFIG_PATH'])
+export async function readRuntimeEnvironment(path: string): Promise<Record<string, string>> {
+  const allowed = new Set([
+    'ASSISTANT_STORAGE',
+    'ASSISTANT_RUNTIME',
+    'QUARK_APPLICATION_MODE',
+    'COMPAT_CONFIG_PATH',
+    'DATABASE_URL',
+  ])
   const result: Record<string, string> = {}
   let text = ''
   try {
@@ -92,6 +102,22 @@ async function readRuntimeEnvironment(path: string): Promise<Record<string, stri
     if (allowed.has(key)) result[key] = line.slice(separator + 1)
   }
   return result
+}
+
+async function readConfiguredProperty(
+  root: string,
+  fallback: { path: string; property: string } | undefined,
+): Promise<boolean> {
+  if (!fallback) return false
+  const path = resolve(root, fallback.path)
+  try {
+    const value = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
+    if (typeof value[fallback.property] !== 'string') return false
+    const configured = (value[fallback.property] as string).trim()
+    return Boolean(configured) && !configured.startsWith('PENDING_')
+  } catch {
+    return false
+  }
 }
 
 async function pathKind(path: string): Promise<'file' | 'directory' | 'missing'> {
@@ -177,13 +203,14 @@ export async function auditRecoveryReadiness(root = projectRoot) {
     })
   }
 
-  const resources = manifest.requiredResources.map(resource => ({
+  const resources = await Promise.all(manifest.requiredResources.map(async resource => ({
     id: resource.id,
-    configured: Boolean(process.env[resource.environment]),
+    configured: Boolean(process.env[resource.environment])
+      || await readConfiguredProperty(root, resource.fallbackConfig),
     environment: resource.environment,
     secret: resource.secret,
     description: resource.description,
-  }))
+  })))
   const blockers = [
     ...(!source.originMatches ? ['repository-origin-mismatch'] : []),
     ...missingTracked.map(path => `untracked-required-source:${path}`),
