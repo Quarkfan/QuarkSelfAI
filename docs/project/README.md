@@ -41,7 +41,8 @@ PostgreSQL bundle 恢复到空库并准备安全实例。它们都不会覆盖�
 ## 当前结论（2026-09-06）
 
 - GitHub 远端与代码基线可用，代码层可以重新 clone。
-- 当前 `main` 已在空目录完成冷 clone、`npm ci`、完整测试和两类恢复审计；空 clone 会如实保持未恢复状态。
+- 当前 `main` 已在空目录完成冷 clone、`npm ci`、完整测试和恢复审计；最新加密包还通过了单入口解密、SQLite integrity、
+  control-only 启动、健康回读与临时明文清理。空 clone 或未批准实例会如实保持未恢复/blocked 状态。
 - 本机已安装 `age 1.3.2`，公钥进入非秘密配置，私钥运行副本与 iCloud Drive 密文分离；首份真实恢复包已完成
   provider 挂载目录回读、解密和 SQLite 完整性校验。
 - 私钥已由 owner 确认保存到 Apple“密码”并决定继续使用当前身份；每日 03:15 的本机加密备份与保留调度已启用。

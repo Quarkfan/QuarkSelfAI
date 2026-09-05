@@ -211,9 +211,12 @@ custom dump inventory 非空且 bundle migration 与 checkout 精确一致；然
 
 ## 8. 当前未完成项
 
-截至 2026-09-06，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现；真实 `age 1.3.2` 身份与 iCloud
-Drive filesystem provider 已完成 online-bounded 写入、挂载回读、密文哈希、解密和 SQLite integrity 闭环，且每日
+截至 2026-09-06，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现；最新 revision 已通过一次真实
+`restore:bootstrap-safe` 冷 clone 演练，覆盖 `npm ci`、构建、解密、SQLite integrity、control-only 启动、健康回读、停止和
+明文 staging 清理。真实 `age 1.3.2` 身份与 iCloud Drive filesystem provider 已完成 online-bounded 写入、挂载回读、
+密文哈希、解密和 SQLite integrity 闭环，且每日
 03:15 的本机调度已启用。owner 已确认 Apple“密码”私钥副本完成并决定继续使用当前身份；PostgreSQL custom dump
 元数据与空库 restore-safe 门禁已实现并通过隔离假执行器测试，仍缺另一设备实际取出与下载、真实 PostgreSQL 空库演练和
 全新终端接管演练。
-因此当前能证明“当前设备可生成并回读可恢复密文”，不能证明“助理能力可在任意终端随时恢复”。
+因此当前能证明“当前设备可从远端代码与加密包重建可启动的安全实例”，不能证明“助理能力可在任意终端随时恢复”。
+本轮固定证据见 [`docs/evidence/recovery-bootstrap-2026-09-06.md`](../evidence/recovery-bootstrap-2026-09-06.md)。

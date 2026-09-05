@@ -616,3 +616,7 @@
 - 当前设备的在线账号审计在受限沙箱内曾把 GitHub、飞书和滴答同时误报为 `authentication-not-ready`；同一命令在宿主
   网络只读复核后 8/8 通过：GitHub、Codex、Claude、飞书 user/bot、滴答和 DSH runtime 均为 ready，推理 provider 为
   configured。以后网络受限环境中的联合失败只能标记为执行环境缺口，不能据此要求 owner 重登或刷新凭证。
+- 以 revision `2eba32bf5ac62116bdfcb52955f43d793f05c1e0` 生成并发布新的 online-bounded age bundle；provider 回读、密文
+  SHA-256、真实解密和 SQLite 校验通过。随后从 GitHub 冷 clone，使用单入口恢复并实际启动 loopback control-only 实例；
+  `/api/health` 返回 ok、SQLite、worker stopped、kernel stopped，readiness 因所有业务 provider/effect 未激活而保持 blocked。
+  进程已停止，工具 staging 残留 0，明确临时 clone 已删除；该演练不扩张为跨设备云端持久化证明。
