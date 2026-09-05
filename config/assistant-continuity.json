@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "scope": "assistant-capability-organization",
+  "instructionContract": {
+    "primary": "AGENTS.md",
+    "mirrors": ["CLAUDE.md"],
+    "requiredTracked": true,
+    "mustMatchByteForByte": true
+  },
+  "repositorySources": [
+    "docs/architecture.md",
+    "docs/requirements-traceability.md",
+    "docs/adr/0085-evidence-driven-capability-evolution.md",
+    "docs/adr/0088-cto-cio-work-assistant-operating-mandate.md",
+    "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
+    "docs/project/README.md",
+    "config/module-catalog.json",
+    "config/capability-evolution-automation.json"
+  ],
+  "durableCapabilities": [
+    {
+      "id": "assistant-state",
+      "recoveryArtifactIds": ["primary-sqlite", "primary-postgres"],
+      "requirement": "one-selected-by-storage-mode"
+    },
+    {
+      "id": "dsh-state",
+      "recoveryArtifactIds": ["dsh-production-profile"],
+      "requirement": "required"
+    },
+    {
+      "id": "transition-state",
+      "recoveryArtifactIds": ["compatibility-state"],
+      "requirement": "required-during-compatibility"
+    },
+    {
+      "id": "capability-evolution-ledger",
+      "recoveryArtifactIds": ["capability-evolution-state"],
+      "requirement": "required"
+    }
+  ],
+  "deviceBoundInputs": [
+    {
+      "id": "codex-local-memory-and-skills",
+      "selector": "${HOME}/.codex",
+      "disposition": "excluded-after-curation",
+      "requiredForCoreRestore": false
+    },
+    {
+      "id": "claude-local-skills",
+      "selector": "${HOME}/.claude/skills",
+      "disposition": "excluded-after-curation",
+      "requiredForCoreRestore": false
+    },
+    {
+      "id": "codex-automation-binding",
+      "selector": "${CODEX_HOME}/automations/quarkselfai",
+      "disposition": "recreate-from-repository-blueprint",
+      "requiredForCoreRestore": true
+    }
+  ],
+  "personalCapabilityCuration": {
+    "source": "config/personal-capability-curation.json",
+    "requiredStatus": "decision-complete"
+  },
+  "workIntegration": {
+    "registry": "config/work-domain-isolation.json",
+    "currentStatus": "inventory-only",
+    "targetDisposition": "separate-private-versioned-pack",
+    "remoteResourceId": "private-work-integration-remote",
+    "remoteResourceStatus": "required-unprovided",
+    "mayBlockCoreBuildAfterMigration": false
+  },
+  "organizationExitCriteria": [
+    "instruction-contract-is-tracked-and-mirrored",
+    "repository-sources-are-tracked",
+    "durable-capabilities-map-to-recovery-artifacts",
+    "device-bound-inputs-have-explicit-dispositions",
+    "work-integration-has-no-unclassified-assets",
+    "work-integration-private-remote-is-selected",
+    "personal-portable-assets-have-an-explicit-curation-decision"
+  ]
+}

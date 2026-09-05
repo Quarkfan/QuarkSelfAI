@@ -53,6 +53,10 @@ bundle ID 精确匹配的 staging，要求目标 major 不低于来源且没有�
 - 当前 `~/.codex/memories`、`~/.codex/skills` 和 `~/.claude/skills` 只能作为迁移输入，不能继续作为唯一真源。
 - 公司、客户、租户、人员、工单与内部代码知识进入对应工作 integration pack 或工作区私有知识库，不进入主线恢复包。
 
+上述连续性资产的统一机器清单见 `config/assistant-continuity.json`。个人 Skill/知识首轮筛选已决定不把任何本机用户目录
+作为核心恢复依赖；供应商与通用能力按需重装，工作能力迁入私有 pack，记录见 `config/personal-capability-curation.json`。
+当前雇主工作集成仍处于“已盘点、未隔离”阶段，不能由账号登录或备份成功替代。
+
 当前外部目录量级：`~/.codex` 约 4.6 GiB、`~/.claude` 约 850 MiB；其中大部分是 session、遥测、插件和缓存，
 不属于最小恢复集。整目录复制会扩大隐私、供应链和版本兼容风险。
 

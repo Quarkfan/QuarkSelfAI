@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "status": "decision-complete",
+  "observedAt": "2026-09-06",
+  "snapshot": {
+    "executorDirectoryCount": 3,
+    "installedCopyCount": 75,
+    "uniqueSkillNameCount": 58,
+    "vendorManagedReinstallableCount": 28,
+    "workDomainCandidateCount": 10
+  },
+  "decisions": [
+    {
+      "class": "product-core",
+      "disposition": "repository-contract-and-runtime",
+      "requiredForCoreRestore": true
+    },
+    {
+      "class": "vendor-managed-agent-skills",
+      "disposition": "reinstall-on-demand-from-verified-provider",
+      "requiredForCoreRestore": false
+    },
+    {
+      "class": "generic-optional-agent-skills",
+      "disposition": "reinstall-on-demand-after-source-review",
+      "requiredForCoreRestore": false
+    },
+    {
+      "class": "work-domain-agent-skills",
+      "disposition": "move-to-private-work-integration-pack",
+      "requiredForCoreRestore": false
+    },
+    {
+      "class": "sessions-telemetry-caches-and-local-memory",
+      "disposition": "exclude-from-core-recovery",
+      "requiredForCoreRestore": false
+    }
+  ],
+  "selectedPortableAssets": [],
+  "coreRestoreDependsOnSelectedAssets": false,
+  "reviewTrigger": "a-local-skill-becomes-required-for-a-supported-core-workflow"
+}
