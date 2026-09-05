@@ -132,6 +132,17 @@ npm run restore:stage -- \
 该命令先解密、拒绝危险归档路径和符号链接，再验证内容寻址 manifest、每个文件的 SHA-256/大小以及 SQLite
 `PRAGMA integrity_check`。成功只代表“恢复包可分阶段读取”，不会把文件写入 live `var`，也不会启动消费者。
 
+新终端的推荐入口把上述 staging 与 restore-safe 准备合并为一个命令，并在成功或失败后删除它自己创建的临时明文目录：
+
+```bash
+npm run restore:bootstrap-safe -- \
+  --input /受限目录/quarkselfai-YYYYMMDD.age \
+  --identity-file /由密码管理器恢复的/age-identity.txt
+```
+
+该入口不安装依赖、不代替账号登录、不写入用户配置目录，也不启用消费者、DSH kernel 或外部 effect。需要独立检查或保留
+staging 证据时仍使用上面的 `restore:stage` 与 `restore:prepare-safe` 两步入口。
+
 在一个 checkout revision 与恢复包完全一致、且尚无 `var` 目录的新 clone 中准备安全实例：
 
 ```bash

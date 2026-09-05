@@ -206,6 +206,7 @@
     "backup:prune": "node --import tsx scripts/recovery-target.ts prune",
     "backup:cycle": "node --import tsx scripts/recovery-target.ts cycle",
     "restore:stage": "node --import tsx scripts/recovery-bundle.ts stage",
+    "restore:bootstrap-safe": "node --import tsx scripts/prepare-recovery-clone.ts",
     "restore:prepare-safe": "node --import tsx scripts/recovery-bundle.ts prepare",
     "restore:prepare-postgres-safe": "node --import tsx scripts/recovery-bundle.ts prepare-postgres",
     "start:restore-safe": "node --env-file=var/restore-safe.env dist/app.js",

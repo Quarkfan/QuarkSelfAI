@@ -604,3 +604,12 @@
 - 进一步复核路径和依赖边界后，私有 revision `75c846d2aa69d208fafde427a7f1843a1a87a3f0` 将 99 项收敛为四类候选：
   私有复制 21、主线泛化 64、脱敏回放 9、历史退休 5。每项都有唯一策略依据且可重建；全部仍标记 owner 未批准，复制数、
   激活数、consumer 与外部写 effect 为 0，不把模型复核冒充迁移授权。
+
+## 2026-09-06 新终端单入口 restore-safe 编排
+
+- 恢复核心此前要求手工串联 `restore:stage` 与 SQLite/PG prepare，功能上安全但容易在新终端遗漏临时明文 staging 清理。
+- 新增 `restore:bootstrap-safe`：只接收 age bundle 和 identity 文件路径，在权限受限的工具自有临时目录完成解密与校验，按
+  bundle storage 选择 SQLite 或 PostgreSQL 安全准备，并在成功或失败后删除精确临时目录。PostgreSQL 仍要求环境注入 URL
+  和与 staged bundle 完全一致的批准 ID；任何未知 storage 失败关闭。
+- 该入口不安装依赖、不恢复用户目录、不代替账号登录、不启动 kernel/consumer/effect，也不设置
+  `TAKEOVER_CONFIRMED`。四个编排测试覆盖 SQLite、PG 错误批准、PG 正确批准和未知 storage 的清理路径。

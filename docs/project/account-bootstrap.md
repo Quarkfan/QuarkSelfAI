@@ -39,6 +39,7 @@ stdout/stderr、用户名、openId、scope、邮箱、token 片段和上游错�
 ## 3. 与 restore-safe 的关系
 
 - `restore:stage` 解密账号配置时只放在受限 staging。
+- 推荐的 `restore:bootstrap-safe` 会在准备完成或失败后自动删除其临时 staging，避免新终端遗留明文恢复材料。
 - `restore:prepare-safe` 将旧账号材料放入新 clone 的 `var/recovery-input`，不会复制到 `~/.lark-cli`、
   `~/.config/dida-cli`、`~/.codex` 或 `~/.claude`。
 - owner 完成重新登录或逐项审核导入后，再运行联网严格审计。

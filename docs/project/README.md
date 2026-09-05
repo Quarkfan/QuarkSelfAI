@@ -31,9 +31,9 @@
 的映射及每类本机输入的处置。报告把尚未完成的私有工作包和个人能力筛选列为 `outstanding`，不会把清单一致误报为
 组织完成。
 
-恢复工具提供六个彼此分离的入口：`npm run backup:recovery` 只生成 age 加密包，`npm run backup:publish` 写入已配置
+恢复工具提供独立入口及一个安全编排入口：`npm run backup:recovery` 只生成 age 加密包，`npm run backup:publish` 写入已配置
 目标并完成目标回读、密文哈希、解密和 SQLite 校验，`npm run backup:cycle` 在发布成功后执行严格血缘保留，
-`npm run restore:stage` 只解密并核验，
+`npm run restore:bootstrap-safe` 在临时 staging 中完成解密、核验和 restore-safe 准备并自动清理明文；`npm run restore:stage` 只解密并核验，
 `npm run restore:prepare-safe` 只准备 SQLite 安全实例，`npm run restore:prepare-postgres-safe` 只允许把精确批准的
 PostgreSQL bundle 恢复到空库并准备安全实例。它们都不会覆盖现网状态、
 启动消费者或启用任何外部写 effect；完整操作见[可移植与灾难恢复规范](portability-and-recovery.md)。

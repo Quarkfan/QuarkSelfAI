@@ -27,6 +27,7 @@
       "scripts/audit-assistant-continuity.ts",
       "scripts/audit-account-bootstrap.ts",
       "scripts/recovery-bundle.ts",
+      "scripts/prepare-recovery-clone.ts",
       "scripts/recovery-target.ts",
       "scripts/render-recovery-launchd.ts",
       "deploy/launchd/com.quarkfan.quark-self-ai.recovery.plist.template",
