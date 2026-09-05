@@ -613,3 +613,6 @@
   和与 staged bundle 完全一致的批准 ID；任何未知 storage 失败关闭。
 - 该入口不安装依赖、不恢复用户目录、不代替账号登录、不启动 kernel/consumer/effect，也不设置
   `TAKEOVER_CONFIRMED`。四个编排测试覆盖 SQLite、PG 错误批准、PG 正确批准和未知 storage 的清理路径。
+- 当前设备的在线账号审计在受限沙箱内曾把 GitHub、飞书和滴答同时误报为 `authentication-not-ready`；同一命令在宿主
+  网络只读复核后 8/8 通过：GitHub、Codex、Claude、飞书 user/bot、滴答和 DSH runtime 均为 ready，推理 provider 为
+  configured。以后网络受限环境中的联合失败只能标记为执行环境缺口，不能据此要求 owner 重登或刷新凭证。
