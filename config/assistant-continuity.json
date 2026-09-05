@@ -16,6 +16,7 @@
     "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
     "docs/project/README.md",
     "docs/evidence/work-integration-remote-2026-09-06.md",
+    "docs/evidence/work-integration-migration-preflight-2026-09-06.md",
     "config/module-catalog.json",
     "config/capability-evolution-automation.json"
   ],
@@ -71,7 +72,7 @@
     "targetDisposition": "separate-private-versioned-pack",
     "localScaffold": {
       "repositoryName": "QuarkSelfAI-Work",
-      "revision": "c83a58fc068548a9ef11b7035d9aa03de7e7b8a3",
+      "revision": "c44c14269c512279889ad78d90d2a9329b60838a",
       "status": "prepared-published",
       "activated": false,
       "assetPlanStatus": "content-addressed-inventory",
@@ -84,7 +85,19 @@
         "redactReplay": 9,
         "retireHistory": 5
       },
-      "contentCopiedCount": 0
+      "contentCopiedCount": 0,
+      "migrationBatch": {
+        "id": "phase-1-private-assets",
+        "status": "preflight-complete-awaiting-owner",
+        "digest": "6c2a8904b82c109a5c2d8f999ee2ddad315415605b21c0000041db327b95bff5",
+        "itemCount": 21,
+        "exactCopyItemCount": 14,
+        "redactedReplayItemCount": 6,
+        "excludedItemCount": 1,
+        "ownerApprovedCount": 0,
+        "contentCopiedCount": 0,
+        "activationAllowedCount": 0
+      }
     },
     "remoteResourceId": "private-work-integration-remote",
     "remoteResourceStatus": "provided",

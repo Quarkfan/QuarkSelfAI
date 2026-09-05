@@ -25,6 +25,11 @@ test('maps assistant behavior to portable sources without claiming organization 
     retireHistory: 5,
   })
   assert.equal(report.workIntegration.localScaffoldContentCopiedCount, 0)
+  assert.equal(report.workIntegration.migrationBatch.status, 'preflight-complete-awaiting-owner')
+  assert.equal(report.workIntegration.migrationBatch.itemCount, 21)
+  assert.equal(report.workIntegration.migrationBatch.exactCopyItemCount, 14)
+  assert.equal(report.workIntegration.migrationBatch.redactedReplayItemCount, 6)
+  assert.equal(report.workIntegration.migrationBatch.excludedItemCount, 1)
   assert.equal(report.workIntegration.remoteResourceStatus, 'provided')
   assert.equal(report.workIntegration.remote.visibility, 'private')
   assert.equal(report.outstanding.includes('personal-portable-assets-curation'), false)

@@ -47,6 +47,18 @@ type ContinuityInventory = {
         retireHistory: number
       }
       contentCopiedCount: number
+      migrationBatch: {
+        id: string
+        status: string
+        digest: string
+        itemCount: number
+        exactCopyItemCount: number
+        redactedReplayItemCount: number
+        excludedItemCount: number
+        ownerApprovedCount: number
+        contentCopiedCount: number
+        activationAllowedCount: number
+      }
     }
     remoteResourceId: string
     remoteResourceStatus: string
@@ -159,6 +171,15 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
     || Object.values(inventory.workIntegration?.localScaffold?.decisionCounts ?? {}).reduce((sum, value) => sum + value, 0)
       !== workDomain.baseline.pathCount
     || inventory.workIntegration?.localScaffold?.contentCopiedCount !== 0) blockers.push('work-integration-scaffold-evidence-invalid')
+  const migrationBatch = inventory.workIntegration?.localScaffold?.migrationBatch
+  if (migrationBatch?.id !== 'phase-1-private-assets'
+    || migrationBatch?.status !== 'preflight-complete-awaiting-owner'
+    || !/^[a-f0-9]{64}$/.test(migrationBatch?.digest ?? '')
+    || migrationBatch?.itemCount !== 21
+    || migrationBatch.exactCopyItemCount + migrationBatch.redactedReplayItemCount + migrationBatch.excludedItemCount !== migrationBatch.itemCount
+    || migrationBatch.ownerApprovedCount !== 0 || migrationBatch.contentCopiedCount !== 0 || migrationBatch.activationAllowedCount !== 0) {
+    blockers.push('work-integration-migration-batch-evidence-invalid')
+  }
   if (inventory.workIntegration?.remoteResourceStatus !== 'provided'
     || inventory.workIntegration?.remote?.provider !== 'github'
     || inventory.workIntegration?.remote?.url !== 'git@github.com:Quarkfan/QuarkSelfAI-Work.git'
@@ -222,6 +243,7 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
       localScaffoldOwnerApprovedCount: inventory.workIntegration.localScaffold.ownerApprovedCount,
       localScaffoldDecisionCounts: inventory.workIntegration.localScaffold.decisionCounts,
       localScaffoldContentCopiedCount: inventory.workIntegration.localScaffold.contentCopiedCount,
+      migrationBatch: inventory.workIntegration.localScaffold.migrationBatch,
       remoteResourceStatus: inventory.workIntegration.remoteResourceStatus,
       remote: inventory.workIntegration.remote,
       mayBlockCoreBuildAfterMigration: inventory.workIntegration.mayBlockCoreBuildAfterMigration,
