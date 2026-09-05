@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "status": "migration-inventory",
+  "markers": [
+    "blacklake",
+    "黑湖",
+    "lakers",
+    "archery",
+    "xiaowei",
+    "湖小维",
+    "任永强",
+    "张以宁",
+    "油脂客户",
+    "全栈开发学习交流群"
+  ],
+  "excludedRegistryPaths": [
+    "config/work-domain-isolation.json",
+    "scripts/audit-work-domain-isolation.ts"
+  ],
+  "baseline": {
+    "pathCount": 99,
+    "pathDigest": "f16d2e4d2cd107ae34a50bab7b3776f288d15b2782a40432f62a88be46399895",
+    "evidenceDigest": "27d30cbf7c911672b4850327f56cb719ea4c6540c3bdd47f2bb3897cbf7dc1aa"
+  },
+  "classificationRules": [
+    {
+      "id": "governance-history",
+      "disposition": "redact-or-retire",
+      "exact": ["AGENTS.md", "CLAUDE.md", "README.md"],
+      "prefixes": ["docs/"]
+    },
+    {
+      "id": "runtime-integration",
+      "disposition": "private-pack",
+      "exact": [".env.example", "package.json", "cordis.patch.yml", "web/app.js"],
+      "prefixes": ["compat/", "config/", "deploy/", "packages/bridge-compat/src/", "src/"]
+    },
+    {
+      "id": "integration-contract",
+      "disposition": "genericize",
+      "exact": ["packages/bridge-compat/config.example.json"],
+      "prefixes": ["packages/bridge-compat/schemas/"]
+    },
+    {
+      "id": "migration-operation",
+      "disposition": "private-pack",
+      "prefixes": ["scripts/"]
+    },
+    {
+      "id": "regression-evidence",
+      "disposition": "redact-or-retire",
+      "prefixes": ["test/", "packages/bridge-compat/test/"]
+    }
+  ],
+  "exitCriteria": [
+    "A versioned private work integration pack contains every still-required employer-specific adapter, policy, credential contract, and operational runbook.",
+    "The generic product composition starts, builds, and restores without the private pack or an employer workspace.",
+    "A redacted contract replay proves the private pack preserves required behavior behind generic ports.",
+    "One approved maintenance window switches the single provider without a second consumer or a second write path.",
+    "After the rollback retention window, employer-specific runtime assets and historical evidence are removed or redacted from the product mainline."
+  ]
+}

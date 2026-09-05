@@ -9,7 +9,7 @@
 | 原始能力要求 | 对应能力 | 当前证据 | 状态/剩余门禁 |
 | --- | --- | --- | --- |
 | 代码可在任意受信终端 clone，并通过账号登录和数据备份恢复同一助理能力 | recovery-readiness, account-bootstrap-readiness, deployment-packaging, durable-store | 项目章程、ADR 0090、机器 recovery/account manifest、数据/身份清单、真实 age-only 打包、iCloud provider 不可覆盖写入、挂载回读、checksum/解密/SQLite 校验、严格血缘 14 日 + 8 周保留、每日 03:15 独立 LaunchAgent、Apple“密码”owner-attested escrow、revision 一致的 fresh-clone SQLite restore-safe、PostgreSQL 版本/migration 摘要与精确 bundle/空库/单事务 restore-safe 门禁、脱敏账号审计 | implemented/gated：当前设备 SQLite、账号链路、私钥 escrow 和周期备份已验证到各自边界；PostgreSQL 编排已通过隔离测试，仍需另一设备实际取出/下载证明、真实 PostgreSQL 空库和完整接管演练 |
-| QuarkSelfAI 独立于当前雇主工作，BlackLake 信息不进入产品主线；外部 DevOps 设计采纳后必须复制入库 | work-domain isolation, capability-evolution | ADR 0090、BlackLake 边界与现有耦合清单；采纳要求 provenance/许可/去业务化/本地资产 | gated：当前 BlackLake adapter 仍参与现网，须先建设独立 pack 并在维护窗口切换，不能直接删除 |
+| QuarkSelfAI 独立于当前雇主工作，BlackLake 信息不进入产品主线；外部 DevOps 设计采纳后必须复制入库 | work-domain-isolation-audit, capability-evolution | ADR 0090、BlackLake 边界；99 个 tracked 文本路径的分类、路径摘要与命中行摘要严格基线；未分类为 0；采纳要求 provenance/许可/去业务化/本地资产 | gated：现有耦合已完整登记且新增/变更会失败关闭，但 adapter 仍参与现网；须先建设独立 pack 并在维护窗口切换，不能直接删除 |
 | 正式承担个人 CTO、CIO 与工作助理角色，并具有一定独立性和创造性 | collaboration-learning, capability-evolution, natural-language-policy | ADR 0088；根/仓库 AGENTS 与 CLAUDE 角色真源；目标经营、三重职责、决策优先级、精确 mandate 与硬边界 | complete：角色扩大主动判断与闭环责任，不旁路外联、生产、权限、人员预算合同和核心架构门禁 |
 | 守护进程监听飞书，不依赖循环 sleep；崩溃后恢复 | lark-event-adapter, retry-and-alerting, daemon-deployment | 单一实时消费者；非实时来源默认 10 分钟持久工作流补偿；本地队列与远程搜索分离；launchd；租约/退避；跨进程隔离故障恢复演练 | complete（服务器部署仍为可选项） |
 | 本人机器人私聊直接理解自然语言并执行，不要求命令枚举 | direct-owner-control | 契约测试；持久 controller/current session；最近六条有界上下文与 reply/root/thread 连贯性提示；控制会话排除于本人参与补偿；调研确认要求精确关联或单一事项完整短句 | complete |

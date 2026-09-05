@@ -16,6 +16,10 @@
 `npm run audit:recovery` 查看本机清单，执行 `npm run audit:recovery -- --strict` 作为恢复门禁。审计只查看
 路径、文件类型和配置是否存在，不读取或输出凭证值。
 
+工作域隔离的机器真源是 [`config/work-domain-isolation.json`](../../config/work-domain-isolation.json)。执行
+`npm run audit:work-domain-isolation -- --strict` 验证所有已跟踪的雇主专用引用仍与已复核基线一致；它只输出分类、
+数量和摘要，不输出业务正文。该审计通过表示“现有耦合已完整登记且没有静默扩张”，不表示迁移已经完成。
+
 恢复工具提供六个彼此分离的入口：`npm run backup:recovery` 只生成 age 加密包，`npm run backup:publish` 写入已配置
 目标并完成目标回读、密文哈希、解密和 SQLite 校验，`npm run backup:cycle` 在发布成功后执行严格血缘保留，
 `npm run restore:stage` 只解密并核验，
@@ -32,7 +36,7 @@ PostgreSQL bundle 恢复到空库并准备安全实例。它们都不会覆盖�
 - 私钥已由 owner 确认保存到 Apple“密码”并决定继续使用当前身份；每日 03:15 的本机加密备份与保留调度已启用。
   PostgreSQL 空库恢复门禁已实现但尚无真实目标演练；另一设备实际取出私钥并下载恢复包的回读、真实 PostgreSQL 恢复和完整
   接管演练仍未完成，因此“任意终端恢复”尚未成立。
-- 当前仓库仍包含 BlackLake 专用适配器和文档引用，属于待拆分的历史耦合；在不破坏现网单消费者和审批门禁前，
-  先登记、再迁移，不能直接删除。
+- 当前仓库仍包含 BlackLake 专用适配器和文档引用，属于待拆分的历史耦合；99 个命中路径已由机器清单完整登记、
+  分类且严格审计无遗漏。在不破坏现网单消费者和审批门禁前，先迁移到私有 pack，再删除或脱敏主线资产。
 - 本阶段已完成立项、分类、清单、恢复门禁、不触碰现网的备份/恢复核心、iCloud Drive provider 密文回读和每日
   保留调度。跨设备云端取回证明、PostgreSQL 恢复和运行切换仍在 Phase 2–4。
