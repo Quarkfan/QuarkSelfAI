@@ -70,9 +70,13 @@
     "targetDisposition": "separate-private-versioned-pack",
     "localScaffold": {
       "repositoryName": "QuarkSelfAI-Work",
-      "revision": "0259366ab6f233a227bce41d1233cb5b5be0a9f3",
+      "revision": "e2545a5e7cab46ab436fde3bfa7d13b6b4b20829",
       "status": "prepared-unpublished",
-      "activated": false
+      "activated": false,
+      "assetPlanStatus": "content-addressed-inventory",
+      "assetCount": 99,
+      "provisionalCount": 99,
+      "contentCopiedCount": 0
     },
     "remoteResourceId": "private-work-integration-remote",
     "remoteResourceStatus": "required-unprovided",

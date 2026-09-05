@@ -598,3 +598,6 @@
   `0259366ab6f233a227bce41d1233cb5b5be0a9f3`。骨架只含私有边界、99 路径来源摘要、五阶段迁移计划和脱敏审计；来源
   回读一致，tracked path 8、凭证模式 0、符号链接 0、consumer 0、外部写 effect 0。未配置远端、未复制业务正文、
   未修改主线 provider 或消费者；需要 owner 提供私有远端后才能成为异机可恢复资源。
+- 独立工作包在 revision `e2545a5e7cab46ab436fde3bfa7d13b6b4b20829` 增加逐项内容寻址迁移账本：99 个来源路径均有
+  固定主线 revision、内容 SHA-256、分类和计划动作，且可从来源完整重建；99 项仍全部是 `provisional-policy`，复制数、
+  允许激活数、consumer 和外部写 effect 均为 0。主仓库只记录聚合证据和私有 revision，不复制工作路径或业务正文。

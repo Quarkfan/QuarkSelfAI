@@ -55,8 +55,10 @@ Git 历史和运行日志扫描未检出私钥文本，但该扫描不构成对�
 现有 GitHub 登录，不在聊天或仓库中保存 token。远端确定前不会移动现网 provider 或改变消费者。
 
 本机已在固定 `github` 目录建立 `QuarkSelfAI-Work` 独立仓库骨架，首个本地 revision 为
-`0259366ab6f233a227bce41d1233cb5b5be0a9f3`。它只包含边界、来源摘要、迁移计划和审计，当前未配置 remote、未复制业务
-正文、未激活任何 provider/consumer/effect；本地提交不能替代异机可取回的私有远端。
+`0259366ab6f233a227bce41d1233cb5b5be0a9f3`；当前 revision 为
+`e2545a5e7cab46ab436fde3bfa7d13b6b4b20829`。它新增覆盖全部 99 项来源资产的内容寻址迁移账本，逐项保存路径、摘要、分类和
+计划动作，但全部仍为 provisional，未复制业务正文。当前未配置 remote、未激活任何 provider/consumer/effect；本地提交
+不能替代异机可取回的私有远端。
 
 真实 PostgreSQL 演练可二选一：由 owner 提供一个专用、可删除的空数据库 secret，或明确允许助手启动一个仅绑定
 loopback 的临时 Docker PostgreSQL。两者都只用于恢复验收，不接入飞书消费者或生产业务数据。
