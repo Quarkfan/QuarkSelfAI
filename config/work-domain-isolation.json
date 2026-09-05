@@ -16,13 +16,14 @@
   ],
   "excludedRegistryPaths": [
     "config/work-domain-isolation.json",
+    "config/capability-platform-migration.json",
     "config/work-integration-host-contract-proposal.json",
     "scripts/audit-work-domain-isolation.ts"
   ],
   "baseline": {
-    "pathCount": 99,
-    "pathDigest": "f16d2e4d2cd107ae34a50bab7b3776f288d15b2782a40432f62a88be46399895",
-    "evidenceDigest": "04857b693ae9af9841f8b5731141af804963364dd198e8551595cb0966363d53"
+    "pathCount": 101,
+    "pathDigest": "d591af26cbb9e015a3b0f364bd9e2199ecdb3679279711b612495e57d267cb03",
+    "evidenceDigest": "b277df01349ab105259e8165e2ac4060a98a8d5fba888609acee69f53438d299"
   },
   "classificationRules": [
     {

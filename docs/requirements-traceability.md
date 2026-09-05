@@ -1,5 +1,13 @@
 # 需求追踪矩阵
 
+## 下一代能力平台目标（设计态）
+
+2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
+[`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。当前 99 个模块的拟迁移处置见
+`config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
+`config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
+100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
+
 本文件把个人助手建设期间提出的需求映射到实现、验证和接管门禁，防止“测试很多”掩盖某条原始需求仍
 未完成。机器可读接管状态仍以 `config/feature-parity.json` 为准；本表不得单独放行生产切换。
 

@@ -674,3 +674,22 @@
   因此被误报为来源漂移。私有 revision `3b9623bb31dca2e3991e6fec17fcb6d8411c7b85` 已将审计改为通过 Git object database
   读取 manifest 固定 revision，来源对象不一致或 revision 不可达仍失败关闭。修复后 99 项来源、20 个目标、秘密/符号链接和
   activation 审计均通过；该提交不修改 pack 内容、manifest、依赖或运行状态。
+
+## 2026-09-06 多用户能力平台 Phase 0 设计与 POC
+
+- owner 将最终目标扩展为多用户服务端/客户端平台：云端积累、编排和治理 Agent，本地客户端发现 Claude Code、Codex 等
+  执行器并以 DSH 保底；Skill、程序包、GitHub 工具、无头浏览器、应用、游戏等统一抽象为 Capability Artifact。
+- 重新读取现有章程、需求追踪、架构、模块目录、ADR 0091、恢复/私有包证据与当前 Git 状态后，确认现有真源仍以本地单用户
+  运行和恢复为主，不能直接视为新平台 PRD。本轮新增统一 PRD 与 Proposed/inactive ADR 0092，明确云端控制面、本地运行时、
+  Capability SDK/Runtime、Agent Blueprint、Execution Envelope、隐私边界、阶段门禁与成功口径。
+- 机器迁移清单对当前 `config/module-catalog.json` 的 99 个 module ID 做 exactly-once 处置：39 个 platform core、37 个通用
+  capability artifact、6 个 private work integration、2 个 experience、10 个 operations capability、5 个 migration-only；混合
+  work-journal compiler 进入先拆通用编译与私有证据 adapter 的门禁。
+- 控制台覆盖清单固定 34 项产品要求，每项同时声明 control、monitor、manage 与 POC anchor；静态 HTML POC 覆盖能力目录、
+  Agent Studio、发布、运行、设备、执行器、批准/effect、权限/数据、租户、私有包、事故、恢复、应用/游戏和审计。POC 使用虚构
+  数据且不联网、不安装、不激活、不写入。
+- 本轮只允许 Phase 0 文档、机器清单、审计、测试与独立 POC。没有修改 live console/API、DSH/Cordis composition、consumer、
+  provider、scheduler、writer、凭证、外部数据或服务；没有删除主线来源或触碰用户未提交的 package/client/DS_Store 文件。
+- 机器审计已验证 99/99 模块处置和 34/34 control/monitor/manage POC anchor；完整仓库、连续性、工作域和私有包审计通过。
+  当前应用内浏览器安全策略禁止打开本地 `file://`，且不允许改用替代浏览器绕过，因此真实桌面/窄屏视觉确认仍是 Phase 0
+  唯一未闭合门禁；在 owner 打开静态 POC 确认前，不把“机器覆盖率 100%”表述为“控制台视觉验收完成”。

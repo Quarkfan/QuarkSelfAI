@@ -1,5 +1,19 @@
 # 架构
 
+## 提议中的下一代平台边界
+
+多用户“云端控制、本地执行”的能力与 Agent 编排目标以
+[Capability Platform PRD](product/capability-platform-prd.md) 和
+[ADR 0092](adr/0092-cloud-control-local-execution-capability-platform.md) 为设计真源。目标由 Cloud Control Plane、
+Local Client Runtime、Capability SDK/Runtime 与 Agent Orchestration 四层组成；程序包、CLI、GitHub 项目、浏览器、
+应用、游戏和私有集成都统一成为可安装、可授权、可测试、可恢复的 Capability Artifact。Claude Code、Codex 与 DSH
+消费同一个 Execution Envelope，DSH 是客户端保底执行器。
+
+该边界当前是 `design-candidate / inactive`，不描述现网事实。现网仍按下文的本地单实例与 compatibility owner 运行；
+未取得分批批准前，不得据此改变 DSH/Cordis composition、安装或激活新制品、切换 consumer/provider/scheduler/writer、
+上传本地敏感数据或删除现有来源。99 个当前模块的拟处置与控制台范围分别由
+`config/capability-platform-migration.json` 和 `config/capability-platform-console-coverage.json` 固定。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

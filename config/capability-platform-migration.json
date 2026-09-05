@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "status": "design-candidate-inactive",
+  "sourceCatalog": "config/module-catalog.json",
+  "sourceRevision": "ddfbdcc4c9ab7834bdf38e2b7182854c4be6ab0d",
+  "rules": {
+    "exactlyOnce": true,
+    "coreMayDependOnPrivatePack": false,
+    "activationAllowed": false,
+    "runtimeCompositionChangeAllowed": false
+  },
+  "groups": [
+    {
+      "disposition": "platform-core",
+      "targetPlane": "shared-contract",
+      "moduleIds": ["module-catalog", "assistant-contracts", "authorization-contract", "channel-contract", "policy-contracts", "storage-port", "durable-state-contract", "durable-action-contracts", "durable-workflow-contracts", "durable-event-contracts", "assistant-effect-contracts", "runtime-status-contracts", "platform-api", "feishu-effect-contracts", "message-projection-contracts", "conversation-effect-contracts", "task-capability-contracts", "codex-session-effects", "followup-contracts", "work-journal-contracts"]
+    },
+    {
+      "disposition": "platform-core",
+      "targetPlane": "local-client",
+      "moduleIds": ["dsh-runtime", "lifecycle-host", "application-host", "application-composition", "durable-wake-scheduler", "workspace-boundary", "executor-router", "kernel-supervisor", "neutral-default-providers", "dsh-profile-installer", "native-product-profile", "native-product-composition", "sqlite-storage", "durable-state-host"]
+    },
+    {
+      "disposition": "platform-core",
+      "targetPlane": "hybrid-runtime",
+      "moduleIds": ["durable-action-ledger", "durable-workflow-runtime", "durable-event-runtime", "policy-runtime", "assistant-module-catalog"]
+    },
+    {
+      "disposition": "capability-artifact",
+      "targetPlane": "local-or-hybrid",
+      "moduleIds": ["assistant-policy-model", "skill-evolution-compiler", "work-journal", "feishu-channel", "feishu-workflow-effects", "feishu-context-effects", "feishu-native-ingress", "message-intake-native", "feishu-focus-discovery-effects", "intake-interaction-effects", "dsh-reasoning-effects", "collaboration-learning-policy", "proactive-dialogue-policy", "collaboration-learning-native", "agent-bound-action-worker", "network-recovery-adapter", "dsh-conversation-effects", "dida-task-effects", "dida-projection-effects", "dida-maintenance-native", "codex-session-effect-adapter", "session-lifecycle-native", "delegated-followup-native", "claude-code-provider", "codex-provider", "dynamic-plugin-authoring", "dida-projection", "direct-command-workflow", "focus-intake", "owner-engagement", "dida-maintenance", "delegated-followup", "session-lifecycle", "notification-digest", "collaboration-learning", "proactive-owner-dialogue"]
+    },
+    {
+      "disposition": "private-work-integration",
+      "targetPlane": "private-pack",
+      "moduleIds": ["work-journal-agent-compiler", "xiaowei-research-native", "blacklake-reference-routing", "blacklake-reference-audit", "xiaowei-research", "xiaowei-insight-digest"]
+    },
+    {
+      "disposition": "experience-artifact",
+      "targetPlane": "cloud-and-local-surface",
+      "moduleIds": ["control-console", "approval-cards"]
+    },
+    {
+      "disposition": "operations-capability",
+      "targetPlane": "governance",
+      "moduleIds": ["architecture-governance", "policy-rehearsal", "capability-evolution-observer", "capability-evolution-portability-audit", "assistant-continuity-audit", "project-foundation-audit", "recovery-readiness", "work-domain-isolation-audit", "account-bootstrap-readiness", "deployment-packaging"]
+    },
+    {
+      "disposition": "capability-artifact",
+      "targetPlane": "cloud-provider",
+      "moduleIds": ["postgres-storage"]
+    },
+    {
+      "disposition": "migration-only",
+      "targetPlane": "temporary-compatibility",
+      "moduleIds": ["assistant-profile-composition", "takeover-readiness", "bridge-compat-host", "legacy-state-tooling", "takeover-evidence"]
+    }
+  ],
+  "splitRequirements": [
+    {
+      "moduleId": "work-journal-agent-compiler",
+      "genericTarget": "capability-artifact:work-journal-compiler",
+      "privateTarget": "private-work-integration:work-evidence-adapters",
+      "reason": "current module mixes generic compilation with company reference and Feishu evidence"
+    },
+    {
+      "moduleId": "feishu-channel",
+      "genericTarget": "capability-artifact:message-channel-feishu",
+      "privateTarget": null,
+      "reason": "generic Feishu channel stays portable while business policies remain separate"
+    }
+  ]
+}

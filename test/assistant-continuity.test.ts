@@ -45,3 +45,10 @@ test('fails closed when the executor instruction mirrors drift', async () => {
   assert.equal(instructionMirrorDigest(['same', 'same']).mirrored, true)
   assert.equal(instructionMirrorDigest(['codex', 'claude']).mirrored, false)
 })
+
+test('keeps the frozen private migration count independent from later governance documents', async () => {
+  const report = await auditAssistantContinuity(process.cwd())
+  assert.equal(report.workIntegration.localScaffoldAssetCount, 99)
+  assert.equal(report.workIntegration.inventoriedPathCount, 101)
+  assert.equal(report.blockers.includes('work-integration-scaffold-evidence-invalid'), false)
+})

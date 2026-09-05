@@ -166,11 +166,12 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
     || inventory.workIntegration?.localScaffold?.status !== 'content-migrated-inactive'
     || inventory.workIntegration?.localScaffold?.activated !== false
     || inventory.workIntegration?.localScaffold?.assetPlanStatus !== 'content-addressed-inventory'
-    || inventory.workIntegration?.localScaffold?.assetCount !== workDomain.baseline.pathCount
-    || inventory.workIntegration?.localScaffold?.reviewedCandidateCount !== workDomain.baseline.pathCount
+    || !Number.isSafeInteger(inventory.workIntegration?.localScaffold?.assetCount)
+    || inventory.workIntegration?.localScaffold?.assetCount < 1
+    || inventory.workIntegration?.localScaffold?.reviewedCandidateCount !== inventory.workIntegration?.localScaffold?.assetCount
     || inventory.workIntegration?.localScaffold?.ownerApprovedCount !== 0
     || Object.values(inventory.workIntegration?.localScaffold?.decisionCounts ?? {}).reduce((sum, value) => sum + value, 0)
-      !== workDomain.baseline.pathCount
+      !== inventory.workIntegration?.localScaffold?.assetCount
     || inventory.workIntegration?.localScaffold?.contentCopiedCount !== 20) blockers.push('work-integration-scaffold-evidence-invalid')
   const migrationBatch = inventory.workIntegration?.localScaffold?.migrationBatch
   if (migrationBatch?.id !== 'phase-1-private-assets'
