@@ -81,6 +81,16 @@
       },
       "secret": false,
       "description": "Public age/X25519 recipient; the private key must be stored separately"
+    },
+    {
+      "id": "backup-identity-escrow-record",
+      "environment": "QUARK_RECOVERY_IDENTITY_ESCROW",
+      "fallbackConfig": {
+        "path": "config/recovery-public.json",
+        "property": "identityEscrow.status"
+      },
+      "secret": false,
+      "description": "Owner attestation that the private age identity is stored outside Git and the backup target"
     }
   ],
   "artifacts": [

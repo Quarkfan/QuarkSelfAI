@@ -171,5 +171,6 @@ npm run start:restore-safe
 
 截至 2026-09-05，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现；真实 `age 1.3.2` 身份与 iCloud
 Drive filesystem provider 已完成一次 online-bounded 写入、挂载回读、密文哈希、解密和 SQLite integrity 闭环。
-仍缺 Apple“密码”私钥副本、另一设备实际下载、保留策略的周期调度、PostgreSQL 空库恢复和全新终端接管演练。
+owner 已确认 Apple“密码”私钥副本完成；仍缺另一设备实际取出与下载、保留策略的周期调度、PostgreSQL 空库恢复和
+全新终端接管演练。
 因此当前能证明“当前设备可生成并回读可恢复密文”，不能证明“助理能力可在任意终端随时恢复”。

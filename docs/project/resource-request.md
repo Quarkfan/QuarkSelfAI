@@ -24,9 +24,8 @@
 已安装 `age 1.3.2` 并生成 X25519 身份。公钥 recipient 已写入非秘密配置；私钥只在本机受限目录保留运行副本，
 不进入仓库和 iCloud Drive 恢复目录。
 
-待 owner 完成的一次人工动作：把私钥全文保存到 Apple“密码”的独立自定义条目，并在另一已批准设备确认可读取。
-密码条目建议命名 `QuarkSelfAI age recovery identity`；网站可填 `quarkselfai.local`，用户名填 `age-x25519-recovery`，
-私钥放密码字段或受保护备注。不得把私钥粘贴回聊天、GitHub 或 iCloud Drive 备份目录。
+owner 已于 2026-09-06 确认把私钥保存到 Apple“密码”的独立自定义条目。该确认只证明 escrow 动作完成；密码库内容
+未被助手读取，另一已批准设备能否取出并解密仍须单独演练。不得把私钥粘贴回聊天、GitHub 或 iCloud Drive 备份目录。
 
 ## 执行状态与后续工作
 

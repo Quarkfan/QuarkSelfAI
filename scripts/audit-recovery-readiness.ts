@@ -112,8 +112,12 @@ async function readConfiguredProperty(
   const path = resolve(root, fallback.path)
   try {
     const value = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
-    if (typeof value[fallback.property] !== 'string') return false
-    const configured = (value[fallback.property] as string).trim()
+    const configuredValue = fallback.property.split('.').reduce<unknown>((current, segment) => {
+      if (!current || typeof current !== 'object' || Array.isArray(current)) return undefined
+      return (current as Record<string, unknown>)[segment]
+    }, value)
+    if (typeof configuredValue !== 'string') return false
+    const configured = configuredValue.trim()
     return Boolean(configured) && !configured.startsWith('PENDING_')
   } catch {
     return false

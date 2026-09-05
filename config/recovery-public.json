@@ -5,5 +5,11 @@
   "retention": {
     "daily": 14,
     "weekly": 8
+  },
+  "identityEscrow": {
+    "provider": "apple-passwords",
+    "status": "owner-attested",
+    "attestedOn": "2026-09-06",
+    "crossDeviceVerified": false
   }
 }
