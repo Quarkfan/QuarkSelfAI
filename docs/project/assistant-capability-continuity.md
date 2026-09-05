@@ -37,11 +37,18 @@ Codex 周期任务的 host/project id 同样属于设备绑定。仓库只保存
 不移动现网 provider、不改消费者、不形成双写。采用的通用设计必须去业务化后复制入主仓库，不能从私有工作包反向成为
 核心启动依赖。
 
-当前已创建并发布独立私有仓库 `QuarkSelfAI-Work`；GitHub 页面已确认 visibility 为 `Private`。远端 `main` 在 revision
-`971685b22476e6b1e263b20f441b5ea72519dcf2` 保存 99 个来源资产的逐项内容摘要、分类、计划动作和审阅依据，以及首批 20 个
+当前已创建并发布独立私有仓库 `QuarkSelfAI-Work`；GitHub 页面已确认 visibility 为 `Private`。远端 `main` 当前 revision
+`3b9623bb31dca2e3991e6fec17fcb6d8411c7b85` 保存 99 个来源资产的逐项内容摘要、分类、计划动作和审阅依据，以及首批 20 个
 非激活内容目标。候选结论仍为私有复制 21、主线泛化 64、脱敏回放 9、历史退休 5；首批精确批准覆盖 21 项处置，其中
 实际落盘 20 项、排除 1 项、允许激活数为 0。审计确认未启用消费者或外部写入，且账本可从固定主线 revision 完整重建。
 它现在是跨终端可取回的工作集成内容真源，但来源仍留在主线，host contract 和运行恢复尚未完成，所以不称为已经隔离。
+首批内容迁移本身仍由 revision `971685b22476e6b1e263b20f441b5ea72519dcf2` 固定；较新的 revision 只修正审计按冻结
+source revision 回读，避免主线治理文档演进被误报为首批内容漂移。
+
+阶段 2 host contract 设计已固化在 ADR 0091、`docs/project/work-integration-host-contract.md` 和
+`config/work-integration-host-contract-proposal.json`，状态为 `design-complete-awaiting-owner`。恢复顺序明确为先在无 pack、无
+公司工作区和无公司网络条件下完成核心 restore-safe，再按精确私有 revision/digest 重建并安装 inactive pack；安装不会恢复
+消费者、provider ownership、external write 或 takeover confirmation。设计完成不构成 DSH/Cordis 边界变更的实施授权。
 
 digest 为 `6c2a8904b82c109a5c2d8f999ee2ddad315415605b21c0000041db327b95bff5` 的首批迁移已经 owner 批准并执行：
 14 项按固定 source revision 原样复制，6 项重建为脱敏 contract replay，1 项因凭证形态字面量被排除。结果摘要为

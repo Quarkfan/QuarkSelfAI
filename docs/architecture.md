@@ -44,6 +44,13 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 三源真源读取当前入口、索引和 skill frontmatter，返回内容哈希并验证建议 skill 真实存在；QuarkSelfAI
 不复制三源业务规则。多步链路候选必须同时包含 `virtual-employee-operation-chain`。
 
+阶段 2 的目标边界由 [ADR 0091](adr/0091-generic-work-integration-host-contract.md) 定义，目前仍是未批准、未激活设计。
+目标形态中，核心只依赖通用 work-integration contract 和唯一 Cordis registry；私有 pack 反向依赖该 contract，并通过
+设备本地、精确 revision/digest、默认关闭的 operator overlay 注册。pack 不拥有消费者、durable scheduler、审批真源、
+executor router 或 workspace allowlist。Codex、Claude Code 与 DSH 共用一个规范化执行上下文；本地路径只由核心
+workspace policy 在 adapter 边界解析。当前 `@quarkfan/quark-self-ai/blacklake`、compatibility host 和产品 composition
+均未因该设计改变，不能把 ADR 状态解释为已经迁移或切换。
+
 `blacklakeReferences.planResearch` 把路由结论接入 durable action ledger。`skip` 不创建 action；`confirm`
 创建带精确 approval 的只读 action，批准前同样不可 claim；`start` 仅允许生产、安全或客户阻塞风险，且
 目标清晰、确有本地证据缺口、预期有直接收益。参考读取与 executor 执行因此共享同一审批和审计边界。

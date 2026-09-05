@@ -57,13 +57,18 @@ Git 历史和运行日志扫描未检出私钥文本，但该扫描不构成对�
 
 本机已在固定 `github` 目录建立 `QuarkSelfAI-Work` 独立仓库骨架，首个本地 revision 为
 `0259366ab6f233a227bce41d1233cb5b5be0a9f3`；当前 revision 为
-`971685b22476e6b1e263b20f441b5ea72519dcf2`。它保存覆盖全部 99 项来源资产的内容寻址迁移账本，以及已批准首批的 20 个
+`3b9623bb31dca2e3991e6fec17fcb6d8411c7b85`。它保存覆盖全部 99 项来源资产的内容寻址迁移账本，以及已批准首批的 20 个
 非激活内容目标。当前未配置任何运行依赖，也未激活 provider/consumer/effect；私有远端已经解除首批内容的跨终端取回
-门禁，但尚未完成 host contract、主线移除和运行接管。
+门禁，但尚未完成 host contract、主线移除和运行接管。首批内容 revision 仍为
+`971685b22476e6b1e263b20f441b5ea72519dcf2`；当前 revision 仅增加冻结 source revision 的正确审计语义。
 
 首批迁移 digest `6c2a8904b82c109a5c2d8f999ee2ddad315415605b21c0000041db327b95bff5` 已精确批准并完成：14 项原样复制、
 6 项脱敏回放、1 项排除；结果摘要为 `54e4ea05a735680361ca0cddb005890ef5fcad003df0e3eb2ae711addb3cb028`。后续阶段 2 会改变
 通用 host contract/DSH-Cordis 边界，必须以新的精确 revision 和范围重新取得批准。
+
+阶段 2 设计现已形成机器可读授权清单 `config/work-integration-host-contract-proposal.json`。下一批准只覆盖通用 contract、
+默认关闭 registry、私有包契约化改造、可复现 inactive artifact 和离线 replay；明确不覆盖 live profile 修改、安装/激活、
+shadow 对接 live provider、消费者/provider 切换、外部写、凭证、主线来源删除或服务重启。批准前不需要提供新秘密或外部资源。
 
 真实 PostgreSQL 演练可二选一：由 owner 提供一个专用、可删除的空数据库 secret，或明确允许助手启动一个仅绑定
 loopback 的临时 Docker PostgreSQL。两者都只用于恢复验收，不接入飞书消费者或生产业务数据。

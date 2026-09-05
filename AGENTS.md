@@ -101,6 +101,10 @@
   文件、桌面会话和本机 CLI 能力。所有本地文件能力必须复用统一 workspace policy，默认不得授权主目录，
   也不得自动把文件正文、目录清单或绝对路径同步到飞书、滴答或远端服务。
 - DSH 与 lark-cli 升级必须运行构建、契约测试、compat 检查和脱敏回放。
+- 通用 work integration host contract 以 ADR 0091 为设计真源。核心只依赖通用 contract 与唯一 registry；私有 pack 只能反向
+  依赖该 contract，并通过设备本地、精确 revision/digest、默认关闭的 overlay 注册。pack 不得自建消费者、durable scheduler、
+  审批真源、executor router、workspace allowlist 或第二写入链路；Codex、Claude Code 与 DSH 必须共享同一规范化执行上下文。
+  当前提案未批准，不能据此修改 live composition、安装/激活 pack、执行 shadow/cutover、删除主线来源或重启服务。
 - 执行器兜底必须保持能力与会话语义：native 普通 durable action 使用 Claude Code → DSH native → Codex；当前本人私聊总控延续原 Codex 会话，只有 Codex 与 Claude Code 都发生基础设施故障时才使用隔离的 DSH headless 兜底。明确指定的 Codex session、结构化滴答写入和需要原 provider 会话连续性的任务不得静默切换到 DSH。DSH headless 使用独立 `DSH_HOME`，不得与内嵌 Web profile 并发写同一 session 存储。
 - 主动通知必须遵守 `docs/operations/autonomous-twin-session.md` 的降噪门禁：瞬时基础设施故障静默、恢复只对应已通知故障、普通消息与简报限于 08:00–20:00、超期汇总限于 09:00–19:00 且任务级 24 小时去重；本人手工小维会话不镜像到控制会话。
 - 已批准追问的回复轮询是独立、可恢复的读取来源；单次网络、DNS、超时或飞书读取失败必须保留待处理项并记录脱敏故障，不得以未捕获异常终止 compatibility host 或其他消费者。后续成功读取时清除该来源故障并继续原事项。

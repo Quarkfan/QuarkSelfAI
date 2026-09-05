@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "phase-2-generic-host-contract-inactive",
+  "status": "awaiting-owner-approval",
+  "createdOn": "2026-09-06",
+  "baseRevisions": {
+    "core": "05b32ac6d9ca252a3578b322ee7419376360a51f",
+    "privatePack": "3b9623bb31dca2e3991e6fec17fcb6d8411c7b85"
+  },
+  "architecture": {
+    "dependencyDirection": [
+      "executors-to-canonical-context-to-core-router",
+      "core-to-generic-contract-only",
+      "dsh-cordis-to-generic-registry",
+      "private-pack-to-generic-contract-only",
+      "device-overlay-to-exact-private-artifact"
+    ],
+    "coreMayDependOnPrivatePack": false,
+    "coreMayDependOnCompanyWorkspace": false,
+    "packMayImportCoreSource": false,
+    "packOwnsConsumers": false,
+    "packOwnsDurableScheduler": false,
+    "packOwnsApprovalTruth": false,
+    "packOwnsExecutorRouting": false,
+    "packMayRegisterInactiveProviders": true,
+    "baseProfileMayNamePrivatePack": false
+  },
+  "implementationScope": {
+    "coreAdd": [
+      "src/work-integration/contracts.ts",
+      "src/work-integration/registry.ts",
+      "src/work-integration/plugin.ts",
+      "scripts/audit-work-integration-host-contract.ts",
+      "test/work-integration-contract.test.ts",
+      "test/work-integration-registry.test.ts"
+    ],
+    "coreModify": [
+      "package.json",
+      "cordis.patch.yml",
+      "config/module-catalog.json",
+      "docs/architecture.md",
+      "docs/adr/0091-generic-work-integration-host-contract.md",
+      "docs/project/work-integration-host-contract.md",
+      "docs/project/assistant-capability-continuity.md",
+      "docs/project/blacklake-boundary.md",
+      "docs/operations/autonomous-twin-session.md",
+      "AGENTS.md",
+      "CLAUDE.md"
+    ],
+    "privatePackAdd": [
+      "src/host-contract-adapter.ts",
+      "src/pack.ts",
+      "test/host-contract-conformance.test.ts",
+      "test/executor-context-parity.test.ts",
+      "test/inactive-install.test.ts",
+      "tsconfig.json",
+      "package-lock.json"
+    ],
+    "privatePackModify": [
+      "package.json",
+      "README.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "docs/migration-plan.md",
+      "config/pack-manifest.json",
+      "pack/src/blacklake/plugin.ts",
+      "pack/src/blacklake/references.ts",
+      "pack/src/migration/xiaowei-research-handoff.ts",
+      "pack/src/work-journal/agent-compiler.ts",
+      "pack/src/work-journal/reference-project-evidence.ts",
+      "pack/src/xiaowei/plugin.ts",
+      "pack/src/xiaowei/types.ts",
+      "pack/src/xiaowei/workflow.ts",
+      "pack/packages/bridge-compat/src/blacklake-capability-context.js",
+      "pack/packages/bridge-compat/src/xiaowei-insight-digest.js",
+      "pack/packages/bridge-compat/src/xiaowei-research-channel.js",
+      "pack/scripts/audit-xiaowei-research-handoff.ts",
+      "pack/scripts/check-blacklake-references.ts"
+    ]
+  },
+  "allowedActions": [
+    "implement-versioned-generic-contract-and-runtime-validators",
+    "add-generic-cordis-registry-disabled-with-zero-pack-bindings",
+    "export-the-generic-contract-from-core",
+    "refactor-private-pack-to-import-only-the-generic-contract",
+    "build-content-addressed-private-pack-artifact-with-lifecycle-scripts-disabled",
+    "create-device-overlay-fixture-with-enabled-false",
+    "run-offline-redacted-replays-and-contract-tests",
+    "run-core-build-start-and-restore-safe-tests-with-pack-absent",
+    "commit-and-push-validated-changes-to-the-two-existing-remotes"
+  ],
+  "explicitExclusions": [
+    "modify-live-runtime-composition-or-installed-dsh-profile",
+    "install-or-enable-private-pack-in-live-runtime",
+    "start-shadow-against-live-providers",
+    "start-or-switch-consumer",
+    "activate-provider-or-external-write-effect",
+    "send-message-create-task-or-modify-external-data",
+    "read-or-change-credentials-or-permissions",
+    "delete-or-move-mainline-work-domain-source",
+    "restart-service",
+    "modify-reference-projects",
+    "include-current-user-uncommitted-files-in-a-commit"
+  ],
+  "acceptanceGates": [
+    "core-cold-build-start-restore-safe-without-pack-workspace-or-company-network",
+    "contract-and-manifest-conformance",
+    "no-core-import-of-private-pack-and-no-pack-import-of-core-source",
+    "codex-claude-dsh-canonical-context-parity",
+    "local-workspace-handle-and-remote-rejection-tests",
+    "duplicate-consumer-provider-scheduler-and-writer-fail-closed",
+    "secret-business-identifier-message-body-customer-data-host-and-path-scan-zero",
+    "inactive-install-reports-zero-consumers-zero-active-providers-zero-external-writes",
+    "main-npm-check-and-all-compatibility-audits",
+    "private-pack-npm-check-and-idempotent-artifact-build",
+    "git-staged-scope-excludes-preexisting-user-changes"
+  ],
+  "rollback": {
+    "beforeActivation": "remove only the inactive device overlay and artifact, then revert the exact phase-2 commits in each repository",
+    "runtimeOrExternalStateRollbackRequired": false,
+    "sourceDeletionAllowed": false
+  },
+  "activation": {
+    "contractImplementationApproved": false,
+    "packInstallApproved": false,
+    "shadowApproved": false,
+    "consumerCutoverApproved": false,
+    "providerActivationApproved": false,
+    "externalWritesApproved": false,
+    "sourceDeletionApproved": false,
+    "serviceRestartApproved": false
+  }
+}

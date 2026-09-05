@@ -655,3 +655,22 @@
   其余 replay 依赖阶段 2 的通用 host contract，不擅自扩张本批次补依赖。
 - 本轮未删除主线来源、未激活 provider/consumer/effect、未重启服务。工作域当前是 `copied-shadow-inactive`，仍不称为隔离完成；
   阶段 2 会改变 DSH/Cordis 核心边界，必须重新取得精确批准。
+
+## 2026-09-06 阶段 2 通用 host contract 设计
+
+- 从主线与私有包固定 revision 重新核对现状：主线仍含工作域来源和 live compatibility owner，私有包为
+  `content-migrated-inactive`；既有 work-domain、assistant-continuity、完整主线检查和私有 pack 审计均通过。主线存在用户
+  未提交的 `package.json`、品牌 client 文件与 `.DS_Store`，本轮未覆盖、删除或纳入提交。
+- 设计推翻“由 pack 自建消息、任务、日历、知识、数据和审批六套端口”的宽边界。核心继续唯一拥有消费者、durable
+  workflow/effect、审批、executor router 与 workspace policy；pack 只依赖通用 contract，注册被动工作域实现。Codex、Claude
+  Code 与 DSH 使用同一个规范化执行上下文，本地路径由 host 在 adapter 边界通过 workspace handle 解析。
+- DSH/Cordis 的目标变化是新增一个通用、默认无绑定的 registry；私有 artifact 只能由设备本地 operator overlay 按精确
+  revision/digest 绑定，安装、注册、shadow、激活和 cutover 分开。基础 profile 不命名私有 pack，核心在 pack、公司工作区和
+  公司网络都不存在时仍必须 build/start/restore-safe。
+- 本轮只新增 ADR、阶段方案、机器提案、无副作用审计和测试，并更新协作/连续性真源；没有实现 contract 或 registry、修改
+  live composition、安装/启用 pack、启动 shadow、切换消费者/provider、外部写、删除来源或重启服务。下一批 2A–2C 的精确
+  文件范围、允许动作、排除项、验收与回滚由 `config/work-integration-host-contract-proposal.json` 固定，等待 owner 批准。
+- 带当前主线目录执行私有 pack 审计时，发现实现比较当前 baseline，而文档承诺按冻结 source revision 回读；主线治理文本更新
+  因此被误报为来源漂移。私有 revision `3b9623bb31dca2e3991e6fec17fcb6d8411c7b85` 已将审计改为通过 Git object database
+  读取 manifest 固定 revision，来源对象不一致或 revision 不可达仍失败关闭。修复后 99 项来源、20 个目标、秘密/符号链接和
+  activation 审计均通过；该提交不修改 pack 内容、manifest、依赖或运行状态。
