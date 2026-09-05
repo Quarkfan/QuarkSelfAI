@@ -50,6 +50,14 @@ type ContinuityInventory = {
     }
     remoteResourceId: string
     remoteResourceStatus: string
+    remote: {
+      provider: string
+      url: string
+      defaultBranch: string
+      visibility: string
+      verifiedAt: string
+      initialPublishedRevision: string
+    }
     mayBlockCoreBuildAfterMigration: boolean
   }
   organizationExitCriteria: string[]
@@ -142,7 +150,7 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
   if (inventory.workIntegration?.mayBlockCoreBuildAfterMigration !== false) blockers.push('work-integration-core-dependency-not-forbidden')
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(inventory.workIntegration?.localScaffold?.repositoryName ?? '')
     || !/^[a-f0-9]{40}$/.test(inventory.workIntegration?.localScaffold?.revision ?? '')
-    || inventory.workIntegration?.localScaffold?.status !== 'prepared-unpublished'
+    || inventory.workIntegration?.localScaffold?.status !== 'prepared-published'
     || inventory.workIntegration?.localScaffold?.activated !== false
     || inventory.workIntegration?.localScaffold?.assetPlanStatus !== 'content-addressed-inventory'
     || inventory.workIntegration?.localScaffold?.assetCount !== workDomain.baseline.pathCount
@@ -151,6 +159,15 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
     || Object.values(inventory.workIntegration?.localScaffold?.decisionCounts ?? {}).reduce((sum, value) => sum + value, 0)
       !== workDomain.baseline.pathCount
     || inventory.workIntegration?.localScaffold?.contentCopiedCount !== 0) blockers.push('work-integration-scaffold-evidence-invalid')
+  if (inventory.workIntegration?.remoteResourceStatus !== 'provided'
+    || inventory.workIntegration?.remote?.provider !== 'github'
+    || inventory.workIntegration?.remote?.url !== 'git@github.com:Quarkfan/QuarkSelfAI-Work.git'
+    || inventory.workIntegration?.remote?.defaultBranch !== 'main'
+    || inventory.workIntegration?.remote?.visibility !== 'private'
+    || !/^\d{4}-\d{2}-\d{2}$/.test(inventory.workIntegration?.remote?.verifiedAt ?? '')
+    || !/^[a-f0-9]{40}$/.test(inventory.workIntegration?.remote?.initialPublishedRevision ?? '')) {
+    blockers.push('work-integration-private-remote-evidence-invalid')
+  }
   if (inventory.workIntegration?.currentStatus !== 'isolated') outstanding.push('work-integration-not-yet-isolated')
   if (inventory.workIntegration?.remoteResourceStatus !== 'provided') outstanding.push(inventory.workIntegration.remoteResourceId)
   if (!portableRepositoryPath(curationSource) || !tracked.has(curationSource)) blockers.push('personal-capability-curation-source-missing')
@@ -206,6 +223,7 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
       localScaffoldDecisionCounts: inventory.workIntegration.localScaffold.decisionCounts,
       localScaffoldContentCopiedCount: inventory.workIntegration.localScaffold.contentCopiedCount,
       remoteResourceStatus: inventory.workIntegration.remoteResourceStatus,
+      remote: inventory.workIntegration.remote,
       mayBlockCoreBuildAfterMigration: inventory.workIntegration.mayBlockCoreBuildAfterMigration,
     },
     outstanding: [...new Set(outstanding)].sort(),

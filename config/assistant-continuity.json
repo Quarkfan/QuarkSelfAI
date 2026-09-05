@@ -15,6 +15,7 @@
     "docs/adr/0088-cto-cio-work-assistant-operating-mandate.md",
     "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
     "docs/project/README.md",
+    "docs/evidence/work-integration-remote-2026-09-06.md",
     "config/module-catalog.json",
     "config/capability-evolution-automation.json"
   ],
@@ -70,8 +71,8 @@
     "targetDisposition": "separate-private-versioned-pack",
     "localScaffold": {
       "repositoryName": "QuarkSelfAI-Work",
-      "revision": "75c846d2aa69d208fafde427a7f1843a1a87a3f0",
-      "status": "prepared-unpublished",
+      "revision": "c83a58fc068548a9ef11b7035d9aa03de7e7b8a3",
+      "status": "prepared-published",
       "activated": false,
       "assetPlanStatus": "content-addressed-inventory",
       "assetCount": 99,
@@ -86,7 +87,15 @@
       "contentCopiedCount": 0
     },
     "remoteResourceId": "private-work-integration-remote",
-    "remoteResourceStatus": "required-unprovided",
+    "remoteResourceStatus": "provided",
+    "remote": {
+      "provider": "github",
+      "url": "git@github.com:Quarkfan/QuarkSelfAI-Work.git",
+      "defaultBranch": "main",
+      "visibility": "private",
+      "verifiedAt": "2026-09-06",
+      "initialPublishedRevision": "75c846d2aa69d208fafde427a7f1843a1a87a3f0"
+    },
     "mayBlockCoreBuildAfterMigration": false
   },
   "organizationExitCriteria": [

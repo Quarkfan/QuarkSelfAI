@@ -623,3 +623,15 @@
 - 新增 `audit:foundation` 统一立项验收，但保持四阶段独立：资料组织、SQLite 异机恢复、PostgreSQL 兼容和单写者接管。
   本机 online 运行证明恢复前置、连续性清单、能力进化蓝图、cold-clone 演练和 8 项账号检查通过；私有工作远端、实际工作
   隔离、跨设备恢复、真实 PG 演练和批准后的单写者演练仍分别 blocked。报告无凭证、账号标识、业务正文或绝对路径。
+
+## 2026-09-06 私有工作集成远端发布
+
+- owner 明确授权在 `Quarkfan` 下创建私有仓库 `QuarkSelfAI-Work`，仅用于当前工作 integration pack。GitHub CLI 当时没有
+  登录；没有读取或导出钥匙串凭证，改用 owner 已登录的 GitHub 页面创建，并在完成页确认 visibility 为 `Private`。
+- 本地独立骨架通过 SSH 推送；远端 `main` 最终回读为
+  `c83a58fc068548a9ef11b7035d9aa03de7e7b8a3`。pack 审计确认来源 99/99 一致、秘密模式 0、符号链接 0、consumer 0、
+  外部写 effect 0，remote status 为 `configured`。
+- 主线连续性清单据此把私有远端资源从 `required-unprovided` 调整为 `provided`，但不扩大授权：99 个候选仍全部未批准、
+  未复制和未激活，实际工作域隔离仍未完成。本轮不移动 provider、不改消费者、不启动服务，无需重启。
+- 下一项资源门禁是内容迁移的精确批准；跨设备恢复、真实 PostgreSQL 空库恢复和最终单写者接管继续独立验收，不能因
+  私有仓库已存在而合并宣称完成。

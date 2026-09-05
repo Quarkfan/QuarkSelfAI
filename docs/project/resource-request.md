@@ -48,17 +48,18 @@ Git 历史和运行日志扫描未检出私钥文本，但该扫描不构成对�
 - 飞书、滴答或模型 token 的明文；
 - 新服务器、域名或公网入口。首个恢复目标仍是本地终端。
 
-## 仍需提供：私有工作集成远端
+## 已提供：私有工作集成远端
 
 当前雇主相关适配器和知识不能继续作为产品主线资产，需要迁入与 QuarkSelfAI 分离、仅 owner 和受信执行器可访问的
-私有 Git 仓库。请提供一个空的私有远端地址，或明确授权助手在 owner 的 GitHub 账户下创建一个私有仓库。凭证沿用
-现有 GitHub 登录，不在聊天或仓库中保存 token。远端确定前不会移动现网 provider 或改变消费者。
+私有 Git 仓库。owner 已于 2026-09-06 明确授权创建 `Quarkfan/QuarkSelfAI-Work`，并通过 GitHub 页面确认仓库为
+`Private`。创建与推送沿用现有 Git/浏览器登录，没有在聊天或仓库中保存 token；该授权不包含来源内容迁移、provider
+切换或消费者变更。
 
 本机已在固定 `github` 目录建立 `QuarkSelfAI-Work` 独立仓库骨架，首个本地 revision 为
 `0259366ab6f233a227bce41d1233cb5b5be0a9f3`；当前 revision 为
-`75c846d2aa69d208fafde427a7f1843a1a87a3f0`。它新增覆盖全部 99 项来源资产的内容寻址迁移账本，并完成路径与依赖层面的
+`c83a58fc068548a9ef11b7035d9aa03de7e7b8a3`。它新增覆盖全部 99 项来源资产的内容寻址迁移账本，并完成路径与依赖层面的
 候选复核：私有复制 21、主线泛化 64、脱敏回放 9、历史退休 5。所有候选仍需 owner 批准，未复制业务正文。当前未配置
-remote、未激活任何 provider/consumer/effect；本地提交不能替代异机可取回的私有远端。
+任何运行依赖，也未激活 provider/consumer/effect；私有远端只解除骨架的跨终端取回门禁。
 
 真实 PostgreSQL 演练可二选一：由 owner 提供一个专用、可删除的空数据库 secret，或明确允许助手启动一个仅绑定
 loopback 的临时 Docker PostgreSQL。两者都只用于恢复验收，不接入飞书消费者或生产业务数据。
