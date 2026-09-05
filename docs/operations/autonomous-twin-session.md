@@ -526,3 +526,25 @@
   `runs=0` 属预期。回滚只需卸载该恢复 job，不影响 QuarkSelfAI 主守护进程、SQLite、DSH 或唯一飞书消费者。
 - 仍未完成另一设备从 Apple“密码”取出私钥并下载 iCloud 密文的演练、PostgreSQL 空库恢复和最终单写者接管；目标
   保持 active，不能宣称任意终端恢复已完成。
+
+## 2026-09-06 PostgreSQL 空库恢复门禁
+
+### 发现与实现
+
+- 只读检查发现 PostgreSQL 备份虽已使用 custom format，但尚未保存文档承诺的 server major 与 migration 摘要，且
+  `prepareRestoreSafe` 会明确拒绝 PostgreSQL bundle，没有独立的安全恢复入口。
+- PG snapshot 现在先通过 `psql` 读取 `server_version_num` 和有序 `schema_migration`，再生成 custom dump；三者一同
+  进入内容寻址、逐文件哈希的 age bundle。连接 URL 被解析为 libpq 环境变量，密码不会进入 `psql`/`pg_dump` argv。
+- 新增 `restore:prepare-postgres-safe`：要求环境注入目标 URL、命令行提供与 bundle 精确一致的批准 ID、fresh clone
+  revision 一致且没有 `var`，并确认目标数据库没有用户关系。恢复使用单事务、遇错即停、去 owner/ACL 的
+  `pg_restore`，随后精确回读 migration 集和应用关系。
+- 成功后只生成 `control-only`、loopback、kernel off、`TAKEOVER_CONFIRMED=false` 的安全配置。恢复后核验异常不会
+  自动 drop 可能已写入的隔离数据库，错误会要求人工检查或丢弃，避免工具猜测执行破坏性回滚。
+
+### 验证、边界与下一步
+
+- 隔离测试覆盖 PG custom dump、版本/migration 元数据、age stage、错误 bundle 批准拒绝、空库检查、凭证不进 argv、
+  单事务恢复参数、恢复后 migration/关系核验和 `0600` safe env；未连接或修改任何真实 PostgreSQL。
+- recovery manifest 在 PostgreSQL 模式下新增 `pg_restore` 与 `psql` 必需命令，SQLite 默认形态不因此依赖 PG 工具。
+- 本轮不修改运行数据库、主守护进程、消费者、DSH/Cordis 或外部系统。真实门禁仍需一个专用可丢弃空库，或 owner
+  明确允许启动仅绑定 loopback 的临时 Docker PostgreSQL；完成前不把隔离假执行器测试称为真实恢复证明。

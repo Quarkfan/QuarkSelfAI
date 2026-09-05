@@ -49,7 +49,7 @@
 
 ### PostgreSQL
 
-- 使用与服务端兼容的 `pg_dump --format=custom`，同时保存 PostgreSQL major、schema migration 和校验摘要。
+- 使用与服务端兼容的 `pg_dump --format=custom`，同时保存 PostgreSQL `server_version_num`、精确 migration 清单和校验摘要。
 - 恢复到空数据库，执行迁移/结构检查和只读业务计数；不得直接覆盖未知现有实例。
 
 ### 文件状态
@@ -150,6 +150,22 @@ npm run start:restore-safe
 这仍不是接管。恢复实例完成账号、工作区和数据只读验证，确认旧实例停止并取得 owner 对本次单写者切换的批准后，
 才能使用正式部署流程生成新的运行配置。
 
+PostgreSQL bundle 使用独立的空库恢复入口。连接串只能由批准的 secret store 注入环境变量，不能放在命令参数；
+`--approved-bundle-id` 必须与已核验 bundle 精确一致：
+
+```bash
+npm run restore:prepare-postgres-safe -- \
+  --staging-directory /受限暂存目录/quarkselfai-restore \
+  --project-root "$PWD" \
+  --approved-bundle-id /已核验的bundle-id/
+```
+
+执行前需已设置 `QUARK_RESTORE_POSTGRES_URL`。工具先确认目标 PostgreSQL major 不低于来源、目标库没有任何用户关系、
+custom dump inventory 非空且 bundle migration 与 checkout 精确一致；然后以 `--single-transaction --exit-on-error`、
+`--no-owner --no-privileges` 恢复，最后回读 migration 集与应用关系。数据库密码转为 libpq 环境变量，不进入
+`pg_restore`/`psql` argv。成功后生成与 SQLite 相同的 `control-only`、loopback、`TAKEOVER_CONFIRMED=false`
+配置；恢复后核验失败时不会自动 drop 数据库，而会明确要求检查或丢弃这个隔离目标。
+
 ## 6. 恢复安全门禁
 
 恢复实例必须先处于 `restore-safe`：
@@ -181,6 +197,7 @@ npm run start:restore-safe
 
 截至 2026-09-06，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现；真实 `age 1.3.2` 身份与 iCloud
 Drive filesystem provider 已完成 online-bounded 写入、挂载回读、密文哈希、解密和 SQLite integrity 闭环，且每日
-03:15 的本机调度已启用。owner 已确认 Apple“密码”私钥副本完成并决定继续使用当前身份；仍缺另一设备实际取出与下载、PostgreSQL 空库恢复和
+03:15 的本机调度已启用。owner 已确认 Apple“密码”私钥副本完成并决定继续使用当前身份；PostgreSQL custom dump
+元数据与空库 restore-safe 门禁已实现并通过隔离假执行器测试，仍缺另一设备实际取出与下载、真实 PostgreSQL 空库演练和
 全新终端接管演练。
 因此当前能证明“当前设备可生成并回读可恢复密文”，不能证明“助理能力可在任意终端随时恢复”。

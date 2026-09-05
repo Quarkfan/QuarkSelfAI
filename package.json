@@ -204,6 +204,7 @@
     "backup:cycle": "node --import tsx scripts/recovery-target.ts cycle",
     "restore:stage": "node --import tsx scripts/recovery-bundle.ts stage",
     "restore:prepare-safe": "node --import tsx scripts/recovery-bundle.ts prepare",
+    "restore:prepare-postgres-safe": "node --import tsx scripts/recovery-bundle.ts prepare-postgres",
     "start:restore-safe": "node --env-file=var/restore-safe.env dist/app.js",
     "rehearse:policy": "node --import tsx scripts/rehearse-policy.ts",
     "rehearse:executor-fallback": "node --import tsx scripts/rehearse-executor-fallback.ts",

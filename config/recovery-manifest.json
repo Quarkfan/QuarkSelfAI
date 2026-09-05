@@ -60,6 +60,14 @@
       {
         "command": "pg_dump",
         "requiredWhen": "postgres"
+      },
+      {
+        "command": "pg_restore",
+        "requiredWhen": "postgres"
+      },
+      {
+        "command": "psql",
+        "requiredWhen": "postgres"
       }
     ]
   },

@@ -20,6 +20,10 @@ SQLite 和 DSH 目录中可能同时存在数据库/WAL，备份实现必须先�
 并在离开临时目录前交给 `age` 加密；明文暂存始终在受限临时目录并于成功或失败后清理。恢复端只创建新的 staging，
 验证内容寻址 manifest、文件哈希和 SQLite 完整性，不直接覆盖 live 状态。
 
+PostgreSQL 备份额外记录不含凭证的 `server_version_num` 与精确 migration 清单。恢复只接受与 checkout revision 和
+bundle ID 精确匹配的 staging，要求目标 major 不低于来源且没有用户关系；连接密码只进入 libpq 子进程环境和新 clone
+权限 `0600` 的 restore-safe 配置，不进入 argv、receipt 或 Git。
+
 ## 2. 可重新登录或从秘密管理器恢复的身份
 
 | 身份 | 当前事实 | 恢复方式 | 是否进入 Git |

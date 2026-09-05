@@ -36,7 +36,8 @@ Git 历史和运行日志扫描未检出私钥文本，但该扫描不构成对�
 1. 已使用 SQLite online backup、筛选归档、SHA-256 manifest 和隔离恢复核心生成真实 age 包。
 2. 已实现 iCloud filesystem provider 写入、挂载下载回读、解密校验和严格血缘的 14 日 + 8 周保留；本机每日
    03:15 的独立低优先级 LaunchAgent 已启用。
-3. 使用已完成的 fresh-clone `restore-safe` 准备命令做 SQLite 演练，并补齐 PostgreSQL 空库恢复门禁。
+3. 已完成 fresh-clone SQLite `restore-safe` 演练，并实现 PostgreSQL 版本/migration 元数据与空库恢复门禁；下一步需
+   一个可丢弃的空 PostgreSQL 数据库完成真实 `pg_dump`/`pg_restore` 演练。
 4. 把账号登录、密钥注入、路径重写和单消费者切换写成唯一 runbook。
 5. 在一个干净目录先做真实加密同机演练；再约定一台新终端做完整恢复演练。
 
@@ -46,6 +47,9 @@ Git 历史和运行日志扫描未检出私钥文本，但该扫描不构成对�
 - BlackLake 业务数据库或内部仓库备份；
 - 飞书、滴答或模型 token 的明文；
 - 新服务器、域名或公网入口。首个恢复目标仍是本地终端。
+
+真实 PostgreSQL 演练可二选一：由 owner 提供一个专用、可删除的空数据库 secret，或明确允许助手启动一个仅绑定
+loopback 的临时 Docker PostgreSQL。两者都只用于恢复验收，不接入飞书消费者或生产业务数据。
 
 ## 建议默认值
 

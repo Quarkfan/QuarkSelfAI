@@ -5,7 +5,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 import { promisify } from 'node:util'
-import { createRecoveryBundle, prepareRestoreSafe, stageRecoveryBundle } from '../scripts/recovery-bundle.js'
+import {
+  createRecoveryBundle,
+  preparePostgresRestoreSafe,
+  prepareRestoreSafe,
+  stageRecoveryBundle,
+} from '../scripts/recovery-bundle.js'
 import { loadRuntimeConfig } from '../src/config/runtime.js'
 
 const exec = promisify(execFile)
@@ -24,7 +29,10 @@ async function fixture() {
   await exec('git', ['config', 'user.name', 'Recovery Test'], { cwd: project })
   await exec('git', ['config', 'user.email', 'recovery@example.invalid'], { cwd: project })
   await writeFile(join(project, 'README.md'), 'fixture\n')
-  await exec('git', ['add', 'README.md'], { cwd: project })
+  await mkdir(join(project, 'migrations'), { recursive: true })
+  await writeFile(join(project, 'migrations', '001_initial.sql'), 'SELECT 1;\n')
+  await writeFile(join(project, 'migrations', '002_policy.sql'), 'SELECT 1;\n')
+  await exec('git', ['add', 'README.md', 'migrations'], { cwd: project })
   await exec('git', ['commit', '-m', 'fixture'], { cwd: project })
   const freshClone = join(root, 'fresh-clone')
   await exec('git', ['clone', project, freshClone])
@@ -46,6 +54,7 @@ async function fixture() {
     projectId: 'quarkselfai',
     artifacts: [
       { id: 'primary-sqlite', class: 'durable-state', selector: '${PROJECT_ROOT}/var/quarkselfai.sqlite3', requiredWhen: 'sqlite', backupMethod: 'sqlite-online-backup', sensitivity: 'high', restoreOrder: 30 },
+      { id: 'primary-postgres', class: 'durable-state', selector: '${ENV:DATABASE_URL}', selectorKind: 'environment', requiredWhen: 'postgres', backupMethod: 'pg-dump-custom', sensitivity: 'critical', restoreOrder: 30 },
       { id: 'dsh-production-profile', class: 'durable-state', selector: '${PROJECT_ROOT}/var/dsh', requiredWhen: 'always', backupMethod: 'filtered-archive', sensitivity: 'high', restoreOrder: 40 },
       { id: 'runtime-environment', class: 'secret-config', selector: '${PROJECT_ROOT}/var/runtime.env', requiredWhen: 'always', backupMethod: 'encrypted-file', sensitivity: 'critical', restoreOrder: 20 },
       { id: 'compatibility-config', class: 'secret-config', selector: '${ENV:COMPAT_CONFIG_PATH}', selectorKind: 'environment', requiredWhen: 'compatibility', backupMethod: 'encrypted-file', sensitivity: 'critical', restoreOrder: 25 },
@@ -132,6 +141,104 @@ test('creates an encrypted-only recovery artifact and stages a verified restore'
     stagingDirectory: staged,
     projectRoot: context.freshClone,
   }), /var directory already exists/)
+})
+
+test('restores a PostgreSQL snapshot only to an empty approved database without credentials in argv', async () => {
+  const context = await fixture()
+  const pgDump = join(context.root, 'fake-pg-dump.mjs')
+  const psql = join(context.root, 'fake-psql.mjs')
+  const pgRestore = join(context.root, 'fake-pg-restore.mjs')
+  const databaseState = join(context.root, 'postgres-restored')
+  await writeFile(pgDump, `#!/usr/bin/env node
+import { writeFileSync } from 'node:fs'
+const args = process.argv.slice(2)
+if (args.some(value => value.includes('secret'))) process.exit(9)
+const index = args.indexOf('--file')
+if (index < 0) process.exit(8)
+writeFileSync(args[index + 1], 'PGDMP fixture custom archive')
+`)
+  await writeFile(psql, `#!/usr/bin/env node
+import { existsSync } from 'node:fs'
+const args = process.argv.slice(2)
+if (args.some(value => value.includes('secret')) || process.env.DATABASE_URL || process.env.QUARK_RESTORE_POSTGRES_URL) process.exit(9)
+const sql = args[args.indexOf('--command') + 1] || ''
+if (sql.includes('server_version_num')) process.stdout.write('160005\\n')
+else if (sql.includes('SELECT version FROM schema_migration')) process.stdout.write('001_initial.sql\\n002_policy.sql\\n')
+else if (sql.includes('COUNT(*)')) process.stdout.write(existsSync(process.env.PG_TEST_STATE || '') ? '12\\n' : '0\\n')
+else process.exit(7)
+`)
+  await writeFile(pgRestore, `#!/usr/bin/env node
+import { writeFileSync } from 'node:fs'
+const args = process.argv.slice(2)
+if (args.some(value => value.includes('secret'))) process.exit(9)
+if (args.includes('--list')) process.stdout.write('; Archive inventory\\n1; 0 0 TABLE public assistant_event owner\\n')
+else {
+  if (!args.includes('--single-transaction') || !args.includes('--exit-on-error') || !args.includes('--no-owner') || !args.includes('--no-privileges')) process.exit(8)
+  writeFileSync(process.env.PG_TEST_STATE, 'restored')
+}
+`)
+  await Promise.all([pgDump, psql, pgRestore].map(path => chmod(path, 0o700)))
+
+  const output = join(context.root, 'postgres-recovery.age')
+  const document = await createRecoveryBundle({
+    projectRoot: context.project,
+    home: context.home,
+    environment: {
+      ASSISTANT_STORAGE: 'postgres',
+      ASSISTANT_RUNTIME: 'compatibility',
+      DATABASE_URL: 'postgresql://fixture:source-secret@localhost:5432/quark_source',
+      COMPAT_CONFIG_PATH: join(context.project, 'var', 'handoff', 'config.json'),
+    },
+    output,
+    recipient: 'age1fixture-recipient',
+    binaries: { age: context.age, pgDump, psql },
+  })
+  assert.equal(document.storage, 'postgres')
+  assert.ok(document.entries.some(entry => entry.path === 'artifacts/primary-postgres/database.dump'))
+  assert.ok(document.entries.some(entry => entry.path === 'artifacts/primary-postgres/metadata.json'))
+  const staged = join(context.root, 'postgres-staged')
+  await stageRecoveryBundle({
+    input: output,
+    outputDirectory: staged,
+    identityFile: context.identity,
+    binaries: { age: context.age },
+  })
+  await assert.rejects(() => preparePostgresRestoreSafe({
+    stagingDirectory: staged,
+    projectRoot: context.freshClone,
+    databaseUrl: 'postgresql://fixture:target-secret@localhost:5432/quark_restore',
+    approvedBundleId: '0'.repeat(64),
+    environment: { PG_TEST_STATE: databaseState },
+    binaries: { pgRestore, psql },
+  }), /approval does not match/)
+
+  const receipt = await preparePostgresRestoreSafe({
+    stagingDirectory: staged,
+    projectRoot: context.freshClone,
+    databaseUrl: 'postgresql://fixture:target-secret@localhost:5432/quark_restore',
+    approvedBundleId: document.bundleId,
+    environment: { PG_TEST_STATE: databaseState },
+    binaries: { pgRestore, psql },
+  })
+  assert.equal(receipt.bundleId, document.bundleId)
+  assert.equal(await readFile(databaseState, 'utf8'), 'restored')
+  const safeEnvironment = await readFile(join(context.freshClone, 'var', 'restore-safe.env'), 'utf8')
+  assert.match(safeEnvironment, /ASSISTANT_STORAGE=postgres/)
+  assert.match(safeEnvironment, /DATABASE_URL=postgresql:\/\/fixture:target-secret@localhost:5432\/quark_restore/)
+  assert.match(safeEnvironment, /ASSISTANT_RUNTIME=control-only/)
+  assert.match(safeEnvironment, /TAKEOVER_CONFIRMED=false/)
+  assert.equal((await stat(join(context.freshClone, 'var', 'restore-safe.env'))).mode & 0o777, 0o600)
+
+  const nonemptyClone = join(context.root, 'nonempty-clone')
+  await exec('git', ['clone', context.project, nonemptyClone])
+  await assert.rejects(() => preparePostgresRestoreSafe({
+    stagingDirectory: staged,
+    projectRoot: nonemptyClone,
+    databaseUrl: 'postgresql://fixture:target-secret@localhost:5432/quark_restore',
+    approvedBundleId: document.bundleId,
+    environment: { PG_TEST_STATE: databaseState },
+    binaries: { pgRestore, psql },
+  }), /not an empty database/)
 })
 
 test('refuses plaintext output and an invalid encryption recipient', async () => {
