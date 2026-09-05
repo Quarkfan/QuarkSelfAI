@@ -426,6 +426,9 @@
 - 新增测试覆盖 selector 展开、SQLite/PG/compat 条件、Git remote 等价归一和 manifest 无用户绝对路径；
   `npm run check` 通过，架构目录 94 个模块归属有效，主项目 289 项中 286 通过、3 项仅因沙箱回环限制跳过，
   compatibility provider 179/179 通过；根同步门禁通过 `2026-09-05.1`。
+- 推送后从远端在隔离临时目录重新 clone，`npm ci` 成功。安装审计发现 `fast-uri 3.1.5` 与 `qs 6.15.3` 两个
+  传递依赖分别命中高危和中危公告；隔离验证后仅更新锁文件到 `fast-uri 3.1.7`、`qs 6.16.0`，不改变直接依赖，
+  npm 官方审计降为 0 个已知漏洞。冷 clone 随后重新执行 build、架构检查和 recovery audit。
 - 回滚只需移除 ADR/项目文档、recovery manifest/audit 及对应目录登记；没有数据库 migration 或运行时状态变化。
 - 未决资源是版本化异机存储目标和 age/X25519 公钥接收者。得到选择后进入 Phase 2，实施一致性备份、加密、回读
   校验和 restore-safe；最终仍需在干净终端完成真实演练后才能宣称目标达成。
