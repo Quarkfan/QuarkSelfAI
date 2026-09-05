@@ -620,3 +620,6 @@
   SHA-256、真实解密和 SQLite 校验通过。随后从 GitHub 冷 clone，使用单入口恢复并实际启动 loopback control-only 实例；
   `/api/health` 返回 ok、SQLite、worker stopped、kernel stopped，readiness 因所有业务 provider/effect 未激活而保持 blocked。
   进程已停止，工具 staging 残留 0，明确临时 clone 已删除；该演练不扩张为跨设备云端持久化证明。
+- 新增 `audit:foundation` 统一立项验收，但保持四阶段独立：资料组织、SQLite 异机恢复、PostgreSQL 兼容和单写者接管。
+  本机 online 运行证明恢复前置、连续性清单、能力进化蓝图、cold-clone 演练和 8 项账号检查通过；私有工作远端、实际工作
+  隔离、跨设备恢复、真实 PG 演练和批准后的单写者演练仍分别 blocked。报告无凭证、账号标识、业务正文或绝对路径。

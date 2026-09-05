@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "phases": [
+    {
+      "id": "information-organization",
+      "gates": [
+        "repository-recovery-prerequisites",
+        "assistant-continuity-inventory",
+        "capability-evolution-blueprint",
+        "private-work-remote",
+        "work-integration-isolated"
+      ]
+    },
+    {
+      "id": "portable-sqlite-recovery",
+      "gates": [
+        "cold-clone-restore-safe-rehearsal",
+        "online-account-readiness",
+        "cross-device-recovery-rehearsal"
+      ]
+    },
+    {
+      "id": "postgres-compatibility",
+      "gates": ["postgres-empty-database-rehearsal"]
+    },
+    {
+      "id": "single-writer-takeover",
+      "gates": ["approved-single-writer-rehearsal"]
+    }
+  ],
+  "evidence": {
+    "coldCloneRestoreSafe": "docs/evidence/recovery-bootstrap-2026-09-06.md",
+    "crossDeviceRecovery": "docs/evidence/recovery-cross-device.md",
+    "postgresRecovery": "docs/evidence/recovery-postgres.md",
+    "singleWriterTakeover": "docs/evidence/recovery-single-writer-takeover.md"
+  }
+}

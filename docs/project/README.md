@@ -13,6 +13,7 @@
 6. [资源申请单](resource-request.md)：实现异机恢复前需要 owner 提供或选择的资源。
 7. [能力进化任务](capability-evolution-task.md)：新终端重建周期巡检时使用的去设备化任务正文。
 8. [辅助能力连续性](assistant-capability-continuity.md)：协作契约、运行状态、本机输入和工作集成的真源边界。
+9. [立项验收总表](foundation-acceptance.md)：统一呈现组织、SQLite 异机恢复、PostgreSQL 和单写者接管的独立门禁。
 
 机器可读真源是 [`config/recovery-manifest.json`](../../config/recovery-manifest.json)。执行
 `npm run audit:recovery` 查看本机清单，执行 `npm run audit:recovery -- --strict` 作为恢复门禁。审计只查看

@@ -201,6 +201,7 @@
     "audit:capability-evolution": "node --import tsx scripts/audit-capability-evolution-portability.ts",
     "audit:assistant-continuity": "node --import tsx scripts/audit-assistant-continuity.ts",
     "audit:accounts": "node --import tsx scripts/audit-account-bootstrap.ts",
+    "audit:foundation": "node --import tsx scripts/audit-foundation-readiness.ts",
     "backup:recovery": "node --import tsx scripts/recovery-bundle.ts create",
     "backup:publish": "node --import tsx scripts/recovery-target.ts publish",
     "backup:prune": "node --import tsx scripts/recovery-target.ts prune",
