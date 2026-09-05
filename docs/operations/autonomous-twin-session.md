@@ -455,3 +455,7 @@
   恢复门禁关闭。
 - 回滚可删除恢复脚本/测试/命令，恢复 recovery manifest、审计、模块目录、ADR 和项目文档；没有数据库 migration、
   运行状态或外部系统写入需要回滚。
+- 后续补齐 fresh-clone `restore-safe` 准备：目标必须与 bundle revision 完全一致且不存在 `var`，因此不能覆盖现网。
+  SQLite 与筛选状态写入新 clone，原账号/兼容配置只进入受限 `recovery-input`；新环境强制 control-only、kernel off、
+  work journal off、loopback、`TAKEOVER_CONFIRMED=false` 并生成新控制令牌。测试通过真实运行配置解析确认这些门禁，
+  同时验证第二次准备会因已有 `var` 失败关闭。PostgreSQL 恢复仍保持独立未完成门禁。

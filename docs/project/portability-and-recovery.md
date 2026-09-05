@@ -91,6 +91,28 @@ npm run restore:stage -- \
 该命令先解密、拒绝危险归档路径和符号链接，再验证内容寻址 manifest、每个文件的 SHA-256/大小以及 SQLite
 `PRAGMA integrity_check`。成功只代表“恢复包可分阶段读取”，不会把文件写入 live `var`，也不会启动消费者。
 
+在一个 checkout revision 与恢复包完全一致、且尚无 `var` 目录的新 clone 中准备安全实例：
+
+```bash
+npm run restore:prepare-safe -- \
+  --staging-directory /受限暂存目录/quarkselfai-restore \
+  --project-root "$PWD" \
+  --web-port 13210
+```
+
+该步骤只支持当前默认 SQLite 形态；PostgreSQL 必须另走空数据库 `pg_restore` 门禁。生成的
+`var/restore-safe.env` 强制 `ASSISTANT_RUNTIME=control-only`、`ASSISTANT_KERNEL=off`、
+`TAKEOVER_CONFIRMED=false`、`WORK_JOURNAL_ENABLED=false` 和 loopback 控制台，并生成新的本机控制令牌。原账号配置
+只放入 `var/recovery-input` 等待重新登录或人工复核，不自动写回用户目录。需要只读查看时可运行：
+
+```bash
+npm run build
+npm run start:restore-safe
+```
+
+这仍不是接管。恢复实例完成账号、工作区和数据只读验证，确认旧实例停止并取得 owner 对本次单写者切换的批准后，
+才能使用正式部署流程生成新的运行配置。
+
 ## 6. 恢复安全门禁
 
 恢复实例必须先处于 `restore-safe`：
@@ -120,6 +142,6 @@ npm run restore:stage -- \
 
 ## 8. 当前未完成项
 
-截至 2026-09-05，加密打包与隔离恢复核心已实现并通过伪 age 的无秘密单元测试；真实 `age` 二进制/公私钥互操作、
-备份目标、自动上传、远端回读校验和全新终端演练仍未完成。因此当前能证明“代码可 clone、恢复机制可测试”，不能
-证明“助理能力可随时恢复”。
+截至 2026-09-05，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现并通过伪 age 的无秘密单元测试；
+真实 `age` 二进制/公私钥互操作、PostgreSQL 恢复、备份目标、自动上传、远端回读校验和全新终端演练仍未完成。
+因此当前能证明“代码可 clone、SQLite 恢复机制可测试”，不能证明“助理能力可随时恢复”。

@@ -1,5 +1,5 @@
 import { execFile as execFileCallback } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import {
   chmod,
   copyFile,
@@ -91,6 +91,22 @@ export type StageBundleOptions = {
   outputDirectory: string
   identityFile: string
   binaries?: Partial<RecoveryBinaries>
+}
+
+export type PrepareRestoreSafeOptions = {
+  stagingDirectory: string
+  projectRoot: string
+  webPort?: number
+  binaries?: Pick<Partial<RecoveryBinaries>, 'sqlite3'>
+}
+
+export type RestoreSafeReceipt = {
+  mode: 'restore-safe'
+  bundleId: string
+  gitRevision: string
+  preparedAt: string
+  runtimeEnvironment: string
+  pendingGates: string[]
 }
 
 const defaultBinaries: RecoveryBinaries = {
@@ -428,6 +444,131 @@ async function verifyStagedBundle(bundleRoot: string, sqliteBinary: string): Pro
   return document
 }
 
+async function copyArtifactEntry(
+  stagingRoot: string,
+  targetRoot: string,
+  entry: BundleEntry,
+  sensitive = false,
+): Promise<void> {
+  const source = resolve(stagingRoot, entry.path)
+  const destination = resolve(targetRoot, entry.path.slice(`artifacts/${entry.artifactId}/`.length))
+  if (relative(targetRoot, destination).startsWith('..')) throw new Error('restore target path escapes staging')
+  await mkdir(dirname(destination), { recursive: true, mode: 0o700 })
+  await copyFile(source, destination)
+  await chmod(destination, sensitive ? 0o600 : Number.parseInt(entry.mode, 8))
+}
+
+function safeEnvironmentLine(name: string, value: string): string {
+  if (/[\r\n\0]/.test(value)) throw new Error(`unsafe restore environment value: ${name}`)
+  return `${name}=${value}`
+}
+
+/**
+ * Materialize a verified bundle into a fresh clone without activating any
+ * consumer, account, kernel, or external effect. The target's var directory
+ * must not exist, so this cannot overwrite an active installation.
+ */
+export async function prepareRestoreSafe(options: PrepareRestoreSafeOptions): Promise<RestoreSafeReceipt> {
+  const stagingRoot = resolve(options.stagingDirectory)
+  const targetProject = resolve(options.projectRoot)
+  const targetVar = join(targetProject, 'var')
+  const sqliteBinary = options.binaries?.sqlite3 ?? defaultBinaries.sqlite3
+  const document = await verifyStagedBundle(stagingRoot, sqliteBinary)
+  const targetRevision = await gitRevision(targetProject)
+  if (targetRevision !== document.gitRevision) {
+    throw new Error('fresh clone revision does not match the recovery bundle')
+  }
+  try {
+    await lstat(targetVar)
+    throw new Error('fresh clone var directory already exists')
+  } catch (error) {
+    if (error instanceof Error && error.message === 'fresh clone var directory already exists') throw error
+  }
+  if (document.storage !== 'sqlite') {
+    throw new Error('restore-safe preparation for PostgreSQL requires the separate empty-database restore gate')
+  }
+  const port = options.webPort ?? 13210
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) throw new Error('restore-safe web port is invalid')
+
+  const temporaryVar = await mkdtemp(join(targetProject, '.quark-restore-safe-'))
+  await chmod(temporaryVar, 0o700)
+  try {
+    const grouped = new Map<string, BundleEntry[]>()
+    for (const entry of document.entries) {
+      const values = grouped.get(entry.artifactId) ?? []
+      values.push(entry)
+      grouped.set(entry.artifactId, values)
+    }
+    const primary = grouped.get('primary-sqlite') ?? []
+    if (primary.length !== 1 || primary[0]?.path !== 'artifacts/primary-sqlite/database.sqlite3') {
+      throw new Error('recovery bundle does not contain one canonical SQLite database')
+    }
+    await copyArtifactEntry(stagingRoot, temporaryVar, primary[0], true)
+    await rename(join(temporaryVar, 'database.sqlite3'), join(temporaryVar, 'quarkselfai.sqlite3'))
+
+    const mappings = new Map<string, { destination: string; sensitive: boolean }>([
+      ['dsh-production-profile', { destination: 'dsh', sensitive: true }],
+      ['compatibility-state', { destination: 'handoff', sensitive: true }],
+      ['capability-evolution-state', { destination: 'capability-evolution', sensitive: false }],
+      ['runtime-environment', { destination: 'recovery-input/runtime-environment', sensitive: true }],
+      ['compatibility-config', { destination: 'recovery-input/compatibility-config', sensitive: true }],
+      ['lark-cli-profile', { destination: 'recovery-input/account-bootstrap/lark-cli-profile', sensitive: true }],
+      ['dida-cli-profile', { destination: 'recovery-input/account-bootstrap/dida-cli-profile', sensitive: true }],
+      ['codex-personal-rules', { destination: 'recovery-input/optional/codex-personal-rules', sensitive: true }],
+      ['claude-personal-skills', { destination: 'recovery-input/optional/claude-personal-skills', sensitive: true }],
+    ])
+    for (const [artifactId, entries] of grouped) {
+      if (artifactId === 'primary-sqlite') continue
+      const mapping = mappings.get(artifactId)
+      if (!mapping) throw new Error(`restore-safe does not recognize artifact: ${artifactId}`)
+      for (const entry of entries) {
+        await copyArtifactEntry(stagingRoot, join(temporaryVar, mapping.destination), entry, mapping.sensitive)
+      }
+    }
+
+    const environment = [
+      '# Generated restore-safe configuration. Do not set TAKEOVER_CONFIRMED here.',
+      safeEnvironmentLine('ASSISTANT_STORAGE', 'sqlite'),
+      safeEnvironmentLine('SQLITE_PATH', join(targetVar, 'quarkselfai.sqlite3')),
+      safeEnvironmentLine('ASSISTANT_EXECUTION_MODE', 'local'),
+      safeEnvironmentLine('ASSISTANT_WORKSPACE_ROOTS', JSON.stringify([targetProject])),
+      safeEnvironmentLine('ASSISTANT_KERNEL', 'off'),
+      safeEnvironmentLine('ASSISTANT_RUNTIME', 'control-only'),
+      safeEnvironmentLine('QUARK_APPLICATION_MODE', 'compatibility'),
+      safeEnvironmentLine('TAKEOVER_CONFIRMED', 'false'),
+      safeEnvironmentLine('WORK_JOURNAL_ENABLED', 'false'),
+      safeEnvironmentLine('WEB_HOST', '127.0.0.1'),
+      safeEnvironmentLine('WEB_PORT', String(port)),
+      safeEnvironmentLine('CONSOLE_TOKEN', randomBytes(32).toString('base64url')),
+      safeEnvironmentLine('CONTROL_PLANE_TOKEN', randomBytes(32).toString('base64url')),
+      safeEnvironmentLine('DSH_HOME', join(targetVar, 'dsh')),
+      '',
+    ].join('\n')
+    await writeFile(join(temporaryVar, 'restore-safe.env'), environment, { mode: 0o600 })
+
+    const receipt: RestoreSafeReceipt = {
+      mode: 'restore-safe',
+      bundleId: document.bundleId,
+      gitRevision: document.gitRevision,
+      preparedAt: new Date().toISOString(),
+      runtimeEnvironment: 'var/restore-safe.env',
+      pendingGates: [
+        'account-reauthentication-or-reviewed-import',
+        'workspace-path-review',
+        'read-only-runtime-verification',
+        'old-instance-stopped',
+        'owner-approved-single-writer-takeover',
+      ],
+    }
+    await writeFile(join(temporaryVar, 'restore-safe-receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 })
+    await rename(temporaryVar, targetVar)
+    return receipt
+  } catch (error) {
+    await rm(temporaryVar, { recursive: true, force: true })
+    throw error
+  }
+}
+
 export async function stageRecoveryBundle(options: StageBundleOptions): Promise<BundleDocument> {
   const input = resolve(options.input)
   const outputDirectory = resolve(options.outputDirectory)
@@ -494,7 +635,20 @@ async function main(): Promise<void> {
     process.stdout.write(`${JSON.stringify({ ok: true, bundleId: document.bundleId, outputDirectory })}\n`)
     return
   }
-  throw new Error('usage: recovery-bundle.ts create|stage [options]')
+  if (mode === 'prepare') {
+    const stagingDirectory = argument('--staging-directory')
+    const targetProjectRoot = argument('--project-root') || scriptRoot
+    const webPortValue = argument('--web-port')
+    if (!stagingDirectory) throw new Error('prepare requires --staging-directory')
+    const receipt = await prepareRestoreSafe({
+      stagingDirectory,
+      projectRoot: targetProjectRoot,
+      ...(webPortValue ? { webPort: Number(webPortValue) } : {}),
+    })
+    process.stdout.write(`${JSON.stringify({ ok: true, ...receipt })}\n`)
+    return
+  }
+  throw new Error('usage: recovery-bundle.ts create|stage|prepare [options]')
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

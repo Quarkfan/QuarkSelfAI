@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 import { promisify } from 'node:util'
-import { createRecoveryBundle, stageRecoveryBundle } from '../scripts/recovery-bundle.js'
+import { createRecoveryBundle, prepareRestoreSafe, stageRecoveryBundle } from '../scripts/recovery-bundle.js'
+import { loadRuntimeConfig } from '../src/config/runtime.js'
 
 const exec = promisify(execFile)
 
@@ -25,6 +26,8 @@ async function fixture() {
   await writeFile(join(project, 'README.md'), 'fixture\n')
   await exec('git', ['add', 'README.md'], { cwd: project })
   await exec('git', ['commit', '-m', 'fixture'], { cwd: project })
+  const freshClone = join(root, 'fresh-clone')
+  await exec('git', ['clone', project, freshClone])
   await exec('sqlite3', [join(project, 'var', 'quarkselfai.sqlite3'), 'CREATE TABLE proof(value TEXT); INSERT INTO proof VALUES ("ok");'])
   await exec('sqlite3', [join(project, 'var', 'dsh', 'quarkselfai.sqlite3'), 'CREATE TABLE proof(value TEXT); INSERT INTO proof VALUES ("dsh");'])
   await writeFile(join(project, 'var', 'dsh', 'settings.yaml'), 'profile: fixture\n')
@@ -63,7 +66,7 @@ writeFileSync(out, args.includes('-d') ? content.subarray(header.length) : Buffe
   await chmod(age, 0o700)
   const identity = join(root, 'identity.txt')
   await writeFile(identity, 'fixture identity\n', { mode: 0o600 })
-  return { root, project, home, age, identity }
+  return { root, project, home, age, identity, freshClone }
 }
 
 test('creates an encrypted-only recovery artifact and stages a verified restore', async () => {
@@ -99,6 +102,33 @@ test('creates an encrypted-only recovery artifact and stages a verified restore'
   assert.equal(result.stdout.trim(), 'ok')
   assert.equal((await stat(join(staged, 'artifacts', 'runtime-environment', 'runtime.env'))).mode & 0o777, 0o600)
   assert.match(await readFile(join(staged, 'artifacts', 'compatibility-state', 'state.json'), 'utf8'), /fixture/)
+
+  const receipt = await prepareRestoreSafe({
+    stagingDirectory: staged,
+    projectRoot: context.freshClone,
+    webPort: 14321,
+  })
+  assert.equal(receipt.mode, 'restore-safe')
+  assert.ok(receipt.pendingGates.includes('owner-approved-single-writer-takeover'))
+  const safeEnvironment = await readFile(join(context.freshClone, 'var', 'restore-safe.env'), 'utf8')
+  assert.match(safeEnvironment, /ASSISTANT_RUNTIME=control-only/)
+  assert.match(safeEnvironment, /ASSISTANT_KERNEL=off/)
+  assert.match(safeEnvironment, /TAKEOVER_CONFIRMED=false/)
+  assert.doesNotMatch(safeEnvironment, /COMPAT_CONFIG_PATH=/)
+  const safeEnv = Object.fromEntries(safeEnvironment.split(/\r?\n/)
+    .filter(line => line && !line.startsWith('#'))
+    .map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]))
+  const safeConfig = loadRuntimeConfig(safeEnv, context.freshClone)
+  assert.equal(safeConfig.runtime.mode, 'control-only')
+  assert.equal(safeConfig.kernel.mode, 'off')
+  assert.equal(safeConfig.web.host, '127.0.0.1')
+  const restoredResult = await exec('sqlite3', ['-readonly', join(context.freshClone, 'var', 'quarkselfai.sqlite3'), 'SELECT value FROM proof;'])
+  assert.equal(restoredResult.stdout.trim(), 'ok')
+  assert.equal((await stat(join(context.freshClone, 'var', 'restore-safe.env'))).mode & 0o777, 0o600)
+  await assert.rejects(() => prepareRestoreSafe({
+    stagingDirectory: staged,
+    projectRoot: context.freshClone,
+  }), /var directory already exists/)
 })
 
 test('refuses plaintext output and an invalid encryption recipient', async () => {

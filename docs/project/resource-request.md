@@ -34,7 +34,7 @@
 
 1. 使用已完成的 SQLite online backup、PG custom dump、筛选归档、SHA-256 manifest 和隔离恢复核心生成真实 age 包。
 2. 实现上传、下载回读、14 日备份 + 8 周备份保留策略。
-3. 建立从已核验 staging 应用到 `restore-safe` 实例的命令，默认关闭 consumer 和外部 write effects。
+3. 使用已完成的 fresh-clone `restore-safe` 准备命令做 SQLite 演练，并补齐 PostgreSQL 空库恢复门禁。
 4. 把账号登录、密钥注入、路径重写和单消费者切换写成唯一 runbook。
 5. 在一个干净目录先做真实加密同机演练；再约定一台新终端做完整恢复演练。
 

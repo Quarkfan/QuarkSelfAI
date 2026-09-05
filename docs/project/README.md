@@ -15,9 +15,9 @@
 `npm run audit:recovery` 查看本机清单，执行 `npm run audit:recovery -- --strict` 作为恢复门禁。审计只查看
 路径、文件类型和配置是否存在，不读取或输出凭证值。
 
-恢复工具已经提供两条彼此分离的命令：`npm run backup:recovery` 只生成 age 加密包，`npm run restore:stage`
-只解密到新的隔离目录并核验 manifest、文件哈希和 SQLite 完整性。它们都不会上传远端、覆盖现网状态、启动消费者
-或启用任何外部写 effect；完整操作见[可移植与灾难恢复规范](portability-and-recovery.md)。
+恢复工具提供三段彼此分离的命令：`npm run backup:recovery` 只生成 age 加密包，`npm run restore:stage` 只解密并
+核验，`npm run restore:prepare-safe` 只允许把核验结果放进 revision 一致且没有 `var` 的新 clone。它们都不会上传
+远端、覆盖现网状态、启动消费者或启用任何外部写 effect；完整操作见[可移植与灾难恢复规范](portability-and-recovery.md)。
 
 ## 当前结论（2026-09-05）
 
