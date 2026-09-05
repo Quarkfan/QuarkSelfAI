@@ -15,7 +15,14 @@ test('maps assistant behavior to portable sources without claiming organization 
   assert.equal(report.workIntegration.localScaffoldActivated, false)
   assert.equal(report.workIntegration.localScaffoldAssetPlanStatus, 'content-addressed-inventory')
   assert.equal(report.workIntegration.localScaffoldAssetCount, 99)
-  assert.equal(report.workIntegration.localScaffoldProvisionalCount, 99)
+  assert.equal(report.workIntegration.localScaffoldReviewedCandidateCount, 99)
+  assert.equal(report.workIntegration.localScaffoldOwnerApprovedCount, 0)
+  assert.deepEqual(report.workIntegration.localScaffoldDecisionCounts, {
+    copyPrivate: 21,
+    genericizeCore: 64,
+    redactReplay: 9,
+    retireHistory: 5,
+  })
   assert.equal(report.workIntegration.localScaffoldContentCopiedCount, 0)
   assert.equal(report.outstanding.includes('personal-portable-assets-curation'), false)
   assert.equal(report.personalCapabilityCuration.status, 'decision-complete')

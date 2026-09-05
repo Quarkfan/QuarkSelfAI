@@ -38,7 +38,14 @@ type ContinuityInventory = {
       activated: boolean
       assetPlanStatus: string
       assetCount: number
-      provisionalCount: number
+      reviewedCandidateCount: number
+      ownerApprovedCount: number
+      decisionCounts: {
+        copyPrivate: number
+        genericizeCore: number
+        redactReplay: number
+        retireHistory: number
+      }
       contentCopiedCount: number
     }
     remoteResourceId: string
@@ -139,7 +146,10 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
     || inventory.workIntegration?.localScaffold?.activated !== false
     || inventory.workIntegration?.localScaffold?.assetPlanStatus !== 'content-addressed-inventory'
     || inventory.workIntegration?.localScaffold?.assetCount !== workDomain.baseline.pathCount
-    || inventory.workIntegration?.localScaffold?.provisionalCount !== workDomain.baseline.pathCount
+    || inventory.workIntegration?.localScaffold?.reviewedCandidateCount !== workDomain.baseline.pathCount
+    || inventory.workIntegration?.localScaffold?.ownerApprovedCount !== 0
+    || Object.values(inventory.workIntegration?.localScaffold?.decisionCounts ?? {}).reduce((sum, value) => sum + value, 0)
+      !== workDomain.baseline.pathCount
     || inventory.workIntegration?.localScaffold?.contentCopiedCount !== 0) blockers.push('work-integration-scaffold-evidence-invalid')
   if (inventory.workIntegration?.currentStatus !== 'isolated') outstanding.push('work-integration-not-yet-isolated')
   if (inventory.workIntegration?.remoteResourceStatus !== 'provided') outstanding.push(inventory.workIntegration.remoteResourceId)
@@ -191,7 +201,9 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
       localScaffoldActivated: inventory.workIntegration.localScaffold.activated,
       localScaffoldAssetPlanStatus: inventory.workIntegration.localScaffold.assetPlanStatus,
       localScaffoldAssetCount: inventory.workIntegration.localScaffold.assetCount,
-      localScaffoldProvisionalCount: inventory.workIntegration.localScaffold.provisionalCount,
+      localScaffoldReviewedCandidateCount: inventory.workIntegration.localScaffold.reviewedCandidateCount,
+      localScaffoldOwnerApprovedCount: inventory.workIntegration.localScaffold.ownerApprovedCount,
+      localScaffoldDecisionCounts: inventory.workIntegration.localScaffold.decisionCounts,
       localScaffoldContentCopiedCount: inventory.workIntegration.localScaffold.contentCopiedCount,
       remoteResourceStatus: inventory.workIntegration.remoteResourceStatus,
       mayBlockCoreBuildAfterMigration: inventory.workIntegration.mayBlockCoreBuildAfterMigration,
