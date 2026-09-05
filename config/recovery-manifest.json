@@ -16,13 +16,16 @@
       "config/dsh-baseline.json",
       "config/module-catalog.json",
       "config/recovery-manifest.json",
+      "config/account-bootstrap.json",
       "scripts/audit-recovery-readiness.ts",
+      "scripts/audit-account-bootstrap.ts",
       "scripts/recovery-bundle.ts",
       "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
       "docs/project/README.md",
       "docs/project/charter.md",
       "docs/project/portability-and-recovery.md",
       "docs/project/data-and-identity-inventory.md",
+      "docs/project/account-bootstrap.md",
       "docs/project/blacklake-boundary.md",
       "docs/project/resource-request.md"
     ]

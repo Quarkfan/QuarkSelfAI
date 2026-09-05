@@ -459,3 +459,8 @@
   SQLite 与筛选状态写入新 clone，原账号/兼容配置只进入受限 `recovery-input`；新环境强制 control-only、kernel off、
   work journal off、loopback、`TAKEOVER_CONFIRMED=false` 并生成新控制令牌。测试通过真实运行配置解析确认这些门禁，
   同时验证第二次准备会因已有 `var` 失败关闭。PostgreSQL 恢复仍保持独立未完成门禁。
+- 新增机器可读账号清单、独立账号恢复手册与 `audit:accounts`：覆盖 GitHub、Codex、Claude、飞书 user/bot、滴答、
+  锁定 DSH runtime 和 DSH inference 配置。默认本地检查，`--online` 只做 GitHub HEAD、飞书 verify 和滴答 list；
+  子进程 stdout/stderr 全部丢弃，仅输出固定状态/原因码，测试证明邮箱、openId、scope、token 片段与上游正文不会泄露。
+- 当前主机真实联网审计 `ok=true`：GitHub、飞书 user/bot、滴答只读链路 ready，Codex/Claude 登录状态 ready，DSH
+  锁定运行时 ready，推理端点与 secret configured。审计没有创建或修改外部对象，也没有向模型端点发请求。

@@ -35,6 +35,9 @@ SQLite 和 DSH 目录中可能同时存在数据库/WAL，备份实现必须先�
 飞书配置实际位于 `~/.lark-cli/config.json`，可能由 macOS Keychain 保存秘密。Keychain 条目不能假定随 Git、文件归档
 或 Time Machine 必然可用，恢复手册应支持重新登录/重新注入。
 
+`scripts/audit-account-bootstrap.ts` 按 `config/account-bootstrap.json` 检查上述身份。默认只检查本地状态；`--online`
+才执行 GitHub、飞书与滴答的只读调用。所有 CLI 输出只在进程内判断，最终报告不包含 token 片段、scope 或个人标识。
+
 ## 3. 应进入仓库或个人能力包的长期知识
 
 - 产品架构、ADR、操作手册、默认策略与安全门禁：进入 QuarkSelfAI Git 主线。

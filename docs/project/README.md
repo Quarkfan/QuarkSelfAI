@@ -8,8 +8,9 @@
 1. [项目章程](charter.md)：愿景、范围、成功标准、阶段与治理。
 2. [可移植与灾难恢复规范](portability-and-recovery.md)：从 clone 到恢复服务的目标流程和验收门禁。
 3. [数据与身份清单](data-and-identity-inventory.md)：可恢复数据、账号、密钥、缓存与当前缺口。
-4. [BlackLake 工作边界](blacklake-boundary.md)：公司工作信息如何与个人助手主线隔离。
-5. [资源申请单](resource-request.md)：实现异机恢复前需要 owner 提供或选择的资源。
+4. [账号恢复与只读验收](account-bootstrap.md)：新终端登录顺序、脱敏审计与接管边界。
+5. [BlackLake 工作边界](blacklake-boundary.md)：公司工作信息如何与个人助手主线隔离。
+6. [资源申请单](resource-request.md)：实现异机恢复前需要 owner 提供或选择的资源。
 
 机器可读真源是 [`config/recovery-manifest.json`](../../config/recovery-manifest.json)。执行
 `npm run audit:recovery` 查看本机清单，执行 `npm run audit:recovery -- --strict` 作为恢复门禁。审计只查看

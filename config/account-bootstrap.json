@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "projectId": "quarkselfai",
+  "accounts": [
+    {
+      "id": "github",
+      "class": "source-control",
+      "required": true,
+      "loginHint": "Configure a GitHub SSH identity that can read the configured origin"
+    },
+    {
+      "id": "codex",
+      "class": "executor",
+      "required": true,
+      "loginHint": "Run codex login --device-auth"
+    },
+    {
+      "id": "claude",
+      "class": "executor",
+      "required": true,
+      "loginHint": "Run claude auth login"
+    },
+    {
+      "id": "lark-user",
+      "class": "channel-identity",
+      "required": true,
+      "loginHint": "Run lark-cli auth login and authorize the owner user identity"
+    },
+    {
+      "id": "lark-bot",
+      "class": "channel-identity",
+      "required": true,
+      "loginHint": "Restore the bot app secret through the secret store and run lark-cli auth status"
+    },
+    {
+      "id": "dida",
+      "class": "task-system",
+      "required": true,
+      "loginHint": "Run dida auth login or inject a token through the approved secret store"
+    },
+    {
+      "id": "dsh-runtime",
+      "class": "assistant-kernel",
+      "required": true,
+      "loginHint": "Install the repository-locked DSH runtime closure"
+    },
+    {
+      "id": "dsh-inference",
+      "class": "model-provider",
+      "required": true,
+      "loginHint": "Inject QUARK_INFERENCE_BASE_URL and QUARK_INFERENCE_API_KEY through the secret store"
+    }
+  ]
+}
