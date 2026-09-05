@@ -68,6 +68,12 @@
     "registry": "config/work-domain-isolation.json",
     "currentStatus": "inventory-only",
     "targetDisposition": "separate-private-versioned-pack",
+    "localScaffold": {
+      "repositoryName": "QuarkSelfAI-Work",
+      "revision": "0259366ab6f233a227bce41d1233cb5b5be0a9f3",
+      "status": "prepared-unpublished",
+      "activated": false
+    },
     "remoteResourceId": "private-work-integration-remote",
     "remoteResourceStatus": "required-unprovided",
     "mayBlockCoreBuildAfterMigration": false

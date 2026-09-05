@@ -11,6 +11,8 @@ test('maps assistant behavior to portable sources without claiming organization 
   assert.equal(report.instructionContract.sourceCount, 2)
   assert.ok(report.durableCapabilityCount >= 4)
   assert.ok(report.outstanding.includes('private-work-integration-remote'))
+  assert.equal(report.workIntegration.localScaffoldStatus, 'prepared-unpublished')
+  assert.equal(report.workIntegration.localScaffoldActivated, false)
   assert.equal(report.outstanding.includes('personal-portable-assets-curation'), false)
   assert.equal(report.personalCapabilityCuration.status, 'decision-complete')
   assert.equal(report.personalCapabilityCuration.selectedPortableAssetCount, 0)

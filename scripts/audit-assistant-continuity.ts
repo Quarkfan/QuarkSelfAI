@@ -31,6 +31,7 @@ type ContinuityInventory = {
     registry: string
     currentStatus: string
     targetDisposition: string
+    localScaffold: { repositoryName: string; revision: string; status: string; activated: boolean }
     remoteResourceId: string
     remoteResourceStatus: string
     mayBlockCoreBuildAfterMigration: boolean
@@ -123,6 +124,10 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
     blockers.push('work-integration-inventory-invalid')
   }
   if (inventory.workIntegration?.mayBlockCoreBuildAfterMigration !== false) blockers.push('work-integration-core-dependency-not-forbidden')
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(inventory.workIntegration?.localScaffold?.repositoryName ?? '')
+    || !/^[a-f0-9]{40}$/.test(inventory.workIntegration?.localScaffold?.revision ?? '')
+    || inventory.workIntegration?.localScaffold?.status !== 'prepared-unpublished'
+    || inventory.workIntegration?.localScaffold?.activated !== false) blockers.push('work-integration-scaffold-evidence-invalid')
   if (inventory.workIntegration?.currentStatus !== 'isolated') outstanding.push('work-integration-not-yet-isolated')
   if (inventory.workIntegration?.remoteResourceStatus !== 'provided') outstanding.push(inventory.workIntegration.remoteResourceId)
   if (!portableRepositoryPath(curationSource) || !tracked.has(curationSource)) blockers.push('personal-capability-curation-source-missing')
@@ -169,6 +174,8 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
     workIntegration: {
       inventoriedPathCount: workDomain.baseline.pathCount,
       currentStatus: inventory.workIntegration.currentStatus,
+      localScaffoldStatus: inventory.workIntegration.localScaffold.status,
+      localScaffoldActivated: inventory.workIntegration.localScaffold.activated,
       remoteResourceStatus: inventory.workIntegration.remoteResourceStatus,
       mayBlockCoreBuildAfterMigration: inventory.workIntegration.mayBlockCoreBuildAfterMigration,
     },
