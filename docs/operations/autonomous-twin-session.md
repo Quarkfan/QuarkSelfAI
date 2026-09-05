@@ -464,3 +464,7 @@
   子进程 stdout/stderr 全部丢弃，仅输出固定状态/原因码，测试证明邮箱、openId、scope、token 片段与上游正文不会泄露。
 - 当前主机真实联网审计 `ok=true`：GitHub、飞书 user/bot、滴答只读链路 ready，Codex/Claude 登录状态 ready，DSH
   锁定运行时 ready，推理端点与 secret configured。审计没有创建或修改外部对象，也没有向模型端点发请求。
+- 推送后从 GitHub `main` 在新的隔离目录冷 clone `8328d43`：锁文件安装 151 个包、npm audit 为 0，完整主项目
+  293 项（290 通过、3 项仅因沙箱回环限制跳过）与 compatibility 179/179 通过。空 clone 的 recovery audit 精确列出
+  缺失的 `var` 状态、age 和外部资源，账号本地审计精确列出未请求 GitHub 在线验证和未注入 DSH inference 配置；
+  证明代码闭包可重建且门禁不会把无状态 clone 误报为已恢复。
