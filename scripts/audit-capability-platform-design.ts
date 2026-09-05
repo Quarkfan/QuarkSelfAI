@@ -52,12 +52,18 @@ export async function auditCapabilityPlatformDesign(rootInput = projectRoot) {
     requirementIds.add(item.id)
     const missingFields = [...required].filter(field => !item[field]?.trim())
     if (!item.domain || !item.label || !item.screen || !item.anchor || missingFields.length) blockers.push(`incomplete-console-coverage:${item.id}`)
-    else if (!poc.includes(`data-coverage="${item.anchor}"`)) blockers.push(`missing-poc-anchor:${item.id}:${item.anchor}`)
-    else complete += 1
+    else {
+      const anchor = `data-coverage="${item.anchor}"`
+      const anchorCount = poc.split(anchor).length - 1
+      if (anchorCount !== 1) blockers.push(`${anchorCount === 0 ? 'missing' : 'duplicate'}-poc-anchor:${item.id}:${item.anchor}`)
+      else if (!poc.includes(`id="page-${item.screen}"`)) blockers.push(`missing-poc-screen:${item.id}:${item.screen}`)
+      else complete += 1
+    }
   }
   const coveragePercent = coverage.requirements.length ? Math.round((complete / coverage.requirements.length) * 10000) / 100 : 0
   if (coverage.status !== 'design-candidate-inactive') blockers.push('unsafe-console-coverage-state')
   if (coveragePercent !== 100) blockers.push(`console-coverage-not-complete:${coveragePercent}`)
+  if (!poc.includes(`POC requirement anchors</span><b>${coverage.requirements.length} / ${coverage.requirements.length}</b>`)) blockers.push('poc-visible-coverage-count-drift')
   if (!prd.includes('Capability Artifact') || !prd.includes('Agent Blueprint') || !prd.includes('Execution Envelope')) blockers.push('prd-missing-core-abstractions')
   if (!adr.includes('Proposed / inactive') || !poc.includes('所有写入关闭')) blockers.push('inactive-design-safety-marker-missing')
 

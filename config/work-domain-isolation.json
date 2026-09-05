@@ -17,6 +17,7 @@
   "excludedRegistryPaths": [
     "config/work-domain-isolation.json",
     "config/capability-platform-migration.json",
+    "config/capability-platform-phase-1a-proposal.json",
     "config/work-integration-host-contract-proposal.json",
     "scripts/audit-work-domain-isolation.ts"
   ],

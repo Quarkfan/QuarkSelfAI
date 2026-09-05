@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-1a-contract-sdk",
+  "status": "awaiting-owner-visual-and-architecture-approval",
+  "baseRevision": "c746e70c1fdbf54a3617816e5ad887e8e679ebe2",
+  "architectureChange": "Add runtime-neutral public Capability Manifest, Agent Blueprint, Execution Envelope, permission, state, interface and validation contracts plus an unmounted inactive registry seam.",
+  "fileScope": {
+    "create": [
+      "src/capability-platform/manifest.ts",
+      "src/capability-platform/blueprint.ts",
+      "src/capability-platform/execution-envelope.ts",
+      "src/capability-platform/permissions.ts",
+      "src/capability-platform/interfaces.ts",
+      "src/capability-platform/validation.ts",
+      "src/capability-platform/inactive-registry.ts",
+      "config/schemas/capability-manifest.schema.json",
+      "config/schemas/agent-blueprint.schema.json",
+      "config/schemas/execution-envelope.schema.json",
+      "test/capability-platform-contracts.test.ts"
+    ],
+    "modify": [
+      "src/platform/index.ts",
+      "config/module-catalog.json",
+      "config/capability-platform-migration.json",
+      "docs/architecture.md",
+      "docs/requirements-traceability.md",
+      "docs/operations/autonomous-twin-session.md"
+    ]
+  },
+  "allowedActions": [
+    "define pure TypeScript contracts and JSON schemas",
+    "implement deterministic validation and content digests",
+    "add an unmounted in-memory registry that defaults to inactive",
+    "add cross-executor fixture tests for equivalent normalized context",
+    "add fail-closed tests for unsafe manifests, effects, permissions and duplicate identity",
+    "update architecture and audit evidence within the listed scope",
+    "commit and push one independently revertible revision after all gates pass"
+  ],
+  "explicitExclusions": [
+    "package.json and all current owner working-tree changes",
+    "new third-party dependencies or downloaded code",
+    "package export changes",
+    "DSH or Cordis profile and runtime composition changes",
+    "cloud services, listeners, databases, migrations or tenant records",
+    "client daemon, device enrollment, executor discovery or computer control",
+    "private pack installation, registration, shadow or activation",
+    "consumer, provider, scheduler, writer or effect ownership changes",
+    "network access, credentials, external writes, service restart or source deletion"
+  ],
+  "verification": [
+    "npm run check",
+    "node --import tsx scripts/audit-capability-platform-design.ts",
+    "npm run audit:assistant-continuity -- --strict",
+    "npm run audit:work-domain-isolation -- --strict",
+    "bash /Users/edy/BlackLakeWork/scripts/check-blacklake-agent-sync.sh",
+    "private work integration pack strict audit against the frozen source revision",
+    "git diff and status prove owner changes are unstaged and uncommitted"
+  ],
+  "rollback": {
+    "method": "Revert the single Phase 1A commit.",
+    "stateMigrationRequired": false,
+    "serviceRestartRequired": false,
+    "dataRecoveryRequired": false
+  },
+  "ownerApproval": {
+    "visualApproved": false,
+    "architectureApproved": false,
+    "approvedRevision": null
+  }
+}

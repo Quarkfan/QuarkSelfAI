@@ -690,6 +690,9 @@
   数据且不联网、不安装、不激活、不写入。
 - 本轮只允许 Phase 0 文档、机器清单、审计、测试与独立 POC。没有修改 live console/API、DSH/Cordis composition、consumer、
   provider、scheduler、writer、凭证、外部数据或服务；没有删除主线来源或触碰用户未提交的 package/client/DS_Store 文件。
-- 机器审计已验证 99/99 模块处置和 34/34 control/monitor/manage POC anchor；完整仓库、连续性、工作域和私有包审计通过。
+- 第一版 34 项覆盖复核后发现计划派发、能力进化、客户端升级、本地盘点、跨执行器上下文等价和测试实验室仍被隐含在粗粒度
+  卡片中，不足以证明 100%。覆盖模型与 POC 已扩展为 50/50 项，每项仍同时具有 control/monitor/manage 和唯一 anchor；另新增
+  Phase 0 完成性审计与 Phase 1A 机器提案，明确机器完成不等于视觉或运行实现完成。
+- 机器审计已验证 99/99 模块处置和 50/50 control/monitor/manage POC anchor；完整仓库、连续性、工作域和私有包审计通过。
   当前应用内浏览器安全策略禁止打开本地 `file://`，且不允许改用替代浏览器绕过，因此真实桌面/窄屏视觉确认仍是 Phase 0
   唯一未闭合门禁；在 owner 打开静态 POC 确认前，不把“机器覆盖率 100%”表述为“控制台视觉验收完成”。

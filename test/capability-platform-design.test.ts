@@ -7,7 +7,7 @@ test('covers every current module and every console requirement without activati
   assert.equal(report.ok, true, report.blockers.join('\n'))
   assert.equal(report.moduleCatalogCount, 99)
   assert.equal(report.migratedModuleCount, report.moduleCatalogCount)
-  assert.equal(report.consoleRequirementCount, 34)
+  assert.equal(report.consoleRequirementCount, 50)
   assert.equal(report.consoleCompleteCount, report.consoleRequirementCount)
   assert.equal(report.consoleCoveragePercent, 100)
   assert.equal(report.runtimeActivationAllowed, false)
