@@ -51,6 +51,7 @@ type ContinuityInventory = {
         id: string
         status: string
         digest: string
+        resultDigest: string
         itemCount: number
         exactCopyItemCount: number
         redactedReplayItemCount: number
@@ -162,7 +163,7 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
   if (inventory.workIntegration?.mayBlockCoreBuildAfterMigration !== false) blockers.push('work-integration-core-dependency-not-forbidden')
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(inventory.workIntegration?.localScaffold?.repositoryName ?? '')
     || !/^[a-f0-9]{40}$/.test(inventory.workIntegration?.localScaffold?.revision ?? '')
-    || inventory.workIntegration?.localScaffold?.status !== 'prepared-published'
+    || inventory.workIntegration?.localScaffold?.status !== 'content-migrated-inactive'
     || inventory.workIntegration?.localScaffold?.activated !== false
     || inventory.workIntegration?.localScaffold?.assetPlanStatus !== 'content-addressed-inventory'
     || inventory.workIntegration?.localScaffold?.assetCount !== workDomain.baseline.pathCount
@@ -170,14 +171,15 @@ export async function auditAssistantContinuity(rootInput = projectRoot) {
     || inventory.workIntegration?.localScaffold?.ownerApprovedCount !== 0
     || Object.values(inventory.workIntegration?.localScaffold?.decisionCounts ?? {}).reduce((sum, value) => sum + value, 0)
       !== workDomain.baseline.pathCount
-    || inventory.workIntegration?.localScaffold?.contentCopiedCount !== 0) blockers.push('work-integration-scaffold-evidence-invalid')
+    || inventory.workIntegration?.localScaffold?.contentCopiedCount !== 20) blockers.push('work-integration-scaffold-evidence-invalid')
   const migrationBatch = inventory.workIntegration?.localScaffold?.migrationBatch
   if (migrationBatch?.id !== 'phase-1-private-assets'
-    || migrationBatch?.status !== 'preflight-complete-awaiting-owner'
+    || migrationBatch?.status !== 'content-migrated-inactive'
     || !/^[a-f0-9]{64}$/.test(migrationBatch?.digest ?? '')
+    || !/^[a-f0-9]{64}$/.test(migrationBatch?.resultDigest ?? '')
     || migrationBatch?.itemCount !== 21
     || migrationBatch.exactCopyItemCount + migrationBatch.redactedReplayItemCount + migrationBatch.excludedItemCount !== migrationBatch.itemCount
-    || migrationBatch.ownerApprovedCount !== 0 || migrationBatch.contentCopiedCount !== 0 || migrationBatch.activationAllowedCount !== 0) {
+    || migrationBatch.ownerApprovedCount !== 21 || migrationBatch.contentCopiedCount !== 20 || migrationBatch.activationAllowedCount !== 0) {
     blockers.push('work-integration-migration-batch-evidence-invalid')
   }
   if (inventory.workIntegration?.remoteResourceStatus !== 'provided'

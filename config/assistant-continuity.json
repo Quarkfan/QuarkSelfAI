@@ -68,12 +68,12 @@
   },
   "workIntegration": {
     "registry": "config/work-domain-isolation.json",
-    "currentStatus": "inventory-only",
+    "currentStatus": "copied-shadow-inactive",
     "targetDisposition": "separate-private-versioned-pack",
     "localScaffold": {
       "repositoryName": "QuarkSelfAI-Work",
-      "revision": "c44c14269c512279889ad78d90d2a9329b60838a",
-      "status": "prepared-published",
+      "revision": "971685b22476e6b1e263b20f441b5ea72519dcf2",
+      "status": "content-migrated-inactive",
       "activated": false,
       "assetPlanStatus": "content-addressed-inventory",
       "assetCount": 99,
@@ -85,17 +85,18 @@
         "redactReplay": 9,
         "retireHistory": 5
       },
-      "contentCopiedCount": 0,
+      "contentCopiedCount": 20,
       "migrationBatch": {
         "id": "phase-1-private-assets",
-        "status": "preflight-complete-awaiting-owner",
+        "status": "content-migrated-inactive",
         "digest": "6c2a8904b82c109a5c2d8f999ee2ddad315415605b21c0000041db327b95bff5",
+        "resultDigest": "54e4ea05a735680361ca0cddb005890ef5fcad003df0e3eb2ae711addb3cb028",
         "itemCount": 21,
         "exactCopyItemCount": 14,
         "redactedReplayItemCount": 6,
         "excludedItemCount": 1,
-        "ownerApprovedCount": 0,
-        "contentCopiedCount": 0,
+        "ownerApprovedCount": 21,
+        "contentCopiedCount": 20,
         "activationAllowedCount": 0
       }
     },
