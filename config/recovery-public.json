@@ -10,6 +10,13 @@
     "provider": "apple-passwords",
     "status": "owner-attested",
     "attestedOn": "2026-09-06",
-    "crossDeviceVerified": false
+    "crossDeviceVerified": false,
+    "rotationDecision": "retain-current-identity",
+    "rotationDecisionOn": "2026-09-06"
+  },
+  "schedule": {
+    "kind": "daily-local-time",
+    "time": "03:15",
+    "runner": "platform-service"
   }
 }

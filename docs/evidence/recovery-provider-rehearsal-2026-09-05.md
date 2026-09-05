@@ -31,5 +31,14 @@
 
 - 2026-09-06 owner 已确认私钥手工保存到 Apple“密码”；助手未读取密码库内容，另一设备可读性尚未验证。
 - 尚未从另一设备下载 iCloud 对象并完成同一回读校验。
-- 14 日 + 8 周保留算法已通过测试，并对真实目录完成 dry-run：1 份有效、1 份保留、0 份删除、0 份忽略；周期调度
-  尚未启用。PostgreSQL 空库恢复与最终单写者接管未演练。
+- 2026-09-06 再次运行真实 `backup:cycle`：bundle ID
+  `8f8df3f64f4eeb51722edaf4dd1a1efb24e792753e63fd2625a1429ab2e44395`，密文 3145902 bytes，SHA-256
+  `c5b26834ecf7ae901ed63e9779b2435886d477cbce3090ba2ce973e02b8b4c22`；目标回读、真实解密与 SQLite integrity
+  均通过。保留执行识别 2 份严格血缘对象，保留最新 1 份、删除同日旧对象 1 份、忽略 0 份。
+- 已注册独立低优先级 LaunchAgent `com.quarkfan.quark-self-ai.recovery`，每日本地时间 03:15 运行 `backup:cycle`；
+  plist 通过 `plutil`，权限为 `0600`，不含 `RunAtLoad`/`KeepAlive`、飞书消费者或秘密。注册后尚未到首次日历触发，
+  `runs=0`；手工执行的同一代码路径已通过上述真实演练。
+- 私钥检查只输出布尔结果：本机 `0600` 身份推导出的 recipient 与仓库公钥一致。仓库工作树、全部 Git revision、
+  QuarkSelfAI `var` 日志及本机应用运行目录（排除预期私钥文件和 `.age` 密文）均未检出 age 私钥标记文本。
+  owner 明确决定不轮换并继续使用当前身份；这不替代另一设备从 Apple“密码”取出并解密的验收。
+- PostgreSQL 空库恢复与最终单写者接管未演练。

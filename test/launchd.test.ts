@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { renderLaunchdTemplate } from '../src/deploy/launchd.js'
+import { renderLaunchdTemplate, renderRecoveryLaunchdTemplate } from '../src/deploy/launchd.js'
 
 test('renders a restart-on-failure LaunchAgent without embedding secrets', async () => {
   const template = await readFile(fileURLToPath(new URL('../deploy/launchd/com.quarkfan.quark-self-ai.plist.template', import.meta.url)), 'utf8')
@@ -36,4 +36,32 @@ test('renders the isolated native product entry only when explicitly selected', 
   })
   assert.match(rendered, /\/opt\/quark-self-ai\/dist\/product\/app\.js/)
   assert.doesNotMatch(rendered, /\/dist\/app\.js/)
+})
+
+test('renders a low-priority daily recovery job without secrets or a message consumer', async () => {
+  const template = await readFile(fileURLToPath(new URL('../deploy/launchd/com.quarkfan.quark-self-ai.recovery.plist.template', import.meta.url)), 'utf8')
+  const rendered = renderRecoveryLaunchdTemplate(template, {
+    projectRoot: '/Users/test/Quark & SelfAI',
+    nodeExecutable: '/opt/node/bin/node',
+    executablePath: '/opt/node/bin:/usr/bin:/bin',
+    stdoutPath: '/Users/test/Library/Logs/quark-recovery.out.log',
+    stderrPath: '/Users/test/Library/Logs/quark-recovery.err.log',
+    hour: 3,
+    minute: 15,
+  })
+  assert.match(rendered, /com\.quarkfan\.quark-self-ai\.recovery/)
+  assert.match(rendered, /Quark &amp; SelfAI\/scripts\/recovery-target\.ts/)
+  assert.match(rendered, /<key>Hour<\/key>\s*<integer>3<\/integer>/)
+  assert.match(rendered, /<key>Minute<\/key>\s*<integer>15<\/integer>/)
+  assert.match(rendered, /<key>LowPriorityIO<\/key>\s*<true\/>/)
+  assert.doesNotMatch(rendered, /RunAtLoad|KeepAlive|CONSOLE_TOKEN|LARK|FEISHU|consumer/i)
+  assert.throws(() => renderRecoveryLaunchdTemplate(template, {
+    projectRoot: '/tmp/quark',
+    nodeExecutable: '/opt/node/bin/node',
+    executablePath: '/opt/node/bin:/usr/bin:/bin',
+    stdoutPath: '/tmp/out.log',
+    stderrPath: '/tmp/err.log',
+    hour: 24,
+    minute: 0,
+  }), /hour/)
 })

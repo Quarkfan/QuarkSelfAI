@@ -87,6 +87,32 @@ systemd 安装也必须先在 `/opt/quark-dsh-runtime` 按 `deploy/dsh-runtime/p
 兼容子进程在 ready 后异常退出会让 QuarkSelfAI 父进程以失败状态退出，因此 launchd、systemd 和容器
 的 restart policy 能统一执行退避重启。`/api/health` 在 compat worker 非 ready 时返回 503。
 
+### 每日加密恢复任务
+
+恢复任务与主守护进程是两个不同的 LaunchAgent。先从仓库模板渲染到一个不存在的临时输出，再检查并安装：
+
+```bash
+npm run render:recovery-launchd -- \
+  --output /受限暂存目录/com.quarkfan.quark-self-ai.recovery.plist \
+  --project-root /绝对项目目录 \
+  --node /绝对Node路径 \
+  --path /执行器PATH \
+  --stdout /绝对日志路径 \
+  --stderr /绝对错误日志路径 \
+  --hour 3 \
+  --minute 15
+plutil -lint /受限暂存目录/com.quarkfan.quark-self-ai.recovery.plist
+```
+
+输出使用 `wx` 和 `0600`，不会覆盖现有文件。模板不含 recipient、私钥、iCloud 路径、飞书配置或其他秘密；运行时从
+Git 忽略的 `var/recovery-target.json` 读取设备目标和私钥路径。安装到当前用户 `~/Library/LaunchAgents/` 后用
+`launchctl bootstrap` 注册；升级先 `bootout`，原子替换已校验 plist，再 `bootstrap`。回滚只需 `bootout` 该恢复
+job 并保留 plist，不影响 `com.quarkfan.quark-self-ai` 主守护进程、数据库或唯一飞书消费者。
+
+当前设备已注册 `com.quarkfan.quark-self-ai.recovery`，每日本地时间 03:15 运行 `backup:cycle`。它不在加载时立即
+执行、不常驻，只有日历触发时生成一份新密文并执行严格血缘保留；注册后 `state=not running`、`runs=0` 是尚未到首次
+日历触发的正常状态。需要立即验证时，应手工运行同一个 `npm run backup:cycle`，不要用启动第二个消费者来测试。
+
 ## 发布顺序
 
 1. 数据库备份并应用迁移。

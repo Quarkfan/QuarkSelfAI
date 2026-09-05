@@ -476,7 +476,7 @@
 - owner 明确允许安装和使用 `age`，并允许将大文件或不适合 GitHub 的信息放入自行管理的 iCloud Drive 目录。
 - 采用三分离：GitHub 保存代码、恢复规则与 age 公钥；iCloud Drive 只保存版本化 `.age` 密文和脱敏 receipt；私钥
   运行副本位于本机权限 `0600` 的独立目录，最终灾备副本由 owner 手工保存到 Apple“密码”。
-- 不自动写 Apple“密码”，不把私钥放入 Git、聊天或 iCloud 恢复目录。File Provider 本机回读不冒充 Apple 云端或
+- 不自动写 Apple“密码”；操作流程禁止把私钥放入 Git、聊天或 iCloud 恢复目录。File Provider 本机回读不冒充 Apple 云端或
   异机持久化证明。
 
 ### 实现与真实演练
@@ -502,3 +502,27 @@
   冒充成跨设备可恢复证明。
 - 尚需在另一设备实际取出私钥；另需完成周期调度、跨设备下载、PostgreSQL 空库恢复和完整 restore-safe 接管演练，
   才能宣称任意终端恢复。
+
+## 2026-09-06 每日恢复调度与密钥处置
+
+### 决策与实现
+
+- 新增 `backup:cycle`，严格按“先发布并完成 provider 回读/真实解密/SQLite integrity，再执行 14 日 + 8 周严格血缘
+  保留”的顺序运行；保留失败不会把未核验对象当作成功，也不会删除未知、孤立或校验不一致的文件。
+- 新增不含秘密的恢复 LaunchAgent 模板、确定性渲染器与时间/绝对路径校验。当前设备已注册
+  `com.quarkfan.quark-self-ai.recovery`，每日本地时间 03:15 触发，使用低优先级 I/O，不设 `RunAtLoad` 或
+  `KeepAlive`，不启动飞书消费者或业务写 effect。
+- owner 明确决定不轮换当前 age 身份。机器真源记录为继续使用现有 identity；该决定不改变另一设备验证门禁，也不把
+  本地扫描结果扩大解释为聊天服务或云端的端到端保密证明。
+
+### 证据、边界与回滚
+
+- 手工运行与日历任务相同的 `backup:cycle` 代码路径，生成 bundle
+  `8f8df3f64f4eeb51722edaf4dd1a1efb24e792753e63fd2625a1429ab2e44395`；密文回读、真实解密和 SQLite integrity
+  通过，2 份有效对象中保留 1 份、精确删除同日旧对象 1 份、忽略 0 份。
+- 本机身份文件权限为 `0600`，推导 recipient 与仓库公钥相符；仓库工作树、全部 Git revision、项目运行日志和应用
+  运行目录（排除预期私钥文件与 `.age` 密文）未检出 age 私钥文本。未把私钥内容写入文档、配置、命令输出或提交。
+- 安装后的 plist 通过 `plutil`，权限 `0600`；launchd 显示唯一日历触发为 03:15，注册后尚未到首次日历窗口，
+  `runs=0` 属预期。回滚只需卸载该恢复 job，不影响 QuarkSelfAI 主守护进程、SQLite、DSH 或唯一飞书消费者。
+- 仍未完成另一设备从 Apple“密码”取出私钥并下载 iCloud 密文的演练、PostgreSQL 空库恢复和最终单写者接管；目标
+  保持 active，不能宣称任意终端恢复已完成。

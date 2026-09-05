@@ -201,6 +201,7 @@
     "backup:recovery": "node --import tsx scripts/recovery-bundle.ts create",
     "backup:publish": "node --import tsx scripts/recovery-target.ts publish",
     "backup:prune": "node --import tsx scripts/recovery-target.ts prune",
+    "backup:cycle": "node --import tsx scripts/recovery-target.ts cycle",
     "restore:stage": "node --import tsx scripts/recovery-bundle.ts stage",
     "restore:prepare-safe": "node --import tsx scripts/recovery-bundle.ts prepare",
     "start:restore-safe": "node --env-file=var/restore-safe.env dist/app.js",
@@ -214,6 +215,7 @@
     "register:compat-state": "node --env-file=var/runtime.env --import tsx scripts/register-compat-state.ts",
     "takeover:preflight": "node --import tsx scripts/takeover-preflight.ts",
     "render:launchd": "node --import tsx scripts/render-launchd.ts",
+    "render:recovery-launchd": "node --import tsx scripts/render-recovery-launchd.ts",
     "dev": "node --import tsx src/app.ts",
     "start": "node dist/app.js"
   },

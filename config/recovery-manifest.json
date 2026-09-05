@@ -21,6 +21,8 @@
       "scripts/audit-account-bootstrap.ts",
       "scripts/recovery-bundle.ts",
       "scripts/recovery-target.ts",
+      "scripts/render-recovery-launchd.ts",
+      "deploy/launchd/com.quarkfan.quark-self-ai.recovery.plist.template",
       "config/recovery-public.json",
       "docs/adr/0090-portable-personal-assistant-and-work-domain-isolation.md",
       "docs/project/README.md",

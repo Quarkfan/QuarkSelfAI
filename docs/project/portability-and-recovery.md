@@ -91,6 +91,16 @@ npm run backup:publish
 使用独立私钥解密到受限临时目录，核对内容寻址 bundle manifest 与 SQLite integrity，最后才写入不含业务正文和秘密的
 `.receipt.json`。任一步失败会删除本次精确对象，且临时明文始终清理。
 
+当前 macOS 主机还安装了独立的低优先级 LaunchAgent，每日本地时间 03:15 执行：
+
+```bash
+npm run backup:cycle
+```
+
+`backup:cycle` 先完成与 `backup:publish` 相同的不可覆盖写入、目标回读、真实解密和 SQLite 完整性校验，再按
+14 日 + 8 周策略清理严格血缘的旧对象。它没有 `RunAtLoad` 或 `KeepAlive`，不启动 QuarkSelfAI、飞书消费者或任何
+外部业务 effect；单次失败由 launchd 留在本地日志，下一日再运行。安装与回滚见[部署与运行](../operations/deployment.md)。
+
 iCloud Drive 是首个 filesystem provider。上述成功只能证明“已写入并从本机 File Provider 挂载回读”，不能单独证明
 Apple 云端已经同步，也不能代替另一设备下载演练。私钥运行副本位于本机受限目录，灾备副本应手工保存到 Apple
 “密码”的独立条目；不得保存到同一个 iCloud Drive 恢复目录。
@@ -169,8 +179,8 @@ npm run start:restore-safe
 
 ## 8. 当前未完成项
 
-截至 2026-09-05，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现；真实 `age 1.3.2` 身份与 iCloud
-Drive filesystem provider 已完成一次 online-bounded 写入、挂载回读、密文哈希、解密和 SQLite integrity 闭环。
-owner 已确认 Apple“密码”私钥副本完成；仍缺另一设备实际取出与下载、保留策略的周期调度、PostgreSQL 空库恢复和
+截至 2026-09-06，加密打包、隔离校验与 fresh-clone `restore-safe` 准备核心已实现；真实 `age 1.3.2` 身份与 iCloud
+Drive filesystem provider 已完成 online-bounded 写入、挂载回读、密文哈希、解密和 SQLite integrity 闭环，且每日
+03:15 的本机调度已启用。owner 已确认 Apple“密码”私钥副本完成并决定继续使用当前身份；仍缺另一设备实际取出与下载、PostgreSQL 空库恢复和
 全新终端接管演练。
 因此当前能证明“当前设备可生成并回读可恢复密文”，不能证明“助理能力可在任意终端随时恢复”。

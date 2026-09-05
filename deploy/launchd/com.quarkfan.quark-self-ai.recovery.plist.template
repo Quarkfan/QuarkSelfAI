@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.quarkfan.quark-self-ai.recovery</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE_EXECUTABLE__</string>
+    <string>--import</string>
+    <string>tsx</string>
+    <string>__PROJECT_ROOT__/scripts/recovery-target.ts</string>
+    <string>cycle</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__PROJECT_ROOT__</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__EXEC_PATH__</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>__BACKUP_HOUR__</integer>
+    <key>Minute</key>
+    <integer>__BACKUP_MINUTE__</integer>
+  </dict>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+  <key>Nice</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>__STDOUT_PATH__</string>
+  <key>StandardErrorPath</key>
+  <string>__STDERR_PATH__</string>
+</dict>
+</plist>

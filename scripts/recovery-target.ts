@@ -293,8 +293,8 @@ function argument(name: string): string | undefined {
 }
 
 async function main(): Promise<void> {
-  if (process.argv[2] !== 'publish' && process.argv[2] !== 'prune') {
-    throw new Error('usage: recovery-target.ts publish|prune [options]')
+  if (process.argv[2] !== 'publish' && process.argv[2] !== 'prune' && process.argv[2] !== 'cycle') {
+    throw new Error('usage: recovery-target.ts publish|prune|cycle [options]')
   }
   const publicConfigPath = argument('--public-config') || resolve(scriptRoot, 'config/recovery-public.json')
   const targetConfigPath = argument('--target-config') || resolve(scriptRoot, 'var/recovery-target.json')
@@ -321,6 +321,18 @@ async function main(): Promise<void> {
     includeOptional: process.argv.includes('--include-optional'),
     quiesced: process.argv.includes('--quiesced'),
   })
+  if (process.argv[2] === 'cycle') {
+    const retention = publicConfig.retention ?? { daily: 14, weekly: 8 }
+    const plan = await planRecoveryRetention(targetConfig.path, retention)
+    const deleted = await applyRecoveryRetention(targetConfig.path, plan)
+    process.stdout.write(`${JSON.stringify({ ok: true, ...receipt, retention: {
+      verifiedReceipts: plan.verifiedReceipts,
+      kept: plan.kept.length,
+      deleted,
+      ignored: plan.ignored.length,
+    } })}\n`)
+    return
+  }
   process.stdout.write(`${JSON.stringify({ ok: true, ...receipt })}\n`)
 }
 
