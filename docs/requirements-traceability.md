@@ -152,6 +152,9 @@ sshd user/key/ForceCommand 配置和真实远程连接，因此还不能称 SSH 
 现已有可由 sshd 调用的 built `quark-device-v1` Node entry：显式 enable、精确命令、single-link 0600 config 和 bounded stdin 缺一即失败；它只访问本地
 IPC，失败不输出路径或内部异常。宿主测试验证真实 child process enabled/disabled 两条路径。尚未安装 entry、创建 OS 账号/key 或修改 sshd 配置。
 
+服务端 transport 现可通过一个未挂载 factory 组合：先打开唯一 cloud host，再打开 owner-only SSH IPC 和 TLS 1.3 edge；正常关闭与任一步失败都逆序释放。
+宿主测试证明 TLS 凭证失败后 socket/provider 无残留且同一路径可重开，并以真实 TLS 登录。尚无 server process entry、配置加载、信号处理或服务部署。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

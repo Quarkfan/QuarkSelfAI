@@ -1443,3 +1443,13 @@
   均删除。未安装 entry、未配置 sshd/OS user/key、未启动服务或远程连接。
 - 完整 `npm run check` 通过：主项目 484 项中 474 通过、10 项仅因 sandbox listener 限制跳过，compat 179/179；宿主 entry 专项为 1/1。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+
+## 2026-09-06 single-host cloud server runtime
+
+- TLS edge 与 SSH IPC 原先各自可打开，但尚无一个进程级组合保证它们引用同一 provider graph。本轮新增显式 factory：仅创建一个 prepared cloud host，
+  再依次打开 owner-only IPC 与 TLS；正常关闭和启动失败都按 TLS、IPC、host 逆序清理，close 可重复调用。
+- 宿主合成测试先让 TLS credential 在 IPC 已打开后失败，确认 socket 被删除且 provider 锁释放；随后用同一 database/socket 重开，通过 TLS 1.3
+  完成真实 owner 登录并无残留关闭。沙箱仍因 listener 权限跳过该项。
+- 本批没有 process entry、配置文件读取、真实证书/tenant、DNS/公网、sshd 配置、服务安装或启动，也没有 scheduler、executor、consumer 或 effect。
+- 完整 `npm run check` 通过：主项目 485 项中 474 通过、11 项仅因 sandbox listener 限制跳过，compat 179/179；宿主 runtime 专项为 1/1。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
