@@ -1571,3 +1571,7 @@
 - 完整 `npm run check` 通过：主项目 502 项中 490 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构保持 136 modules、
   76 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once、隔离 101/101 且无 drift；
   continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，全部兼容门禁通过。
+- 提交 `1460b8662c476b3929e63dbeab41a205296ea386` 后构建 12 文件发行包，artifact digest
+  `sha256:e0e6ab92a68fb5072dd1b5d40c4229bb192852994352ef279a2cbb301b2cf5a9`；bundled admin entry 完成 install/configure/owner 后，
+  演练精确删除临时 receipt 模拟 crash，再以 expected identity 成功 repair 并由 status 回读 `owner-created-inactive`。全部 activation flag 仍关闭，
+  含一次性 credential/database 的临时根已整体删除。
