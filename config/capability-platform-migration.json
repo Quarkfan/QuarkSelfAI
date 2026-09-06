@@ -24,7 +24,7 @@
     {
       "disposition": "platform-core",
       "targetPlane": "cloud-control-plane",
-      "moduleIds": ["test-tenant-control-plane", "agent-blueprint-compiler", "capability-offer-compiler", "capability-artifact-candidate-compiler", "inactive-device-sync"]
+      "moduleIds": ["test-tenant-control-plane", "test-agent-studio", "agent-blueprint-compiler", "capability-offer-compiler", "capability-artifact-candidate-compiler", "inactive-device-sync"]
     },
     {
       "disposition": "platform-core",

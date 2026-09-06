@@ -18,7 +18,7 @@ async function fixtures() {
 test('represents every core-bound offer exactly once as a non-installable platform facility', async () => {
   const { offers, specs } = await fixtures()
   const catalog = compilePlatformFacilities(offers, specs)
-  assert.equal(catalog.coveredCoreOfferCount, 51)
+  assert.equal(catalog.coveredCoreOfferCount, 52)
   assert.deepEqual(catalog.uncoveredModuleIds, [])
   assert.equal(catalog.facilities.length, 4)
   assert.ok(catalog.facilities.every(item => !item.installable && !item.replaceableByPrivatePack && item.currentOwnerPreserved))

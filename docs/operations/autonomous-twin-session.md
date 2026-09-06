@@ -827,3 +827,12 @@
   discovery/routing 和 inactive install，durable runtime 继续独立。
 - 该修正只改变迁移目录元数据，不改 source import、composition、listener、process 或 owner。四个 Facility 仍 exactly-once 覆盖
   51 个 core Offer，私有 pack 不能替换任何核心设施。
+
+## 2026-09-06 Capability Platform Phase 3C test Agent Studio
+
+- 新增 tenant/user scoped Agent draft、乐观 revision 与不可变 test release contract/reference store。相同 draft ID 可在不同租户隔离
+  共存，过期 revision 不能覆盖新草稿，同一 Blueprint semantic version 不能绑定两个 digest。
+- 仅接受 `test.*`、`releaseState=test`、手动 trigger、无 external-effect 的 Blueprint；绝对本地路径、secret-shaped 配置、自动 trigger
+  和 stale digest 失败关闭。test publish 只生成元数据，不 dispatch、不 schedule。
+- 当前无数据库、HTTP listener、团队协作、生产 release 或 runtime mount。新增模块后 catalog/migration 为 112/112，Facility core
+  coverage 为 52/52；现网 owner/effect 不变。

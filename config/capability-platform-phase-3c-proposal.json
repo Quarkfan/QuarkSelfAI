@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-3c-test-agent-studio",
+  "status": "implemented-inactive",
+  "baseRevision": "5fe5f62e119b40769779d10260c76120475abf2e",
+  "architectureChange": "Add a tenant/user-scoped Agent Studio draft and immutable test-release model with optimistic concurrency.",
+  "allowedActions": ["save test Blueprint drafts in memory", "enforce optimistic revisions", "publish immutable test-only metadata", "run offline fixtures"],
+  "explicitExclusions": ["production tenants", "automatic triggers", "external effects", "task dispatch", "database persistence", "network listener", "runtime composition change", "service restart", "owner working-tree files"],
+  "rollback": {"method":"Revert the Phase 3C commit.","stateMigrationRequired":false,"serviceRestartRequired":false,"dataRecoveryRequired":false},
+  "ownerAuthorization": {"basis":"Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.","runtimeActivationAuthorized":false}
+}

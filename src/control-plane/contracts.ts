@@ -1,4 +1,5 @@
 import type { SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
+import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
 
 export interface TenantContextV1 {
   readonly tenantId: string
@@ -28,4 +29,34 @@ export interface TestTenantControlPlanePortV1 {
 export interface ExecutionPlanSignerV1 {
   readonly keyId: string
   sign(input: { readonly algorithm: 'ed25519'; readonly payloadDigest: string }): Promise<string>
+}
+
+export interface AgentDraftRecordV1 {
+  readonly tenantId: string
+  readonly userId: string
+  readonly draftId: string
+  readonly blueprint: AgentBlueprintV1
+  readonly revision: number
+  readonly state: 'draft' | 'test-released'
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+
+export interface AgentTestReleaseV1 {
+  readonly tenantId: string
+  readonly userId: string
+  readonly draftId: string
+  readonly blueprintId: string
+  readonly version: string
+  readonly blueprintDigest: string
+  readonly draftRevision: number
+  readonly state: 'test'
+  readonly createdAt: string
+}
+
+export interface TestAgentStudioPortV1 {
+  saveDraft(context: TenantContextV1, input: { readonly draftId: string; readonly blueprint: AgentBlueprintV1; readonly expectedRevision: number }, now?: Date): AgentDraftRecordV1
+  publishTest(context: TenantContextV1, input: { readonly draftId: string; readonly expectedRevision: number }, now?: Date): AgentTestReleaseV1
+  getDraft(context: TenantContextV1, draftId: string): AgentDraftRecordV1 | undefined
+  listDrafts(context: TenantContextV1): readonly AgentDraftRecordV1[]
 }
