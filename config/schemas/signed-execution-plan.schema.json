@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quarkself.ai/schemas/signed-execution-plan-v1.json",
+  "title": "Signed Execution Plan V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "planId", "issuedAt", "expiresAt", "keyId", "algorithm", "payloadDigest", "signature", "envelope"],
+  "properties": {
+    "schemaVersion": {"const": 1}, "planId": {"$ref": "#/$defs/id"},
+    "issuedAt": {"type": "string", "format": "date-time"}, "expiresAt": {"type": "string", "format": "date-time"},
+    "keyId": {"type": "string", "minLength": 1}, "algorithm": {"const": "ed25519"},
+    "payloadDigest": {"$ref": "#/$defs/digest"}, "signature": {"type": "string", "minLength": 1},
+    "envelope": {"$ref": "https://quarkself.ai/schemas/execution-envelope-v1.json"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,63}$"},
+    "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+  }
+}

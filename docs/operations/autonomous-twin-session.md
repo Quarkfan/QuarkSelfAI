@@ -715,3 +715,17 @@
   迁移映射，原 99 项处置保持不变。
 - 本批没有改变现网 composition、消费者/provider/scheduler/writer、网络、凭证、服务或数据；没有启用私有包、删除主线来源
   或重启。静态 POC 视觉证据仍 outstanding，不因开发授权被误记为验收完成。
+
+## 2026-09-06 Capability Platform Phase 2A 客户端安全边界
+
+- 在 Phase 1A revision `7d7da92bf602bccecf1c2213a4374c34adf55dbb` 的静态契约上继续构建，不启动真实客户端。
+  `DeviceIdentityV1` 只包含 tenant/user/device 公共标识、公钥与不透明 attestation reference，模型中没有私钥字段。
+- `ExecutorCapabilityReportV1` 只报告 availability、版本、协议、能力、约束与 TTL；validator 拒绝本地路径和 secret-shaped
+  内容。`InactiveExecutorDiscoveryV1` 只调度注入 probe，仓库没有 shell/CLI probe，也没有把 probe 挂入 Cordis。
+- `negotiateExecutor` 从显式 allowlist/preference、协议与能力需求中选择 ready 且未过期的 report；选择过程不启动 executor。
+  fixture 验证首选不可用时可选择显式 safe fallback，但不在核心写死任何具体执行器产品。
+- `SignedExecutionPlanV1` 把签名信息绑定到不含签名元数据的 envelope payload digest，并经注入 verifier 验证 key、算法、有效期、
+  digest 与 envelope metadata 一致性；任何 action 字段漂移均失败关闭。inactive client snapshot 固定零 capability、零 runtime
+  owner 和 effects 关闭。
+- 本批新增 2 个模块，目录现为 103 项且迁移映射 103/103 exactly-once。没有设备 enrollment、网络连接、真实工具探测、
+  installer、电脑控制、consumer/provider/scheduler/effect 变化、私有包激活、外部写或服务重启。

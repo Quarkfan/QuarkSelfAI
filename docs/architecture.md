@@ -15,7 +15,13 @@ contract、规范化摘要和无生命周期的 inactive registry，但没有挂
 本地敏感数据或删除现有来源。原 99 个模块的拟处置与控制台范围分别由
 `config/capability-platform-migration.json` 和 `config/capability-platform-console-coverage.json` 固定。
 新增的 `capability-platform-contracts` 是第 100 个、静态且无 provider 的公共 contract module；校验与 inactive registry
-被隔离为第 101 个、默认 inactive 的治理 module。两者均已纳入 exactly-once 映射。
+被隔离为第 101 个、默认 inactive 的治理 module。Phase 2A 再增加静态 `local-client-contracts` 和 inactive
+`local-client-negotiation`，当前共 103 个模块，均已纳入 exactly-once 映射。
+
+Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
+私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
+计划验证在 envelope 被交给 executor 前完成。当前 discovery 仅接受注入式 probe，客户端 snapshot 固定 disconnected 或
+unenrolled 且 owner/effects 全为零；仓库不存在真实探针、连接器、installer 或常驻 client daemon。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

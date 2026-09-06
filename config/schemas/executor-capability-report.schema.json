@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quarkself.ai/schemas/executor-capability-report-v1.json",
+  "title": "Executor Capability Report V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "deviceId", "executorId", "availability", "version", "protocolVersions", "capabilities", "constraints", "discoveredAt", "expiresAt"],
+  "properties": {
+    "schemaVersion": {"const": 1}, "deviceId": {"$ref": "#/$defs/id"}, "executorId": {"$ref": "#/$defs/id"},
+    "availability": {"enum": ["ready", "not-installed", "auth-required", "version-unsupported", "unavailable"]},
+    "version": {"type": ["string", "null"]},
+    "protocolVersions": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "capabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "discoveredAt": {"type": "string", "format": "date-time"}, "expiresAt": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {"id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,63}$"}}
+}

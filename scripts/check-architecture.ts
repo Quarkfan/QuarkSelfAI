@@ -381,6 +381,7 @@ for (const filename of files) {
       'src/policy/types', 'src/execution/workspace-policy', 'src/execution/ledger-contract', 'src/events/contracts', 'src/workflow/contracts',
       'src/capability-platform/permissions', 'src/capability-platform/interfaces', 'src/capability-platform/manifest',
       'src/capability-platform/blueprint', 'src/capability-platform/execution-envelope',
+      'src/client-runtime/contracts',
     ])) {
       violations.push(`${from} exports non-contract implementation ${to}`)
     }

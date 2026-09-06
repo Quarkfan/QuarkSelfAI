@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 contract 与治理 module，合计 101 个）的拟迁移处置见
+（当前另含两组 Phase 1/2A contract 与治理 module，合计 103 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -12,6 +12,10 @@
 Phase 1A 已实现 `CapabilityManifestV1`、`AgentBlueprintV1`、`ExecutionEnvelopeV1`、权限/接口 contract、确定性
 canonical digest 和无生命周期的 inactive registry，并以 Claude Code、Codex、DSH 等价输入 fixture 验证。它只进入公共
 静态 API；没有实现云控制面、客户端 daemon、安装器、执行器发现、私有包注册或任何运行 owner 切换。
+
+Phase 2A 已实现 provider-neutral 设备公开身份、隐私有界 executor report、纯 negotiation、signed plan 校验端口和 inactive
+client snapshot。当前“发现”只由离线 fake probe 验证，尚未调用本机工具；因此属于客户端协议基础，不满足真实设备注册、
+真实 Claude Code/Codex/DSH 发现或电脑操作完成标准。
 
 本文件把个人助手建设期间提出的需求映射到实现、验证和接管门禁，防止“测试很多”掩盖某条原始需求仍
 未完成。机器可读接管状态仍以 `config/feature-parity.json` 为准；本表不得单独放行生产切换。
