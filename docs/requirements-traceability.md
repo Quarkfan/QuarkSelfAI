@@ -145,6 +145,10 @@ direct transport 现已有可真实启动的 TLS 1.3 edge，它只接受 shared-
 宿主测试通过临时证书完成一次真实 `127.0.0.1:0` TLS 1.3 请求并确认 listener/connection 正常关闭；wildcard ephemeral bind、独立 provider ownership
 和非法 PEM 均失败关闭。尚未挂入 server process，亦无真实域名、证书轮换、反向代理、防火墙或公网部署。
 
+SSH 服务端已增加 owner-only Unix IPC：只有唯一 cloud host 打开 0600 socket，sshd-side proxy 只交换单个 bounded frame，不能构造 provider。
+宿主测试完成真实 Unix socket request/response、权限和清理验证，并修复了 Node 默认 half-close 会提前截断异步响应的问题。尚缺打包后的 subsystem entry、
+sshd user/key/ForceCommand 配置和真实远程连接，因此还不能称 SSH gateway 已部署。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

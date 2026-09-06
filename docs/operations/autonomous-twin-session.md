@@ -1423,3 +1423,13 @@
 - 本批不挂载 server process，不配置真实证书、DNS、反向代理、防火墙或公网端口，不启动持久服务，不改变 provider/consumer/writer/effects。
 - 完整 `npm run check` 通过：主项目 481 项中 473 通过、8 项仅因 sandbox loopback 限制跳过，compat 179/179；宿主 TLS 专项则为 2/2。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+
+## 2026-09-06 owner-only SSH subsystem IPC
+
+- 为避免 sshd subsystem 子进程自行打开第二套 provider，本轮让唯一 cloud host 在 process-owned 0700 root 创建 0600 Unix socket；proxy 只做一个 bounded
+  stdin/stdout frame 的 IPC，不导入 repository/provider，也没有远程网络、scheduler、executor 或 effect 能力。
+- socket 路径必须 unused/canonical，bridge 固定 shared-host ownership 与 effects-off；关闭时核对创建时 device/inode 后删除，路径若被替换则拒绝误删。
+- 沙箱不允许 Unix listener；宿主首测发现 Node 默认 half-close 会在请求 EOF 后提前截断异步响应，改为 `allowHalfOpen=true` 后 2/2 测试通过，0600、单次调用、
+  response 和删除均已验证。未配置 sshd user/key/subsystem、未启动持久服务或远程连接。
+- 完整 `npm run check` 通过：主项目 483 项中 474 通过、9 项仅因 sandbox listener 限制跳过，compat 179/179；宿主 IPC 专项为 2/2。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。

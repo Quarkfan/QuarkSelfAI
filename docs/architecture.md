@@ -97,6 +97,9 @@ SSH frame 委托该 composition 已持有的 device-session provider。配置固
 [ADR 0151](adr/0151-explicit-tls-cloud-edge.md) 提供显式 Node TLS 1.3 edge：只包裹既有 handler，不能创建 provider；证书/私钥只由调用方以
 内存 bytes 注入，不进入 JSON/argv/receipt。literal IP、port、timeout、connection bound、shared-host ownership 与 effects-off 均为 closed config。
 真实 loopback TLS 1.3 握手已完成并立即关闭，但该 edge 未挂入 product/service composition，也没有真实证书、DNS 或公网端口。
+[ADR 0152](adr/0152-owner-only-ssh-subsystem-ipc.md) 固定 SSH 服务端进程边界：唯一 cloud host 在 process-owned 0700 目录创建 0600 Unix socket，
+sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打开数据库或 provider。IPC 使用 half-close 完成 unary request/response，关闭时按
+创建时 device/inode 清理 socket。真实 sshd user/key/subsystem 注册和服务激活仍未进行。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
