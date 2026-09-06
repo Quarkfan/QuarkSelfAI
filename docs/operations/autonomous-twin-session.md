@@ -772,3 +772,15 @@
   六个 work integration 使用 `private-pack-inactive`，五个 migration module 使用 `migration-only` 并保留 exit criteria。
 - 每个 Offer 固定保留 current owner 且 activation=false；私有 Offer 不暴露主线 source reference。本批没有发布 Manifest、写入
   registry、复制私有内容、切换 owner 或改变运行状态。
+
+## 2026-09-06 Capability Platform Phase 4B Artifact Candidate
+
+- 把 55 个 `manifest-pending` 或 `private-pack-inactive` Offer exactly-once 归并成 24 个产品级 Capability candidate，避免把内部
+  module 机械等同为控制台能力；当前类型覆盖 policy、workflow、connector、agent、application、package、composite 与
+  integration-pack，未伪造仓库当前并不存在的 browser runtime 或 game 实现。
+- 每个 candidate 固定 `publicationAllowed=false`、`activationAllowed=false`、保留当前 owner，并显式列出 artifact digest、许可、
+  lifecycle、权限、SBOM 与签名等证据缺口。证据不完整时只能显示为 `evidence-pending`，不能产生可发布 Manifest。
+- 6 个私有 Offer 由 selector 在内存归并；公开结果只保留数量与稳定摘要，不暴露私有 module assignment。重复、漏项、未知 module、
+  私有映射外泄或提前发布均失败关闭。新增 compiler 后 module catalog 与迁移映射为 109/109。
+- 本批不发布 Manifest、不写 registry、不安装、不加载、不授权、不运行、不切 owner，不改变 composition 或任何 effect；用户未提交
+  的 `package.json`、品牌 client 和 `.DS_Store` 继续隔离。

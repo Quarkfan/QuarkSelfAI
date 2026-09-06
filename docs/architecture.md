@@ -19,7 +19,8 @@ contract、规范化摘要和无 Cordis lifecycle 的 inactive registry，但没
 新增的 `capability-platform-contracts` 是第 100 个、静态且无 provider 的公共 contract module；校验与 inactive registry
 被隔离为第 101 个、默认 inactive 的治理 module。Phase 2A 再增加静态 `local-client-contracts` 和 inactive
 `local-client-negotiation`；Phase 2B 增加 inactive `capability-install-planner`；Phase 3A 增加控制面 contract 与 test-tenant
-reference store；Phase 3B 增加 inactive Agent Blueprint compiler；Phase 4A 增加 module→Offer compiler。当前共 108 个模块，
+reference store；Phase 3B 增加 inactive Agent Blueprint compiler；Phase 4A 增加 module→Offer compiler；Phase 4B 将所有 artifact
+Offer 精确归并为产品级 Capability candidate。当前共 109 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、

@@ -382,6 +382,7 @@ for (const filename of files) {
       'src/capability-platform/permissions', 'src/capability-platform/interfaces', 'src/capability-platform/manifest',
       'src/capability-platform/blueprint', 'src/capability-platform/execution-envelope',
       'src/capability-platform/offers',
+      'src/capability-platform/artifact-candidates',
       'src/client-runtime/contracts',
       'src/control-plane/contracts',
     ])) {
