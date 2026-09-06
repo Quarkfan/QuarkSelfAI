@@ -871,3 +871,10 @@
 - identical attempt 幂等，single-use grant 的不同 attempt 失败关闭；Phase 5A harness 通过注入端口强制打开该 sink，并证明当前
   no-effect plan 的记录数严格为 0。该依赖保持 workflow→port→provider，不让编排源码绑定具体 provider。
 - 本批不提供或调用真实 effect，不持久化 recording，不激活 provider。新增模块后 catalog/migration 115/115，Facility coverage 55/55。
+
+## 2026-09-06 Capability Platform Phase 5C lease-bound redacted results
+
+- 测试 control plane 的 result contract 新增 `deviceId` 与 `planId`，并要求 task 已由该 device/plan 的 lease acknowledgement 唯一推进为
+  `leased` 后才能接受结果；`queued` task、其他 device/plan 和无效 evidence 一律失败关闭。
+- 第一份脱敏结果不可变；完全相同的重试幂等返回，冲突结果不能覆盖。result 仍不携带原始输出、lease token、本地路径或凭证。
+- 本批不接网络、不运行 Agent、不写持久数据库、不改变运行 owner/effect；模块总数与 Facility coverage 保持 115/115、55/55。

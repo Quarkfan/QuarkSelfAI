@@ -112,10 +112,16 @@ export class InactiveTestTenantControlPlaneV1 implements TestTenantControlPlaneP
   complete(context: TenantContextV1, input: Omit<RedactedResultV1, 'tenantId' | 'userId'>): RedactedResultV1 {
     const partition = this.#partition(context)
     const dispatch = partition.dispatches.get(input.taskId)
-    if (!dispatch || dispatch.userId !== context.userId) throw new Error('result task is outside the tenant user scope')
+    if (!dispatch || dispatch.userId !== context.userId || dispatch.deviceId !== input.deviceId || dispatch.plan.planId !== input.planId) throw new Error('result task, device or plan is outside the leased scope')
+    if (dispatch.state !== 'leased' && !partition.results.has(input.taskId)) throw new Error('result requires an acknowledged task lease')
     if (!input.summaryCode || unsafeText.test(input.summaryCode)) throw new Error('result must be privacy bounded')
+    if (!input.artifactDigests.every(value => /^sha256:[a-f0-9]{64}$/.test(value)) || Number.isNaN(Date.parse(input.completedAt))) throw new Error('result evidence is invalid')
     const existing = partition.results.get(input.taskId)
-    if (existing) return existing
+    if (existing) {
+      const proposed = { ...input, tenantId: context.tenantId, userId: context.userId }
+      if (JSON.stringify(existing) !== JSON.stringify(proposed)) throw new Error('immutable task result already exists with different evidence')
+      return existing
+    }
     const result = Object.freeze({ ...input, tenantId: context.tenantId, userId: context.userId })
     partition.results.set(input.taskId, result)
     const state = input.outcome === 'succeeded' ? 'completed' : input.outcome
