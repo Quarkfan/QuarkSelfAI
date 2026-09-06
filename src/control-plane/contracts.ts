@@ -95,3 +95,8 @@ export interface PersistentCapabilityRegistryPortV1 {
   listVisible(context: TenantContextV1): Promise<readonly CapabilityCatalogRecordV1[]>
   close(): Promise<void>
 }
+
+export interface TenantDevicePortV1 {
+  registerDevice(context: TenantContextV1, input: { readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceRecordV1>
+  listDevices(context: TenantContextV1): Promise<readonly DeviceRecordV1[]>
+}

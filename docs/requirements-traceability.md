@@ -50,6 +50,9 @@ Capability Registry 现已具备默认不挂载的 SQLite provider：只接收�
 云控制面新增默认不挂载的认证应用层：每次操作只从 identity port 的 opaque session reference 推导 tenant/user context，调用方不能在
 业务参数中指定 tenantId；当前没有 HTTP listener、token parser、cookie、身份提供方、服务启动或 production tenant。
 
+无 listener HTTP handler 已覆盖 `/v1/devices` 注册/查询、Capability 列表和 Agent draft 列表，使用 closed request body 和稳定脱敏错误码；
+它仅验证 API 语义，不代表公网服务、TLS、认证 provider 或客户端注册已经上线。
+
 Phase 4A 已把当前每个 module 编译为且只编译为一个隐私有界 Offer，并区分 core-bound、manifest-pending、private-pack-
 inactive 和 migration-only；该证据证明迁移目标无漏项，但 `manifest-pending` 仍须逐批形成真正 Manifest 才算能力转换完成。
 

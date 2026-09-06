@@ -1,7 +1,7 @@
 import type { ArtifactVerificationReportV1 } from '../client-runtime/contracts.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
-import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, TenantContextV1 } from './contracts.js'
+import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, DeviceRecordV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
 
 const sessionPattern = /^session:[a-z0-9][a-z0-9._:-]{0,127}$/
 
@@ -16,6 +16,7 @@ export class InactiveCloudControlPlaneApplicationV1 {
     private readonly identity: CloudIdentityPortV1,
     private readonly capabilities: PersistentCapabilityRegistryPortV1,
     private readonly studio: PersistentAgentStudioPortV1,
+    private readonly devices: TenantDevicePortV1,
   ) {}
 
   async listCapabilities(sessionReference: string): Promise<readonly CapabilityCatalogRecordV1[]> {
@@ -36,6 +37,14 @@ export class InactiveCloudControlPlaneApplicationV1 {
 
   async publishAgentTest(sessionReference: string, input: { readonly draftId: string; readonly expectedRevision: number }, now?: Date): Promise<AgentTestReleaseV1> {
     return await this.studio.publishTest(await this.#context(sessionReference), input, now)
+  }
+
+  async registerDevice(sessionReference: string, input: { readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceRecordV1> {
+    return await this.devices.registerDevice(await this.#context(sessionReference), input, now)
+  }
+
+  async listDevices(sessionReference: string): Promise<readonly DeviceRecordV1[]> {
+    return await this.devices.listDevices(await this.#context(sessionReference))
   }
 
   async #context(sessionReference: string): Promise<TenantContextV1> {

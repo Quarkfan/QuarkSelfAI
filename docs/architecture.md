@@ -56,6 +56,9 @@ authorization/execution/effects 五态均未打开。private release 只对 owne
 云控制面应用边界通过 `CloudIdentityPortV1` 接收 adapter 已解析的 opaque session reference，所有 Registry/Studio 操作的 tenant/user
 context 只由该 port 返回，API body 无法覆盖。当前应用层不含 HTTP listener、credential parser、scheduler 或 runtime mount。
 
+[ADR 0116](adr/0116-inactive-cloud-api-boundary.md) 进一步定义无 listener 的 `/v1` handler：设备注册/查询、能力目录和 Agent 草稿
+使用同一认证应用层，closed body 阻断 tenant 注入，错误响应不回传内部异常。TLS、HTTP listener、rate limit 与凭证解析仍属于未来 edge adapter。
+
 设备连接协议与具体网络通道分离。按 [ADR 0111](adr/0111-ssh-device-transport-fallback.md)，direct TLS 始终是主通道；在直连不可用时，
 客户端可选择固定 `quark-device-v1` SSH subsystem 作为候选备用通道。两者复用同一 device session、signed plan、lease、checkpoint、
 approval、workspace 和 effect contract，切换不产生第二 consumer/provider/writer。SSH 私钥只由客户端 secret reference 解析，必须 pin

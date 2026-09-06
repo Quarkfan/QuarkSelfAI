@@ -985,3 +985,10 @@
 - malformed、secret-shaped、绝对路径和未认证 session 在 provider 调用前失败关闭；fixture 证明每个操作都重新认证且不缓存跨用户上下文。
 - 本批没有身份提供方、HTTP listener、cookie/token parser、scheduler、dispatcher、executor、effect 或服务启动。新增模块后 catalog/
   migration 为 119/119、Facility coverage 为 59/59，composition 与 owner 不变。
+
+## 2026-09-06 inactive cloud device and HTTP API boundary
+
+- 认证应用层新增设备注册/查询 port，与 Registry/Studio 一样只使用 identity port 推导的 tenant/user context；请求参数不暴露 tenant override。
+- 新增 fetch-independent `/v1` handler，覆盖 device registration/list、capability list 与 agent-draft list；closed body 拒绝 tenant 注入，
+  unauthenticated/forbidden/conflict/rejected 使用稳定 code 且不泄露 exception details。
+- 本批没有 HTTP/TLS listener、raw token/cookie parser、rate limiter、identity provider、服务启动或 composition 变化；模块仍为 inactive 119/119。

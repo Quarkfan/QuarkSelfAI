@@ -20,7 +20,11 @@ function harness() {
     async getDraft() { return undefined }, async close() {},
   } satisfies PersistentAgentStudioPortV1
   const identity = { async resolveSession(reference: string) { return reference === 'session:alpha' ? alpha : reference === 'session:beta' ? beta : undefined } }
-  return { app: new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio), observed }
+  const devices = {
+    async registerDevice(context: TenantContextV1) { observed.push(context); return { tenantId: context.tenantId } as never },
+    async listDevices(context: TenantContextV1) { observed.push(context); return [] },
+  }
+  return { app: new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices), observed }
 }
 
 test('derives tenant and user only from the authenticated session on every operation', async () => {
@@ -29,7 +33,9 @@ test('derives tenant and user only from the authenticated session on every opera
   await app.listAgentDrafts('session:beta')
   await app.saveAgentDraft('session:alpha', { draftId: 'draft.one', blueprint: {} as never, expectedRevision: 0 })
   await app.publishAgentTest('session:beta', { draftId: 'draft.one', expectedRevision: 1 })
-  assert.deepEqual(observed.map(context => context.tenantId), ['test.alpha', 'test.beta', 'test.alpha', 'test.beta'])
+  await app.registerDevice('session:alpha', { deviceId: 'device.one', publicKey: 'public-key' })
+  await app.listDevices('session:beta')
+  assert.deepEqual(observed.map(context => context.tenantId), ['test.alpha', 'test.beta', 'test.alpha', 'test.beta', 'test.alpha', 'test.beta'])
   assert.ok(observed.every(context => Object.isFrozen(context) && context.userId === 'owner'))
 })
 
