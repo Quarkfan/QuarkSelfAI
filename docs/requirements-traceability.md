@@ -158,6 +158,9 @@ IPC，失败不输出路径或内部异常。宿主测试验证真实 child proc
 现已提供 built 但默认禁用、未安装的 cloud server entry：只接受 exact opt-in 与 owner-only closed config，使用真实随机 token、device proof verifier 和 pinned
 plan verifier；稳定 ready receipt 在 signal handler 安装后才产生，SIGTERM 会清理两个 edge 与唯一 provider。尚未加入任何 package/deploy/service 启动入口。
 
+SSH gateway 安装面现可生成 content-addressed review plan：专用非 root 用户、合法 Ed25519 public key、forced subsystem command、public-key-only 认证，
+并同时禁止 shell 旁路所需的 TTY、forwarding、agent、X11、tunnel 与 gateway。plan 明确 `applyAllowed=false`、`reloadAllowed=false`，没有系统写入。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

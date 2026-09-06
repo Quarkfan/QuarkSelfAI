@@ -106,6 +106,8 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 失败与关闭均按 TLS、IPC、host 逆序回收。它仍是未挂载 library，不读取部署配置/凭证、不提供 process entry，也未进入现有 composition 或服务管理器。
 [ADR 0155](adr/0155-default-disabled-cloud-server-entry.md) 增加默认禁用的 built server entry：私有 closed config、root-confined TLS 文件、
 真实 Ed25519 verifiers、随机 token、稳定 ready receipt 与 SIGTERM/SIGINT 清理均已闭合；entry 尚未进入 package script、部署 selector 或服务定义。
+[ADR 0156](adr/0156-prepared-openssh-gateway-plan.md) 提供纯渲染的 OpenSSH gateway plan：专用非 root 用户、Ed25519 public key、forced command
+与禁止 shell/TTY/forwarding/tunnel 的双重约束均被内容寻址；plan 固定不可 apply/reload，尚未写系统文件、创建账号或连接远端。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

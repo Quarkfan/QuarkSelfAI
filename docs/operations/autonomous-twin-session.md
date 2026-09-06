@@ -1463,3 +1463,13 @@
 - 本批未把 entry 加入 package scripts、container entrypoint、systemd/launchd 或当前 application selector；没有安装配置、真实 credential/tenant、服务启动或外部写。
 - 完整 `npm run check` 通过：主项目 486 项中 474 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；最终宿主 entry 专项为 1/1。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+
+## 2026-09-06 prepared OpenSSH gateway plan
+
+- 新增纯函数生成 `prepared-inactive` OpenSSH 工件：只允许专用非 root 用户与结构合法的单个 Ed25519 public key；authorized key 同时使用 `restrict`、
+  forced subsystem command 和显式 no-forwarding/no-agent/no-X11/no-PTY，Match block 再禁用密码、交互认证、TTY、tunnel 与 gateway。
+- 所有可进入 shell command 的 path 必须 absolute/normalized 且无空白、quote、backslash 或控制字节；caller key options、多 key/multiline、root user 均失败关闭。
+  plan 固定 apply/reload false，声明 OpenSSH >=7.2，提供先撤 key 再撤 drop-in 的回滚顺序并保持 server state。
+- 本批只生成内容与 digest，没有写 authorized_keys/sshd_config、创建用户、安装 key、执行 `sshd -t`、reload 服务或建立 SSH 连接。
+- 完整 `npm run check` 通过：主项目 488 项中 476 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
