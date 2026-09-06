@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 130 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 131 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -89,8 +89,11 @@ owner/effects 全为零。preflight 与 loopback 回执固定 `executorInvoked=f
 Pilot 02 已增加固定认证状态探测与只允许单 executor 的 no-effect smoke adapter。后续复核推翻了“DSH 五包 closure 可代表 fallback”的旧假设：
 只有锁定 `@deepseek-ai/dsh` 产品 CLI、完整必需 peer、可加载 headless composition 和 inference 配置同时成立才报告 ready。真实独立 action 证据显示
 Claude 超时、Codex 非零退出，而 DSH 在网络沙箱外通过同一签名、公开合成、零 capability/context/workspace/effect 程序成功；沙箱内仅得到 transport failure。
-DSH 经固定 stdin host 接收输入，OS argv 不含任务，工具与遥测由锁定 overlay 禁用，结果正文只进入随后删除的本地临时 store。该 adapter 仍默认不挂载，
-所以证明的是 executor boundary 可运行，不是 daemon、自动 fallback、生产激活或三执行器 parity 已完成。
+DSH 经固定 stdin host 接收输入，OS argv 不含任务，工具与遥测由锁定 overlay 禁用，结果正文只进入客户端私有 store。
+[ADR 0141](adr/0141-explicit-configured-client-reasoning-composition.md) 进一步把三种 adapter 收束为 configured client 的唯一产品 composition：
+只有显式 `executeSignedReasoningNoEffectOnce` 才会创建 adapter 并进入既有 device proof、lease、checkpoint-before-ack、精确选择与 digest-only result sync。
+DSH 每个 action 使用独立临时 home 并在结束时删除，不在持久 runtime 下形成第二 session 真源。composition 仍为 inactive，不自动连接、poll、
+fallback 或挂入 daemon，因此证明的是安装客户端边界已经真实接线，不是生产激活或三执行器成功率 parity 已完成。
 
 [ADR 0118](adr/0118-persistent-local-client-state-boundary.md) 增加独立、默认 inactive 的本地客户端 SQLite 状态域。设备私钥只以
 opaque secret/keychain reference 表示；workspace handle 到 canonical path 的映射只留本机，且每次解析重新核验根路径身份，阻断登记后

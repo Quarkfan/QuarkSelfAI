@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import { generateKeyPairSync } from 'node:crypto'
-import { chmod, mkdtemp, realpath, rm, symlink } from 'node:fs/promises'
+import { chmod, mkdtemp, readdir, readFile, realpath, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import type { DeviceEnrollmentClientPortV1, DeviceSessionServerPortV1 } from '../src/control-plane/contracts.js'
+import { executionEnvelopePayloadDigest } from '../src/capability-platform/validation.js'
+import type { DeviceEnrollmentClientPortV1, DeviceSessionServerPortV1, RedactedResultV1 } from '../src/control-plane/contracts.js'
+import type { SignedExecutionPlanV1 } from '../src/client-runtime/contracts.js'
+import type { FixedReasoningInvocationV1 } from '../src/client-runtime/reasoning-executor-adapter.js'
 import { compileInactiveClientBootstrap, InactiveConfiguredLocalClientV1 } from '../src/client-runtime/configured-local-client.js'
 
 const migration = new URL('../migrations/client-sqlite/001_client_state.sql', import.meta.url).pathname
@@ -15,6 +18,20 @@ const verifier = { async verify() { return true } }
 const planPublicKey = `ed25519-spki:${(generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }) as Buffer).toString('base64url')}`
 
 function document(stateRoot: string) { return { schemaVersion: 1, controlPlaneEndpoint: 'https://control.example.com/', stateRoot, tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner', planVerification: { keyId: 'control.primary', publicKey: planPublicKey } } as const }
+
+function signedReasoningPlan(): SignedExecutionPlanV1 {
+  const unsigned = {
+    schemaVersion: 1 as const, tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', agentId: 'agent.reasoning', runId: 'run.reasoning', actionId: 'action.reasoning',
+    blueprint: { id: 'agent.reasoning', version: '1.0.0', digest: `sha256:${'a'.repeat(64)}` }, program: { role: 'reasoner', goals: ['Return the synthetic fixture result'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.reasoning/action.reasoning',
+    deadline: later, budget: { tokens: 32, durationMs: 1_000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [],
+    executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: ['agent.execute'], allowedExecutors: ['dsh'], preferredExecutors: ['dsh'] },
+    continuity: { sessionId: null, continuationToken: null, fallbackAllowed: false, midActionSwitchAllowed: false as const },
+    plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'control.primary' },
+  }
+  const digest = executionEnvelopePayloadDigest(unsigned)
+  const envelope = { ...unsigned, plan: { digest, signature: `signed:${digest}`, keyId: 'control.primary' } }
+  return { schemaVersion: 1, planId: 'plan.reasoning', issuedAt: now.toISOString(), expiresAt: later, keyId: 'control.primary', algorithm: 'ed25519', payloadDigest: digest, signature: `signed:${digest}`, envelope }
+}
 
 test('assembles one configured client without connecting and resumes enrollment across reopen', async () => {
   const temporary = await mkdtemp(join(tmpdir(), 'quark-configured-client-')); const root = await realpath(temporary)
@@ -73,5 +90,37 @@ test('provisions only after revalidating the same inactive bootstrap plan', asyn
     assert.equal(await InactiveConfiguredLocalClientV1.provisionMasterKey(plan, { async ensure() { provisions += 1; return 'created' } }), 'created')
     await assert.rejects(InactiveConfiguredLocalClientV1.provisionMasterKey({ ...plan, externalWritesEnabled: true as false }, { async ensure() { provisions += 1; return 'existing' } }), /not inactive/)
     assert.equal(provisions, 1)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('explicitly runs the signed DSH adapter through the configured durable client without effects', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'quark-configured-reasoning-')); const root = await realpath(temporary)
+  const plan = signedReasoningPlan(); let polls = 0; let invocations = 0; let submitted: RedactedResultV1 | undefined
+  const sessions: DeviceSessionServerPortV1 = {
+    async issueChallenge(scope) { return { schemaVersion: 1, challengeId: 'challenge.reasoning', ...scope, nonce: 'A'.repeat(43), issuedAt: now.toISOString(), expiresAt: later } },
+    async openSession() { return { schemaVersion: 1, sessionId: 'session.reasoning', tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', issuedAt: now.toISOString(), expiresAt: later, state: 'active' } },
+    async poll() { polls += 1; return polls === 1 ? { schemaVersion: 1, taskId: 'task.reasoning', planId: plan.planId, plan, deviceId: 'device.owner', leaseToken: 'L'.repeat(43), attempt: 1, leasedAt: now.toISOString(), expiresAt: later, externalWritesEnabled: false } : null },
+    async acknowledge() { return { schemaVersion: 1, taskId: 'task.reasoning', planId: plan.planId, deviceId: 'device.owner', state: 'accepted', acceptedAt: now.toISOString() } },
+    async submitResult(_sessionId, input) { submitted = { ...input, tenantId: 'tenant.alpha', userId: 'user.owner' }; return submitted },
+  }
+  try {
+    const bootstrap = await compileInactiveClientBootstrap(document(root), migration)
+    const client = await InactiveConfiguredLocalClientV1.initialize(bootstrap, verifier, { masterKeys: { async load() { return Uint8Array.from(masterKey) } }, sessions }, now)
+    await client.refreshInstalledExecutors(root, now, {
+      runtimeRoot: root,
+      versionRunner: { async run(executorId) { return { state: executorId === 'dsh' ? 'completed' as const : 'not-found' as const, exitCode: executorId === 'dsh' ? 0 : null, output: executorId === 'dsh' ? '0.1.1-rc.2' : '', authentication: executorId === 'dsh' ? 'ready' as const : 'unknown' as const } } },
+      authRunner: { async run() { throw new Error('auth probe must not run') } },
+      bundledDshDiscovery: async () => ({ schemaVersion: 1, executorId: 'dsh', installation: 'detected', version: '0.1.1-rc.2', inferenceConfigured: true, authentication: 'ready', protocolVersions: ['envelope.v1'], capabilities: ['agent.execute'] }),
+    })
+    const receipt = await client.executeSignedReasoningNoEffectOnce(now, {
+      clock: () => now,
+      runner: { async run(invocation: FixedReasoningInvocationV1) { invocations += 1; assert.equal(invocation.executorId, 'dsh'); assert.equal(invocation.args.some(value => value.includes('synthetic fixture')), false); assert.match(invocation.stdin, /synthetic fixture/); return { state: 'completed', exitCode: 0, stdout: 'fixture result' } } },
+    })
+    assert.deepEqual({ state: receipt.state, executorId: receipt.executorId, invoked: receipt.executorInvoked, effects: receipt.effectsActive }, { state: 'result-synced', executorId: 'dsh', invoked: true, effects: 0 })
+    assert.equal(invocations, 1); assert.equal(submitted?.summaryCode, 'executor.reasoning-completed'); assert.equal(submitted?.artifactDigests.length, 1)
+    const resultFiles = await readdir(join(root, 'artifacts/reasoning-results'))
+    assert.equal(resultFiles.length, 1); assert.equal(await readFile(join(root, 'artifacts/reasoning-results', resultFiles[0]!), 'utf8'), 'fixture result')
+    assert.deepEqual(await readdir(join(root, 'runtime/reasoning')), [])
+    await client.close()
   } finally { await rm(root, { recursive: true, force: true }) }
 })

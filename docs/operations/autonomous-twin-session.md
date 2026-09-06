@@ -1272,3 +1272,20 @@
 - 发布包初装暴露缺失 peer，补齐并锁定后，headless composition 可加载。相同公开合成 signed program 在网络沙箱内仅出现 transport failure，在沙箱外由 DSH 成功完成；保留的审计只含版本、稳定结果码、artifact digest 与安全属性，临时正文和 session 已删除。
 - 该 adapter、pilot 和 DSH host 仍为 `runtime=inactive`，没有挂入 configured client、daemon 或现网 composition；未切换消费者/provider/owner，未重启服务，effects 保持 0/23。回滚为移除新增 DSH 产品依赖、stdin host、两层 patch、pilot 与 discovery gate，不涉及 live 状态迁移。
 - 锁定完整 peer 后，干净 `npm ci` 通过。完整 `npm run check` 通过：主项目 449 项中 442 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 130 modules、117 assets、effects active 0/23。work-domain isolation、assistant continuity、capability evolution、capability platform、DSH/server compatibility 与根同步审计均通过；continuity 仍如实保留 `work-integration-not-yet-isolated`。
+
+## 2026-09-06 explicit configured-client reasoning composition
+
+- 新增 inactive operations composition，确定性提供 Claude Code、Codex、DSH 三个真实 reasoning adapter；configured client 只有在调用
+  `executeSignedReasoningNoEffectOnce` 时才组装它们，初始化仍不联网、不探测、不轮询、不运行。签名计划与现有 durable cycle 继续负责唯一选择、
+  checkpoint-before-ack、暂停后同 executor 恢复和 digest-only result sync，adapter 内没有 fallback。
+- runtime 与 result root 必须是 owner-only canonical 目录。DSH stdin host 为每个 action 创建独立临时 home，并在成功或失败后删除；持久 runtime
+  不保存第二份 DSH session/prompt/result，正文只由 0600 content-addressed result store 持有。
+- 集成 fixture 从加密 configured client、DSH ready report、device session lease、签名 public reasoning program 到本地正文与脱敏结果同步完整通过；
+  只调用 DSH 一次，OS argv 不含目标文本，effects=0，持久 runtime 为空。本批不启动 daemon、不自动 poll、不连接真实云、不挂 Cordis composition，
+  不改变 consumer/provider/scheduler/writer，也不重启现网服务。
+- 回滚删除 facade delegate、composition、测试、ADR 与 catalog module 即可；无 schema、live state 或外部 effect 需要迁移。完整 `npm run check`
+  通过：主项目 453 项中 446 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 131 modules、71 个 platform-core
+  Offer、117 assets、effects active 0/23。capability platform 131/131 exactly-once、work-domain isolation、assistant continuity、capability
+  evolution、DSH/server/BlackLake/Lark compatibility 与根同步审计均通过；continuity 仍如实保留 `work-integration-not-yet-isolated`。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`；`failureReason=none`、`failureStage=none`。本轮没有启动 Claude Code、Codex
+  或 DSH 的真实模型 action，集成执行使用注入的固定 runner。

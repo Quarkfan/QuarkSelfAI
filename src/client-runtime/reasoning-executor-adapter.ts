@@ -89,7 +89,7 @@ class NodeFixedReasoningProcessRunnerV1 implements FixedReasoningProcessRunnerV1
       let stdout = Buffer.alloc(0)
       let settled = false
       let state: FixedReasoningObservationV1['state'] = 'completed'
-      const child = spawn(invocation.command, [...invocation.args], { cwd: invocation.cwd, env: fixedEnvironment(invocation.executorId, invocation.cwd), shell: false, stdio: ['pipe', 'pipe', 'ignore'] })
+      const child = spawn(invocation.command, [...invocation.args], { cwd: invocation.cwd, env: fixedEnvironment(invocation.executorId), shell: false, stdio: ['pipe', 'pipe', 'ignore'] })
       const finish = (exitCode: number | null): void => {
         if (settled) return
         settled = true
@@ -173,13 +173,12 @@ function dshStdinHostPath(): string {
   return fileURLToPath(new URL('../../dist/client-runtime/dsh-stdin-host.js', import.meta.url))
 }
 
-function fixedEnvironment(executorId: ReasoningExecutorIdV1, cwd: string): NodeJS.ProcessEnv {
+function fixedEnvironment(executorId: ReasoningExecutorIdV1): NodeJS.ProcessEnv {
   const names = ['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'ALL_PROXY'] as const
   const environment: NodeJS.ProcessEnv = Object.fromEntries(names.flatMap(name => process.env[name] ? [[name, process.env[name]]] : []))
   if (executorId === 'claude-code' && process.env.CLAUDE_CONFIG_DIR) environment.CLAUDE_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR
   if (executorId === 'codex' && process.env.CODEX_HOME) environment.CODEX_HOME = process.env.CODEX_HOME
   if (executorId === 'dsh') {
-    environment.DSH_HOME = join(cwd, 'dsh-home')
     environment.DSH_PERMISSION_MODE = 'read-only'
     environment.DSH_TOOLS_MODE = 'native'
     environment.DSH_TELEMETRY_MODE = 'DISABLED'

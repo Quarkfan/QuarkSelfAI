@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap 与双端 device-code enrollment，合计 130 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap 与双端 device-code enrollment，合计 131 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -20,7 +20,7 @@ Phase 2A/5E 已实现 provider-neutral 设备公开身份、隐私有界 executo
 client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃分类器。获批 Pilot 01 已真实运行固定 version probe，并完成一次
 临时 loopback signed no-effect lease/checkpoint 往返。Pilot 02 固定 auth probe 确认 Claude Code/Codex 当前认证 ready；bundled DSH closure
 版本闭合但当前 pilot 进程没有 inference 配置。唯一 Claude 无工具合成尝试在 60 秒超时后终止，未 fallback、未保留输出、effects=0，
-所以仍不满足可运行 executor、真实 Agent 执行或电脑操作完成标准。
+所以该早期证据仍不满足可运行 executor、真实 Agent 执行或电脑操作完成标准；后续 reasoning pilot 与 configured-client 接线证据见下文。
 
 客户端本地状态现可在独立 SQLite 中跨 reopen 保存公开设备身份、opaque 私钥引用、workspace handle 映射、脱敏 executor report、
 installed-inactive capability、选定/前一版本和 no-effect run checkpoint。真实本地制品存储会先复核 SHA-256，再以内容 digest 原子落入
@@ -68,13 +68,15 @@ configured client 现有唯一显式 installed-executor discovery：复用固定
 
 客户端另有显式 no-effect execution cycle：只接受 signed no-effect lease，先 checkpoint leased、精确 ack 后再 checkpoint accepted，才将同一 `ExecutorAdapterInputV1` 交给精确选中的
 executor port，privacy-bounded result 先落本地再提交，server 接受后才标记 synced。合成失败跨 reopen 恢复为同 executor，未调用备用 port；
-completed-pending-sync 会先重传结果而不重复执行。虽然签名计划现已携带完整声明式 Agent program，该 cycle 的集成测试仍使用注入 executor，尚无 daemon、自动 poll、
-电脑操作或 effect，因此仍不满足“通过统一契约真实运行 Agent”的最终完成标准。
+completed-pending-sync 会先重传结果而不重复执行。该 cycle 现已由 configured client 显式接到三个真实产品 adapter 的 composition；集成测试从
+加密客户端、DSH readiness、签名 lease、精确选择、stdin 调用、本地正文落盘到 digest-only result sync 完整闭合，仍没有 daemon、自动 poll、
+电脑操作或 effect，因此尚不满足客户端常驻运行与广义能力执行的最终完成标准。
 
 当前另有默认不挂载的 Claude Code/Codex/DSH reasoning-only process adapter：它真实实现现有 executor port，但只接受无 capability graph、context、workspace、
 approval 和 effect 的 provider-neutral 计划，并把模型正文仅保存在客户端私有 content-addressed store。真实公开合成 pilot 中 Claude 超时、Codex 非零退出；
 DSH 使用锁定产品 headless CLI、stdin host、allowlisted environment 和禁用全部模型工具/遥测的 overlay 成功返回，正文未投影且临时状态已删除。
-这证明 DSH 边界可执行，但 adapter 尚未挂载到自动 client cycle，不能称三个 executor parity 或生产 fallback 已完成。
+这证明 DSH 边界可执行；三 adapter 已可由 configured client 的显式方法进入 durable cycle，但仍未挂入自动 client daemon。Claude/Codex 的真实
+pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallback 已完成。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；

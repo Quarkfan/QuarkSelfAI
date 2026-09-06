@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises'
+import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const maxInputBytes = 256 * 1024
@@ -23,5 +24,11 @@ async function readBoundedStdin(): Promise<string> {
 
 const task = await readBoundedStdin()
 await Promise.all([readFile(inferencePatch, 'utf8'), readFile(noEffectPatch, 'utf8')])
-process.argv = [process.execPath, dshBin, '--profile', 'headless', '--patch', inferencePatch, '--patch', noEffectPatch, task]
-await import(pathToFileURL(dshBin).href)
+const actionHome = await realpath(await mkdtemp(join(process.cwd(), 'dsh-action-')))
+process.env.DSH_HOME = actionHome
+try {
+  process.argv = [process.execPath, dshBin, '--profile', 'headless', '--patch', inferencePatch, '--patch', noEffectPatch, task]
+  await import(pathToFileURL(dshBin).href)
+} finally {
+  await rm(actionHome, { recursive: true, force: true })
+}

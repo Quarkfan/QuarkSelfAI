@@ -9,6 +9,7 @@ import type { InactiveClientCycleReceiptV1, NoEffectClientExecutionReceiptV1 } f
 import { MacOsKeychainMasterKeyLifecycleV1, MacOsKeychainMasterKeyProviderV1 } from './macos-keychain-master-key.js'
 import { NodePinnedEd25519PlanVerifierV1 } from './plan-signature.js'
 import { NodeInstalledExecutorDiscoveryV1, type InstalledExecutorDiscoveryDependenciesV1 } from './installed-executor-discovery.js'
+import { createProductReasoningExecutors, type ProductReasoningExecutorDependenciesV1 } from './reasoning-executor-composition.js'
 
 const idPattern = /^[a-z0-9][a-z0-9._:-]{0,127}$/
 const referencePattern = /^(?:secret|keychain):[a-z0-9][a-z0-9._:-]{0,127}$/
@@ -64,7 +65,7 @@ export async function compileInactiveClientBootstrap(document: unknown, clientMi
 
 /** One explicit inactive client facade. Construction has no network, discovery, polling, executor or effect side effect. */
 export class InactiveConfiguredLocalClientV1 {
-  private constructor(private readonly client: InactiveEncryptedLocalClientV1, private readonly enrollment: DeviceEnrollmentClientPortV1, private readonly sessions: DeviceSessionServerPortV1) {}
+  private constructor(private readonly client: InactiveEncryptedLocalClientV1, private readonly enrollment: DeviceEnrollmentClientPortV1, private readonly sessions: DeviceSessionServerPortV1, private readonly reasoningRuntimeRoot: string, private readonly reasoningResultRoot: string) {}
 
   static async initializePinned(plan: InactiveClientBootstrapPlanV1, dependencies: InactiveConfiguredClientDependenciesV1 = {}, now = new Date()): Promise<InactiveConfiguredLocalClientV1> {
     return await InactiveConfiguredLocalClientV1.initialize(plan, new NodePinnedEd25519PlanVerifierV1(plan.planVerification.keyId, plan.planVerification.publicKey), dependencies, now)
@@ -81,7 +82,7 @@ export class InactiveConfiguredLocalClientV1 {
     const enrollment = dependencies.enrollment ?? new NodeInactiveHttpDeviceEnrollmentTransportV1(plan.controlPlaneEndpoint)
     const sessions = dependencies.sessions ?? new NodeInactiveHttpDeviceTransportV1(plan.controlPlaneEndpoint)
     const client = await InactiveEncryptedLocalClientV1.initialize(plan.client, verifier, masterKeys, now)
-    return new InactiveConfiguredLocalClientV1(client, enrollment, sessions)
+    return new InactiveConfiguredLocalClientV1(client, enrollment, sessions, join(dirname(plan.client.paths.databasePath), 'runtime/reasoning'), join(plan.client.paths.artifactRoot, 'reasoning-results'))
   }
 
   snapshot(now = new Date()): ClientRuntimeSnapshotV1 { return this.client.snapshot(now) }
@@ -90,6 +91,10 @@ export class InactiveConfiguredLocalClientV1 {
   async pollEnrollment(now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.client.pollDeviceEnrollment(this.enrollment, now) }
   async syncOnce(now = new Date()): Promise<InactiveClientCycleReceiptV1> { return await this.client.syncOnce(this.sessions, now) }
   async executeNoEffectOnce(executors: readonly NoEffectClientExecutorPortV1[], now = new Date()): Promise<NoEffectClientExecutionReceiptV1> { return await this.client.executeNoEffectOnce(this.sessions, executors, now) }
+  async executeSignedReasoningNoEffectOnce(now = new Date(), dependencies: ProductReasoningExecutorDependenciesV1 = {}): Promise<NoEffectClientExecutionReceiptV1> {
+    const executors = await createProductReasoningExecutors(this.reasoningRuntimeRoot, this.reasoningResultRoot, dependencies)
+    return await this.client.executeNoEffectOnce(this.sessions, executors, now)
+  }
   async close(): Promise<void> { await this.client.close() }
 }
 
