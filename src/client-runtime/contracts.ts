@@ -106,3 +106,51 @@ export interface ExecutorDiscoveryProbeV1 {
 export interface PlanSignatureVerifierV1 {
   verify(input: { readonly keyId: string; readonly algorithm: 'ed25519'; readonly payloadDigest: string; readonly signature: string }): Promise<boolean>
 }
+
+export interface DeviceSessionChallengeV1 {
+  readonly schemaVersion: 1
+  readonly challengeId: string
+  readonly tenantId: string
+  readonly userId: string
+  readonly deviceId: string
+  readonly nonce: string
+  readonly issuedAt: string
+  readonly expiresAt: string
+}
+
+export interface DeviceSessionProofV1 {
+  readonly schemaVersion: 1
+  readonly challengeId: string
+  readonly deviceId: string
+  readonly keyId: string
+  readonly algorithm: 'ed25519'
+  readonly signature: string
+}
+
+export interface DeviceSessionV1 {
+  readonly schemaVersion: 1
+  readonly sessionId: string
+  readonly tenantId: string
+  readonly userId: string
+  readonly deviceId: string
+  readonly issuedAt: string
+  readonly expiresAt: string
+  readonly state: 'active' | 'superseded' | 'expired' | 'revoked'
+}
+
+export interface DeviceTaskLeaseV1 {
+  readonly schemaVersion: 1
+  readonly taskId: string
+  readonly planId: string
+  readonly plan: SignedExecutionPlanV1
+  readonly deviceId: string
+  readonly leaseToken: string
+  readonly attempt: number
+  readonly leasedAt: string
+  readonly expiresAt: string
+  readonly externalWritesEnabled: false
+}
+
+export interface DeviceProofVerifierV1 {
+  verify(input: { readonly publicKey: string; readonly algorithm: 'ed25519'; readonly challenge: string; readonly signature: string }): Promise<boolean>
+}

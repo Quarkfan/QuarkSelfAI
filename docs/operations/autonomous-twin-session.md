@@ -793,3 +793,12 @@
   interface 与 recovery 字段。生命周期 handler 必须引用 Manifest 明确 `provides` 的 interface，云端不能注入任意命令代替接口。
 - 合成 fixture 已补齐七个 lifecycle interface 和签名 key；Blueprint compiler、inactive install planner 与公共 contract 回归通过。
   本批只收紧纯校验，不验证真实 bytes、不发布或安装 Manifest，也不改变现网 runtime。
+
+## 2026-09-06 Capability Platform Phase 2C inactive device sync
+
+- 增加设备 challenge/proof/session 与 task lease 公共 contract，以及纯内存 reference coordinator。设备私钥不进入模型；服务端只用
+  注入 verifier 校验证明，同一 tenant/user/device 的新 session 会先 supersede 旧 session，避免双消费者。
+- 只接收 `test.*` 已注册设备与无 effect、无 approval grant 的 queued dispatch。租约携带不可变 signed plan；未过期轮询返回同一
+  lease，过期后才生成新 token 并增加 attempt，跨 tenant/user/device 的 acknowledge 失败关闭。
+- 当前无 listener/socket、数据库、持久 session、真实客户端进程或 executor launch，不挂载现网 composition。新增模块后 catalog 与
+  迁移映射为 110/110，现有 owner、consumer、provider、scheduler 和 effect 均不变。
