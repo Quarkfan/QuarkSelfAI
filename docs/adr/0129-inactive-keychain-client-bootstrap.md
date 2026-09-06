@@ -8,7 +8,7 @@ Introduce a provider-neutral `LocalMasterKeyProviderV1` and an inactive encrypte
 
 The first concrete provider is a read-only macOS Keychain adapter for a pre-provisioned generic-password item. Its service name is fixed, its account is validated, it invokes `security find-generic-password` without a shell, and no secret enters process arguments. Output is bounded, decoded only as an exact 32-byte unpadded base64url value and cleared after use. Missing items, other platforms, malformed output, timeouts and command failures return bounded errors without account or output data.
 
-Keychain provisioning is deliberately not implemented through the `security` CLI because that command would place the new secret in process arguments. A future native installer or UI must provision it through an OS credential API. Windows and Linux providers, install packaging, daemon startup, cloud registration, automatic discovery, connection, execution and effects remain absent. The new composition is not mounted into the current product.
+Keychain provisioning was deliberately excluded from this batch because passing a value to `security -w <value>` would place it in process arguments. ADR 0134 later adds an explicit lifecycle using the CLI's prompt/stdin form with `-w` as the final argument, plus mandatory readback. Windows and Linux providers, install packaging, daemon startup, cloud registration, automatic discovery, connection, execution and effects remain absent. The new composition is not mounted into the current product.
 
 ## Rollback
 

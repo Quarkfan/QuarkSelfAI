@@ -1,12 +1,12 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import type { DeviceEnrollmentClientPortV1, DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
-import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, LocalMasterKeyProviderV1, PlanSignatureVerifierV1 } from './contracts.js'
+import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, LocalMasterKeyProviderV1, LocalMasterKeyProvisionerV1, PlanSignatureVerifierV1 } from './contracts.js'
 import { InactiveEncryptedLocalClientV1, type EncryptedLocalClientConfigV1 } from './encrypted-local-client.js'
 import { NodeInactiveHttpDeviceEnrollmentTransportV1 } from './http-device-enrollment-transport.js'
 import { NodeInactiveHttpDeviceTransportV1 } from './http-device-transport.js'
 import type { InactiveClientCycleReceiptV1 } from './inactive-client-cycle.js'
-import { MacOsKeychainMasterKeyProviderV1 } from './macos-keychain-master-key.js'
+import { MacOsKeychainMasterKeyLifecycleV1, MacOsKeychainMasterKeyProviderV1 } from './macos-keychain-master-key.js'
 
 const idPattern = /^[a-z0-9][a-z0-9._:-]{0,127}$/
 const referencePattern = /^(?:secret|keychain):[a-z0-9][a-z0-9._:-]{0,127}$/
@@ -60,6 +60,11 @@ export async function compileInactiveClientBootstrap(document: unknown, clientMi
 /** One explicit inactive client facade. Construction has no network, discovery, polling, executor or effect side effect. */
 export class InactiveConfiguredLocalClientV1 {
   private constructor(private readonly client: InactiveEncryptedLocalClientV1, private readonly enrollment: DeviceEnrollmentClientPortV1, private readonly sessions: DeviceSessionServerPortV1) {}
+
+  static async provisionMasterKey(plan: InactiveClientBootstrapPlanV1, provisioner?: LocalMasterKeyProvisionerV1): Promise<'created' | 'existing'> {
+    await assertInactivePlan(plan)
+    return await (provisioner ?? new MacOsKeychainMasterKeyLifecycleV1(plan.keychainAccount)).ensure()
+  }
 
   static async initialize(plan: InactiveClientBootstrapPlanV1, verifier: PlanSignatureVerifierV1, dependencies: InactiveConfiguredClientDependenciesV1 = {}, now = new Date()): Promise<InactiveConfiguredLocalClientV1> {
     await assertInactivePlan(plan)

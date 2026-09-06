@@ -1193,3 +1193,12 @@
 - 临时目录测试证明初始化及跨 reopen 恢复均为 0 自动网络请求，重复 begin 复用相同 pending request；只有显式 begin/poll/sync 才会调用注入的
   transport，且 sync 仍为 no-effect client cycle。本批未预置真实 Keychain、创建 installer、注册 daemon、探测/执行工具或改变现网 composition。
 - 模块与 Facility 数量维持 130/70；回滚删除 facade/test/ADR 并恢复 catalog dependency，无 schema 或 live 状态迁移。
+
+## 2026-09-06 explicit macOS Keychain provisioning
+
+- 新增 provider-neutral master-key provisioner 与 macOS lifecycle。先通过既有 bounded reader 保留合法 item；缺失时生成 32-byte 随机 key，使用绝对
+  `/usr/bin/security`，将末位 `-w` 的输入仅通过 stdin 传递，argv/stdout/stderr/错误与返回状态均不含 secret。
+- 创建后必须回读并恒时比较；create 失败或超时只在另一并发创建者留下合法 item 时接受为 existing。generated/encoded/stdin/readback buffers
+  均清零，malformed、平台错误和不可验证结果失败关闭。configured client 在调用 lifecycle 前再次复核完整 inactive plan。
+- 单测只使用注入 runner，未写真实 Keychain；没有启动客户端、注册设备、联网、执行工具、改变 consumer/provider/composition 或启用 effect。
+  模块与 Facility 数量仍为 130/70。回滚移除 provisioner/lifecycle/delegate/test/ADR，无外部状态清理。

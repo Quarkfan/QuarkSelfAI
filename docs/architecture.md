@@ -145,8 +145,8 @@ sync 都是显式方法，当前 sync 仍只接受 no-effect lease 并在持久 
 
 [ADR 0129](adr/0129-inactive-keychain-client-bootstrap.md) 增加 master-key provider port、只读 macOS Keychain adapter 和 encrypted client
 bootstrap owner。Keychain adapter 只执行固定 generic-password read，secret 不进入参数、错误、持久状态或云投影；bootstrap 在单一 instance
-lease 内首次注册或精确匹配已有 identity，并在恢复时证明私钥与已保存公钥相符。它仍需安装器/原生 UI 以无 argv 泄露方式预置 Keychain item，
-且默认不探测、不联网、不运行 executor。
+lease 内首次注册或精确匹配已有 identity，并在恢复时证明私钥与已保存公钥相符。该批未包含 Keychain 写入，后续由 ADR 0134 的显式
+stdin provisioning lifecycle 补齐；bootstrap 默认仍不探测、不联网、不运行 executor。
 
 [ADR 0130](adr/0130-durable-device-code-enrollment.md) 以持久 device-code flow 分离浏览器登录与客户端注册。客户端只提交其真实 Ed25519
 公钥和声明 scope，收到 64-bit 展示码及 256-bit poll token；数据库只存 token digest。已登录用户必须在同 tenant/user scope 内确认，注册成功后
@@ -164,6 +164,10 @@ redirect、URL credential 和非封闭/超限响应。它仍是未挂载的显�
 [ADR 0133](adr/0133-validated-inactive-client-bootstrap.md) 用一份封闭的本地配置把 Keychain master-key reader、加密客户端、注册 transport 与
 session transport 装入同一个 close boundary。state root 必须是 canonical、非 symlink、仅 owner 可访问目录，所有子路径固定派生；初始化前
 重新验证整份 plan，不能以 TypeScript 类型代替信任边界。构造仍不联网、不自动轮询或探测，且未形成 installer/daemon。
+
+[ADR 0134](adr/0134-keychain-master-key-provisioning.md) 补齐显式 macOS master-key provisioning：固定绝对 `security` 路径，以末位 `-w`
+从 stdin 接收进程内随机生成值，创建后重新读取并恒时核对，所有临时 buffer 清零。它只由已复核的 inactive bootstrap plan 显式调用；当前
+测试不写真实 Keychain，installer UI、应用 ACL 与其他平台 provider 仍未形成。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

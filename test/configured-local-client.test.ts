@@ -55,3 +55,13 @@ test('rejects an activated or drifted bootstrap plan before reading a master key
     assert.equal(reads, 0)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
+
+test('provisions only after revalidating the same inactive bootstrap plan', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'quark-configured-client-')); const root = await realpath(temporary); let provisions = 0
+  try {
+    const plan = await compileInactiveClientBootstrap(document(root), migration)
+    assert.equal(await InactiveConfiguredLocalClientV1.provisionMasterKey(plan, { async ensure() { provisions += 1; return 'created' } }), 'created')
+    await assert.rejects(InactiveConfiguredLocalClientV1.provisionMasterKey({ ...plan, externalWritesEnabled: true as false }, { async ensure() { provisions += 1; return 'existing' } }), /not inactive/)
+    assert.equal(provisions, 1)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})

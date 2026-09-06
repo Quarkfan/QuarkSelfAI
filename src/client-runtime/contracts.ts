@@ -10,6 +10,7 @@ export interface RemovableLocalDeviceSecretStoreV1 extends LocalDeviceSecretStor
 
 /** Supplies one local encryption key without exposing its origin to client composition. */
 export interface LocalMasterKeyProviderV1 { load(): Promise<Uint8Array> }
+export interface LocalMasterKeyProvisionerV1 { ensure(): Promise<'created' | 'existing'> }
 
 export interface LocalDeviceEnrollmentStateV1 {
   readonly requestId: string; readonly deviceId: string; readonly userCode: string; readonly pollTokenRef: string

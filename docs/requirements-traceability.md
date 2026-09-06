@@ -31,9 +31,9 @@ workspace handle/路径、artifact root/来源路径或 checkpoint 正文，work
 设备身份现使用真实 Ed25519 生成、签名和验签 adapter：云端只持有 SPKI 公钥，客户端私钥必须留在 `LocalDeviceSecretStoreV1` 后方并只以
 opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥不匹配均失败关闭。持久 adapter 已以调用方注入的 32-byte master key
 执行 AES-256-GCM 加密、原子 0600 记录与跨 reopen 签名验证；磁盘不保存 reference、明文或 master key，错 key 和 symlink 失败关闭。首次
-enrollment 已进入单 owner application 并支持通用 tenant identity。只读 macOS Keychain provider 可获取预置 master key，encrypted bootstrap
-会清零调用方 key、在同一 owner lease 内注册/重开并验证私钥匹配；仍未实现安全 Keychain provisioning、Windows/Linux provider、客户端安装包，
-也未注册真实云端设备。
+enrollment 已进入单 owner application 并支持通用 tenant identity。macOS Keychain lifecycle 可保留合法现有 key，或生成随机 key 后仅经固定
+`/usr/bin/security` 的 stdin 写入并回读恒时核对；encrypted bootstrap 会清零调用方 key、在同一 owner lease 内注册/重开并验证私钥匹配。
+真实 Keychain 写入未在测试中执行，Windows/Linux provider、客户端安装包和真实云端设备注册仍未完成。
 
 客户端注册不再要求接收浏览器 session/cookie：SQLite device-code provider 生成 10 分钟、64-bit user code 与 256-bit poll token，仅持久化 token
 digest；approve 从已认证云 session 推导 tenant/user 并调用唯一 device provider，poll 只返回 bounded 状态。真实 Ed25519 SPKI、scope、expiry、
@@ -49,7 +49,8 @@ device sync。启动先验证 enrollment 与全部已安装制品，第二实例
 
 现已增加封闭的本地 bootstrap document/compiler/facade，把固定 Keychain account、加密状态、public enrollment transport 与 session transport
 装入上述唯一 owner；状态根目录、migration 和派生路径在读取 Keychain 前进行运行时复核。初始化与跨 reopen 均证明 0 自动网络请求，注册与
-no-effect sync 仍只能显式调用。安全 Keychain provisioning、安装器建目录、后台服务注册与 Windows/Linux key provider 尚未完成。
+no-effect sync 仍只能显式调用。macOS Keychain provisioning 已形成独立显式 lifecycle；安装器建目录、后台服务注册、原生应用 ACL 与
+Windows/Linux key provider 尚未完成。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
