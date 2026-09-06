@@ -1049,3 +1049,12 @@
 - 唯一真实合成尝试按顺序选择 Claude Code，输入只是固定公开 token 请求，tools disabled、空临时 workspace、无 continuation/effect。
   60 秒未返回后进程被终止，raw output 丢弃，临时目录删除；没有重试或切换 Codex/DSH。
 - 状态如实记为 `completed-bounded-failure`。executorInvoked=true 仅说明发起了一次进程，不证明运行成功；现网 owner/composition 未变。
+
+## 2026-09-06 persistent inactive local client state
+
+- 新增独立 client SQLite migration/provider，保存 device enrollment、workspace 映射、executor report、installed-inactive capability 与
+  signed no-effect run checkpoint；没有创建 live client database，也未挂载 daemon/composition。
+- 私钥只允许 opaque `secret:`/`keychain:` reference；canonical workspace path 只留本地，并在每次 resolve 时重新核验路径身份，登记后
+  删除并替换为 symlink 会失败关闭。cloud projection 不含 key reference、workspace handle/路径或 checkpoint 正文。
+- 集成测试覆盖跨 reopen 恢复、过期投影过滤基础、foreign device、active capability、checkpoint integrity/rollback 与 symlink root swap。
+  provider 固定 disconnected、owner counts=0、effects=false；回滚只移除本批 provider/migration/test/ADR。

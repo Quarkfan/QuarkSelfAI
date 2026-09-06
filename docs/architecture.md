@@ -90,6 +90,11 @@ Pilot 02 已增加固定认证状态探测、bundled DSH closure 检查和只允
 Claude Code/Codex 认证 ready，DSH closure 为 `0.1.1-rc.2` 但当前进程未配置 inference。唯一 Claude 合成尝试在 60 秒超时后终止，
 没有切换第二 executor、没有保留输出、没有工具/工作区读取/effect；因此该证据是 bounded failure，不能宣称 executor 已可运行。
 
+[ADR 0118](adr/0118-persistent-local-client-state-boundary.md) 增加独立、默认 inactive 的本地客户端 SQLite 状态域。设备私钥只以
+opaque secret/keychain reference 表示；workspace handle 到 canonical path 的映射只留本机，且每次解析重新核验根路径身份，阻断登记后
+symlink 替换。云投影仅包含公开设备身份、未过期脱敏 executor report、计数和零 owner/effect 字段；安装状态固定 installed-inactive，
+run checkpoint 复用签名计划校验并要求 revision 单调。当前仍没有常驻 client daemon、cloud connector、真实 installer 或已武装 executor。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

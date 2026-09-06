@@ -21,6 +21,10 @@ client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃
 版本闭合但当前 pilot 进程没有 inference 配置。唯一 Claude 无工具合成尝试在 60 秒超时后终止，未 fallback、未保留输出、effects=0，
 所以仍不满足可运行 executor、真实 Agent 执行或电脑操作完成标准。
 
+客户端本地状态现可在独立 SQLite 中跨 reopen 保存公开设备身份、opaque 私钥引用、workspace handle 映射、脱敏 executor report、
+installed-inactive capability 和 no-effect run checkpoint。云投影测试证明不含 key reference、workspace handle/路径或 checkpoint 正文，
+workspace 根被 symlink 替换时失败关闭，checkpoint rollback 被拒绝。尚无安装包、常驻 daemon、云连接和真实 capability lifecycle 执行。
+
 设备协议已增加 direct TLS 主通道与 SSH subsystem 备用通道的静态 contract。SSH 只允许客户端主动出站到固定
 `quark-device-v1` subsystem，host key 与 credential 使用本地 opaque reference，禁止 shell、任意 command、port/agent forwarding，
 并要求切换前释放旧 transport lease。当前 policy 固定 `configured-inactive`/`activationAllowed=false`，尚无真实 SSH adapter、gateway、
