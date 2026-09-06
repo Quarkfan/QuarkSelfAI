@@ -25,6 +25,10 @@ client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃
 并要求切换前释放旧 transport lease。当前 policy 固定 `configured-inactive`/`activationAllowed=false`，尚无真实 SSH adapter、gateway、
 凭证或连接证据，因此不满足服务器可达性完成标准。
 
+Direct TLS 与 SSH 已共享 `quark-device-sync.v1` framed message contract，覆盖设备认证、session、poll/lease/ack、脱敏 result 与 heartbeat；
+分片重组、256 KiB 上限、unknown-field、cross-scope、路径和 secret-shaped 数据均有失败关闭测试。当前只是无 socket codec，不代表设备
+已与云端真实连接。
+
 Phase 2B 已实现六项供应链证据全通过后的 `installed-inactive` 计划，以及 installation/loading/authorization/execution/effects
 五态分离；当前 planner 不下载、不写盘、不执行 lifecycle handler，因此只证明安全安装计划边界。
 

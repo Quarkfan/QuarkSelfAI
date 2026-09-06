@@ -951,3 +951,11 @@
   使用 tenant context，再通过注入 authorization port 校验 exact action/subject；不存在 platform admin 或 unscoped list API。
 - 临时数据库集成测试覆盖双租户隔离、跨 reopen persistence、拒绝未授权写、拒绝 foreign user 设备以及 device owner/public-key 漂移。
   当前 provider 未进入 product composition，不启动 consumer/provider/scheduler/effect；production PostgreSQL RLS 与真实身份提供方仍未实现。
+
+## 2026-09-06 transport-neutral device wire codec
+
+- Direct TLS 与 SSH subsystem 不再只有概念上的共享：新增 `quark-device-sync.v1` message union 与 32-bit length-prefixed JSON codec，覆盖
+  hello、challenge/proof、session、poll/lease/ack、redacted result 与 heartbeat；两种 transport label 使用完全相同的 decoder。
+- 每帧最多 256 KiB，支持任意流分片；tenant/user/device scope 不一致、proof/ack/lease device 漂移、未知字段/消息、绝对路径、
+  secret-shaped 文本、无效 JSON 与异常长度均失败关闭。plan signature、device proof 和 lease 验证仍由下游原 contract 执行。
+- 本批是纯 codec 与离线测试，没有 socket、SSH process、listener、consumer、provider、scheduler、effect、composition 或服务重启。

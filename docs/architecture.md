@@ -50,6 +50,11 @@ approval、workspace 和 effect contract，切换不产生第二 consumer/provid
 host key，且禁用 remote shell、任意 command、port forwarding 与 agent forwarding。当前只有 `configured-inactive` policy validator，
 没有 SSH process、socket、gateway、凭证配置或 runtime mount。
 
+[ADR 0113](adr/0113-transport-neutral-device-wire-protocol.md) 固定两种 transport 共用的 `quark-device-sync.v1` wire protocol。hello、
+challenge/proof、session、poll/lease/ack、redacted result 与 heartbeat 都携带 tenant/user/device scope、message/correlation id，并使用
+最大 256 KiB 的 length-prefixed JSON frame；decoder 支持任意 stream chunking。未知字段、未知消息、跨 scope 嵌套对象、绝对路径、
+secret-shaped 文本与异常长度失败关闭。codec 不替代 plan signature、device proof、lease 或 result gate，也不打开网络连接。
+
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
 计划验证在 envelope 被交给 executor 前完成。当前 discovery 增加了 Claude Code、Codex、DSH 固定 `--version` 描述和纯观察
