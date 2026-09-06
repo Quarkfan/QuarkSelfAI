@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前仍共 120 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前仍共 121 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -99,6 +99,11 @@ run checkpoint 复用签名计划校验并要求 revision 单调。当前仍没�
 云端只登记 SPKI 公钥，PKCS8 私钥字节只通过本地 secret-store port 写入 opaque reference。客户端先校验 tenant/user/device scope 与
 私钥派生公钥一致，再签署 domain-separated server nonce；服务端只用设备仓库中已绑定的公钥验签。当前没有选择或写入真实 OS secret
 store，也没有注册 live device、建立网络连接或挂载 daemon。
+
+[ADR 0120](adr/0120-device-reconnect-and-signed-executor-policy.md) 修正已登记设备的重连与执行器授权：challenge 以公开设备 scope
+定位登记记录，不再依赖浏览器用户 session；只有已登记公钥对应的 Ed25519 proof 才能建立 session。Execution Envelope 同时签入协议、
+executor allowlist/preference 与所需 capability，客户端不能在计划外选择执行器。新增 inactive client cycle 已用两端 SQLite 和真实 proof
+完成一次单 lease 协商、checkpoint-before-ack 与重连空轮询；它不 begin run、不调用 executor、不启动 listener/daemon/effect。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

@@ -19,6 +19,7 @@ function unsignedEnvelope() {
     schemaVersion: 1 as const, tenantId: 'tenant.demo', userId: 'user.demo', deviceId: 'device.demo', agentId: 'agent.demo', runId: 'run.001', actionId: 'action.001',
     blueprint: { id: 'agent/demo', version: '1.0.0', digest: `sha256:${'a'.repeat(64)}` }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [],
     idempotencyKey: 'run.001/action.001', deadline: later, budget: { tokens: 100, durationMs: 1000, costMinorUnits: 1 }, dataClasses: [], allowedEffects: [],
+    executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: ['tool.execute'], allowedExecutors: ['executor-a', 'safe-fallback'], preferredExecutors: ['executor-a'] },
     continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const },
     plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'sig', keyId: 'cloud-key' },
   }

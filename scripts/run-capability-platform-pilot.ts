@@ -43,6 +43,7 @@ function signedNoEffectLease(now: Date): DeviceTaskLeaseV1 {
     schemaVersion: 1 as const, tenantId: 'test.pilot', userId: 'user.pilot', deviceId: 'device.pilot', agentId: 'agent/pilot', runId: 'run.pilot', actionId: 'action.pilot',
     blueprint: { id: 'agent/pilot', version: '1.0.0', digest: `sha256:${'a'.repeat(64)}` }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [],
     idempotencyKey: 'run.pilot/action.pilot', deadline: expiresAt, budget: { tokens: 0, durationMs: 1_000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [],
+    executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['claude-code', 'codex', 'dsh'], preferredExecutors: ['claude-code', 'codex'] },
     continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const },
     plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' },
   }

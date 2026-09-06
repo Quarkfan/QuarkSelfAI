@@ -90,6 +90,7 @@ function envelope(overrides: Record<string, unknown> = {}): ExecutionEnvelopeV1 
     workspaceGrants: [{ handle: 'workspace:project', access: 'read', expiresAt: later, grantId: 'grant.workspace' }],
     approvalGrants: [], idempotencyKey: 'tenant.demo/run.001/action.001', deadline: later,
     budget: { tokens: 10000, durationMs: 300000, costMinorUnits: 100 }, dataClasses: ['user-content'], allowedEffects: [],
+    executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: ['tool-call-v1'], allowedExecutors: ['claude-code', 'codex', 'dsh'], preferredExecutors: ['claude-code'] },
     continuity: { sessionId: 'session.001', continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false },
     plan: { digest: sha, signature: 'signature-reference', keyId: 'plan-key' },
     ...overrides,
@@ -151,6 +152,7 @@ test('all executors receive one normalized envelope and approvals remain exactly
   assert.doesNotThrow(() => validateExecutionEnvelope(envelope({ allowedEffects: ['message.send'], approvalGrants: [approval] })))
   assert.throws(() => validateExecutionEnvelope(envelope({ allowedEffects: ['message.send'], approvalGrants: [{ ...approval, userId: 'user.other' }] })), /scope does not match/)
   assert.throws(() => validateExecutionEnvelope(envelope({ context: [{ ...base.context[0], opaqueReference: '/private/workspace' }] })), /opaque references/)
+  assert.throws(() => validateExecutionEnvelope(envelope({ executorRequirement: { ...base.executorRequirement, preferredExecutors: ['other'] } })), /outside the signed allowlist/)
   assert.throws(() => validateExecutionEnvelope(envelope({ continuity: { ...base.continuity, midActionSwitchAllowed: true } })), /mid-action/)
 })
 

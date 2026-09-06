@@ -69,6 +69,12 @@ export async function compileTestExecutionPlan(
     budget: blueprint.budget,
     dataClasses: [...new Set(selected.flatMap(manifest => manifest.dataClasses))],
     allowedEffects: [],
+    executorRequirement: {
+      protocolVersions: ['envelope.v1'],
+      capabilities: [...new Set(selected.flatMap(manifest => manifest.runtime.executorRequirements))].sort(),
+      allowedExecutors: [...blueprint.executorPolicy.preferred, ...blueprint.executorPolicy.fallback],
+      preferredExecutors: [...blueprint.executorPolicy.preferred],
+    },
     continuity: { sessionId: null, continuationToken: null, fallbackAllowed: blueprint.executorPolicy.allowInfrastructureFallback, midActionSwitchAllowed: false as const },
     plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: signer.keyId },
   }

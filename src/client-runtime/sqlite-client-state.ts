@@ -29,6 +29,8 @@ export interface LocalClientCloudProjectionV1 {
   readonly externalWritesEnabled: false
 }
 
+export interface LocalClientEnrollmentV1 { readonly identity: DeviceIdentityV1; readonly privateKeyRef: string }
+
 /** Local-only durable state. Secret references and canonical paths never enter its cloud projection. */
 export class SqliteInactiveClientStateV1 {
   constructor(private readonly db: DatabaseSync, private readonly planVerifier: PlanSignatureVerifierV1) {}
@@ -45,6 +47,13 @@ export class SqliteInactiveClientStateV1 {
     this.db.prepare(`INSERT INTO local_device_identity (singleton, tenant_id, user_id, device_id, identity_json, private_key_ref, created_at) VALUES (1, ?, ?, ?, ?, ?, ?)`)
       .run(identity.tenantId, identity.userId, identity.deviceId, JSON.stringify(identity), privateKeyRef, identity.createdAt)
     return deepFreeze(structuredClone(identity))
+  }
+
+  /** Local-runtime access only. Callers must never include the returned reference in cloud payloads. */
+  localEnrollment(): LocalClientEnrollmentV1 {
+    const row = this.#identityRow()
+    if (!row || !referencePattern.test(String(row.private_key_ref))) throw new Error('local client is not enrolled')
+    return deepFreeze({ identity: this.#identity(row), privateKeyRef: String(row.private_key_ref) })
   }
 
   async registerWorkspace(input: { readonly handle: string; readonly root: string; readonly access: 'read' | 'read-write'; readonly grantId: string; readonly expiresAt: string }): Promise<void> {

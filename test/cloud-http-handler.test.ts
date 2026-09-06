@@ -16,7 +16,7 @@ function handler() {
     async registerDevice(resolved: TenantContextV1, input: { deviceId: string; publicKey: string }) { calls.push(`devices.register:${resolved.tenantId}:${input.deviceId}`); return { tenantId: resolved.tenantId, userId: resolved.userId, deviceId: input.deviceId, publicKey: input.publicKey, state: 'registered' as const, createdAt: '2026-09-06T00:00:00.000Z' } },
   }
   const sessions = {
-    async issueChallenge(resolved: TenantContextV1, deviceId: string) { calls.push(`challenge:${resolved.tenantId}:${deviceId}`); return { challengeId: 'challenge.one' } as never },
+    async issueChallenge(input: { tenantId: string; userId: string; deviceId: string }) { calls.push(`challenge:${input.tenantId}:${input.deviceId}`); return { challengeId: 'challenge.one' } as never },
     async openSession(proof: { deviceId: string }) { calls.push(`proof:${proof.deviceId}`); return { sessionId: 'session.device' } as never },
     async poll(sessionId: string) { calls.push(`poll:${sessionId}`); return null },
     async acknowledge(sessionId: string, input: { taskId: string }) { calls.push(`ack:${sessionId}:${input.taskId}`); return { state: 'accepted' } as never },

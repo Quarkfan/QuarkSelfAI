@@ -45,7 +45,7 @@ test('gives Claude Code, Codex and DSH the same immutable normalized envelope', 
     schemaVersion: 1, tenantId: 'test.alpha', userId: 'user.owner', deviceId: 'device.owner', agentId: 'agent.example', runId: 'run.001', actionId: 'action.001',
     blueprint: { id: 'agent/example', version: '1.0.0', digest: sha }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [],
     idempotencyKey: 'run.001/action.001', deadline: '2027-01-01T00:00:00.000Z', budget: { tokens: 1000, durationMs: 60000, costMinorUnits: 10 },
-    dataClasses: [], allowedEffects: [], continuity: { sessionId: 'session.001', continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false },
+    dataClasses: [], allowedEffects: [], executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['claude-code', 'codex', 'dsh'], preferredExecutors: ['claude-code'] }, continuity: { sessionId: 'session.001', continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false },
     plan: { digest: sha, signature: 'signature-reference', keyId: 'test-key' },
   }
   const inputs = executorParityInputs(['claude-code', 'codex', 'dsh'], envelope as never)

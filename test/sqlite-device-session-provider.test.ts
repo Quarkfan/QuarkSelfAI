@@ -27,7 +27,7 @@ function plan(context: TenantContextV1, taskId: string, deviceId = 'device.owner
   const unsigned = {
     schemaVersion: 1 as const, tenantId: context.tenantId, userId: context.userId, deviceId, agentId: 'agent.demo', runId: `run.${taskId}`, actionId: `action.${taskId}`,
     blueprint: { id: 'agent.demo', version: '1.0.0', digest: sha }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: `${context.tenantId}.${taskId}`, deadline: later,
-    budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [], continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const }, plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' },
+    budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [], executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['executor-a'], preferredExecutors: ['executor-a'] }, continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const }, plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' },
   }
   const digest = executionEnvelopePayloadDigest(unsigned)
   const envelope = { ...unsigned, plan: { digest, signature: `signed:${digest}`, keyId: 'test-key' } }
@@ -50,7 +50,7 @@ async function provision(database: string): Promise<void> {
 }
 
 async function openSession(provider: Awaited<ReturnType<typeof openSqliteInactiveDeviceSessionProvider>>, context: TenantContextV1) {
-  const challenge = await provider.issueChallenge(context, 'device.owner', at)
+  const challenge = await provider.issueChallenge({ tenantId: context.tenantId, userId: context.userId, deviceId: 'device.owner' }, at)
   const session = await provider.openSession({ schemaVersion: 1, challengeId: challenge.challengeId, deviceId: challenge.deviceId, keyId: 'device-key', algorithm: 'ed25519', signature: `signed:${challenge.nonce}` }, at)
   return { challenge, session }
 }

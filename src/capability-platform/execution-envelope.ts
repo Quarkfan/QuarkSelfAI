@@ -32,6 +32,12 @@ export interface ExecutionEnvelopeV1 {
   readonly budget: { readonly tokens: number; readonly durationMs: number; readonly costMinorUnits: number }
   readonly dataClasses: readonly string[]
   readonly allowedEffects: readonly string[]
+  readonly executorRequirement: {
+    readonly protocolVersions: readonly string[]
+    readonly capabilities: readonly string[]
+    readonly allowedExecutors: readonly string[]
+    readonly preferredExecutors: readonly string[]
+  }
   readonly continuity: {
     readonly sessionId: string | null
     readonly continuationToken: string | null
@@ -46,4 +52,3 @@ export interface ExecutorAdapterInputV1 {
   readonly envelope: ExecutionEnvelopeV1
   readonly normalizedContextDigest: string
 }
-

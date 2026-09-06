@@ -60,7 +60,7 @@ test('opens one persistent tenant device session with a real client-generated pr
 
     let sequence = 0
     const server = await openSqliteInactiveDeviceSessionProvider(database, [identityMigration, sessionMigration], { next: label => `${label}.${++sequence}` }, new NodeEd25519DeviceProofVerifierV1(), { verify: async () => true })
-    const challenge = await server.issueChallenge(context, enrollment.identity.deviceId, at)
+    const challenge = await server.issueChallenge({ tenantId: context.tenantId, userId: context.userId, deviceId: enrollment.identity.deviceId }, at)
     const proof = await signDeviceSessionChallenge({ identity: enrollment.identity, privateKeyRef: enrollment.privateKeyRef, challenge }, secrets)
     const session = await server.openSession(proof, at)
     assert.deepEqual({ tenantId: session.tenantId, userId: session.userId, deviceId: session.deviceId, state: session.state }, { tenantId: context.tenantId, userId: context.userId, deviceId: enrollment.identity.deviceId, state: 'active' })

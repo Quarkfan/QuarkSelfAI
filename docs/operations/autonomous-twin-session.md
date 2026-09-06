@@ -1066,3 +1066,14 @@
 - 签名前强制 tenant/user/device scope 完全一致，并从私钥重新派生公钥核对已登记 identity；scope 漂移、引用复用、错配密钥和篡改 nonce
   均失败关闭。当前仅使用内存 secret-store fixture，没有读写真实 keychain、注册 live device、启动连接/daemon 或改变 composition。
 - 回滚只移除本批 adapter、测试、ADR 和 catalog/migration/docs 映射；没有 live key 或服务状态需要恢复。
+
+## 2026-09-06 inactive device reconnect and client session cycle
+
+- 发现原 challenge port 依赖已认证用户 session，会使已登记客户端重启后无法仅凭设备密钥自动重连；同时 signed envelope 未携带
+  executor allowlist/requirement，客户端无法证明选择受 Blueprint 授权。当前事实推翻原接口，按 ADR 0120 在未激活阶段修正 V1。
+- challenge 改为公开 tenant/user/device scope 定位，但 provider 只对 active user 的 registered device 发放；session 仍须真实 Ed25519 proof。
+  edge rate limit/enumeration 防护仍未实现，不能把 provider 暴露公网。
+- Execution Envelope 新增签名覆盖的 protocol、capability requirement、allowed/preferred executor；Blueprint compiler 从 policy 和已选 Manifest
+  派生。两端临时 SQLite 集成测试完成真实 proof、唯一 lease、executor negotiation、checkpoint-before-ack 与重连空轮询。
+- client cycle 固定 `executorInvoked=false`、`effectsActive=0`，不 begin run、不启动 listener/daemon、不改变 composition。回滚按 ADR 0120
+  删除 cycle 并恢复未激活 V1 contract，无 live 数据或服务需要迁移。

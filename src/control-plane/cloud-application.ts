@@ -49,7 +49,8 @@ export class InactiveCloudControlPlaneApplicationV1 {
   }
 
   async issueDeviceChallenge(sessionReference: string, deviceId: string, now?: Date): Promise<DeviceSessionChallengeV1> {
-    return await this.#sessions().issueChallenge(await this.#context(sessionReference), deviceId, now)
+    const context = await this.#context(sessionReference)
+    return await this.#sessions().issueChallenge({ tenantId: context.tenantId, userId: context.userId, deviceId }, now)
   }
   async openDeviceSession(proof: DeviceSessionProofV1, now?: Date): Promise<DeviceSessionV1> { return await this.#sessions().openSession(proof, now) }
   async pollDeviceSession(sessionId: string, now?: Date): Promise<DeviceTaskLeaseV1 | null> { return await this.#sessions().poll(sessionId, now) }

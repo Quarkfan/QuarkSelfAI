@@ -13,7 +13,7 @@ function plan(): SignedExecutionPlanV1 {
     schemaVersion: 1 as const, tenantId: 'test.alpha', userId: 'user.owner', deviceId: 'device.owner', agentId: 'agent/demo', runId: 'run.001', actionId: 'action.001',
     blueprint: { id: 'agent/demo', version: '1.0.0', digest: sha }, capabilities: [], context: [], workspaceGrants: [],
     approvalGrants: [{ grantId: 'grant.effect', tenantId: 'test.alpha', userId: 'user.owner', deviceId: 'device.owner', agentId: 'agent/demo', releaseDigest: sha, actionId: 'action.001', effectKind: 'message.send', scope: 'owner-dm', grantedAt: at.toISOString(), expiresAt: later, singleUse: true }],
-    idempotencyKey: 'run.001/action.001', deadline: later, budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: [], allowedEffects: ['message.send'], continuity: { sessionId: null, continuationToken: null, fallbackAllowed: false, midActionSwitchAllowed: false as const }, plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' },
+    idempotencyKey: 'run.001/action.001', deadline: later, budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: [], allowedEffects: ['message.send'], executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['executor-a'], preferredExecutors: ['executor-a'] }, continuity: { sessionId: null, continuationToken: null, fallbackAllowed: false, midActionSwitchAllowed: false as const }, plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' },
   }
   const digest = executionEnvelopePayloadDigest(unsigned)
   const envelope = { ...unsigned, plan: { digest, signature: `signed:${digest}`, keyId: 'test-key' } }

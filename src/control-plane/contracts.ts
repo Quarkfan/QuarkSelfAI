@@ -102,7 +102,8 @@ export interface TenantDevicePortV1 {
 }
 
 export interface DeviceSessionServerPortV1 {
-  issueChallenge(context: TenantContextV1, deviceId: string, now?: Date): Promise<DeviceSessionChallengeV1>
+  /** Pre-authentication entry: public scope selects an enrolled device; proof still establishes possession. */
+  issueChallenge(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string }, now?: Date): Promise<DeviceSessionChallengeV1>
   openSession(proof: DeviceSessionProofV1, now?: Date): Promise<DeviceSessionV1>
   poll(sessionId: string, now?: Date): Promise<DeviceTaskLeaseV1 | null>
   acknowledge(sessionId: string, input: { readonly leaseToken: string; readonly taskId: string }, now?: Date): Promise<DeviceTaskLeaseAcknowledgementV1>

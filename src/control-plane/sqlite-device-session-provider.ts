@@ -3,7 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1, PlanSignatureVerifierV1, SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
 import { verifySignedExecutionPlan } from '../client-runtime/validation.js'
-import type { DeviceDispatchQueuePortV1, DeviceSessionServerPortV1, DispatchRecordV1, RedactedResultV1, TenantContextV1 } from './contracts.js'
+import type { DeviceDispatchQueuePortV1, DeviceSessionServerPortV1, DispatchRecordV1, RedactedResultV1 } from './contracts.js'
 
 type Row = Record<string, string | number | null>
 type TokenSource = { next(label: 'challenge' | 'nonce' | 'session' | 'lease'): string }
@@ -15,12 +15,12 @@ const unsafeText = /^(?:\/|[A-Za-z]:[\\/]|~[\\/])|(?:token|secret|password|priva
 export class SqliteInactiveDeviceSessionProviderV1 implements DeviceSessionServerPortV1, DeviceDispatchQueuePortV1 {
   constructor(private readonly db: DatabaseSync, private readonly tokens: TokenSource, private readonly proofVerifier: DeviceProofVerifierV1, private readonly planVerifier: PlanSignatureVerifierV1) {}
 
-  async issueChallenge(context: TenantContextV1, deviceId: string, now = new Date(), ttlMs = 60_000): Promise<DeviceSessionChallengeV1> {
-    testContext(context); positive(ttlMs, 'challenge ttl')
-    const device = this.db.prepare(`SELECT d.user_id, d.state, u.state AS user_state FROM cp_device d JOIN cp_user u ON u.tenant_id=d.tenant_id AND u.user_id=d.user_id WHERE d.tenant_id = ? AND d.device_id = ?`).get(context.tenantId, deviceId) as Row | undefined
-    if (!device || device.user_id !== context.userId || device.state !== 'registered' || device.user_state !== 'active') throw new Error('registered device is unavailable')
-    const challenge = Object.freeze({ schemaVersion: 1 as const, challengeId: this.#token('challenge'), tenantId: context.tenantId, userId: context.userId,
-      deviceId, nonce: this.#token('nonce'), issuedAt: timestamp(now), expiresAt: new Date(now.getTime() + ttlMs).toISOString() })
+  async issueChallenge(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string }, now = new Date(), ttlMs = 60_000): Promise<DeviceSessionChallengeV1> {
+    deviceScope(input); positive(ttlMs, 'challenge ttl')
+    const device = this.db.prepare(`SELECT d.user_id, d.state, u.state AS user_state FROM cp_device d JOIN cp_user u ON u.tenant_id=d.tenant_id AND u.user_id=d.user_id WHERE d.tenant_id = ? AND d.device_id = ?`).get(input.tenantId, input.deviceId) as Row | undefined
+    if (!device || device.user_id !== input.userId || device.state !== 'registered' || device.user_state !== 'active') throw new Error('registered device is unavailable')
+    const challenge = Object.freeze({ schemaVersion: 1 as const, challengeId: this.#token('challenge'), tenantId: input.tenantId, userId: input.userId,
+      deviceId: input.deviceId, nonce: this.#token('nonce'), issuedAt: timestamp(now), expiresAt: new Date(now.getTime() + ttlMs).toISOString() })
     this.db.prepare(`INSERT INTO cp_device_challenge (challenge_id, tenant_id, user_id, device_id, nonce, issued_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(challenge.challengeId, challenge.tenantId, challenge.userId, challenge.deviceId, challenge.nonce, challenge.issuedAt, challenge.expiresAt)
     return challenge
@@ -128,9 +128,7 @@ export async function openSqliteInactiveDeviceSessionProvider(databasePath: stri
 function sessionFrom(row: Row): DeviceSessionV1 { return Object.freeze({ schemaVersion: 1, sessionId: String(row.session_id), tenantId: String(row.tenant_id), userId: String(row.user_id), deviceId: String(row.device_id), issuedAt: String(row.issued_at), expiresAt: String(row.expires_at), state: String(row.state) as DeviceSessionV1['state'] }) }
 function dispatchFrom(row: Row): DispatchRecordV1 { return Object.freeze({ tenantId: String(row.tenant_id), userId: String(row.user_id), taskId: String(row.task_id), deviceId: String(row.device_id), plan: JSON.parse(String(row.plan_json)), idempotencyKey: String(row.idempotency_key), state: String(row.state) as DispatchRecordV1['state'], createdAt: String(row.created_at) }) }
 function lease(row: Row, plan: SignedExecutionPlanV1): DeviceTaskLeaseV1 { return Object.freeze({ schemaVersion: 1, taskId: String(row.task_id), planId: String(row.plan_id), plan, deviceId: String(row.device_id), leaseToken: String(row.lease_token), attempt: Number(row.lease_attempt), leasedAt: String(row.leased_at), expiresAt: String(row.lease_expires_at), externalWritesEnabled: false }) }
-function testContext(context: TenantContextV1): void {
-  if (!context.tenantId.startsWith('test.') || !tokenPattern.test(context.tenantId) || !tokenPattern.test(context.userId) || !context.roles.length || new Set(context.roles).size !== context.roles.length) throw new Error('inactive device provider accepts valid test tenants only')
-}
+function deviceScope(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string }): void { if (!input.tenantId.startsWith('test.') || !tokenPattern.test(input.tenantId) || !tokenPattern.test(input.userId) || !tokenPattern.test(input.deviceId)) throw new Error('inactive device provider accepts valid test device scopes only') }
 function positive(value: number, label: string): void { if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${label} must be positive`) }
 function timestamp(value: Date): string { if (Number.isNaN(value.getTime())) throw new Error('timestamp is invalid'); return value.toISOString() }
 function validateResult(input: Omit<RedactedResultV1, 'tenantId' | 'userId'>): void {
