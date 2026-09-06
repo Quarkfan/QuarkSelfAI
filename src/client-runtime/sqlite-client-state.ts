@@ -36,7 +36,7 @@ export class SqliteInactiveClientStateV1 {
 
   enroll(identityInput: DeviceIdentityV1, privateKeyRef: string): DeviceIdentityV1 {
     const identity = validateDeviceIdentity(identityInput)
-    if (!identity.tenantId.startsWith('test.') || !referencePattern.test(privateKeyRef)) throw new Error('inactive client enrollment requires a test identity and opaque local key reference')
+    if (!referencePattern.test(privateKeyRef)) throw new Error('inactive client enrollment requires an opaque local key reference')
     const existing = this.#identityRow()
     if (existing) {
       const value = this.#identity(existing)
@@ -47,6 +47,8 @@ export class SqliteInactiveClientStateV1 {
       .run(identity.tenantId, identity.userId, identity.deviceId, JSON.stringify(identity), privateKeyRef, identity.createdAt)
     return deepFreeze(structuredClone(identity))
   }
+
+  isEnrolled(): boolean { return Boolean(this.#identityRow()) }
 
   /** Local-runtime access only. Callers must never include the returned reference in cloud payloads. */
   localEnrollment(): LocalClientEnrollmentV1 {

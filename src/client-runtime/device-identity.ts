@@ -1,16 +1,11 @@
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto'
-import type { DeviceIdentityV1, DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1 } from './contracts.js'
+import type { DeviceIdentityV1, DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1, LocalDeviceSecretStoreV1 } from './contracts.js'
+export type { LocalDeviceSecretStoreV1, RemovableLocalDeviceSecretStoreV1 } from './contracts.js'
 import { validateDeviceIdentity } from './validation.js'
 
 const secretReferencePattern = /^(?:secret|keychain):[a-z0-9][a-z0-9._:-]{0,127}$/
 const publicKeyPrefix = 'ed25519-spki:'
 const proofDomain = 'quark-device-proof-v1\0'
-
-/** Client-owned secret boundary. Implementations must copy input/output bytes and never expose them to cloud projections. */
-export interface LocalDeviceSecretStoreV1 {
-  put(reference: string, value: Uint8Array): Promise<void>
-  get(reference: string): Promise<Uint8Array | undefined>
-}
 
 export interface DeviceEnrollmentMaterialV1 {
   readonly identity: DeviceIdentityV1
@@ -30,8 +25,6 @@ export async function createEd25519DeviceEnrollment(input: {
   if (await secrets.get(input.privateKeyRef)) throw new Error('device enrollment secret reference already exists')
   const pair = generateKeyPairSync('ed25519')
   const publicKey = encodePublicKey(pair.publicKey.export({ format: 'der', type: 'spki' }) as Buffer)
-  const privateBytes = pair.privateKey.export({ format: 'der', type: 'pkcs8' }) as Buffer
-  try { await secrets.put(input.privateKeyRef, Uint8Array.from(privateBytes)) } finally { privateBytes.fill(0) }
   const identity = validateDeviceIdentity({
     schemaVersion: 1,
     tenantId: input.tenantId,
@@ -42,6 +35,8 @@ export async function createEd25519DeviceEnrollment(input: {
     createdAt: now.toISOString(),
     attestation: { kind: 'self', reference: input.attestationReference ?? 'self:ed25519' },
   })
+  const privateBytes = pair.privateKey.export({ format: 'der', type: 'pkcs8' }) as Buffer
+  try { await secrets.put(input.privateKeyRef, Uint8Array.from(privateBytes)) } finally { privateBytes.fill(0) }
   return deepFreeze({ identity: structuredClone(identity), privateKeyRef: input.privateKeyRef, publicKeyId: keyId(publicKey) })
 }
 

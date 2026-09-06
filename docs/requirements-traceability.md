@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储与客户端 composition，合计 125 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition 与加密 secret store，合计 126 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -29,8 +29,10 @@ workspace handle/路径、artifact root/来源路径或 checkpoint 正文，work
 重验，垃圾回收只删除无引用 blob/receipt，且清理失败不会伪装成文件已删除。
 
 设备身份现使用真实 Ed25519 生成、签名和验签 adapter：云端只持有 SPKI 公钥，客户端私钥必须留在 `LocalDeviceSecretStoreV1` 后方并只以
-opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥不匹配均失败关闭。当前仍未选择生产 OS secret-store adapter，也未
-注册真实设备或连接云端。
+opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥不匹配均失败关闭。持久 adapter 已以调用方注入的 32-byte master key
+执行 AES-256-GCM 加密、原子 0600 记录与跨 reopen 签名验证；磁盘不保存 reference、明文或 master key，错 key 和 symlink 失败关闭。首次
+enrollment 已进入单 owner application 并支持通用 tenant identity。仍未选择生产 OS master-key provider、打包 encrypted store 到恢复包，
+也未注册真实云端设备。
 
 客户端现有单一 application composition：同一个进程 owner 持有 instance lease、SQLite、artifact store、executor discovery 和一次性
 device sync。启动先验证 enrollment 与全部已安装制品，第二实例失败关闭，死亡 PID 的合法旧 lease 可安全回收；discovery 与 sync 只能显式

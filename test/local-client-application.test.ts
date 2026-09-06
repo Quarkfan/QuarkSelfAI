@@ -6,7 +6,9 @@ import { join } from 'node:path'
 import test from 'node:test'
 import type { ExecutorCapabilityReportV1, InactiveInstallationPlanV1 } from '../src/client-runtime/contracts.js'
 import { LocalClientInstanceLeaseV1 } from '../src/client-runtime/client-instance-lease.js'
+import { signDeviceSessionChallenge } from '../src/client-runtime/device-identity.js'
 import { InactiveExecutorDiscoveryV1 } from '../src/client-runtime/discovery.js'
+import { EncryptedFileDeviceSecretStoreV1 } from '../src/client-runtime/encrypted-file-secret-store.js'
 import { InactiveLocalClientApplicationV1 } from '../src/client-runtime/local-client-application.js'
 import { openSqliteInactiveClientState } from '../src/client-runtime/sqlite-client-state.js'
 
@@ -40,4 +42,28 @@ test('reclaims only a well-formed lease whose process is no longer alive', async
     await mkdir(path); await writeFile(join(path, 'owner.json'), JSON.stringify({ schemaVersion: 1, pid: 2147483647, token: '00000000-0000-4000-8000-000000000000', createdAt: at.toISOString() }))
     const lease = await LocalClientInstanceLeaseV1.acquire(path, at); await lease.release()
   } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('enrolls a persistent non-test device once and reuses its encrypted key after restart', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-client-enroll-')); const paths = { databasePath: join(directory, 'client.sqlite3'), migrationPath: migration, artifactRoot: join(directory, 'artifacts'), instanceLeasePath: join(directory, 'runtime', 'owner.lock') }; const secretRoot = join(directory, 'secrets'); const master = new Uint8Array(32).fill(4)
+  try {
+    let secrets = await EncryptedFileDeviceSecretStoreV1.open(secretRoot, master)
+    const result = await InactiveLocalClientApplicationV1.enroll(paths, { tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner' }, verifier, secrets, at)
+    assert.deepEqual({ tenant: result.enrollment.identity.tenantId, algorithm: result.enrollment.identity.keyAlgorithm, connection: result.application.snapshot(at).connection }, { tenant: 'tenant.alpha', algorithm: 'ed25519', connection: 'disconnected' })
+    await result.application.close(); secrets.close()
+    secrets = await EncryptedFileDeviceSecretStoreV1.open(secretRoot, master); const app = await InactiveLocalClientApplicationV1.open(paths, verifier, at)
+    const challenge = { schemaVersion: 1 as const, challengeId: 'challenge.one', tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', nonce: 'nonce.one', issuedAt: at.toISOString(), expiresAt: later }
+    assert.equal((await signDeviceSessionChallenge({ identity: result.enrollment.identity, privateKeyRef: 'secret:device.owner', challenge }, secrets)).algorithm, 'ed25519')
+    await app.close()
+    await assert.rejects(() => InactiveLocalClientApplicationV1.enroll(paths, { tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.other', privateKeyRef: 'secret:device.other' }, verifier, secrets, at), /already enrolled/)
+    assert.equal(await secrets.get('secret:device.other'), undefined); secrets.close()
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('validates enrollment identity before persisting a private key', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-client-invalid-enroll-')); const paths = { databasePath: join(directory, 'client.sqlite3'), migrationPath: migration, artifactRoot: join(directory, 'artifacts'), instanceLeasePath: join(directory, 'runtime', 'owner.lock') }; const secrets = await EncryptedFileDeviceSecretStoreV1.open(join(directory, 'secrets'), new Uint8Array(32).fill(5))
+  try {
+    await assert.rejects(() => InactiveLocalClientApplicationV1.enroll(paths, { tenantId: 'INVALID TENANT', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:invalid-enrollment' }, verifier, secrets, at))
+    assert.equal(await secrets.get('secret:invalid-enrollment'), undefined)
+  } finally { secrets.close(); await rm(directory, { recursive: true, force: true }) }
 })

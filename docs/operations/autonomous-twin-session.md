@@ -1136,3 +1136,13 @@
   symlink 状态失败关闭。集成测试验证第二实例阻断、关闭释放与跨 reopen 恢复。
 - `open` 不探测、不联网、不加载/运行能力；discover/sync 均须显式调用，sync 仍不执行 executor。catalog/migration 为 125/125、Facility
   coverage 为 65/65，active capability/consumer/provider/scheduler/effect 仍全部为零，现网 composition 未变。
+
+## 2026-09-06 encrypted local device secrets and first enrollment
+
+- 新增本地 AES-256-GCM secret store：32-byte master key 仅由调用方注入并在 close 清零内部副本；每条记录使用随机 IV 与包含 opaque reference
+  的 domain-separated AAD，文件名仅为 reference digest，JSON 不含 reference、明文或 master key。
+- 0700 canonical root、0600 有界 record、fsync temporary + atomic hard-link、重复引用不可变；错误 key、路径型 reference、direct symlink root、
+  symlink record 和无效 key length 均失败关闭。测试完成 close/reopen 后读取与真实 Ed25519 challenge 签名。
+- 首次 enrollment 纳入同一 instance lease；SQLite 落库前失败会清理新 secret，落库后保留完整一致状态供重试。本地 identity 允许通用 tenant，
+  且 identity 在写入私钥前完成校验；云端 inactive providers 的 `test.*` 限制不变。catalog/migration 为 126/126、Facility coverage 为
+  66/66，未接真实云、daemon 或 effect。

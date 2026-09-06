@@ -1,6 +1,13 @@
 import type { ExecutionEnvelopeV1 } from '../capability-platform/execution-envelope.js'
 import type { CapabilityLifecycleSnapshotV1 } from '../capability-platform/manifest.js'
 
+/** Client-owned secret boundary. Implementations must copy bytes and never project them to cloud state. */
+export interface LocalDeviceSecretStoreV1 {
+  put(reference: string, value: Uint8Array): Promise<void>
+  get(reference: string): Promise<Uint8Array | undefined>
+}
+export interface RemovableLocalDeviceSecretStoreV1 extends LocalDeviceSecretStoreV1 { remove(reference: string): Promise<boolean> }
+
 export type ClientConnectionState = 'unenrolled' | 'disconnected' | 'connecting' | 'online' | 'degraded' | 'revoked'
 export type ExecutorAvailability = 'ready' | 'not-installed' | 'auth-required' | 'version-unsupported' | 'unavailable'
 

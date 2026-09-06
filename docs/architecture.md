@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 125 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 126 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -137,6 +137,11 @@ GC 只删除 SQLite 引用集合以外、名称合法的本地文件。所有操
 收束到同一个客户端 application owner。启动时必须取得本机 instance lease、确认已有 enrollment 并完成 artifact recovery audit；第二实例
 失败关闭，死亡进程留下的格式正确 lease 可通过原子目录 rename 回收。`open` 本身不探测执行器、不连接网络、不加载能力；discover 与
 sync 都是显式方法，当前 sync 仍只接受 no-effect lease 并在持久 checkpoint 后 ack，不调用 executor。该 composition 未挂入现网入口。
+
+[ADR 0128](adr/0128-encrypted-local-device-secrets-and-enrollment.md) 增加持久客户端 secret-store adapter 与首次 enrollment。Ed25519 PKCS8
+字节使用调用方注入的 32-byte master key 经 AES-256-GCM 加密，reference 只参与 AAD 和文件名 digest，master key、reference 与明文均不
+写入 record；目录/文件权限、原子写、重复引用、错误密钥和 symlink 均有门禁。首次 enrollment 与客户端 instance lease 共用唯一 owner，
+可接受通用 tenant identity；这不放宽云端 inactive provider 的 `test.*` 限制，也未选择生产 OS master-key provider 或分发入口。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

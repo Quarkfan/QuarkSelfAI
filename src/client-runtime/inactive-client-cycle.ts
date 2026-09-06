@@ -1,5 +1,6 @@
 import type { DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
-import { signDeviceSessionChallenge, type LocalDeviceSecretStoreV1 } from './device-identity.js'
+import { signDeviceSessionChallenge } from './device-identity.js'
+import type { LocalDeviceSecretStoreV1 } from './contracts.js'
 import { negotiateExecutor } from './negotiation.js'
 import type { SqliteInactiveClientStateV1 } from './sqlite-client-state.js'
 
