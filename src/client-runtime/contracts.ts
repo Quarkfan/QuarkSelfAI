@@ -145,6 +145,11 @@ export interface NoEffectClientExecutorPortV1 {
   }>
 }
 
+/** Trust-boundary validation is injected so process adapters do not depend on policy implementations. */
+export interface ExecutorAdapterInputValidationPortV1 {
+  validate(input: ExecutorAdapterInputV1): ExecutorAdapterInputV1
+}
+
 export interface PlanSignatureVerifierV1 {
   verify(input: { readonly keyId: string; readonly algorithm: 'ed25519'; readonly payloadDigest: string; readonly signature: string }): Promise<boolean>
 }

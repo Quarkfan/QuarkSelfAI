@@ -68,8 +68,12 @@ DSH 五包 closure 作为唯一基础 fallback。单项失败不会阻断其余�
 
 客户端另有显式 no-effect execution cycle：只接受 signed no-effect lease，先 checkpoint leased、精确 ack 后再 checkpoint accepted，才将同一 `ExecutorAdapterInputV1` 交给精确选中的
 executor port，privacy-bounded result 先落本地再提交，server 接受后才标记 synced。合成失败跨 reopen 恢复为同 executor，未调用备用 port；
-completed-pending-sync 会先重传结果而不重复执行。当前 port 仅由测试注入；虽然签名计划现已携带完整声明式 Agent program，仍无真实 Claude Code/Codex/DSH execution adapter、daemon、自动 poll、
+completed-pending-sync 会先重传结果而不重复执行。虽然签名计划现已携带完整声明式 Agent program，该 cycle 的集成测试仍使用注入 executor，尚无 daemon、自动 poll、
 电脑操作或 effect，因此仍不满足“通过统一契约真实运行 Agent”的最终完成标准。
+
+当前另有默认不挂载的 Claude Code/Codex reasoning-only process adapter：它真实实现现有 executor port，但只接受无 capability graph、context、workspace、
+approval 和 effect 的 provider-neutral 计划，并把模型正文仅保存在客户端私有 content-addressed store。测试使用注入 runner，尚未形成真实模型调用证据；
+DSH 五包 closure 也尚无可执行 host entry。因此它是可执行边界实现，不等于三个 executor 已完成真实 Agent parity。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；

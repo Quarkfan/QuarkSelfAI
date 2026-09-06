@@ -1252,3 +1252,14 @@
 - 完整 `npm run check` 通过：主项目 441 项中 434 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 130 modules、
   23/23 effects implemented、0/23 active。work-domain isolation、assistant continuity、capability evolution portability 与根同步审计均通过；
   continuity 继续如实报告 `organizationComplete=false` 和 `work-integration-not-yet-isolated`。
+
+## 2026-09-06 inactive real reasoning executor adapters
+
+- 新增一个精确 id 的 Claude Code/Codex `NoEffectClientExecutorPortV1` 实现。adapter 重新验证 envelope 与 normalized digest，只接受未过期、正预算、
+  provider-neutral、零 capability graph/context/workspace/approval/effect 的 reasoning-only program；不允许在 adapter 内 fallback。
+- Claude 与 Codex 都只从 stdin 接收签名 program，分别固定为 no-tools/no-session 与 ephemeral/ignore-user-config/read-only；runner 不公开为通用 process API，
+  stdout/timeout 有界、stderr 丢弃，错误不包含 prompt 或结果。结果正文只进入客户端私有 0600 content-addressed store，云端只见固定 summary 与 digest。
+- 测试使用注入 runner，覆盖固定 argv、Claude JSON、Codex JSONL、过期/语义扩张/digest drift 失败关闭、store 幂等和篡改检测；没有运行真实模型。
+  adapter 未装入 configured client 或产品 composition。DSH 当前只有五包 closure、没有锁定 executable host entry，继续不得报告真实可执行 parity。
+- 完整 `npm run check` 通过：主项目 445 项中 438 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构仍为 130 modules、
+  effects active 0/23。work-domain isolation、assistant continuity 和根同步审计通过，未改变 `work-integration-not-yet-isolated` 的诚实结论。

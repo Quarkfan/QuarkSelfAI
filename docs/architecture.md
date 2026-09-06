@@ -192,6 +192,11 @@ capability graph 与 model policy，Claude Code、Codex、DSH 因而接收同一
 配置必须是有界 canonical JSON，并拒绝绝对路径、secret-shaped 值和 command/script/shell/argv/executable 直接执行载荷。本批只改变 contract、compiler、
 schema 和 fixture；不运行 executor、不迁移持久状态、不改变 composition 或 effect owner。
 
+[ADR 0140](adr/0140-inactive-real-reasoning-executor-adapters.md) 增加默认不挂载的真实 Claude Code/Codex reasoning adapter。它只接受签名、未过期、
+provider-neutral 且无 capability/context/workspace/approval/effect 的 Agent program，以固定无工具/read-only 参数从 stdin 调用一个精确 executor。模型结果仅
+写入客户端 0600 content-addressed store，云结果只有固定 summary 与 digest。DSH 尚缺可执行 host entry，因此本批不伪装为可运行 fallback；测试也只用
+注入 runner，没有启动真实模型、daemon、网络或现网 composition。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

@@ -328,10 +328,14 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprintV1 {
   text(blueprint.revision, 'blueprint.revision', 200)
   digest(blueprint.digest, 'blueprint.digest')
   if (!['draft', 'test', 'shadow', 'released', 'retired'].includes(text(blueprint.releaseState, 'blueprint.releaseState'))) throw new Error('blueprint.releaseState is invalid')
-  text(blueprint.role, 'blueprint.role', 500)
+  const blueprintRole = text(blueprint.role, 'blueprint.role', 500)
+  if (absolutePathPattern.test(blueprintRole) || secretAssignmentPattern.test(blueprintRole)) throw new Error('blueprint role cannot contain an absolute path or secret-shaped value')
   const goals = array(blueprint.goals, 'blueprint.goals').map((item, index) => text(item, `blueprint.goals[${index}]`, 2000))
-  if (!goals.length) throw new Error('blueprint.goals cannot be empty')
-  const capabilities = array(blueprint.capabilities, 'blueprint.capabilities').map((item, index) => {
+  if (!goals.length || goals.length > 64) throw new Error('blueprint.goals must contain between 1 and 64 items')
+  for (const goal of goals) if (absolutePathPattern.test(goal) || secretAssignmentPattern.test(goal)) throw new Error('blueprint goals cannot contain absolute paths or secret-shaped values')
+  const blueprintCapabilities = array(blueprint.capabilities, 'blueprint.capabilities')
+  if (blueprintCapabilities.length > 256) throw new Error('blueprint cannot reference more than 256 capabilities')
+  const capabilities = blueprintCapabilities.map((item, index) => {
     const capability = record(item, `blueprint.capabilities[${index}]`)
     exactKeys(capability, ['id', 'versionRange', 'artifactDigest', 'required'], `blueprint.capabilities[${index}]`)
     const id = identifier(capability.id, `blueprint.capabilities[${index}].id`)
@@ -344,7 +348,9 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprintV1 {
   const capabilitySet = new Set(capabilities)
   const graph = record(blueprint.graph, 'blueprint.graph')
   exactKeys(graph, ['nodes', 'edges'], 'blueprint.graph')
-  const nodes = array(graph.nodes, 'blueprint.graph.nodes').map((item, index) => {
+  const graphNodes = array(graph.nodes, 'blueprint.graph.nodes')
+  if (graphNodes.length > 256) throw new Error('blueprint graph cannot contain more than 256 nodes')
+  const nodes = graphNodes.map((item, index) => {
     const node = record(item, `blueprint.graph.nodes[${index}]`)
     exactKeys(node, ['id', 'capabilityId', 'interfaceId', 'configuration'], `blueprint.graph.nodes[${index}]`)
     const id = identifier(node.id, `blueprint.graph.nodes[${index}].id`)
@@ -357,7 +363,9 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprintV1 {
   unique(nodes, 'blueprint.graph.nodes')
   const nodeSet = new Set(nodes)
   const adjacency = new Map(nodes.map(node => [node, [] as string[]]))
-  for (const [index, value] of array(graph.edges, 'blueprint.graph.edges').entries()) {
+  const graphEdges = array(graph.edges, 'blueprint.graph.edges')
+  if (graphEdges.length > 1024) throw new Error('blueprint graph cannot contain more than 1024 edges')
+  for (const [index, value] of graphEdges.entries()) {
     const edge = record(value, `blueprint.graph.edges[${index}]`)
     exactKeys(edge, ['from', 'to', 'output', 'input'], `blueprint.graph.edges[${index}]`)
     const from = identifier(edge.from, `blueprint.graph.edges[${index}].from`)
@@ -401,6 +409,7 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprintV1 {
   const modelPolicy = record(blueprint.modelPolicy, 'blueprint.modelPolicy')
   exactKeys(modelPolicy, ['allowed', 'preferred'], 'blueprint.modelPolicy')
   const allowedModels = array(modelPolicy.allowed, 'blueprint.modelPolicy.allowed').map((item, index) => identifier(item, `blueprint.modelPolicy.allowed[${index}]`))
+  if (allowedModels.length > 64) throw new Error('blueprint cannot allow more than 64 models')
   unique(allowedModels, 'blueprint.modelPolicy.allowed')
   if (modelPolicy.preferred !== null && !allowedModels.includes(identifier(modelPolicy.preferred, 'blueprint.modelPolicy.preferred'))) throw new Error('blueprint preferred model must be allowed')
   const budget = record(blueprint.budget, 'blueprint.budget')
@@ -439,9 +448,10 @@ export function validateExecutionEnvelope(value: unknown): ExecutionEnvelopeV1 {
   const role = text(program.role, 'envelope.program.role', 500)
   if (absolutePathPattern.test(role) || secretAssignmentPattern.test(role)) throw new Error('execution program role cannot contain an absolute path or secret-shaped value')
   const goals = array(program.goals, 'envelope.program.goals').map((item, index) => text(item, `envelope.program.goals[${index}]`, 2000))
-  if (!goals.length) throw new Error('execution program goals cannot be empty')
+  if (!goals.length || goals.length > 64) throw new Error('execution program goals must contain between 1 and 64 items')
   for (const goal of goals) if (absolutePathPattern.test(goal) || secretAssignmentPattern.test(goal)) throw new Error('execution program goals cannot contain absolute paths or secret-shaped values')
   const capabilities = array(envelope.capabilities, 'envelope.capabilities')
+  if (capabilities.length > 256) throw new Error('execution envelope cannot pin more than 256 capabilities')
   const capabilityIds = capabilities.map((value, index) => {
     const capability = record(value, `envelope.capabilities[${index}]`)
     exactKeys(capability, ['id', 'version', 'artifactDigest'], `envelope.capabilities[${index}]`)
@@ -453,7 +463,9 @@ export function validateExecutionEnvelope(value: unknown): ExecutionEnvelopeV1 {
   unique(capabilityIds, 'envelope.capabilities')
   const graph = record(program.graph, 'envelope.program.graph')
   exactKeys(graph, ['nodes', 'edges'], 'envelope.program.graph')
-  const nodeIds = array(graph.nodes, 'envelope.program.graph.nodes').map((value, index) => {
+  const graphNodes = array(graph.nodes, 'envelope.program.graph.nodes')
+  if (graphNodes.length > 256) throw new Error('execution program graph cannot contain more than 256 nodes')
+  const nodeIds = graphNodes.map((value, index) => {
     const node = record(value, `envelope.program.graph.nodes[${index}]`)
     exactKeys(node, ['id', 'capabilityId', 'interfaceId', 'configuration'], `envelope.program.graph.nodes[${index}]`)
     const id = identifier(node.id, `envelope.program.graph.nodes[${index}].id`)
@@ -467,7 +479,9 @@ export function validateExecutionEnvelope(value: unknown): ExecutionEnvelopeV1 {
   const nodeSet = new Set(nodeIds)
   const adjacency = new Map(nodeIds.map(node => [node, [] as string[]]))
   const edgeKeys: string[] = []
-  for (const [index, value] of array(graph.edges, 'envelope.program.graph.edges').entries()) {
+  const graphEdges = array(graph.edges, 'envelope.program.graph.edges')
+  if (graphEdges.length > 1024) throw new Error('execution program graph cannot contain more than 1024 edges')
+  for (const [index, value] of graphEdges.entries()) {
     const edge = record(value, `envelope.program.graph.edges[${index}]`)
     exactKeys(edge, ['from', 'to', 'output', 'input'], `envelope.program.graph.edges[${index}]`)
     const from = identifier(edge.from, `envelope.program.graph.edges[${index}].from`)
@@ -483,6 +497,7 @@ export function validateExecutionEnvelope(value: unknown): ExecutionEnvelopeV1 {
   const modelPolicy = record(program.modelPolicy, 'envelope.program.modelPolicy')
   exactKeys(modelPolicy, ['allowed', 'preferred'], 'envelope.program.modelPolicy')
   const allowedModels = array(modelPolicy.allowed, 'envelope.program.modelPolicy.allowed').map((item, index) => identifier(item, `envelope.program.modelPolicy.allowed[${index}]`))
+  if (allowedModels.length > 64) throw new Error('execution program cannot allow more than 64 models')
   unique(allowedModels, 'envelope.program.modelPolicy.allowed')
   if (modelPolicy.preferred !== null && !allowedModels.includes(identifier(modelPolicy.preferred, 'envelope.program.modelPolicy.preferred'))) throw new Error('execution program preferred model must be allowed')
   const context = array(envelope.context, 'envelope.context')
@@ -531,4 +546,12 @@ export function validateExecutionEnvelope(value: unknown): ExecutionEnvelopeV1 {
 export function toExecutorAdapterInput(executorId: string, value: unknown): ExecutorAdapterInputV1 {
   const envelope = validateExecutionEnvelope(value)
   return { executorId: identifier(executorId, 'executorId'), envelope, normalizedContextDigest: contentDigest(envelope) }
+}
+
+export function validateExecutorAdapterInput(value: unknown): ExecutorAdapterInputV1 {
+  const input = record(value, 'executor adapter input')
+  exactKeys(input, ['executorId', 'envelope', 'normalizedContextDigest'], 'executor adapter input')
+  const normalized = toExecutorAdapterInput(identifier(input.executorId, 'executor adapter input.executorId'), input.envelope)
+  if (input.normalizedContextDigest !== normalized.normalizedContextDigest) throw new Error('executor adapter input digest drifted')
+  return value as ExecutorAdapterInputV1
 }
