@@ -13,6 +13,20 @@ export interface DeviceEnrollmentMaterialV1 {
   readonly publicKeyId: string
 }
 
+/** Proves that a recovered local secret is the private half of the persisted public identity. */
+export async function assertDeviceEnrollmentSecret(identityInput: DeviceIdentityV1, privateKeyRef: string, secrets: LocalDeviceSecretStoreV1): Promise<void> {
+  const identity = validateDeviceIdentity(identityInput)
+  if (!secretReferencePattern.test(privateKeyRef)) throw new Error('device enrollment secret reference is invalid')
+  const secret = await secrets.get(privateKeyRef)
+  if (!secret) throw new Error('device private key is unavailable')
+  const privateBytes = Buffer.from(secret)
+  try {
+    const privateKey = createPrivateKey({ key: privateBytes, format: 'der', type: 'pkcs8' })
+    const derivedPublic = encodePublicKey(createPublicKey(privateKey).export({ format: 'der', type: 'spki' }) as Buffer)
+    if (derivedPublic !== identity.publicKey) throw new Error('device private key does not match enrolled public identity')
+  } finally { privateBytes.fill(0); secret.fill(0) }
+}
+
 /** Generates a real Ed25519 identity while returning only public metadata and an opaque local reference. */
 export async function createEd25519DeviceEnrollment(input: {
   readonly tenantId: string
@@ -51,13 +65,14 @@ export async function signDeviceSessionChallenge(input: {
   if (input.challenge.schemaVersion !== 1 || input.challenge.tenantId !== identity.tenantId || input.challenge.userId !== identity.userId || input.challenge.deviceId !== identity.deviceId) throw new Error('device challenge is outside the enrolled identity scope')
   const secret = await secrets.get(input.privateKeyRef)
   if (!secret) throw new Error('device private key is unavailable')
+  const privateBytes = Buffer.from(secret)
   try {
-    const privateKey = createPrivateKey({ key: Buffer.from(secret), format: 'der', type: 'pkcs8' })
+    const privateKey = createPrivateKey({ key: privateBytes, format: 'der', type: 'pkcs8' })
     const derivedPublic = encodePublicKey(createPublicKey(privateKey).export({ format: 'der', type: 'spki' }) as Buffer)
     if (derivedPublic !== identity.publicKey) throw new Error('device private key does not match enrolled public identity')
     const signature = sign(null, proofPayload(input.challenge.nonce), privateKey).toString('base64url')
     return Object.freeze({ schemaVersion: 1, challengeId: input.challenge.challengeId, deviceId: identity.deviceId, keyId: keyId(identity.publicKey), algorithm: 'ed25519', signature })
-  } finally { secret.fill(0) }
+  } finally { privateBytes.fill(0); secret.fill(0) }
 }
 
 /** Server-side verifier for the public key already owned by the tenant device repository. */

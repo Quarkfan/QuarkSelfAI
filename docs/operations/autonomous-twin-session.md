@@ -1146,3 +1146,12 @@
 - 首次 enrollment 纳入同一 instance lease；SQLite 落库前失败会清理新 secret，落库后保留完整一致状态供重试。本地 identity 允许通用 tenant，
   且 identity 在写入私钥前完成校验；云端 inactive providers 的 `test.*` 限制不变。catalog/migration 为 126/126、Facility coverage 为
   66/66，未接真实云、daemon 或 effect。
+
+## 2026-09-06 inactive Keychain and encrypted client bootstrap
+
+- 新增 provider-neutral master-key port 与只读 macOS Keychain adapter。adapter 只允许固定 service 和安全 account，使用 `shell=false` 的
+  `security find-generic-password` 读取预置 32-byte base64url key；stdout 有界且用后清零，secret 不进入 argv、错误、持久状态或云投影。
+- encrypted bootstrap 获取 master key 后打开加密 secret store 并清零调用方 buffer，在同一 instance lease 内首次 enrollment 或精确复用已有
+  tenant/user/device/reference。重启会派生并比对公钥，错误 master key、identity 漂移或私钥不匹配均在探测/连接前失败关闭。
+- 未通过 `security add-generic-password` 写入新 key，因为该路径会把 secret 暴露到 argv；生产 provisioning 留给后续原生 OS API。当前也未实现
+  Windows/Linux provider、安装包、daemon、真实云注册或自动连接。catalog/migration 为 128/128、Facility coverage 为 68/68，effects 为 0/23。

@@ -8,6 +8,9 @@ export interface LocalDeviceSecretStoreV1 {
 }
 export interface RemovableLocalDeviceSecretStoreV1 extends LocalDeviceSecretStoreV1 { remove(reference: string): Promise<boolean> }
 
+/** Supplies one local encryption key without exposing its origin to client composition. */
+export interface LocalMasterKeyProviderV1 { load(): Promise<Uint8Array> }
+
 export type ClientConnectionState = 'unenrolled' | 'disconnected' | 'connecting' | 'online' | 'degraded' | 'revoked'
 export type ExecutorAvailability = 'ready' | 'not-installed' | 'auth-required' | 'version-unsupported' | 'unavailable'
 
