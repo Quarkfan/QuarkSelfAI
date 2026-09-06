@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "requestId": "capability-platform-cloud-edge-pilot-03",
+  "status": "awaiting-exact-owner-approval",
+  "baseRevision": "fdfb10be20ccd3f14fd423b403dfb26c00c64d68",
+  "purpose": "Prove the authenticated multi-tenant cloud API over one ephemeral loopback listener with temporary SQLite state and no Agent execution or effects.",
+  "fileScope": {
+    "create": ["src/control-plane/node-http-adapter.ts", "scripts/run-capability-platform-cloud-edge-pilot.ts", "test/cloud-edge-loopback-pilot.test.ts", "config/capability-platform-cloud-edge-pilot-03.json"],
+    "modify": ["src/control-plane/http-handler.ts", "config/module-catalog.json", "config/capability-platform-migration.json", "docs/adr/0116-inactive-cloud-api-boundary.md", "docs/architecture.md", "docs/requirements-traceability.md", "docs/operations/autonomous-twin-session.md"],
+    "forbidden": ["package.json", "cordis.patch.yml", "config/product-composition.json", "packages/bridge-compat/**", "web/quarkfan-brand.client.d.ts", "web/quarkfan-brand.client.js", "../QuarkSelfAI-Work/**"]
+  },
+  "architectureChange": [
+    "add a Node built-in HTTP edge adapter around the existing transport-independent handler",
+    "derive tenant and user from one synthetic opaque session mapping instead of request parameters",
+    "exercise two isolated test tenants against temporary SQLite identity, Capability Registry and Agent Studio providers",
+    "keep every production composition, consumer, provider, scheduler and writer unchanged"
+  ],
+  "allowedActions": [
+    "open exactly one ephemeral IPv4 loopback listener on 127.0.0.1 port 0 during the pilot",
+    "create and remove one temporary SQLite database and synthetic test-tenant fixture directory",
+    "send only fixed synthetic JSON requests for device registration, capability listing and Agent draft listing",
+    "use only Node built-in modules and existing repository code; install no dependency",
+    "retain only status codes, tenant-isolation assertions, bounded counts and digests",
+    "close the listener and database before the pilot exits",
+    "commit and push the exact implementation after all gates pass"
+  ],
+  "explicitExclusions": [
+    "bind a non-loopback interface or fixed port",
+    "configure DNS, TLS certificates, SSH, firewall, reverse proxy or cloud infrastructure",
+    "use real users, credentials, devices, messages, business data, customer data or user workspaces",
+    "execute an Agent, executor, tool, lifecycle handler or external effect",
+    "install third-party code or change DSH/Cordis and product composition",
+    "activate the client or private Work Integration Pack",
+    "switch or duplicate a consumer, provider, scheduler or writer",
+    "migrate live data, delete a source or restart a service"
+  ],
+  "validation": [
+    "real loopback HTTP roundtrip for two synthetic tenants",
+    "prove body tenant injection fails before a provider call",
+    "prove same user and device ids remain tenant-isolated across SQLite reopen",
+    "assert listenerClosed=true, executorInvoked=false, effectsActive=0 and currentOwnerPreserved=true",
+    "npm run check",
+    "strict assistant-continuity and work-domain-isolation audits",
+    "private pack audit and root agent sync check",
+    "remote revision readback"
+  ],
+  "rollback": {"method": "Close the ephemeral listener, close SQLite, remove the temporary fixture directory, then revert the single pilot implementation commit.", "persistentStateMigrationRequired": false, "serviceRestartRequired": false, "currentRuntimeRecoveryRequired": false},
+  "approvalPhrase": "批准 capability-platform-cloud-edge-pilot-03，基于 revision fdfb10be20ccd3f14fd423b403dfb26c00c64d68，严格按授权单执行。"
+}

@@ -1012,3 +1012,10 @@
 - HTTP boundary 不再把 proof/result unknown object 直接透传：proof 精确限制 schema/challenge/device/key/algorithm/signature；result 精确限制
   device/task/plan/outcome/summaryCode/artifact digests/completedAt，tenant/user 或其他未知字段在 provider 前拒绝。
 - result summary 拒绝绝对路径与 secret-shaped assignment，artifact 只接受 sha256 digest；底层 provider 仍须独立复核 session/lease scope 和幂等。
+
+## 2026-09-06 cloud edge pilot 03 authorization boundary
+
+- 基于 revision `fdfb10be20ccd3f14fd423b403dfb26c00c64d68` 固化下一批精确授权单：只允许一个 `127.0.0.1:0` 临时 HTTP listener、
+  临时 SQLite 与两个纯合成 test tenant，验证认证 API、tenant isolation 和关闭清理。
+- 明确排除公网/TLS/SSH、真实身份或数据、Agent/executor/tool/effect、依赖安装、composition/owner 变化、私有 pack、迁移和服务重启。
+- 当前仅记录申请，不创建 adapter、不打开 listener；收到授权单中的精确 approval phrase 前不得执行 Pilot 03。
