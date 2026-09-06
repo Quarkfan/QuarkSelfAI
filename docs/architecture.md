@@ -42,6 +42,12 @@ Agent Studio 的编译边界由 [ADR 0096](adr/0096-agent-blueprint-compilation.
 interface ownership、graph DAG 与 workspace grant 必须闭合，编译结果才可由注入 signer 签成所有执行器共用的 Envelope。
 当前编译器只接受 test tenant 与无 effect Blueprint，不派发计划。
 
+设备连接协议与具体网络通道分离。按 [ADR 0111](adr/0111-ssh-device-transport-fallback.md)，direct TLS 始终是主通道；在直连不可用时，
+客户端可选择固定 `quark-device-v1` SSH subsystem 作为候选备用通道。两者复用同一 device session、signed plan、lease、checkpoint、
+approval、workspace 和 effect contract，切换不产生第二 consumer/provider/writer。SSH 私钥只由客户端 secret reference 解析，必须 pin
+host key，且禁用 remote shell、任意 command、port forwarding 与 agent forwarding。当前只有 `configured-inactive` policy validator，
+没有 SSH process、socket、gateway、凭证配置或 runtime mount。
+
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
 计划验证在 envelope 被交给 executor 前完成。当前 discovery 增加了 Claude Code、Codex、DSH 固定 `--version` 描述和纯观察

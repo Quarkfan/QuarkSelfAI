@@ -19,6 +19,11 @@ Phase 2A/5E 已实现 provider-neutral 设备公开身份、隐私有界 executo
 client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃分类器。当前只使用注入 observation，preflight 永不启动
 listener 或 executor；因此属于客户端协议基础，不满足真实设备注册、真实执行器发现或电脑操作完成标准。
 
+设备协议已增加 direct TLS 主通道与 SSH subsystem 备用通道的静态 contract。SSH 只允许客户端主动出站到固定
+`quark-device-v1` subsystem，host key 与 credential 使用本地 opaque reference，禁止 shell、任意 command、port/agent forwarding，
+并要求切换前释放旧 transport lease。当前 policy 固定 `configured-inactive`/`activationAllowed=false`，尚无真实 SSH adapter、gateway、
+凭证或连接证据，因此不满足服务器可达性完成标准。
+
 Phase 2B 已实现六项供应链证据全通过后的 `installed-inactive` 计划，以及 installation/loading/authorization/execution/effects
 五态分离；当前 planner 不下载、不写盘、不执行 lifecycle handler，因此只证明安全安装计划边界。
 

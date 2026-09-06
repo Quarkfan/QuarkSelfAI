@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "protocol": "quark-device-sync.v1",
+  "preference": ["direct-tls", "ssh-subsystem"],
+  "directEndpointRef": "endpoint:cloud-control",
+  "ssh": {
+    "kind": "ssh-subsystem",
+    "state": "configured-inactive",
+    "endpointRef": "endpoint:ssh-gateway",
+    "userRef": "identity:device-tunnel",
+    "credentialRef": "secret:ssh-device-key",
+    "hostKeyFingerprintRef": "identity:ssh-host-key",
+    "hostKeyVerification": "pinned",
+    "subsystem": "quark-device-v1",
+    "clientInitiated": true,
+    "fallbackOnly": true,
+    "remoteShellAllowed": false,
+    "remoteCommandAllowed": false,
+    "portForwardingAllowed": false,
+    "agentForwardingAllowed": false
+  },
+  "singleActiveTransport": true,
+  "resumeSameDeviceSession": true,
+  "preservePlanLeaseAndIdempotency": true,
+  "activationAllowed": false
+}

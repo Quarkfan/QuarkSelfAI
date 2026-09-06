@@ -923,3 +923,13 @@
   `executorInvoked=false`、`effectsActive=0`、external writes 关闭、current owner 保持不变。没有 prompt、Agent/lifecycle、依赖安装、
   composition 变化、服务重启、私有包激活、数据迁移或 source 删除。
 - 回滚无需状态或服务恢复：移除本批 inactive adapter、测试和证据文件，并恢复 ADR/catalog 文档即可。
+
+## 2026-09-06 SSH device transport contract
+
+- 为可能无法提供可达公共域名的服务器部署增加 transport-neutral 设计：direct TLS 保持主通道，客户端可在直连不可用时把固定
+  `quark-device-v1` SSH subsystem 作为 fallback candidate。该变化不创建第二套设备协议、调度器、executor 或 write path。
+- SSH gateway、远端 identity、host-key fingerprint 与客户端 key 均只以 opaque reference 表达；真实私钥必须留在客户端 secret store。
+  policy 强制 client-initiated、host-key pinning、single active transport，并禁用 remote shell、任意 command、TCP forwarding 与 agent
+  forwarding。transport 切换必须保留同一 device session、signed plan、lease、checkpoint、approval、workspace、effect 与 idempotency。
+- 当前仅新增纯 contract、validator、默认 inactive 配置与离线测试；没有运行 `ssh`、打开 socket、配置 endpoint/凭证、启动 gateway、
+  改 composition 或重启服务。真实 SSH adapter 与连接演练仍需绑定明确 endpoint、host key、文件范围和回滚的单独批准。
