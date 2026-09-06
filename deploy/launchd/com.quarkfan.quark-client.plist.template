@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.quarkfan.quark-client</string>
+  <key>ProgramArguments</key>
+  <array><string>__NODE_EXECUTABLE__</string><string>__CLIENT_ENTRY__</string><string>run</string></array>
+  <key>WorkingDirectory</key><string>__PROGRAM_ROOT__</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>__EXEC_PATH__</string>
+    <key>QUARK_CLIENT_INSTALL_ROOT</key><string>__INSTALL_ROOT__</string>
+    <key>QUARK_CLIENT_WORKSPACE</key><string>__WORKSPACE_PATH__</string>
+    <key>QUARK_CLIENT_ENABLE_NO_EFFECT_WORKER</key><string>1</string>
+  </dict>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardOutPath</key><string>__STDOUT_PATH__</string>
+  <key>StandardErrorPath</key><string>__STDERR_PATH__</string>
+</dict>
+</plist>

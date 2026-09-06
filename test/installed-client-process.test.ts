@@ -9,8 +9,9 @@ import test from 'node:test'
 import { installInactiveClient, type InactiveClientInstallationV1 } from '../src/client-runtime/client-installation.js'
 import { compileClientEntryCommand } from '../src/client-runtime/client-entry.js'
 import { InstalledNoEffectClientProcessV1, type OwnedConfiguredClientPortV1 } from '../src/client-runtime/installed-client-process.js'
+import { createClientDistributionFixture } from './client-distribution-fixture.js'
 
-function installation(): InactiveClientInstallationV1 { return { plan: {} as never, receipt: { schemaVersion: 1, installationId: `installation.${'a'.repeat(32)}`, clientVersion: '0.1.0', configDigest: `sha256:${'b'.repeat(64)}`, migrationDigest: `sha256:${'c'.repeat(64)}`, installedAt: '2026-09-06T00:00:00.000Z', state: 'installed-inactive', autoStart: false, externalWritesEnabled: false } } }
+function installation(): InactiveClientInstallationV1 { return { plan: {} as never, receipt: { schemaVersion: 1, installationId: `installation.${'a'.repeat(32)}`, clientVersion: '0.1.0', configDigest: `sha256:${'b'.repeat(64)}`, migrationDigest: `sha256:${'c'.repeat(64)}`, distributionDigest: `sha256:${'d'.repeat(64)}`, sourceRevision: 'e'.repeat(40), installedAt: '2026-09-06T00:00:00.000Z', state: 'installed-inactive', autoStart: false, externalWritesEnabled: false } } }
 const execFileAsync = promisify(execFile)
 const at = new Date('2026-09-06T00:00:00.000Z')
 
@@ -47,8 +48,9 @@ test('runs the built status entry against a real inactive installation without o
   const parent = await realpath(await mkdtemp(join(tmpdir(), 'quark-installed-client-status-'))); const installRoot = join(parent, 'client')
   const publicKey = `ed25519-spki:${(generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }) as Buffer).toString('base64url')}`
   try {
-    const installed = await installInactiveClient({ installRoot, clientVersion: '0.1.0', migrationSourcePath: new URL('../migrations/client-sqlite/001_client_state.sql', import.meta.url).pathname, controlPlaneEndpoint: 'https://control.example.com/', tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner', planVerification: { keyId: 'control.primary', publicKey } }, at)
-    const { stdout, stderr } = await execFileAsync(process.execPath, [new URL('../dist/client-runtime/client-entry.js', import.meta.url).pathname, 'status'], { env: { ...process.env, QUARK_CLIENT_INSTALL_ROOT: installRoot } })
+    const distributionSourcePath = await createClientDistributionFixture(parent, `import { readFile } from 'node:fs/promises'; import { join } from 'node:path'; const receipt=JSON.parse(await readFile(join(process.env.QUARK_CLIENT_INSTALL_ROOT,'install-receipt.json'),'utf8')); process.stdout.write(JSON.stringify({schemaVersion:1,installationId:receipt.installationId,clientVersion:receipt.clientVersion,state:receipt.state,autoStart:false,externalWritesEnabled:false})+'\\n')\n`)
+    const installed = await installInactiveClient({ installRoot, distributionSourcePath, clientVersion: '0.1.0', controlPlaneEndpoint: 'https://control.example.com/', tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner', planVerification: { keyId: 'control.primary', publicKey } }, at)
+    const { stdout, stderr } = await execFileAsync(process.execPath, [join(installRoot, 'program/dist/client-runtime/client-entry.js'), 'status'], { cwd: join(installRoot, 'program'), env: { ...process.env, QUARK_CLIENT_INSTALL_ROOT: installRoot } })
     const status = JSON.parse(stdout)
     assert.deepEqual(status, { schemaVersion: 1, installationId: installed.receipt.installationId, clientVersion: '0.1.0', state: 'installed-inactive', autoStart: false, externalWritesEnabled: false })
     assert.equal(stderr, ''); assert.equal(stdout.includes(installRoot), false); assert.deepEqual(await readdir(join(installRoot, 'state')), [])

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { chmod, copyFile, lstat, mkdir, open, readdir, readFile, realpath, rename, rm, rmdir, unlink } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { compileInactiveClientBootstrap, type InactiveClientBootstrapDocumentV1, type InactiveClientBootstrapPlanV1 } from './configured-local-client.js'
+import { verifyClientDistribution, type ClientDistributionManifestV1 } from './client-distribution.js'
 
 const versionPattern = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/
 const digestPattern = /^sha256:[a-f0-9]{64}$/
@@ -9,7 +10,7 @@ const digestPattern = /^sha256:[a-f0-9]{64}$/
 export interface InactiveClientInstallationInputV1 extends Omit<InactiveClientBootstrapDocumentV1, 'schemaVersion' | 'stateRoot'> {
   readonly installRoot: string
   readonly clientVersion: string
-  readonly migrationSourcePath: string
+  readonly distributionSourcePath: string
 }
 
 export interface InactiveClientInstallationReceiptV1 {
@@ -18,6 +19,8 @@ export interface InactiveClientInstallationReceiptV1 {
   readonly clientVersion: string
   readonly configDigest: string
   readonly migrationDigest: string
+  readonly distributionDigest: string
+  readonly sourceRevision: string
   readonly installedAt: string
   readonly state: 'installed-inactive'
   readonly autoStart: false
@@ -29,22 +32,26 @@ export interface InactiveClientInstallationV1 { readonly plan: InactiveClientBoo
 /** Installs portable inactive client state only. It does not provision credentials or register/start a service. */
 export async function installInactiveClient(input: InactiveClientInstallationInputV1, now = new Date()): Promise<InactiveClientInstallationV1> {
   const root = await validateNewRoot(input.installRoot)
-  if (!versionPattern.test(input.clientVersion) || !isAbsolute(input.migrationSourcePath)) throw new Error('client installation input is invalid')
-  const source = await lstat(input.migrationSourcePath)
+  if (!versionPattern.test(input.clientVersion)) throw new Error('client installation input is invalid')
+  const distribution = await verifyClientDistribution(input.distributionSourcePath)
+  if (distribution.clientVersion !== input.clientVersion) throw new Error('client distribution version does not match installation')
+  const migrationSourcePath = join(input.distributionSourcePath, 'program/migrations/client-sqlite/001_client_state.sql')
+  const source = await lstat(migrationSourcePath)
   if (!source.isFile() || source.isSymbolicLink() || source.size <= 0 || source.size > 1024 * 1024) throw new Error('client installation migration is invalid')
   let created = false; let migrationBytes: Buffer | undefined; let configBytes: Buffer | undefined
   try {
     await mkdir(root, { mode: 0o700 }); created = true
-    const stateRoot = join(root, 'state'); const runtimeRoot = join(root, 'runtime')
-    await mkdir(stateRoot, { mode: 0o700 }); await mkdir(runtimeRoot, { mode: 0o700 })
-    const migrationPath = join(runtimeRoot, basename(input.migrationSourcePath))
-    await copyFile(input.migrationSourcePath, migrationPath); await chmod(migrationPath, 0o600)
+    const stateRoot = join(root, 'state'); const runtimeRoot = join(root, 'runtime'); const programRoot = join(root, 'program')
+    await mkdir(stateRoot, { mode: 0o700 }); await mkdir(runtimeRoot, { mode: 0o700 }); await copyDistribution(input.distributionSourcePath, root, distribution)
+    const migrationPath = join(runtimeRoot, basename(migrationSourcePath))
+    await copyFile(migrationSourcePath, migrationPath); await chmod(migrationPath, 0o600)
     migrationBytes = await readFile(migrationPath)
     const migrationDigest = digest(migrationBytes)
     const bootstrap: InactiveClientBootstrapDocumentV1 = { schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, stateRoot, tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, privateKeyRef: input.privateKeyRef, keychainAccount: input.keychainAccount, planVerification: input.planVerification }
     configBytes = Buffer.from(`${JSON.stringify(bootstrap)}\n`, 'utf8')
     await writeDurable(join(root, 'client.json'), configBytes)
-    const receipt: InactiveClientInstallationReceiptV1 = Object.freeze({ schemaVersion: 1, installationId: `installation.${createHash('sha256').update(root).update('\0').update(input.clientVersion).digest('hex').slice(0, 32)}`, clientVersion: input.clientVersion, configDigest: digest(configBytes), migrationDigest, installedAt: now.toISOString(), state: 'installed-inactive', autoStart: false, externalWritesEnabled: false })
+    if (await realpath(programRoot) !== programRoot) throw new Error('client program root is not canonical')
+    const receipt: InactiveClientInstallationReceiptV1 = Object.freeze({ schemaVersion: 1, installationId: `installation.${createHash('sha256').update(root).update('\0').update(input.clientVersion).digest('hex').slice(0, 32)}`, clientVersion: input.clientVersion, configDigest: digest(configBytes), migrationDigest, distributionDigest: distribution.artifactDigest, sourceRevision: distribution.sourceRevision, installedAt: now.toISOString(), state: 'installed-inactive', autoStart: false, externalWritesEnabled: false })
     await writeDurable(join(root, 'install-receipt.json'), Buffer.from(`${JSON.stringify(receipt)}\n`, 'utf8'))
     return Object.freeze({ plan: await compileInactiveClientBootstrap(bootstrap, migrationPath), receipt })
   } catch (error) {
@@ -56,7 +63,7 @@ export async function installInactiveClient(input: InactiveClientInstallationInp
 /** Revalidates local installation evidence without reading client databases or secrets. */
 export async function recoverInactiveClientInstallation(installRoot: string): Promise<InactiveClientInstallationV1> {
   const root = await validateExistingRoot(installRoot)
-  if ((await readdir(root)).sort().join(',') !== 'client.json,install-receipt.json,runtime,state') throw new Error('client installation layout is invalid')
+  if ((await readdir(root)).sort().join(',') !== 'client-distribution.json,client.json,install-receipt.json,program,runtime,state') throw new Error('client installation layout is invalid')
   let configBytes: Buffer | undefined; let receiptBytes: Buffer | undefined; let migrationBytes: Buffer | undefined
   try {
     configBytes = await readBounded(join(root, 'client.json')); receiptBytes = await readBounded(join(root, 'install-receipt.json'))
@@ -66,6 +73,8 @@ export async function recoverInactiveClientInstallation(installRoot: string): Pr
     const expectedInstallationId = `installation.${createHash('sha256').update(root).update('\0').update(item.clientVersion).digest('hex').slice(0, 32)}`
     if (item.installationId !== expectedInstallationId) throw new Error('client installation identity drifted')
     if (item.configDigest !== digest(configBytes)) throw new Error('client installation config digest drifted')
+    const distribution = await verifyClientDistribution(root)
+    if (distribution.artifactDigest !== item.distributionDigest || distribution.sourceRevision !== item.sourceRevision || distribution.clientVersion !== item.clientVersion) throw new Error('client installation distribution drifted')
     const migrationPath = join(root, 'runtime', basename((await onlyMigration(join(root, 'runtime')))))
     migrationBytes = await readBounded(migrationPath, 1024 * 1024)
     if (item.migrationDigest !== digest(migrationBytes)) throw new Error('client installation migration digest drifted')
@@ -86,6 +95,7 @@ export async function uninstallUnusedInactiveClient(installRoot: string): Promis
   const quarantinedState = join(quarantine, 'state')
   if ((await readdir(quarantinedState)).length !== 0) { await rename(quarantine, root); throw new Error('client installation acquired durable state during uninstall') }
   const runtimeRoot = join(quarantine, 'runtime')
+  await removeVerifiedDistribution(quarantine)
   await unlink(join(quarantine, 'client.json')); await unlink(join(quarantine, 'install-receipt.json')); await unlink(await onlyMigration(runtimeRoot)); await rmdir(runtimeRoot)
   // Never recursively delete state: any unexpected write makes an atomic directory removal fail.
   await rmdir(quarantinedState); await rmdir(quarantine)
@@ -113,7 +123,22 @@ async function onlyMigration(root: string): Promise<string> { const state = awai
 function digest(value: Uint8Array): string { return `sha256:${createHash('sha256').update(value).digest('hex')}` }
 function exactReceipt(value: unknown): InactiveClientInstallationReceiptV1 {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client installation receipt is invalid')
-  const item = value as Record<string, unknown>; const keys = ['schemaVersion', 'installationId', 'clientVersion', 'configDigest', 'migrationDigest', 'installedAt', 'state', 'autoStart', 'externalWritesEnabled']
-  if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.schemaVersion !== 1 || typeof item.installationId !== 'string' || !/^installation\.[a-f0-9]{32}$/.test(item.installationId) || typeof item.clientVersion !== 'string' || !versionPattern.test(item.clientVersion) || typeof item.configDigest !== 'string' || !digestPattern.test(item.configDigest) || typeof item.migrationDigest !== 'string' || !digestPattern.test(item.migrationDigest) || typeof item.installedAt !== 'string' || Number.isNaN(Date.parse(item.installedAt)) || item.state !== 'installed-inactive' || item.autoStart !== false || item.externalWritesEnabled !== false) throw new Error('client installation receipt is invalid')
+  const item = value as Record<string, unknown>; const keys = ['schemaVersion', 'installationId', 'clientVersion', 'configDigest', 'migrationDigest', 'distributionDigest', 'sourceRevision', 'installedAt', 'state', 'autoStart', 'externalWritesEnabled']
+  if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.schemaVersion !== 1 || typeof item.installationId !== 'string' || !/^installation\.[a-f0-9]{32}$/.test(item.installationId) || typeof item.clientVersion !== 'string' || !versionPattern.test(item.clientVersion) || typeof item.configDigest !== 'string' || !digestPattern.test(item.configDigest) || typeof item.migrationDigest !== 'string' || !digestPattern.test(item.migrationDigest) || typeof item.distributionDigest !== 'string' || !digestPattern.test(item.distributionDigest) || typeof item.sourceRevision !== 'string' || !/^[a-f0-9]{40}$/.test(item.sourceRevision) || typeof item.installedAt !== 'string' || Number.isNaN(Date.parse(item.installedAt)) || item.state !== 'installed-inactive' || item.autoStart !== false || item.externalWritesEnabled !== false) throw new Error('client installation receipt is invalid')
   return Object.freeze(item as unknown as InactiveClientInstallationReceiptV1)
+}
+
+async function copyDistribution(sourceRoot: string, destinationRoot: string, manifest: ClientDistributionManifestV1): Promise<void> {
+  for (const file of manifest.files) { const destination = join(destinationRoot, file.path); await mkdir(dirname(destination), { recursive: true, mode: 0o700 }); await copyFile(join(sourceRoot, file.path), destination); await chmod(destination, 0o600) }
+  await copyFile(join(sourceRoot, 'client-distribution.json'), join(destinationRoot, 'client-distribution.json')); await chmod(join(destinationRoot, 'client-distribution.json'), 0o600)
+  await verifyClientDistribution(destinationRoot)
+}
+
+async function removeVerifiedDistribution(root: string): Promise<void> {
+  const manifest = await verifyClientDistribution(root)
+  for (const file of [...manifest.files].sort((left, right) => right.path.localeCompare(left.path))) await unlink(join(root, file.path))
+  const directories = new Set<string>()
+  for (const file of manifest.files) { let current = dirname(join(root, file.path)); while (current !== root) { directories.add(current); current = dirname(current) } }
+  for (const directory of [...directories].sort((left, right) => right.length - left.length)) await rmdir(directory)
+  await unlink(join(root, 'client-distribution.json'))
 }

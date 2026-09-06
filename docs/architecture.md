@@ -100,7 +100,10 @@ workspace canonical、周期有界且 external writes 关闭；构造保持静�
 周期刷新，失败只保留稳定降级码并继续同一 owner 的有界重试，`stop()` 取消未来 timer 后等待唯一在途 pass。
 [ADR 0143](adr/0143-installed-client-process-entry.md) 将安装恢复、Keychain-backed configured client 与 worker 收束到一个 close owner，并增加
 直接 Node `status|run` 入口。`status` 只验证安装且不创建状态；`run` 还必须通过本地显式 enable gate，SIGTERM/SIGINT 先 drain worker 再释放
-client lease。当前仍没有 package bin、安装激活或 launchd/systemd 注册，也未挂入现网 composition。
+client lease。[ADR 0144](adr/0144-content-addressed-client-distribution.md) 进一步消除了对 checkout 的隐式依赖：发行目录包含 bundle 后的 client/installer、
+DSH 完整运行闭包、固定配置、migration 与 SPDX SBOM，路径无关 manifest 对每个文件和整体 artifact 做 SHA-256 固定；安装 receipt 同时绑定 source revision
+与 distribution digest。launchd/systemd 仅生成指向 installed program 的 `prepared-inactive` 定义，不写系统目录、不注册、不启动。当前仍未安装到真实用户目录、
+未 provision 真实 Keychain、未连接真实云端或挂入现网 composition。
 
 [ADR 0118](adr/0118-persistent-local-client-state-boundary.md) 增加独立、默认 inactive 的本地客户端 SQLite 状态域。设备私钥只以
 opaque secret/keychain reference 表示；workspace handle 到 canonical path 的映射只留本机，且每次解析重新核验根路径身份，阻断登记后

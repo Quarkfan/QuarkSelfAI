@@ -1,0 +1,20 @@
+[Unit]
+Description=QuarkSelfAI local no-effect client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=__PROGRAM_ROOT__
+Environment=PATH=__EXEC_PATH__
+Environment=QUARK_CLIENT_INSTALL_ROOT=__INSTALL_ROOT__
+Environment=QUARK_CLIENT_WORKSPACE=__WORKSPACE_PATH__
+Environment=QUARK_CLIENT_ENABLE_NO_EFFECT_WORKER=1
+ExecStart=__NODE_EXECUTABLE__ __CLIENT_ENTRY__ run
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:__STDOUT_PATH__
+StandardError=append:__STDERR_PATH__
+
+[Install]
+WantedBy=default.target

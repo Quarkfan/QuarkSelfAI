@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap 与双端 device-code enrollment，合计 132 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment 与客户端发行生命周期，合计 133 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -13,8 +13,8 @@ Phase 1A 已实现 `CapabilityManifestV1`、`AgentBlueprintV1`、`ExecutionEnvel
 canonical digest 和无 Cordis lifecycle 的 inactive registry，并以 Claude Code、Codex、DSH 等价输入 fixture 验证。Envelope 的签名 payload 已包含
 role、goals、capability graph 与 model policy，graph 只能引用同计划 pin 住的 artifact；本地路径、secret-shaped 值和直接 executable payload 不得随计划下发。
 Manifest 覆盖七类 lifecycle handler、完整 runtime requirement 类别和 health check，登记态为 `catalogued-inactive`，不把
-schema validation 冒充 artifact 验证。它只进入公共
-静态 API；没有实现云控制面、客户端 daemon、安装器、执行器发现、私有包注册或任何运行 owner 切换。
+schema validation 冒充 artifact 验证。它只进入公共静态 API；后续阶段已分别补齐默认不挂载的云控制面、执行器发现与 inactive installer，仍没有
+生产云服务、私有包激活或任何运行 owner 切换。
 
 Phase 2A/5E 已实现 provider-neutral 设备公开身份、隐私有界 executor report、纯 negotiation、signed plan 校验端口、inactive
 client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃分类器。获批 Pilot 01 已真实运行固定 version probe，并完成一次
@@ -25,8 +25,8 @@ client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃
 客户端本地状态现可在独立 SQLite 中跨 reopen 保存公开设备身份、opaque 私钥引用、workspace handle 映射、脱敏 executor report、
 installed-inactive capability、选定/前一版本和 no-effect run checkpoint。真实本地制品存储会先复核 SHA-256，再以内容 digest 原子落入
 0600 blob，并以不可变 receipt 联结 SQLite；upgrade/rollback 只切换已安装且重新验真的 inactive 版本。云投影不含 key reference、
-workspace handle/路径、artifact root/来源路径或 checkpoint 正文，workspace symlink 替换、制品篡改和路径逃逸均失败关闭。尚无客户端
-安装包、常驻 daemon、云连接、下载/解包或 capability lifecycle 执行。卸载现会先事务解除 SQLite 引用再清理文件；恢复审计逐版本
+workspace handle/路径、artifact root/来源路径或 checkpoint 正文，workspace symlink 替换、制品篡改和路径逃逸均失败关闭。现已有可验证的 inactive
+客户端发行目录与 installer，但尚无签名/公证发布、真实用户安装、常驻 daemon 激活、云连接、下载或 capability lifecycle 执行。卸载现会先事务解除 SQLite 引用再清理文件；恢复审计逐版本
 重验，垃圾回收只删除无引用 blob/receipt，且清理失败不会伪装成文件已删除。
 
 设备身份现使用真实 Ed25519 生成、签名和验签 adapter：云端只持有 SPKI 公钥，客户端私钥必须留在 `LocalDeviceSecretStoreV1` 后方并只以
@@ -34,7 +34,7 @@ opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥
 执行 AES-256-GCM 加密、原子 0600 记录与跨 reopen 签名验证；磁盘不保存 reference、明文或 master key，错 key 和 symlink 失败关闭。首次
 enrollment 已进入单 owner application 并支持通用 tenant identity。macOS Keychain lifecycle 可保留合法现有 key，或生成随机 key 后仅经固定
 `/usr/bin/security` 的 stdin 写入并回读恒时核对；encrypted bootstrap 会清零调用方 key、在同一 owner lease 内注册/重开并验证私钥匹配。
-真实 Keychain 写入未在测试中执行，Windows/Linux provider、客户端安装包和真实云端设备注册仍未完成。
+真实 Keychain 写入未在测试中执行，Windows/Linux secret provider、发行签名/公证和真实云端设备注册仍未完成。
 
 客户端注册不再要求接收浏览器 session/cookie：SQLite device-code provider 生成 10 分钟、64-bit user code 与 256-bit poll token，仅持久化 token
 digest；approve 从已认证云 session 推导 tenant/user 并调用唯一 device provider，poll 只返回 bounded 状态。真实 Ed25519 SPKI、scope、expiry、
@@ -46,16 +46,17 @@ digest；approve 从已认证云 session 推导 tenant/user 并调用唯一 devi
 
 客户端现有单一 application composition：同一个进程 owner 持有 instance lease、SQLite、artifact store、executor discovery 和一次性
 device sync。启动先验证 enrollment 与全部已安装制品，第二实例失败关闭，死亡 PID 的合法旧 lease 可安全回收；discovery 与 sync 只能显式
-调用，默认快照仍为 disconnected、active capability/consumer/provider/scheduler/effect 全为零。它尚不是可分发安装包或常驻 daemon。
+调用，默认快照仍为 disconnected、active capability/consumer/provider/scheduler/effect 全为零。它已有不依赖 checkout 的发行与进程入口，但尚未注册为常驻 daemon。
 
 现已增加封闭的本地 bootstrap document/compiler/facade，把固定 Keychain account、加密状态、public enrollment transport 与 session transport
 装入上述唯一 owner；状态根目录、migration 和派生路径在读取 Keychain 前进行运行时复核。初始化与跨 reopen 均证明 0 自动网络请求，注册与
-no-effect sync 仍只能显式调用。macOS Keychain provisioning 已形成独立显式 lifecycle；发行安装包、后台服务注册、原生应用 ACL 与
+no-effect sync 仍只能显式调用。macOS Keychain provisioning 已形成独立显式 lifecycle；发行签名/公证、后台服务注册、原生应用 ACL 与
 Windows/Linux key provider 尚未完成。
 
-inactive client 现可在任意调用方指定的 canonical 绝对目录完成真实安装：0700 root/state/runtime、0600 migration/config/receipt、root+version
-绑定 identity 与 config/migration digest 均可恢复复核，恢复 plan 已真实初始化并关闭唯一客户端 owner。unused uninstall 通过原子 quarantine
-与空目录删除证明不会递归删除 durable state；后台服务注册、发行包签名、公证、真实 Keychain/设备注册和 active lifecycle 仍未完成。
+inactive client 现可从内容寻址发行目录安装到任意新 canonical 绝对目录：bundle 后的 client/installer、完整 DSH runtime closure、migration、固定配置与
+SPDX SBOM 均由逐文件和整体 digest 覆盖；receipt 绑定 root/version/source revision/distribution/config/migration。恢复会复算完整 inventory，unused uninstall
+通过原子 quarantine 和 manifest 精确删除证明不会递归删除 durable state。launchd/systemd 只生成 `prepared-inactive` 定义；真实系统注册、发行签名、公证、
+真实 Keychain/设备注册和 active lifecycle 仍未完成。
 
 安装配置现强制携带 control-plane signing key id 与真实 Ed25519 SPKI public key pin，并受 config digest 保护；Node verifier 已用真实 keypair
 验证正确签名并拒绝 key id、digest、signature 与 key type 漂移。恢复的客户端可直接从 pin 构建 verifier，不再依赖测试 fixture；可信 key
@@ -81,7 +82,7 @@ pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallbac
 客户端现有独立 no-effect worker，可在显式 start 后由单 owner 串行驱动 executor discovery 与 signed reasoning cycle；失败只记录稳定码并按
 有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。installed-client process 已把安装恢复、pinned verifier、Keychain-backed client
 与 worker 收束为同一 close boundary，并提供 `status|run` Node 入口；run 必须显式设置本地 enable gate，status 的真实子进程测试不会创建状态或
-泄露路径。它仍没有 package bin、安装激活、服务注册或真实云连接，不能称客户端 daemon 已可分发运行。
+泄露路径。发行包已自带 installer/client 入口并能脱离 checkout 运行 `status`；服务定义仍只生成未注册，且没有真实云连接，因此不能称客户端 daemon 已激活。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
