@@ -1483,3 +1483,6 @@
   因该门禁有意阻止当前未提交实现，本条提交后再从干净 revision 生成真实发行包并另记回读证据。
 - 完整 `npm run check` 通过：主项目 490 项中 478 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+- 提交 `40a17576ae2e1500b80b1b8b1450dc899d96e8e1` 后从该 clean HEAD 真实构建并独立回读：11 个文件，artifact digest
+  `sha256:9ad2414a88774fc5946e81d16aa5e58b2eb0b0f3950508dca64e2dd2fef3e46e`，auto-start/SSH apply/effects 均为 false。
+  两个 bundle 从发行目录直接加载并在未 enable 时返回各自稳定失败码；临时发行目录已删除，未安装或启动。
