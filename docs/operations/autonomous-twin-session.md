@@ -1591,3 +1591,8 @@
 - 完整 `npm run check` 通过：主项目 504 项中 492 通过、12 项仅因 sandbox listener 限制跳过，compatibility 179/179；
   23/23 effects implemented、0/23 active。strict work-domain isolation、assistant continuity、DSH/server/BlackLake/Lark compatibility 与私有包审计均通过；
   continuity 仍如实报告 `organizationComplete=false` 和 `work-integration-not-yet-isolated`。
+- 提交 `d8fb8400e1f41ea2cadad3255ef1ce4971a60a67` 后从 clean source inputs 构建 12 文件发行包，artifact digest
+  `sha256:f82e82ac3736eb5518745189efa23ee046da12694704b9d4310c54037aae0570`；发行包内 admin entry 以真实 age 身份完成 source
+  install/configure/owner → encrypted backup → decrypted staging → 第二个同 distribution install/configure/restore → status，bundle ID
+  `sha256:290620bd0243555b637edc2112dfb479db9d1ca24e8dcc802d9ebd1f25abe645`。最终 status 为 `owner-created-inactive`，
+  service/SSH apply/auto-start/effects 全为 false；一次性 identity、TLS、密码、数据库、密文和明文 staging 随私有临时根整体删除。
