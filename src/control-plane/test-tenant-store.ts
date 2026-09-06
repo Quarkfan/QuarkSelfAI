@@ -97,6 +97,18 @@ export class InactiveTestTenantControlPlaneV1 implements TestTenantControlPlaneP
     return record
   }
 
+  acknowledgeLease(context: TenantContextV1, input: { readonly taskId: string; readonly planId: string; readonly deviceId: string }, now = new Date()): DispatchRecordV1 {
+    const partition = this.#partition(context)
+    const dispatch = partition.dispatches.get(input.taskId)
+    if (!dispatch || dispatch.userId !== context.userId || dispatch.deviceId !== input.deviceId || dispatch.plan.planId !== input.planId) throw new Error('lease acknowledgement is outside the task scope')
+    if (dispatch.state !== 'queued' && dispatch.state !== 'leased') throw new Error('task cannot enter leased state')
+    if (dispatch.state === 'leased') return dispatch
+    const leased = Object.freeze({ ...dispatch, state: 'leased' as const })
+    partition.dispatches.set(input.taskId, leased)
+    this.#audit(partition, context, 'task.lease', `task:${input.taskId}`, 'allowed', now)
+    return leased
+  }
+
   complete(context: TenantContextV1, input: Omit<RedactedResultV1, 'tenantId' | 'userId'>): RedactedResultV1 {
     const partition = this.#partition(context)
     const dispatch = partition.dispatches.get(input.taskId)

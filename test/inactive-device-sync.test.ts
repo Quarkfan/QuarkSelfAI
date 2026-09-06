@@ -54,7 +54,8 @@ test('leases one scoped no-effect task idempotently and retries only after expir
   const retried = coordinator.poll(active.sessionId, new Date(at.getTime() + 1_001), 1_000)!
   assert.equal(retried.attempt, 2)
   assert.notEqual(retried.leaseToken, first.leaseToken)
-  assert.equal(coordinator.acknowledge(active.sessionId, retried.leaseToken, retried.taskId, new Date(at.getTime() + 1_100)).state, 'leased')
+  assert.equal(coordinator.acknowledge(active.sessionId, retried.leaseToken, retried.taskId, new Date(at.getTime() + 1_100)).state, 'accepted')
+  assert.equal(coordinator.poll(active.sessionId, new Date(at.getTime() + 1_200)), null)
 })
 
 test('isolates tenant tasks and rejects replayed challenges, foreign leases and effects', async () => {

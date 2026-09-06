@@ -1,9 +1,9 @@
 import type { DeviceRecordV1, DispatchRecordV1 } from '../control-plane/contracts.js'
-import type { DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseV1 } from './contracts.js'
+import type { DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1 } from './contracts.js'
 
 type ClockTokenSource = { next(label: 'challenge' | 'nonce' | 'session' | 'lease'): string }
 type StoredSession = { value: DeviceSessionV1 }
-type StoredTask = { dispatch: DispatchRecordV1; lease?: DeviceTaskLeaseV1; attempts: number }
+type StoredTask = { dispatch: DispatchRecordV1; lease?: DeviceTaskLeaseV1; attempts: number; acknowledged: boolean }
 
 /** In-memory protocol reference: no listener, socket, persistence, executor launch, consumer mount or effect path. */
 export class InactiveDeviceSyncCoordinatorV1 {
@@ -85,7 +85,7 @@ export class InactiveDeviceSyncCoordinatorV1 {
     const currentTaskScope = taskScope(dispatch.tenantId, dispatch.taskId)
     if (existingTaskScope && existingTaskScope !== currentTaskScope) throw new Error('idempotency key is already assigned to another task')
     if (!existing) {
-      this.#tasks.set(currentTaskScope, { dispatch: Object.freeze({ ...dispatch }), attempts: 0 })
+      this.#tasks.set(currentTaskScope, { dispatch: Object.freeze({ ...dispatch }), attempts: 0, acknowledged: false })
       this.#taskByIdempotencyKey.set(idempotencyScope, currentTaskScope)
     }
   }
@@ -93,7 +93,7 @@ export class InactiveDeviceSyncCoordinatorV1 {
   poll(sessionId: string, now: Date, leaseTtlMs = 60_000): DeviceTaskLeaseV1 | null {
     const session = this.#activeSession(sessionId, now)
     if (!Number.isSafeInteger(leaseTtlMs) || leaseTtlMs <= 0) throw new Error('lease ttl must be a positive integer')
-    const eligible = [...this.#tasks.values()].filter(task => task.dispatch.tenantId === session.tenantId && task.dispatch.userId === session.userId && task.dispatch.deviceId === session.deviceId)
+    const eligible = [...this.#tasks.values()].filter(task => !task.acknowledged && task.dispatch.tenantId === session.tenantId && task.dispatch.userId === session.userId && task.dispatch.deviceId === session.deviceId)
     for (const task of eligible) {
       if (task.lease && Date.parse(task.lease.expiresAt) > now.getTime()) return task.lease
       if (Date.parse(task.dispatch.plan.expiresAt) <= now.getTime()) throw new Error('signed execution plan expired before lease')
@@ -115,13 +115,13 @@ export class InactiveDeviceSyncCoordinatorV1 {
     return null
   }
 
-  acknowledge(sessionId: string, leaseToken: string, taskId: string, now: Date): DispatchRecordV1 {
+  acknowledge(sessionId: string, leaseToken: string, taskId: string, now: Date): DeviceTaskLeaseAcknowledgementV1 {
     const session = this.#activeSession(sessionId, now)
     const task = this.#tasks.get(taskScope(session.tenantId, taskId))
     if (!task || task.dispatch.userId !== session.userId || task.dispatch.deviceId !== session.deviceId || task.lease?.leaseToken !== leaseToken) throw new Error('task lease is unavailable or out of scope')
     if (Date.parse(task.lease.expiresAt) <= now.getTime()) throw new Error('task lease expired')
-    task.dispatch = Object.freeze({ ...task.dispatch, state: 'leased' })
-    return task.dispatch
+    task.acknowledged = true
+    return Object.freeze({ schemaVersion: 1, taskId, planId: task.lease.planId, deviceId: session.deviceId, state: 'accepted', acceptedAt: now.toISOString() })
   }
 
   session(sessionId: string): DeviceSessionV1 | undefined {

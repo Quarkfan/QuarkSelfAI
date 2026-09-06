@@ -151,6 +151,15 @@ export interface DeviceTaskLeaseV1 {
   readonly externalWritesEnabled: false
 }
 
+export interface DeviceTaskLeaseAcknowledgementV1 {
+  readonly schemaVersion: 1
+  readonly taskId: string
+  readonly planId: string
+  readonly deviceId: string
+  readonly state: 'accepted'
+  readonly acceptedAt: string
+}
+
 export interface DeviceProofVerifierV1 {
   verify(input: { readonly publicKey: string; readonly algorithm: 'ed25519'; readonly challenge: string; readonly signature: string }): Promise<boolean>
 }

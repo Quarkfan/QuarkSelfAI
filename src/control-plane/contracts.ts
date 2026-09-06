@@ -23,6 +23,7 @@ export interface TestTenantControlPlanePortV1 {
   publishCapability(context: TenantContextV1, input: Omit<CapabilityReleaseRecordV1, 'tenantId' | 'createdAt'>, now?: Date): CapabilityReleaseRecordV1
   publishBlueprint(context: TenantContextV1, input: Omit<BlueprintReleaseRecordV1, 'tenantId' | 'createdAt'>, now?: Date): BlueprintReleaseRecordV1
   dispatch(context: TenantContextV1, input: Omit<DispatchRecordV1, 'tenantId' | 'userId' | 'state' | 'createdAt'>, now?: Date): DispatchRecordV1
+  acknowledgeLease(context: TenantContextV1, input: { readonly taskId: string; readonly planId: string; readonly deviceId: string }, now?: Date): DispatchRecordV1
   complete(context: TenantContextV1, result: Omit<RedactedResultV1, 'tenantId' | 'userId'>): RedactedResultV1
 }
 

@@ -854,3 +854,12 @@
 - 结果固定 `publicationAllowed=false`、`activationAllowed=false` 并保留 current owner；warning、身份漂移和私有 integration candidate
   均失败关闭。私有 Manifest 必须在私有 pack 内按相同公共 contract 准备，不能把实现映射带回主线。
 - 本批不发布 release、不写 registry、不安装或调用 lifecycle。新增模块后 catalog/migration 113/113，Facility coverage 53/53。
+
+## 2026-09-06 Capability Platform Phase 5A inactive end-to-end shadow run
+
+- 新增 in-memory shadow harness，把 Agent Studio 精确 test release、Blueprint compiler、测试租户 control plane、设备认证/单 lease 和
+  executor normalized context 串为一条完整路径；测试 fixture 显式覆盖 Claude Code、Codex、DSH 三个执行器共享同一 context digest。
+- 链路在设备确认 lease 后停止，只返回 `leased-unexecuted` 脱敏回执；不调用执行器、不报告任务完成、不允许 effect，不创建 listener、
+  数据库或 runtime mount。设备同步层只返回 lease acknowledgement，由测试 control plane 唯一推进 task state，避免形成第二状态真源；
+  stale release 和执行器策略顺序漂移均失败关闭。
+- 新增模块后 catalog/migration 114/114，Facility coverage 54/54；current owner、消费者、provider 与外部写入均不变。

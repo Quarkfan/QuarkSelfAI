@@ -57,6 +57,7 @@ test('queues only idempotent no-effect test dispatches and accepts privacy-bound
   const first = store.dispatch(context, input, now)
   assert.equal(store.dispatch(context, { ...input, taskId: 'task.duplicate' }, now), first)
   assert.throws(() => store.dispatch(context, { ...input, taskId: 'task.effect', idempotencyKey: 'idem.effect', plan: plan(context.tenantId, context.userId, 'device.owner', ['message.send']) }, now), /no-effect/)
+  assert.equal(store.acknowledgeLease(context, { taskId: first.taskId, planId: first.plan.planId, deviceId: first.deviceId }, now).state, 'leased')
   assert.equal(store.complete(context, { taskId: 'task.001', outcome: 'succeeded', summaryCode: 'completed', artifactDigests: [sha], completedAt: later }).summaryCode, 'completed')
   assert.equal(store.getDispatch(context, 'task.001')?.state, 'completed')
   assert.throws(() => store.complete(context, { taskId: 'task.001', outcome: 'failed', summaryCode: '/Users/demo/output', artifactDigests: [], completedAt: later }), /privacy bounded/)
