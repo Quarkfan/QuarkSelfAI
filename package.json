@@ -22,6 +22,10 @@
       "types": "./dist/platform/index.d.ts",
       "import": "./dist/platform/index.js"
     },
+    "./capability-sdk": {
+      "types": "./dist/capability-sdk/index.d.ts",
+      "import": "./dist/capability-sdk/index.js"
+    },
     "./blacklake": {
       "types": "./dist/blacklake/plugin.d.ts",
       "import": "./dist/blacklake/plugin.js"
@@ -138,6 +142,7 @@
     "dist/app.d.ts.map",
     "dist/app.js.map",
     "dist/bootstrap",
+    "dist/capability-sdk",
     "dist/platform",
     "dist/domain",
     "dist/lark",

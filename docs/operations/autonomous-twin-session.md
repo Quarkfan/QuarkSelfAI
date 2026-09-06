@@ -810,3 +810,12 @@
 - Facility 不可安装、不可被 Blueprint 直接选择，也不可由私有 pack 替换。产品能力只能依赖其稳定 ports，当前 deployment
   composition 继续拥有实现，避免“能力化”反向制造双 provider 或让私有包侵入核心。
 - 本批仅增加描述性目录与纯编译门禁，没有 module 数量或运行 ownership 变化，不安装、不加载、不切换、不产生 effect。
+
+## 2026-09-06 Capability Platform Phase 1C developer SDK
+
+- 新增独立导出 `@quarkfan/quark-self-ai/capability-sdk`：能力作者可从已核验的相对路径/file digest 形成稳定 artifact descriptor
+  digest，定义并深度冻结 Manifest，自动生成 Blueprint digest，并为 Claude Code、Codex、DSH 生成同一规范化 envelope fixture。
+- SDK 不读取本地文件、不构建/下载/签名 artifact、不写 registry、不安装、不调用执行器；真实 byte verifier、installer、signer 与
+  executor adapter 仍由 host ports 和授权门禁持有。
+- `package.json` 存在 owner 的 client export 与 DSH client 配置改动；本批通过精确 index hunk 只提交 capability SDK export 和
+  dist 清单，owner 改动继续保持未暂存。新增模块后 catalog/migration 为 111/111，Platform Facility core coverage 为 51/51。

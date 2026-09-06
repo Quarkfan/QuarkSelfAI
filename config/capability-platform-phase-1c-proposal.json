@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-1c-developer-sdk",
+  "status": "implemented-inactive",
+  "baseRevision": "ce258e488c89e08398a1fb9282270574d501e739",
+  "architectureChange": "Publish a side-effect-free Capability developer SDK for deterministic artifact descriptors, immutable Manifest and Blueprint authoring, and executor-context parity fixtures.",
+  "allowedActions": ["add a dedicated package export", "validate and freeze definitions", "compute canonical descriptor digests", "generate normalized executor fixtures", "run local tests and audits"],
+  "explicitExclusions": ["read artifact files", "build or download artifacts", "sign releases", "register or install capabilities", "invoke executors", "change runtime composition", "external effects", "service restart", "owner client configuration"],
+  "rollback": {"method":"Revert the Phase 1C commit.","stateMigrationRequired":false,"serviceRestartRequired":false,"dataRecoveryRequired":false},
+  "ownerAuthorization": {"basis":"Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.","runtimeActivationAuthorized":false}
+}
