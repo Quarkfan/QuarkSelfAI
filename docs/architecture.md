@@ -114,6 +114,10 @@ challenge/proof/poll/ack 请求后关闭唯一临时 listener 和两端临时 SQ
 tenant/user 只能从 opaque cloud session 推导，body 只能携带 draft、Blueprint 与 optimistic revision，不能注入 scope。provider 继续限制
 test tenant、manual/no-effect Blueprint 和不可变 test release；路由不编译、不调度、不派发，也不是 production release。
 
+[ADR 0123](adr/0123-capability-registry-write-api-boundary.md) 对称增加 Capability Registry 的认证 inactive register API。body 只接受
+candidate、evidence 与 private/tenant visibility，tenant/user 从 cloud session 推导；底层 publication evidence gate 仍是唯一判定者，
+输出固定 `catalogued-inactive` 和零 owner/effect，不下载、安装、加载、授权、执行或公开 marketplace artifact。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

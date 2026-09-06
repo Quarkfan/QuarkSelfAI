@@ -9,7 +9,11 @@ const context: TenantContextV1 = { tenantId: 'test.alpha', userId: 'owner', role
 function handler() {
   const calls: string[] = []
   const identity = { async resolveSession(reference: string) { return reference === 'session:valid' ? context : undefined } }
-  const capabilities = { async listVisible() { calls.push('capabilities.list'); return [] }, async registerInactive() { throw new Error('unused') }, async get() { return undefined }, async close() {} }
+  const capabilities = {
+    async listVisible() { calls.push('capabilities.list'); return [] },
+    async registerInactive(resolved: TenantContextV1, input: { visibility: string }) { calls.push(`capabilities.register:${resolved.tenantId}:${input.visibility}`); return { tenantId: resolved.tenantId, state: 'catalogued-inactive' } as never },
+    async get() { return undefined }, async close() {},
+  }
   const studio = {
     async listDrafts() { calls.push('drafts.list'); return [] },
     async saveDraft(resolved: TenantContextV1, input: { draftId: string; expectedRevision: number }) { calls.push(`drafts.save:${resolved.tenantId}:${input.draftId}:${input.expectedRevision}`); return { tenantId: resolved.tenantId, draftId: input.draftId } as never },
@@ -58,6 +62,18 @@ test('saves and publishes a test Agent draft without accepting tenant scope from
   assert.deepEqual(fixture.calls, ['drafts.save:test.alpha:draft.one:0', 'drafts.publish:test.alpha:draft.one:1'])
   assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/agent-drafts', sessionReference: 'session:valid', body: { tenantId: 'test.beta', draftId: 'draft.one', blueprint, expectedRevision: 1 } })).status, 400)
   assert.equal(fixture.calls.length, 2)
+})
+
+test('registers only a scoped inactive capability candidate without accepting tenant body fields', async () => {
+  const fixture = handler()
+  const candidate = { schemaVersion: 1 }
+  const evidence = { schemaVersion: 1 }
+  const result = await fixture.handler.handle({ method: 'POST', path: '/v1/capabilities', sessionReference: 'session:valid', body: { candidate, evidence, visibility: 'tenant' } })
+  assert.equal(result.status, 201)
+  assert.deepEqual(fixture.calls, ['capabilities.register:test.alpha:tenant'])
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/capabilities', sessionReference: 'session:valid', body: { tenantId: 'test.beta', candidate, evidence, visibility: 'tenant' } })).status, 400)
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/capabilities', sessionReference: 'session:valid', body: { candidate, evidence, visibility: 'public' } })).status, 400)
+  assert.equal(fixture.calls.length, 1)
 })
 
 test('routes device challenge, proof, poll, acknowledgement and result through one session provider', async () => {

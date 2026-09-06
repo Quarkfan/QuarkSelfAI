@@ -32,6 +32,11 @@ export class InactiveCloudHttpHandlerV1 {
       if (request.method === 'POST' && request.path === '/v1/device-sessions/ack') { const body = exactBody(request.body, ['sessionId', 'leaseToken', 'taskId']); if (typeof body.sessionId !== 'string' || typeof body.leaseToken !== 'string' || typeof body.taskId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.acknowledgeDeviceLease(body.sessionId, { leaseToken: body.leaseToken, taskId: body.taskId }) }) }
       if (request.method === 'POST' && request.path === '/v1/device-sessions/result') { const body = exactBody(request.body, ['sessionId', 'result']); if (typeof body.sessionId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.submitDeviceResult(body.sessionId, redactedResult(body.result)) }) }
       if (request.method === 'GET' && request.path === '/v1/capabilities') return response(200, 'ok', { items: await this.application.listCapabilities(requiredSession(request)) })
+      if (request.method === 'POST' && request.path === '/v1/capabilities') {
+        const body = exactBody(request.body, ['candidate', 'evidence', 'visibility'])
+        if (!body.candidate || typeof body.candidate !== 'object' || Array.isArray(body.candidate) || !body.evidence || typeof body.evidence !== 'object' || Array.isArray(body.evidence) || !['private', 'tenant'].includes(String(body.visibility))) return response(400, 'invalid-body')
+        return response(201, 'created', { item: await this.application.registerCapability(requiredSession(request), { candidate: body.candidate as never, evidence: body.evidence as never, visibility: body.visibility as 'private' | 'tenant' }) })
+      }
       if (request.method === 'GET' && request.path === '/v1/agent-drafts') return response(200, 'ok', { items: await this.application.listAgentDrafts(requiredSession(request)) })
       if (request.method === 'POST' && request.path === '/v1/agent-drafts') {
         const body = exactBody(request.body, ['draftId', 'blueprint', 'expectedRevision'])

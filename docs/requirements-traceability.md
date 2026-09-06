@@ -64,7 +64,8 @@ Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合
 
 Capability Registry 现已具备默认不挂载的 SQLite provider：只接收身份、canonical digest、signature、SBOM 与 evidence policy 均闭合的
 `validated-unpublished` Manifest，按 private/tenant visibility 强制 tenant/user 隔离，并固定 consumer/provider/scheduler/effects 为零。
-它不下载、安装、加载、授权或执行能力，也不提供 public marketplace 或私有 integration-pack 入口。
+认证 HTTP API 现可提交 candidate+evidence 注册 inactive record，scope 只从 session 推导。它不下载、安装、加载、授权或执行能力，也不提供
+public marketplace 或私有 integration-pack 入口。
 
 云控制面新增默认不挂载的认证应用层：每次操作只从 identity port 的 opaque session reference 推导 tenant/user context，调用方不能在
 业务参数中指定 tenantId；当前没有 HTTP listener、token parser、cookie、身份提供方、服务启动或 production tenant。

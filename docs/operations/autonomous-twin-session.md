@@ -1093,3 +1093,10 @@
   publish test 两个 authenticated route，tenant/user 只从 opaque session 推导，closed body 拒绝 scope 注入并保留 optimistic revision。
 - provider 的 test-tenant、manual/no-effect、immutable test release 门禁不变；本批不 compile/schedule/dispatch、不启动 listener、不产生
   production release 或 effect。回滚删除两条 route、测试和 ADR，既有 inactive SQLite 数据无需迁移。
+
+## 2026-09-06 Capability Registry authenticated write API
+
+- 为持久 inactive Registry 增加 authenticated `POST /v1/capabilities`；closed body 仅接受 candidate、evidence 和 private/tenant visibility，
+  tenant/user 只从 opaque session 推导，拒绝 scope 注入与 public visibility。
+- provider 继续执行 Manifest/evidence/canonical digest 真门禁并固定 `catalogued-inactive`、零 consumer/provider/scheduler/effect。本批不下载、
+  安装、加载、授权、执行或发布 marketplace artifact；回滚删除 route、测试和 ADR，既有 inactive catalog 无需迁移。
