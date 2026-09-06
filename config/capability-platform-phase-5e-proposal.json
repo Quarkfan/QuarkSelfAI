@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-5e-executable-pilot-preflight",
+  "status": "implemented-inactive",
+  "baseRevision": "6a8f6798c75c97b1b7a8aeffc8c073bf89ad4e54",
+  "architectureChange": "Add a pure fixed-command classifier and an unarmed executor-selection preflight for the future loopback executable pilot.",
+  "allowedActions": [
+    "declare the exact Claude Code, Codex and DSH version probe allowlist",
+    "classify injected bounded probe observations",
+    "discard process output from public reports",
+    "select DSH only through the shared executor negotiation contract",
+    "run offline fixtures"
+  ],
+  "explicitExclusions": [
+    "spawn any process",
+    "start a listener",
+    "inspect a real login",
+    "send an executor prompt",
+    "execute an Agent",
+    "persist local evidence",
+    "external write",
+    "runtime composition change",
+    "service restart",
+    "owner working-tree files"
+  ],
+  "rollback": {
+    "method": "Revert the Phase 5E commit.",
+    "stateMigrationRequired": false,
+    "serviceRestartRequired": false,
+    "dataRecoveryRequired": false
+  },
+  "ownerAuthorization": {
+    "basis": "Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.",
+    "runtimeActivationAuthorized": false
+  }
+}

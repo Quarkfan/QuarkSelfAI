@@ -894,3 +894,13 @@
 - 授权单明确禁止新增依赖、修改当前 composition、启动守护进程、外部写、私有包激活、数据迁移与 owner 切换，并避开当前受保护的
   `package.json` 与品牌 client 文件。
 - 当前仅记录申请，不执行任何 pilot 动作；收到精确 approval phrase 前，所有真实进程探测与 listener 保持未授权。
+
+## 2026-09-06 Capability Platform Phase 5E executable pilot preflight
+
+- 将真实试点中仍可离线完成的部分继续前推：固化 Claude Code、Codex、DSH 三个执行器的唯一 `--version` allowlist、5 秒 timeout、
+  protocol/capability 声明和纯 observation classifier；raw process output、路径、账号与认证材料不会进入 report。
+- auth 状态必须由未来 adapter 显式给出，不能从任意输出文本猜测。未登录、超时、缺失 binary、非零退出、未知 auth 和 malformed
+  output 均失败关闭；统一 negotiation 只在 Claude Code/Codex 不满足要求后选择可用 DSH。
+- 第二层 preflight 要求同一 test device 的三个唯一 report，结果固定为 `ready-unarmed` 或 `blocked-unarmed`，并把 listener、executor、
+  external writes 固定为 false。该批没有 process runner、socket、持久化、composition 或 effect callback；真实 probe 与 loopback 仍等批准。
+- 新增模块后 catalog/migration 为 117/117，Facility coverage 为 57/57；回滚只需回退本批，无状态迁移或服务恢复。
