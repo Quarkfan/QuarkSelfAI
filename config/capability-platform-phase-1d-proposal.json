@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-1d-blueprint-validator-parity",
+  "status": "implemented-inactive",
+  "baseRevision": "8a254bc064502c6f2808de5486c9ef17d8008d8d",
+  "architectureChange": "Make runtime Agent Blueprint validation enforce the public schema, graph integrity, policy invariants and canonical digest.",
+  "allowedActions": ["tighten pure Blueprint validation", "validate DAG and references", "validate budget, retention and routing policies", "update synthetic fixtures", "run local tests and audits"],
+  "explicitExclusions": ["publish production Blueprints", "dispatch tasks", "enable triggers", "invoke executors", "change runtime composition", "external effects", "service restart", "owner working-tree files"],
+  "rollback": {"method":"Revert the Phase 1D commit.","stateMigrationRequired":false,"serviceRestartRequired":false,"dataRecoveryRequired":false},
+  "ownerAuthorization": {"basis":"Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.","runtimeActivationAuthorized":false}
+}

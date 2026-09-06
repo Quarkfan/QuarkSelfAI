@@ -5,7 +5,7 @@ import type { AgentBlueprintV1 } from '../src/capability-platform/blueprint.js'
 import type { ExecutionEnvelopeV1 } from '../src/capability-platform/execution-envelope.js'
 import type { CapabilityManifestV1 } from '../src/capability-platform/manifest.js'
 import { InactiveCapabilityRegistryV1 } from '../src/capability-platform/inactive-registry.js'
-import { canonicalJson, contentDigest, toExecutorAdapterInput, validateAgentBlueprint, validateCapabilityManifest, validateExecutionEnvelope } from '../src/capability-platform/validation.js'
+import { blueprintPayloadDigest, canonicalJson, contentDigest, toExecutorAdapterInput, validateAgentBlueprint, validateCapabilityManifest, validateExecutionEnvelope } from '../src/capability-platform/validation.js'
 
 const sha = `sha256:${'a'.repeat(64)}`
 const later = '2027-01-01T00:00:00.000Z'
@@ -60,7 +60,7 @@ function manifest(overrides: Record<string, unknown> = {}): CapabilityManifestV1
 }
 
 function blueprint(overrides: Record<string, unknown> = {}): AgentBlueprintV1 {
-  return {
+  const candidate = {
     schemaVersion: 1,
     id: 'agent/research', name: 'Research Agent', version: '1.0.0', revision: 'r1', digest: sha,
     releaseState: 'test', role: 'researcher', goals: ['Produce a sourced brief'],
@@ -75,7 +75,8 @@ function blueprint(overrides: Record<string, unknown> = {}): AgentBlueprintV1 {
     notifications: { channels: ['console'], on: ['approval', 'completion', 'failure'] },
     retention: { localRawDays: 7, cloudSummaryDays: 30 },
     ...overrides,
-  }
+  } as AgentBlueprintV1
+  return { ...candidate, digest: blueprintPayloadDigest(candidate) }
 }
 
 function envelope(overrides: Record<string, unknown> = {}): ExecutionEnvelopeV1 {
@@ -129,6 +130,11 @@ test('blueprint graph and executor continuity are deterministic and fail closed'
   assert.throws(() => validateAgentBlueprint(blueprint({ graph: { ...base.graph, edges: [{ from: 'browse', to: 'missing', output: 'result', input: 'query' }] } })), /unknown node/)
   assert.throws(() => validateAgentBlueprint(blueprint({ executorPolicy: { ...base.executorPolicy, allowMidActionSwitch: true } })), /continuity/)
   assert.throws(() => validateAgentBlueprint(blueprint({ retry: { ...base.retry, deterministicAttempts: 2 } })), /cannot be retried/)
+  assert.throws(() => validateAgentBlueprint({ ...base, executable: 'unexpected' }), /unknown fields/)
+  assert.throws(() => validateAgentBlueprint(blueprint({ graph: { nodes: [{ id: 'browse', capabilityId: 'tool/missing', interfaceId: 'browser.navigate', configuration: {} }], edges: [] } })), /undeclared capability/)
+  assert.throws(() => validateAgentBlueprint(blueprint({ executorPolicy: { ...base.executorPolicy, fallback: ['claude-code'] } })), /must not overlap/)
+  assert.throws(() => validateAgentBlueprint(blueprint({ modelPolicy: { allowed: ['model-a'], preferred: 'model-b' } })), /must be allowed/)
+  assert.throws(() => validateAgentBlueprint({ ...base, name: 'changed-after-digest' }), /digest does not match/)
 })
 
 test('all executors receive one normalized envelope and approvals remain exactly scoped', () => {

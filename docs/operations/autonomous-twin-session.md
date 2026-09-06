@@ -836,3 +836,12 @@
   和 stale digest 失败关闭。test publish 只生成元数据，不 dispatch、不 schedule。
 - 当前无数据库、HTTP listener、团队协作、生产 release 或 runtime mount。新增模块后 catalog/migration 为 112/112，Facility core
   coverage 为 52/52；现网 owner/effect 不变。
+
+## 2026-09-06 Capability Platform Phase 1D Blueprint validator parity
+
+- 公共 Blueprint validator 现与闭合 Schema 和编排语义对齐：完整字段、release state、Capability pin、graph node/interface、DAG、
+  trigger、executor preference/fallback、opaque device/workspace、permission、model、budget/retry、notification/retention 与 canonical
+  digest 均在同一入口失败关闭。
+- Agent Studio、developer SDK 与 Blueprint compiler 共用该入口；未知字段、未声明 Capability node、执行器列表重叠、preferred model
+  越界、cycle 和 stale digest 均有回归 fixture。
+- 本批只收紧纯 validator，不发布 Blueprint、不启用 trigger、不 dispatch 或执行任务，也不改变任何 runtime owner/effect。

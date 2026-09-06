@@ -73,6 +73,25 @@ function optionalText(value: unknown, label: string, max = 500): string | undefi
   return value === undefined ? undefined : text(value, label, max)
 }
 
+function nonNegativeInteger(value: unknown, label: string): number {
+  if (!Number.isSafeInteger(value) || Number(value) < 0) throw new Error(`${label} must be a non-negative integer`)
+  return Number(value)
+}
+
+function assertAcyclic(adjacency: ReadonlyMap<string, readonly string[]>, message: string): void {
+  const visiting = new Set<string>()
+  const visited = new Set<string>()
+  const visit = (node: string): void => {
+    if (visiting.has(node)) throw new Error(message)
+    if (visited.has(node)) return
+    visiting.add(node)
+    for (const next of adjacency.get(node) ?? []) visit(next)
+    visiting.delete(node)
+    visited.add(node)
+  }
+  for (const node of adjacency.keys()) visit(node)
+}
+
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value)
   if (typeof value === 'number') {
@@ -278,26 +297,108 @@ export function validateCapabilityManifest(value: unknown): CapabilityManifestV1
 
 export function validateAgentBlueprint(value: unknown): AgentBlueprintV1 {
   const blueprint = record(value, 'blueprint')
+  exactKeys(blueprint, ['schemaVersion', 'id', 'name', 'version', 'revision', 'digest', 'releaseState', 'role', 'goals', 'capabilities', 'graph', 'triggers', 'executorPolicy', 'deviceSelector', 'workspaceHandles', 'permissions', 'modelPolicy', 'budget', 'retry', 'notifications', 'retention'], 'blueprint')
   if (blueprint.schemaVersion !== 1) throw new Error('blueprint.schemaVersion must be 1')
   identifier(blueprint.id, 'blueprint.id')
+  text(blueprint.name, 'blueprint.name', 200)
   version(blueprint.version, 'blueprint.version')
+  text(blueprint.revision, 'blueprint.revision', 200)
   digest(blueprint.digest, 'blueprint.digest')
-  const capabilities = array(blueprint.capabilities, 'blueprint.capabilities').map((item, index) => identifier(record(item, `blueprint.capabilities[${index}]`).id, `blueprint.capabilities[${index}].id`))
+  if (!['draft', 'test', 'shadow', 'released', 'retired'].includes(text(blueprint.releaseState, 'blueprint.releaseState'))) throw new Error('blueprint.releaseState is invalid')
+  text(blueprint.role, 'blueprint.role', 500)
+  const goals = array(blueprint.goals, 'blueprint.goals').map((item, index) => text(item, `blueprint.goals[${index}]`, 2000))
+  if (!goals.length) throw new Error('blueprint.goals cannot be empty')
+  const capabilities = array(blueprint.capabilities, 'blueprint.capabilities').map((item, index) => {
+    const capability = record(item, `blueprint.capabilities[${index}]`)
+    exactKeys(capability, ['id', 'versionRange', 'artifactDigest', 'required'], `blueprint.capabilities[${index}]`)
+    const id = identifier(capability.id, `blueprint.capabilities[${index}].id`)
+    text(capability.versionRange, `blueprint.capabilities[${index}].versionRange`, 100)
+    digest(capability.artifactDigest, `blueprint.capabilities[${index}].artifactDigest`)
+    boolean(capability.required, `blueprint.capabilities[${index}].required`)
+    return id
+  })
   unique(capabilities, 'blueprint.capabilities')
+  const capabilitySet = new Set(capabilities)
   const graph = record(blueprint.graph, 'blueprint.graph')
-  const nodes = array(graph.nodes, 'blueprint.graph.nodes').map((item, index) => identifier(record(item, `blueprint.graph.nodes[${index}]`).id, `blueprint.graph.nodes[${index}].id`))
+  exactKeys(graph, ['nodes', 'edges'], 'blueprint.graph')
+  const nodes = array(graph.nodes, 'blueprint.graph.nodes').map((item, index) => {
+    const node = record(item, `blueprint.graph.nodes[${index}]`)
+    exactKeys(node, ['id', 'capabilityId', 'interfaceId', 'configuration'], `blueprint.graph.nodes[${index}]`)
+    const id = identifier(node.id, `blueprint.graph.nodes[${index}].id`)
+    const capabilityId = identifier(node.capabilityId, `blueprint.graph.nodes[${index}].capabilityId`)
+    if (!capabilitySet.has(capabilityId)) throw new Error('blueprint graph node references an undeclared capability')
+    identifier(node.interfaceId, `blueprint.graph.nodes[${index}].interfaceId`)
+    canonicalJson(record(node.configuration, `blueprint.graph.nodes[${index}].configuration`))
+    return id
+  })
   unique(nodes, 'blueprint.graph.nodes')
   const nodeSet = new Set(nodes)
+  const adjacency = new Map(nodes.map(node => [node, [] as string[]]))
   for (const [index, value] of array(graph.edges, 'blueprint.graph.edges').entries()) {
     const edge = record(value, `blueprint.graph.edges[${index}]`)
-    if (!nodeSet.has(text(edge.from, `blueprint.graph.edges[${index}].from`)) || !nodeSet.has(text(edge.to, `blueprint.graph.edges[${index}].to`))) throw new Error('blueprint graph edge references an unknown node')
+    exactKeys(edge, ['from', 'to', 'output', 'input'], `blueprint.graph.edges[${index}]`)
+    const from = identifier(edge.from, `blueprint.graph.edges[${index}].from`)
+    const to = identifier(edge.to, `blueprint.graph.edges[${index}].to`)
+    if (!nodeSet.has(from) || !nodeSet.has(to)) throw new Error('blueprint graph edge references an unknown node')
+    text(edge.output, `blueprint.graph.edges[${index}].output`, 200)
+    text(edge.input, `blueprint.graph.edges[${index}].input`, 200)
+    adjacency.get(from)!.push(to)
   }
+  assertAcyclic(adjacency, 'blueprint graph contains a cycle')
+  const triggers = array(blueprint.triggers, 'blueprint.triggers').map((item, index) => {
+    const trigger = record(item, `blueprint.triggers[${index}]`)
+    exactKeys(trigger, ['id', 'kind', 'specification', 'timezone', 'enabled'], `blueprint.triggers[${index}]`)
+    const kind = text(trigger.kind, `blueprint.triggers[${index}].kind`)
+    if (!['manual', 'event', 'schedule'].includes(kind)) throw new Error('blueprint trigger kind is invalid')
+    text(trigger.specification, `blueprint.triggers[${index}].specification`, 1000)
+    optionalText(trigger.timezone, `blueprint.triggers[${index}].timezone`, 100)
+    boolean(trigger.enabled, `blueprint.triggers[${index}].enabled`)
+    return identifier(trigger.id, `blueprint.triggers[${index}].id`)
+  })
+  unique(triggers, 'blueprint.triggers')
   const executorPolicy = record(blueprint.executorPolicy, 'blueprint.executorPolicy')
+  exactKeys(executorPolicy, ['preferred', 'fallback', 'allowInfrastructureFallback', 'allowMidActionSwitch', 'preserveSessionContinuity'], 'blueprint.executorPolicy')
+  const preferredExecutors = array(executorPolicy.preferred, 'blueprint.executorPolicy.preferred').map((item, index) => identifier(item, `blueprint.executorPolicy.preferred[${index}]`))
+  const fallbackExecutors = array(executorPolicy.fallback, 'blueprint.executorPolicy.fallback').map((item, index) => identifier(item, `blueprint.executorPolicy.fallback[${index}]`))
+  unique(preferredExecutors, 'blueprint.executorPolicy.preferred')
+  unique(fallbackExecutors, 'blueprint.executorPolicy.fallback')
+  if (fallbackExecutors.some(id => preferredExecutors.includes(id))) throw new Error('blueprint executor preference and fallback must not overlap')
+  boolean(executorPolicy.allowInfrastructureFallback, 'blueprint.executorPolicy.allowInfrastructureFallback')
   if (executorPolicy.allowMidActionSwitch !== false || executorPolicy.preserveSessionContinuity !== true) throw new Error('blueprint executor policy must preserve action and session continuity')
-  const retry = record(blueprint.retry, 'blueprint.retry')
-  if (retry.deterministicAttempts !== 1) throw new Error('deterministic failures cannot be retried on another executor')
+  const deviceSelector = text(blueprint.deviceSelector, 'blueprint.deviceSelector', 500)
+  if (absolutePathPattern.test(deviceSelector) || secretAssignmentPattern.test(deviceSelector)) throw new Error('blueprint device selector must be opaque')
+  const workspaceHandles = array(blueprint.workspaceHandles, 'blueprint.workspaceHandles').map((item, index) => {
+    const handle = text(item, `blueprint.workspaceHandles[${index}]`, 500)
+    if (absolutePathPattern.test(handle) || secretAssignmentPattern.test(handle)) throw new Error('blueprint workspace handle must be opaque')
+    return handle
+  })
+  unique(workspaceHandles, 'blueprint.workspaceHandles')
   const permissions = array(blueprint.permissions, 'blueprint.permissions')
   permissions.forEach((item, index) => validatePermission(item, ['local', 'cloud', 'hybrid'], `blueprint.permissions[${index}]`))
+  const modelPolicy = record(blueprint.modelPolicy, 'blueprint.modelPolicy')
+  exactKeys(modelPolicy, ['allowed', 'preferred'], 'blueprint.modelPolicy')
+  const allowedModels = array(modelPolicy.allowed, 'blueprint.modelPolicy.allowed').map((item, index) => identifier(item, `blueprint.modelPolicy.allowed[${index}]`))
+  unique(allowedModels, 'blueprint.modelPolicy.allowed')
+  if (modelPolicy.preferred !== null && !allowedModels.includes(identifier(modelPolicy.preferred, 'blueprint.modelPolicy.preferred'))) throw new Error('blueprint preferred model must be allowed')
+  const budget = record(blueprint.budget, 'blueprint.budget')
+  exactKeys(budget, ['tokens', 'durationMs', 'costMinorUnits'], 'blueprint.budget')
+  for (const field of ['tokens', 'durationMs', 'costMinorUnits'] as const) nonNegativeInteger(budget[field], `blueprint.budget.${field}`)
+  const retry = record(blueprint.retry, 'blueprint.retry')
+  exactKeys(retry, ['infrastructureAttempts', 'deterministicAttempts'], 'blueprint.retry')
+  nonNegativeInteger(retry.infrastructureAttempts, 'blueprint.retry.infrastructureAttempts')
+  if (retry.deterministicAttempts !== 1) throw new Error('deterministic failures cannot be retried on another executor')
+  const notifications = record(blueprint.notifications, 'blueprint.notifications')
+  exactKeys(notifications, ['channels', 'on'], 'blueprint.notifications')
+  const channels = array(notifications.channels, 'blueprint.notifications.channels').map((item, index) => identifier(item, `blueprint.notifications.channels[${index}]`))
+  unique(channels, 'blueprint.notifications.channels')
+  const notificationEvents = array(notifications.on, 'blueprint.notifications.on').map((item, index) => text(item, `blueprint.notifications.on[${index}]`))
+  if (notificationEvents.some(event => !['approval', 'completion', 'failure'].includes(event))) throw new Error('blueprint notification event is invalid')
+  unique(notificationEvents, 'blueprint.notifications.on')
+  const retention = record(blueprint.retention, 'blueprint.retention')
+  exactKeys(retention, ['localRawDays', 'cloudSummaryDays'], 'blueprint.retention')
+  nonNegativeInteger(retention.localRawDays, 'blueprint.retention.localRawDays')
+  nonNegativeInteger(retention.cloudSummaryDays, 'blueprint.retention.cloudSummaryDays')
+  if (blueprint.digest !== blueprintPayloadDigest(value as AgentBlueprintV1)) throw new Error('blueprint digest does not match its canonical payload')
   return value as AgentBlueprintV1
 }
 

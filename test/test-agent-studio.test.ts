@@ -46,7 +46,7 @@ test('rejects production tenants, automatic triggers, effects, secrets and stale
   assert.throws(() => studio.saveDraft(alpha, { draftId: 'draft.auto', blueprint: blueprint('1.0.0', { triggers: [{ id: 'timer', kind: 'schedule', specification: 'hourly', enabled: true }] }), expectedRevision: 0 }), /automatic triggers/)
   const permission = { id: 'effect.send', kind: 'external-effect', operations: ['write'], scope: 'message:owner', placement: 'cloud', approval: 'action', required: true, dataClasses: [], effect: { kind: 'message.send', externalWrite: true, writeVerificationRequired: true } }
   assert.throws(() => studio.saveDraft(alpha, { draftId: 'draft.effect', blueprint: blueprint('1.0.0', { permissions: [permission] }), expectedRevision: 0 }), /external effects/)
-  assert.throws(() => studio.saveDraft(alpha, { draftId: 'draft.path', blueprint: blueprint('1.0.0', { deviceSelector: '/Users/example' }), expectedRevision: 0 }), /host-local/)
+  assert.throws(() => studio.saveDraft(alpha, { draftId: 'draft.path', blueprint: blueprint('1.0.0', { deviceSelector: '/Users/example' }), expectedRevision: 0 }), /opaque|host-local/)
   const stale = { ...blueprint(), name: 'Changed after digest' }
   assert.throws(() => studio.saveDraft(alpha, { draftId: 'draft.stale', blueprint: stale, expectedRevision: 0 }), /digest/)
 })
