@@ -802,3 +802,11 @@
   lease，过期后才生成新 token 并增加 attempt，跨 tenant/user/device 的 acknowledge 失败关闭。
 - 当前无 listener/socket、数据库、持久 session、真实客户端进程或 executor launch，不挂载现网 composition。新增模块后 catalog 与
   迁移映射为 110/110，现有 owner、consumer、provider、scheduler 和 effect 均不变。
+
+## 2026-09-06 Capability Platform Phase 4C platform facilities
+
+- `platform-core` 处置不再只是迁移标签：50 个 `core-bound` Offer exactly-once 编译为 shared contract/SDK、local client runtime、
+  durable orchestration runtime 三个 Platform Facility；它们与 24 个可安装能力 candidate 分开建模。
+- Facility 不可安装、不可被 Blueprint 直接选择，也不可由私有 pack 替换。产品能力只能依赖其稳定 ports，当前 deployment
+  composition 继续拥有实现，避免“能力化”反向制造双 provider 或让私有包侵入核心。
+- 本批仅增加描述性目录与纯编译门禁，没有 module 数量或运行 ownership 变化，不安装、不加载、不切换、不产生 effect。

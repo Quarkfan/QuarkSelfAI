@@ -383,6 +383,7 @@ for (const filename of files) {
       'src/capability-platform/blueprint', 'src/capability-platform/execution-envelope',
       'src/capability-platform/offers',
       'src/capability-platform/artifact-candidates',
+      'src/capability-platform/facilities',
       'src/client-runtime/contracts',
       'src/control-plane/contracts',
     ])) {

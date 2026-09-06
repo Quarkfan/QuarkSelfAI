@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "status": "descriptive-current-owner",
+  "facilities": [
+    {"schemaVersion":1,"id":"capability-contract-sdk","name":"Capability Contract and SDK","targetPlane":"shared-contract","selectableByBlueprint":false,"installable":false,"replaceableByPrivatePack":false},
+    {"schemaVersion":1,"id":"local-client-runtime","name":"Local Client Runtime","targetPlane":"local-client","selectableByBlueprint":false,"installable":false,"replaceableByPrivatePack":false},
+    {"schemaVersion":1,"id":"durable-orchestration-runtime","name":"Durable Orchestration Runtime","targetPlane":"hybrid-runtime","selectableByBlueprint":false,"installable":false,"replaceableByPrivatePack":false}
+  ]
+}
