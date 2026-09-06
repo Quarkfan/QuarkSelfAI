@@ -2,22 +2,22 @@
   "schemaVersion": 1,
   "requestId": "capability-platform-executable-pilot-01",
   "status": "awaiting-exact-owner-approval",
-  "baseRevision": "1899e888612a5d82c176297e1f7b31510cfdbba4",
+  "baseRevision": "13e1be477288e8a5f7e5ed1d9e37b33b8c49c1a9",
   "purpose": "Obtain the first real transport and installed-executor discovery evidence without changing the current QuarkSelfAI runtime owner.",
   "fileScope": {
     "create": [
       "src/control-plane/loopback-test-server.ts",
-      "src/client-runtime/process-discovery.ts",
-      "src/client-runtime/executable-pilot.ts",
+      "src/client-runtime/host-process-probe.ts",
       "scripts/run-capability-platform-pilot.ts",
       "test/capability-platform-loopback-pilot.test.ts",
-      "test/client-process-discovery.test.ts",
-      "config/capability-platform-executable-pilot-01.json",
-      "docs/adr/0110-loopback-executable-pilot.md"
+      "test/client-host-process-probe.test.ts",
+      "config/capability-platform-executable-pilot-01.json"
     ],
     "modify": [
+      "src/client-runtime/executable-pilot.ts",
       "config/module-catalog.json",
       "config/capability-platform-migration.json",
+      "docs/adr/0110-fixed-executor-probe-preflight.md",
       "docs/architecture.md",
       "docs/requirements-traceability.md",
       "docs/operations/autonomous-twin-session.md"
@@ -78,5 +78,5 @@
     "serviceRestartRequired": false,
     "currentRuntimeRecoveryRequired": false
   },
-  "approvalPhrase": "批准 capability-platform-executable-pilot-01，基于 revision 1899e888612a5d82c176297e1f7b31510cfdbba4，严格按授权单执行。"
+  "approvalPhrase": "批准 capability-platform-executable-pilot-01，基于 revision 13e1be477288e8a5f7e5ed1d9e37b33b8c49c1a9，严格按授权单执行。"
 }

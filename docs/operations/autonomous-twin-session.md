@@ -887,7 +887,7 @@
   路径或凭证。中断于 `running` 的记录恢复为 `paused`，避免重启后重复执行；fixture 的状态转换只验证 contract，不宣称真实执行。
 - 本批不写磁盘、不调用执行器、不连云、不同步真实结果。新增模块后 catalog/migration 116/116，Facility coverage 56/56。
 
-## 2026-09-06 executable pilot 01 authorization boundary
+## 2026-09-06 executable pilot 01 authorization boundary (superseded base)
 
 - 在 revision `1899e888612a5d82c176297e1f7b31510cfdbba4` 固化下一批机器授权单：真实 127.0.0.1 ephemeral listener、Claude Code/
   Codex/DSH 固定 version/help probe，以及 signed no-effect plan 的 loopback 往返；本批仍不发送 prompt 或执行 Agent。
@@ -904,3 +904,10 @@
 - 第二层 preflight 要求同一 test device 的三个唯一 report，结果固定为 `ready-unarmed` 或 `blocked-unarmed`，并把 listener、executor、
   external writes 固定为 false。该批没有 process runner、socket、持久化、composition 或 effect callback；真实 probe 与 loopback 仍等批准。
 - 新增模块后 catalog/migration 为 117/117，Facility coverage 为 57/57；回滚只需回退本批，无状态迁移或服务恢复。
+
+## 2026-09-06 executable pilot 01 narrowed authorization boundary
+
+- Phase 5E revision `13e1be477288e8a5f7e5ed1d9e37b33b8c49c1a9` 已完成纯 allowlist/classifier/preflight，因此机器授权单移除这部分
+  创建范围，改为只申请真实 host process adapter、127.0.0.1 ephemeral listener、signed no-effect plan 往返及相应测试。
+- 允许动作和排除项不变：只探测版本/有界 auth availability，不发 prompt、不执行 Agent、不新增依赖、不改 composition、不启动或重启
+  守护进程、不激活私有 pack、不迁移数据、不切换 owner、不产生外部写。精确 approval phrase 已绑定新的 Phase 5E base revision。
