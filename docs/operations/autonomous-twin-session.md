@@ -1213,3 +1213,12 @@
   空目录，永不递归删除 state。测试覆盖 migration 篡改、权限漂移、未知布局、无效 endpoint 清理和已初始化状态保护。
 - 测试只使用临时目录和注入 master key；未真实 provision Keychain、安装到用户目录、注册/启动 daemon、连接云端、运行 executor 或 effect。
   catalog 与 Facility 数量仍为 130/70，回滚删除 lifecycle/test/ADR 与 ownership 映射。
+
+## 2026-09-06 installation-pinned execution-plan verifier
+
+- bootstrap/install config 新增强制 control-plane signing key pin：exact key id 与真实 Ed25519 SPKI public key；该公开 trust material 受 config digest
+  覆盖、仅存本地，不进入 cloud projection。malformed/non-Ed25519 key 在 Keychain、state 和 network 前失败关闭。
+- 新增 Node verifier，固定验证现有 contract 的 canonical `sha256:` digest string 与 64-byte base64url Ed25519 signature；真实 keypair 测试覆盖成功、
+  key id/digest/signature/key type 漂移。decoded key/signature 临时 buffer 均清零。
+- installation recovery 已改用 pinned verifier 初始化并关闭 client，不再需要测试 verifier 才能启动。未连接云端、接收真实 plan、执行 Agent/effect
+  或修改现网；首次可信 key 分发和 rotation 仍需签名发行更新链路。模块/Facility 仍为 130/70。

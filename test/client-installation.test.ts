@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { generateKeyPairSync } from 'node:crypto'
 import { access, chmod, lstat, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -7,7 +8,8 @@ import { installInactiveClient, recoverInactiveClientInstallation, uninstallUnus
 import { InactiveConfiguredLocalClientV1 } from '../src/client-runtime/configured-local-client.js'
 
 const migration = new URL('../migrations/client-sqlite/001_client_state.sql', import.meta.url).pathname
-function input(installRoot: string) { return { installRoot, clientVersion: '0.1.0', migrationSourcePath: migration, controlPlaneEndpoint: 'https://control.example.com/', tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner' } }
+const planPublicKey = `ed25519-spki:${(generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }) as Buffer).toString('base64url')}`
+function input(installRoot: string) { return { installRoot, clientVersion: '0.1.0', migrationSourcePath: migration, controlPlaneEndpoint: 'https://control.example.com/', tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner', planVerification: { keyId: 'control.primary', publicKey: planPublicKey } } }
 
 test('installs, recovers and uninstalls one unused inactive client with private files', async () => {
   const parent = await realpath(await mkdtemp(join(tmpdir(), 'quark-client-installer-'))); const root = join(parent, 'client')
@@ -38,7 +40,7 @@ test('never removes an installation after durable client state appears', async (
   const parent = await realpath(await mkdtemp(join(tmpdir(), 'quark-client-installer-'))); const root = join(parent, 'client')
   try {
     const installed = await installInactiveClient(input(root))
-    const client = await InactiveConfiguredLocalClientV1.initialize(installed.plan, { async verify() { return true } }, { masterKeys: { async load() { return new Uint8Array(32).fill(12) } } }); await client.close()
+    const client = await InactiveConfiguredLocalClientV1.initializePinned(installed.plan, { masterKeys: { async load() { return new Uint8Array(32).fill(12) } } }); await client.close()
     await assert.rejects(uninstallUnusedInactiveClient(root), /contains durable state/); await access(root)
   } finally { await rm(parent, { recursive: true, force: true }) }
 })

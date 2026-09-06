@@ -41,7 +41,7 @@ export async function installInactiveClient(input: InactiveClientInstallationInp
     await copyFile(input.migrationSourcePath, migrationPath); await chmod(migrationPath, 0o600)
     migrationBytes = await readFile(migrationPath)
     const migrationDigest = digest(migrationBytes)
-    const bootstrap: InactiveClientBootstrapDocumentV1 = { schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, stateRoot, tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, privateKeyRef: input.privateKeyRef, keychainAccount: input.keychainAccount }
+    const bootstrap: InactiveClientBootstrapDocumentV1 = { schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, stateRoot, tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, privateKeyRef: input.privateKeyRef, keychainAccount: input.keychainAccount, planVerification: input.planVerification }
     configBytes = Buffer.from(`${JSON.stringify(bootstrap)}\n`, 'utf8')
     await writeDurable(join(root, 'client.json'), configBytes)
     const receipt: InactiveClientInstallationReceiptV1 = Object.freeze({ schemaVersion: 1, installationId: `installation.${createHash('sha256').update(root).update('\0').update(input.clientVersion).digest('hex').slice(0, 32)}`, clientVersion: input.clientVersion, configDigest: digest(configBytes), migrationDigest, installedAt: now.toISOString(), state: 'installed-inactive', autoStart: false, externalWritesEnabled: false })

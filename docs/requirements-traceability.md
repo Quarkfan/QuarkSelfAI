@@ -56,6 +56,10 @@ inactive client 现可在任意调用方指定的 canonical 绝对目录完成�
 绑定 identity 与 config/migration digest 均可恢复复核，恢复 plan 已真实初始化并关闭唯一客户端 owner。unused uninstall 通过原子 quarantine
 与空目录删除证明不会递归删除 durable state；后台服务注册、发行包签名、公证、真实 Keychain/设备注册和 active lifecycle 仍未完成。
 
+安装配置现强制携带 control-plane signing key id 与真实 Ed25519 SPKI public key pin，并受 config digest 保护；Node verifier 已用真实 keypair
+验证正确签名并拒绝 key id、digest、signature 与 key type 漂移。恢复的客户端可直接从 pin 构建 verifier，不再依赖测试 fixture；可信 key
+首次分发与轮换仍须由后续签名发行/更新渠道闭合。
+
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
 inactive client cycle 证明真实设备 proof、签名执行器协商、local checkpoint-before-ack、server lease ack 及重连空轮询。它仍没有运行 executor、

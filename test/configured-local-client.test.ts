@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { generateKeyPairSync } from 'node:crypto'
 import { chmod, mkdtemp, realpath, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -11,8 +12,9 @@ const now = new Date('2026-09-06T00:00:00.000Z')
 const later = '2026-09-06T00:10:00.000Z'
 const masterKey = new Uint8Array(32).fill(17)
 const verifier = { async verify() { return true } }
+const planPublicKey = `ed25519-spki:${(generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }) as Buffer).toString('base64url')}`
 
-function document(stateRoot: string) { return { schemaVersion: 1, controlPlaneEndpoint: 'https://control.example.com/', stateRoot, tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner' } as const }
+function document(stateRoot: string) { return { schemaVersion: 1, controlPlaneEndpoint: 'https://control.example.com/', stateRoot, tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner', planVerification: { keyId: 'control.primary', publicKey: planPublicKey } } as const }
 
 test('assembles one configured client without connecting and resumes enrollment across reopen', async () => {
   const temporary = await mkdtemp(join(tmpdir(), 'quark-configured-client-')); const root = await realpath(temporary)

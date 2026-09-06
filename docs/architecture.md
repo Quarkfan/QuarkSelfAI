@@ -173,6 +173,10 @@ session transport 装入同一个 close boundary。state root 必须是 canonica
 写入封闭 bootstrap config 与绑定 install root/version 的 receipt；恢复会复核布局、权限、identity 和摘要。unused uninstall 先 quarantine 并
 二次确认 state 为空，只删除已验证文件与空目录，永不递归删除客户端状态。它仍不注册或启动后台服务。
 
+[ADR 0136](adr/0136-installation-pinned-plan-verification.md) 将 control-plane plan signing key id 与 Ed25519 SPKI public key 固定进本地安装配置
+及其 digest。具体 verifier 只接受 canonical payload digest、64-byte signature 与精确 key id，bootstrap 在 Keychain/state/network 前拒绝错误
+或非 Ed25519 key。客户端由此可脱离测试 verifier 自主恢复，但 key rotation 与 daemon 仍需后续生命周期。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

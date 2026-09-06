@@ -7,6 +7,7 @@ import { NodeInactiveHttpDeviceEnrollmentTransportV1 } from './http-device-enrol
 import { NodeInactiveHttpDeviceTransportV1 } from './http-device-transport.js'
 import type { InactiveClientCycleReceiptV1 } from './inactive-client-cycle.js'
 import { MacOsKeychainMasterKeyLifecycleV1, MacOsKeychainMasterKeyProviderV1 } from './macos-keychain-master-key.js'
+import { NodePinnedEd25519PlanVerifierV1 } from './plan-signature.js'
 
 const idPattern = /^[a-z0-9][a-z0-9._:-]{0,127}$/
 const referencePattern = /^(?:secret|keychain):[a-z0-9][a-z0-9._:-]{0,127}$/
@@ -21,12 +22,14 @@ export interface InactiveClientBootstrapDocumentV1 {
   readonly deviceId: string
   readonly privateKeyRef: string
   readonly keychainAccount: string
+  readonly planVerification: { readonly keyId: string; readonly publicKey: string }
 }
 
 export interface InactiveClientBootstrapPlanV1 {
   readonly schemaVersion: 1
   readonly controlPlaneEndpoint: string
   readonly keychainAccount: string
+  readonly planVerification: { readonly keyId: string; readonly publicKey: string }
   readonly client: EncryptedLocalClientConfigV1
   readonly autoConnect: false
   readonly autoPollEnrollment: false
@@ -51,7 +54,8 @@ export async function compileInactiveClientBootstrap(document: unknown, clientMi
   if (!state.isDirectory() || state.isSymbolicLink() || (state.mode & 0o077) !== 0 || await realpath(root) !== root) throw new Error('client state root must be a private canonical directory')
   // Construction performs the same endpoint policy check without opening a connection.
   new NodeInactiveHttpDeviceEnrollmentTransportV1(input.controlPlaneEndpoint)
-  return deepFreeze({ schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, keychainAccount: input.keychainAccount,
+  new NodePinnedEd25519PlanVerifierV1(input.planVerification.keyId, input.planVerification.publicKey)
+  return deepFreeze({ schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, keychainAccount: input.keychainAccount, planVerification: { ...input.planVerification },
     client: { paths: { databasePath: join(root, 'client.sqlite3'), migrationPath: clientMigrationPath, artifactRoot: join(root, 'artifacts'), instanceLeasePath: join(root, 'instance') },
       secretRoot: join(root, 'secrets'), enrollment: { tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, privateKeyRef: input.privateKeyRef } },
     autoConnect: false, autoPollEnrollment: false, externalWritesEnabled: false })
@@ -60,6 +64,10 @@ export async function compileInactiveClientBootstrap(document: unknown, clientMi
 /** One explicit inactive client facade. Construction has no network, discovery, polling, executor or effect side effect. */
 export class InactiveConfiguredLocalClientV1 {
   private constructor(private readonly client: InactiveEncryptedLocalClientV1, private readonly enrollment: DeviceEnrollmentClientPortV1, private readonly sessions: DeviceSessionServerPortV1) {}
+
+  static async initializePinned(plan: InactiveClientBootstrapPlanV1, dependencies: InactiveConfiguredClientDependenciesV1 = {}, now = new Date()): Promise<InactiveConfiguredLocalClientV1> {
+    return await InactiveConfiguredLocalClientV1.initialize(plan, new NodePinnedEd25519PlanVerifierV1(plan.planVerification.keyId, plan.planVerification.publicKey), dependencies, now)
+  }
 
   static async provisionMasterKey(plan: InactiveClientBootstrapPlanV1, provisioner?: LocalMasterKeyProvisionerV1): Promise<'created' | 'existing'> {
     await assertInactivePlan(plan)
@@ -85,15 +93,15 @@ export class InactiveConfiguredLocalClientV1 {
 function exactDocument(value: unknown): InactiveClientBootstrapDocumentV1 {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client bootstrap document must be an object')
   const item = value as Record<string, unknown>
-  const keys = ['schemaVersion', 'controlPlaneEndpoint', 'stateRoot', 'tenantId', 'userId', 'deviceId', 'privateKeyRef', 'keychainAccount']
-  if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.schemaVersion !== 1 || typeof item.controlPlaneEndpoint !== 'string' || typeof item.stateRoot !== 'string' || ![item.tenantId, item.userId, item.deviceId].every(value => typeof value === 'string' && idPattern.test(value)) || typeof item.privateKeyRef !== 'string' || !referencePattern.test(item.privateKeyRef) || typeof item.keychainAccount !== 'string' || !accountPattern.test(item.keychainAccount)) throw new Error('client bootstrap document is invalid')
+  const keys = ['schemaVersion', 'controlPlaneEndpoint', 'stateRoot', 'tenantId', 'userId', 'deviceId', 'privateKeyRef', 'keychainAccount', 'planVerification']
+  if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.schemaVersion !== 1 || typeof item.controlPlaneEndpoint !== 'string' || typeof item.stateRoot !== 'string' || ![item.tenantId, item.userId, item.deviceId].every(value => typeof value === 'string' && idPattern.test(value)) || typeof item.privateKeyRef !== 'string' || !referencePattern.test(item.privateKeyRef) || typeof item.keychainAccount !== 'string' || !accountPattern.test(item.keychainAccount) || !item.planVerification || typeof item.planVerification !== 'object' || Array.isArray(item.planVerification) || !exactKeys(item.planVerification as Record<string, unknown>, ['keyId', 'publicKey']) || typeof (item.planVerification as Record<string, unknown>).keyId !== 'string' || typeof (item.planVerification as Record<string, unknown>).publicKey !== 'string') throw new Error('client bootstrap document is invalid')
   return item as unknown as InactiveClientBootstrapDocumentV1
 }
 
 async function assertInactivePlan(value: unknown): Promise<void> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client bootstrap plan is invalid')
   const plan = value as Record<string, unknown>
-  if (!exactKeys(plan, ['schemaVersion', 'controlPlaneEndpoint', 'keychainAccount', 'client', 'autoConnect', 'autoPollEnrollment', 'externalWritesEnabled']) || plan.schemaVersion !== 1 || plan.autoConnect !== false || plan.autoPollEnrollment !== false || plan.externalWritesEnabled !== false || typeof plan.controlPlaneEndpoint !== 'string' || typeof plan.keychainAccount !== 'string' || !accountPattern.test(plan.keychainAccount)) throw new Error('client bootstrap plan is not inactive')
+  if (!exactKeys(plan, ['schemaVersion', 'controlPlaneEndpoint', 'keychainAccount', 'planVerification', 'client', 'autoConnect', 'autoPollEnrollment', 'externalWritesEnabled']) || plan.schemaVersion !== 1 || plan.autoConnect !== false || plan.autoPollEnrollment !== false || plan.externalWritesEnabled !== false || typeof plan.controlPlaneEndpoint !== 'string' || typeof plan.keychainAccount !== 'string' || !accountPattern.test(plan.keychainAccount) || !plan.planVerification || typeof plan.planVerification !== 'object' || Array.isArray(plan.planVerification) || !exactKeys(plan.planVerification as Record<string, unknown>, ['keyId', 'publicKey'])) throw new Error('client bootstrap plan is not inactive')
   if (!plan.client || typeof plan.client !== 'object' || Array.isArray(plan.client)) throw new Error('client bootstrap plan is invalid')
   const client = plan.client as Record<string, unknown>
   if (!exactKeys(client, ['paths', 'secretRoot', 'enrollment']) || typeof client.secretRoot !== 'string' || !client.paths || typeof client.paths !== 'object' || Array.isArray(client.paths) || !client.enrollment || typeof client.enrollment !== 'object' || Array.isArray(client.enrollment)) throw new Error('client bootstrap plan is invalid')
@@ -104,6 +112,9 @@ async function assertInactivePlan(value: unknown): Promise<void> {
   const rootState = await lstat(root); const migrationState = await lstat(paths.migrationPath as string)
   if (!rootState.isDirectory() || rootState.isSymbolicLink() || (rootState.mode & 0o077) !== 0 || await realpath(root) !== root || !migrationState.isFile() || migrationState.isSymbolicLink()) throw new Error('client bootstrap local paths are unsafe')
   new NodeInactiveHttpDeviceEnrollmentTransportV1(plan.controlPlaneEndpoint)
+  const verification = plan.planVerification as Record<string, unknown>
+  if (typeof verification.keyId !== 'string' || typeof verification.publicKey !== 'string') throw new Error('client bootstrap plan verification key is invalid')
+  new NodePinnedEd25519PlanVerifierV1(verification.keyId, verification.publicKey)
 }
 
 function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean { return Object.keys(value).sort().join(',') === [...keys].sort().join(',') }
