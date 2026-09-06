@@ -1402,3 +1402,14 @@
 - 隔离 evidence drift 追溯到上一已提交批次运行账本新增的一行兼容门禁名称；路径仍为 101/101、分类无变化且未新增业务正文，故仅同步 evidence digest。
 - 完整 `npm run check` 通过：主项目 478 项中 471 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构仍为 136 modules、
   76 个 platform-core Offer、assets 增至 121、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once，连续性和全部兼容门禁通过。
+
+## 2026-09-06 single-provider cloud transport host
+
+- direct TLS HTTP handler 与 SSH subsystem adapter 原先可被分别 composition，存在未来误建双 provider graph 的结构空间。本轮新增唯一 prepared host，
+  只打开一次 inactive cloud composition；HTTP 委托其认证 handler，SSH frame 委托同一个 session provider。
+- config exact 固定 direct TLS/SSH 均为 `prepared-inactive`、`singleProvider=true`、`activationAllowed=false`。host 不开 socket、不启动 ssh、不注册
+  sshd subsystem，也不包含 scheduler、executor 或 effect。
+- 合成非 fixture tenant 经 HTTP 登录并注册 device，随后经 SSH frame 从同一 graph 获得 challenge；scope/causation 保持一致，active-shaped config 在打开
+  dependencies 前失败。回滚只删除 host/test/ADR/catalog dependency，无新 schema 或 live transport state。
+- 完整 `npm run check` 通过：主项目 479 项中 472 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构保持 136 modules、
+  76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。

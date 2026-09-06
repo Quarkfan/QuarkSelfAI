@@ -91,6 +91,9 @@ host key，且禁用 remote shell、任意 command、port forwarding 与 agent f
 challenge/proof、session、poll/lease/ack、redacted result 与 heartbeat 都携带 tenant/user/device scope、frame/causation id，并使用
 最大 256 KiB 的 length-prefixed JSON frame；decoder 支持任意 stream chunking。未知字段、未知消息、跨 scope 嵌套对象、绝对路径、
 secret-shaped 文本与异常长度失败关闭。codec 不替代 plan signature、device proof、lease 或 result gate，也不打开网络连接。
+[ADR 0150](adr/0150-single-provider-cloud-transport-host.md) 再将两个 adapter 收敛到唯一 prepared host：HTTP 委托同一 composition 的认证 handler，
+SSH frame 委托该 composition 已持有的 device-session provider。配置固定两端 `prepared-inactive`、`singleProvider=true`、
+`activationAllowed=false`；未来 edge 只能包裹此 host，不能自行再构造 provider graph。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
