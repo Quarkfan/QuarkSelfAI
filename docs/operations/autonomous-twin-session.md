@@ -1173,3 +1173,13 @@
   cleanup-pending，再删除 credential 并写终态。崩溃后 token 已不存在视为清理完成；只有 fully-cleaned expired 可新建替代请求。
 - flow 仅由 encrypted inactive client 的显式方法调用，不自动联网/轮询/批准，不挂 daemon、executor 或运行 composition。catalog/migration
   为 130/130、Facility coverage 为 70/70，effects 保持 0/23。
+
+## 2026-09-06 public device-enrollment HTTP client
+
+- 将客户端依赖从完整 server enrollment port 收窄为仅有 begin/poll 的 public port；authenticated approve 只存在于服务端扩展，客户端 adapter
+  不具备自批准接口。现有 SQLite server provider 继续作为唯一设备注册写路径，没有新增 provider 或 owner。
+- outbound HTTP adapter 对生产 endpoint 强制 HTTPS，仅允许 `127.0.0.1:<port>` 明文测试；省略 browser credential/cookie，拒绝 redirect、URL
+  credential/path/query/fragment、超过 64 KiB 和非封闭 schema 响应，错误不回显 response body 或 poll token。
+- 宿主真实 loopback 使用合成身份和临时 SQLite 跑通 begin、pending poll、authenticated approve、approved poll，共 3 次客户端 HTTP 请求；listener
+  绑定 `127.0.0.1:0` 并在退出前关闭，临时数据删除。adapter 仍默认不挂载，不自动轮询、不启动 daemon/executor、不激活 capability/effect。
+- 本批沿用 130 个模块与 70/70 Facility coverage，只扩展已有 transport 模块；回滚删除 adapter/test/ADR、恢复本地类型依赖即可，无 live 状态迁移。

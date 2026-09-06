@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto'
-import type { DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1 } from '../control-plane/contracts.js'
+import type { DeviceEnrollmentClientPortV1, DeviceEnrollmentStatusV1 } from '../control-plane/contracts.js'
 import type { ClientDeviceEnrollmentViewV1, LocalDeviceEnrollmentStateV1, RemovableLocalDeviceSecretStoreV1 } from './contracts.js'
 import type { SqliteInactiveClientStateV1 } from './sqlite-client-state.js'
 
 /** Resumable local half of device-code enrollment. Poll credentials stay encrypted and never enter its public view. */
 export class InactiveClientDeviceEnrollmentV1 {
-  constructor(private readonly state: SqliteInactiveClientStateV1, private readonly secrets: RemovableLocalDeviceSecretStoreV1, private readonly server: DeviceEnrollmentServerPortV1) {}
+  constructor(private readonly state: SqliteInactiveClientStateV1, private readonly secrets: RemovableLocalDeviceSecretStoreV1, private readonly server: DeviceEnrollmentClientPortV1) {}
 
   async begin(now = new Date()): Promise<ClientDeviceEnrollmentViewV1> {
     const existing = this.state.deviceEnrollment()
@@ -46,7 +46,7 @@ export class InactiveClientDeviceEnrollmentV1 {
   }
 }
 
-function validateRequest(request: Awaited<ReturnType<DeviceEnrollmentServerPortV1['begin']>>, now: Date): void {
+function validateRequest(request: Awaited<ReturnType<DeviceEnrollmentClientPortV1['begin']>>, now: Date): void {
   if (Object.keys(request).sort().join(',') !== 'expiresAt,pollAfterSeconds,pollToken,requestId,schemaVersion,userCode,verificationPath' || request.schemaVersion !== 1 || !/^enrollment\.[a-f0-9]{32}$/.test(request.requestId) || !/^[A-F0-9]{4}(?:-[A-F0-9]{4}){3}$/.test(request.userCode) || !/^[A-Za-z0-9_-]{43}$/.test(request.pollToken) || request.verificationPath !== '/devices/activate' || request.pollAfterSeconds !== 5 || Date.parse(request.expiresAt) <= now.getTime()) throw new Error('device enrollment server request is invalid')
 }
 function view(value: NonNullable<ReturnType<SqliteInactiveClientStateV1['deviceEnrollment']>>): ClientDeviceEnrollmentViewV1 { return Object.freeze({ requestId: value.requestId, userCode: value.userCode, state: value.state.startsWith('approved') ? 'approved' : value.state.startsWith('expired') ? 'expired' : 'pending', verificationPath: '/devices/activate', expiresAt: value.expiresAt, pollAfterSeconds: 5, credentialCleanupPending: value.state.endsWith('cleanup-pending') }) }

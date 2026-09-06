@@ -103,10 +103,13 @@ export interface TenantDevicePortV1 {
   listDevices(context: TenantContextV1): Promise<readonly DeviceRecordV1[]>
 }
 
-export interface DeviceEnrollmentServerPortV1 {
+export interface DeviceEnrollmentClientPortV1 {
   begin(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceEnrollmentRequestV1>
-  approve(context: TenantContextV1, userCode: string, now?: Date): Promise<DeviceEnrollmentStatusV1>
   poll(input: { readonly requestId: string; readonly pollToken: string }, now?: Date): Promise<DeviceEnrollmentStatusV1>
+}
+
+export interface DeviceEnrollmentServerPortV1 extends DeviceEnrollmentClientPortV1 {
+  approve(context: TenantContextV1, userCode: string, now?: Date): Promise<DeviceEnrollmentStatusV1>
 }
 
 export interface DeviceSessionServerPortV1 {

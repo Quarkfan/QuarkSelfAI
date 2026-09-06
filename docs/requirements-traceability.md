@@ -56,6 +56,10 @@ inactive client cycle 证明真实设备 proof、签名执行器协商、local c
 浏览器 session。真实宿主 loopback 以四次请求跑通 client cycle 并立即关闭 listener/临时数据库。尚无公网 TLS certificate、identity edge、
 rate limit、常驻连接或 client daemon，因此仍不满足可部署连接完成标准。
 
+客户端 device-code 注册现有独立 outbound HTTP adapter，客户端依赖只含 begin/poll 的窄 port，不具备 approve 方法；生产 endpoint 强制 HTTPS，
+明确省略 browser credential/cookie，响应限制 64 KiB 并按封闭 schema 验证。真实宿主 loopback 已以 begin→pending poll→authenticated approve→
+approved poll 完成三次客户端 HTTP 往返并关闭临时 listener/SQLite。该证据不包含公网 exposure、真实登录 UI、rate limit 或 daemon 激活。
+
 设备协议已增加 direct TLS 主通道与 SSH subsystem 备用通道的静态 contract。SSH 只允许客户端主动出站到固定
 `quark-device-v1` subsystem，host key 与 credential 使用本地 opaque reference，禁止 shell、任意 command、port/agent forwarding，
 并要求切换前释放旧 transport lease。现已增加固定 launch builder 与 `ssh -V` 探测，宿主 OpenSSH `10.2p1` 可用；policy 仍固定

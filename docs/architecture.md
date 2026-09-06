@@ -157,6 +157,10 @@ rate-limit/abuse gate 未形成前不得启动。
 poll-token reference；真实 poll token 进入现有 AES-GCM secret store。重启复用同一请求，approved/expired 先持久化 cleanup-pending，再删除
 credential 并完成终态；完全清理的 expired 请求才可替换。公共 view、云投影和本地数据库均不含 poll token。
 
+[ADR 0132](adr/0132-public-device-enrollment-http-client.md) 将客户端可见注册 port 收窄为 public begin/poll，只有服务端扩展拥有 authenticated
+approve。outbound adapter 对生产 endpoint 强制 HTTPS，仅允许 `127.0.0.1:<port>` 明文测试，显式省略 browser credential/cookie，拒绝
+redirect、URL credential 和非封闭/超限响应。它仍是未挂载的显式调用能力，不自动连接或批准。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述
