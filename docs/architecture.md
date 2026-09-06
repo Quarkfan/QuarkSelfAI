@@ -104,6 +104,8 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 同时成立才读取一个 stdin frame 并调用 IPC proxy；失败只输出稳定码，不泄露 config/socket path。宿主子进程测试已闭合，但 entry 尚未安装或注册到 sshd。
 [ADR 0154](adr/0154-single-host-cloud-server-runtime.md) 将 TLS 与 SSH IPC 的启动顺序收敛到一个显式 runtime factory：只打开一份 cloud host，
 失败与关闭均按 TLS、IPC、host 逆序回收。它仍是未挂载 library，不读取部署配置/凭证、不提供 process entry，也未进入现有 composition 或服务管理器。
+[ADR 0155](adr/0155-default-disabled-cloud-server-entry.md) 增加默认禁用的 built server entry：私有 closed config、root-confined TLS 文件、
+真实 Ed25519 verifiers、随机 token、稳定 ready receipt 与 SIGTERM/SIGINT 清理均已闭合；entry 尚未进入 package script、部署 selector 或服务定义。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

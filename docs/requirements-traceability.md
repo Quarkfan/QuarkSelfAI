@@ -155,6 +155,9 @@ IPC，失败不输出路径或内部异常。宿主测试验证真实 child proc
 服务端 transport 现可通过一个未挂载 factory 组合：先打开唯一 cloud host，再打开 owner-only SSH IPC 和 TLS 1.3 edge；正常关闭与任一步失败都逆序释放。
 宿主测试证明 TLS 凭证失败后 socket/provider 无残留且同一路径可重开，并以真实 TLS 登录。尚无 server process entry、配置加载、信号处理或服务部署。
 
+现已提供 built 但默认禁用、未安装的 cloud server entry：只接受 exact opt-in 与 owner-only closed config，使用真实随机 token、device proof verifier 和 pinned
+plan verifier；稳定 ready receipt 在 signal handler 安装后才产生，SIGTERM 会清理两个 edge 与唯一 provider。尚未加入任何 package/deploy/service 启动入口。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

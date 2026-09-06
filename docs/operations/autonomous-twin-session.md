@@ -1453,3 +1453,13 @@
 - 本批没有 process entry、配置文件读取、真实证书/tenant、DNS/公网、sshd 配置、服务安装或启动，也没有 scheduler、executor、consumer 或 effect。
 - 完整 `npm run check` 通过：主项目 485 项中 474 通过、11 项仅因 sandbox listener 限制跳过，compat 179/179；宿主 runtime 专项为 1/1。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+
+## 2026-09-06 default-disabled cloud server entry
+
+- 为 single-host runtime 增加 built process entry，但必须同时满足显式 enable、exact `run <absolute-config>` 与 process-owned 0700/0600 文件边界；TLS key/cert
+  必须位于同一私有 root，读取 buffer 在 edge 导入后清零。真实依赖使用随机 token、Ed25519 device proof 与 pinned plan verifier。
+- ready receipt 不含端口、路径、tenant 或 key，只在两个 edge 成功打开且 signal handler 已安装后输出。宿主首测发现以 socket 存在判断 ready 会早于 handler，
+  因此升级为显式 receipt；修正后 built child 在 SIGTERM 下 exit 0 且 Unix socket 已删除。disabled 路径稳定失败且无 stdout。
+- 本批未把 entry 加入 package scripts、container entrypoint、systemd/launchd 或当前 application selector；没有安装配置、真实 credential/tenant、服务启动或外部写。
+- 完整 `npm run check` 通过：主项目 486 项中 474 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；最终宿主 entry 专项为 1/1。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
