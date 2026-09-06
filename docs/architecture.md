@@ -112,6 +112,9 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 封装为私有内容寻址发行包；builder 强制 revision 等于 HEAD 且输入已提交。发行包不含 host config、credential、tenant state、服务定义，固定不自启。
 [ADR 0158](adr/0158-inactive-server-installation-lifecycle.md) 建立 server install/recover/unused-uninstall：复制后逐字节复核，host config/runtime/state
 使用独立私有 namespace；receipt 固定未配置、未注册、未启动。任一 namespace 出现数据即阻止卸载，不能把程序回滚变成 tenant state 删除。
+[ADR 0159](adr/0159-inactive-server-host-configuration.md) 将已验证且尚未使用的安装绑定到本机配置：真实校验 TLS certificate/private key 匹配，
+验证 pinned Ed25519 plan key，并只引用安装内的 migration、state 与 runtime 路径。独立 receipt 固定 listener/database/owner/service/SSH apply/auto-start/effects
+全部关闭；recovery 不开数据库或 socket，runtime/state 一旦出现内容便禁止配置回滚。数据库初始化、首个 owner、服务注册、SSH apply 与启动仍是后续独立状态。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

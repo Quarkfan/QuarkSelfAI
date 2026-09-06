@@ -167,6 +167,11 @@ digest，且 source revision 必须等于 clean HEAD。host config、TLS secret�
 server 安装现可落入新的私有 root 并回读验证 receipt 与全部 distribution bytes；config/runtime/state 三个 namespace 初始为空且彼此分离。
 unused uninstall 采用 quarantine 后二次空目录检查，只删除 manifest-owned 文件；任何配置、运行文件或 tenant state 都阻止删除。尚未 provision 或启动服务。
 
+已安装 server 现可执行独立的 host configuration provisioning：TLS key/certificate 必须来自 owner-only canonical 文件并通过真实公钥匹配，plan verifier
+必须是 pinned Ed25519；生成的 closed config 只引用安装内 program/runtime/state，独立 receipt 固定 database/owner/service/listener/SSH apply/auto-start/effects
+均未激活。recovery 逐字节复核且不打开数据库或 socket；只有 runtime/state 仍为空时才能移除配置。真实数据库 bootstrap/restore、首个 owner、service/SSH apply
+和 process activation 仍未执行。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

@@ -1499,3 +1499,15 @@
 - 提交 `dbb930efe915d7bee9a88312e573c2ca61b80d64` 后真实构建 artifact
   `sha256:e8e8d768932db2d84ddce1e711973acccaafa176925ab4687d486c7d9511b038`，再执行 install→recover→unused uninstall；receipt 回读一致，
   全程保持 installed-inactive、auto-start/service/SSH/effects false。临时 distribution 与 installation root 均已删除。
+
+## 2026-09-06 inactive server host configuration
+
+- 新增 server configure/recover/unused-remove：只接受已验证且 config/runtime/state 为空的 inactive installation；真实验证 owner-only TLS key/certificate
+  匹配与 pinned Ed25519 plan key，再将 credential 私有复制到 config namespace。server/SSH config 只引用 installed program、runtime 和 state 路径。
+- configuration receipt 最后写入并绑定 installation identity 与每个配置/credential digest，固定 database/first owner/service/SSH apply/auto-start/effects false。
+  recovery 不打开 database/listener；credential drift 会失败，runtime 或 durable state 出现后禁止配置回滚。
+- 本批未初始化数据库、创建真实 tenant/owner、注册或启动 service、apply/reload sshd、打开网络 listener、连接客户端或产生 external effect。
+  回滚只删除从未使用且逐字节未变的五个配置文件；有任何 state 的安装必须保留并向前恢复，不能随代码回滚删除。
+- 完整 `npm run check` 通过：主项目 495 项中 483 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构仍为 136 modules、
+  76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once，work-domain 101/101
+  且无 drift；assistant continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，全部兼容门禁通过。
