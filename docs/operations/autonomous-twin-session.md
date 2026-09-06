@@ -845,3 +845,12 @@
 - Agent Studio、developer SDK 与 Blueprint compiler 共用该入口；未知字段、未声明 Capability node、执行器列表重叠、preferred model
   越界、cycle 和 stale digest 均有回归 fixture。
 - 本批只收紧纯 validator，不发布 Blueprint、不启用 trigger、不 dispatch 或执行任务，也不改变任何 runtime owner/effect。
+
+## 2026-09-06 Capability Platform Phase 4E Manifest evidence gate
+
+- 新增 public Capability candidate→`validated-unpublished` Manifest review gate。Manifest id/kind、source revision、artifact digest 必须与
+  candidate/evidence 一致，license、signature、SBOM、malware、maintenance、dependencies 六项必须全部 pass，且 Manifest 自身声明
+  verified signature 与 content-addressed SBOM。
+- 结果固定 `publicationAllowed=false`、`activationAllowed=false` 并保留 current owner；warning、身份漂移和私有 integration candidate
+  均失败关闭。私有 Manifest 必须在私有 pack 内按相同公共 contract 准备，不能把实现映射带回主线。
+- 本批不发布 release、不写 registry、不安装或调用 lifecycle。新增模块后 catalog/migration 113/113，Facility coverage 53/53。

@@ -1,4 +1,4 @@
-import type { CapabilityArtifactKind } from './manifest.js'
+import type { CapabilityArtifactKind, CapabilityManifestV1 } from './manifest.js'
 
 export type CapabilityCandidateBlocker =
   | 'artifact-digest-missing'
@@ -46,4 +46,16 @@ export interface CapabilityArtifactCandidateCatalogV1 {
   readonly eligibleOfferCount: number
   readonly coveredOfferCount: number
   readonly uncoveredModuleIds: readonly string[]
+}
+
+export interface ManifestPublicationCandidateV1 {
+  readonly schemaVersion: 1
+  readonly candidateId: string
+  readonly manifest: CapabilityManifestV1
+  readonly manifestDigest: string
+  readonly evidencePolicyRevision: string
+  readonly status: 'validated-unpublished'
+  readonly publicationAllowed: false
+  readonly activationAllowed: false
+  readonly currentOwnerPreserved: true
 }
