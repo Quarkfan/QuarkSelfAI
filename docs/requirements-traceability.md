@@ -174,10 +174,14 @@ unused uninstall 采用 quarantine 后二次空目录检查，只删除 manifest
 
 installation-scoped first-owner lifecycle 现已复用事务化 identity bootstrap，但 database 与两份 migration path 不再由调用者选择，只能从已恢复的安装派生。
 它要求 runtime/state 为空，创建恰好一个 active tenant/user/owner、零 session，并以独立 receipt 绑定 configuration digest。recovery 只读验证 SQLite integrity、
-singleton owner 与零 session；service、SSH、auto-start、listener 和 effects 均未激活。receipt 中断修复、数据库恢复与真实 owner provision 仍未完成。
+singleton owner 与零 session；service、SSH、auto-start、listener 和 effects 均未激活。数据库恢复与真实 owner provision 仍未完成。
+
+first-owner receipt crash window 现有前向修复：bootstrap 在 receipt 前 checkpoint 并将尚未运行的 database 置为 DELETE journal；若 state 只有该 database，
+repair 会核验 installation/config lineage、SQLite integrity、singleton active owner、相同 persisted timestamp、零 session 和 expected tenant/user，再补写同一 inactive receipt。
+它不接收 password、不改变 identity 数据、不删除 state。一般数据库备份恢复和真实 owner provision 仍未完成。
 
 发行包现已包含默认禁用的 local server admin entry，exact commands 仅覆盖 install、configure、bootstrap-owner、status 与两个 unused rollback；配置为 owner-only
-closed JSON，owner credential 只从 bounded stdin 进入。输出省略 credential、TLS、database path 与 tenant metadata，且不存在 start/stop、service register、SSH apply、
+closed JSON，owner credential 只从 bounded stdin 进入；另有无 credential 的 exact owner-receipt repair。输出省略 credential、TLS、database path 与 tenant metadata，且不存在 start/stop、service register、SSH apply、
 effect enable 或 durable-state delete 命令。真实发行包端到端调用证据将在该 entry 提交后从 clean revision 记录。
 
 service-manager 边界现可纯渲染 macOS LaunchAgent 与 systemd user unit：定义只指向 installed entry/config，显式设置 server enable gate，且不含 credential 或 tenant

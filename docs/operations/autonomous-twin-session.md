@@ -1559,3 +1559,15 @@
 - 完整 `npm run check` 通过：主项目 501 项中 489 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构保持 136 modules、
   76 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once、隔离 101/101 且无 drift；
   continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，全部兼容门禁通过。
+
+## 2026-09-06 first-owner receipt forward repair
+
+- 关闭 database commit 与 receipt write 之间的 crash window：first-owner 创建后先 checkpoint，并在未运行阶段切为 SQLite DELETE journal；正常 server migration
+  仍可在真正启动时恢复 WAL。这样只读 inactive recovery 不会凭空留下持久 sidecar。
+- 新增 exact `repair-owner-receipt`：仅当 runtime 为空且 state 恰有 database 时，验证 installation/config lineage、0600 single-link file、integrity、singleton
+  active owner、三处 persisted timestamp 一致、零 session 和 caller 给出的 expected tenant/user，才补写标准 inactive receipt。
+- repair 不读取或替换 password，不修改 tenant/user/account/role，不删除 database，也不注册/启动 service 或应用 SSH。错误 expected identity 已验证不会创建 receipt；
+  正确 identity 可恢复出与原 receipt 逐字段一致的结果。
+- 完整 `npm run check` 通过：主项目 502 项中 490 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构保持 136 modules、
+  76 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once、隔离 101/101 且无 drift；
+  continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，全部兼容门禁通过。

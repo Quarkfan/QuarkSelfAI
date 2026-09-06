@@ -124,6 +124,9 @@ metadata。entry 没有 start/stop/service/SSH apply/effect/delete-state 命令�
 [ADR 0162](adr/0162-prepared-user-service-definitions.md) 增加 launchd LaunchAgent 与 systemd user unit 的确定性 renderer；两者只引用 installed
 server entry/config，显式设置 server enable gate，并返回 content digest 与 unregistered/unstarted/single-provider/effects-off receipt。当前只生成定义，不写 service-manager
 目录、不调用 launchctl/systemctl、不启动进程；production system service 的非 root OS identity 仍需单独设计。
+[ADR 0163](adr/0163-first-owner-receipt-forward-repair.md) 关闭 SQLite transaction 已提交但 receipt 尚未写入的 crash window：inactive database 在 receipt
+前 checkpoint 并切为 DELETE journal；repair 只接受 state 中唯一 database，核验 integrity、singleton active owner、persisted timestamp、零 session 及调用者给出的
+expected tenant/user 后补写标准 receipt。它不接受密码或替换身份，不删除或修改 tenant state，也不改变任何 activation flag。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

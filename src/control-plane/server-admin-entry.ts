@@ -3,14 +3,14 @@ import { isAbsolute, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { provisionInactiveServerConfiguration, recoverInactiveServerConfiguration, removeUnusedServerConfiguration, type InactiveServerConfigurationInputV1 } from './server-configuration.js'
 import { installInactiveServer, recoverInactiveServerInstallation, uninstallUnusedInactiveServer } from './server-installation.js'
-import { bootstrapInstalledFirstOwner, recoverInstalledFirstOwner, type InstalledFirstOwnerInputV1 } from './server-owner-bootstrap.js'
+import { bootstrapInstalledFirstOwner, recoverInstalledFirstOwner, repairInstalledFirstOwnerReceipt, type InstalledFirstOwnerInputV1, type InstalledFirstOwnerReceiptRepairV1 } from './server-owner-bootstrap.js'
 
-type ServerAdminCommandV1 = { readonly mode: 'install'; readonly distributionRoot: string; readonly installRoot: string } | { readonly mode: 'configure' | 'bootstrap-owner'; readonly installRoot: string; readonly configPath: string } | { readonly mode: 'status' | 'remove-unused-configuration' | 'uninstall-unused'; readonly installRoot: string }
+type ServerAdminCommandV1 = { readonly mode: 'install'; readonly distributionRoot: string; readonly installRoot: string } | { readonly mode: 'configure' | 'bootstrap-owner' | 'repair-owner-receipt'; readonly installRoot: string; readonly configPath: string } | { readonly mode: 'status' | 'remove-unused-configuration' | 'uninstall-unused'; readonly installRoot: string }
 export interface ServerAdminReceiptV1 { readonly schemaVersion: 1; readonly operation: ServerAdminCommandV1['mode']; readonly installationId: string; readonly state: string; readonly sourceRevision?: string; readonly distributionDigest?: string; readonly autoStart: false; readonly serviceRegistered: false; readonly sshGatewayApplied: false; readonly externalEffectsEnabled: false }
 
 export function compileServerAdminCommand(argv: readonly string[]): ServerAdminCommandV1 {
   if (argv[0] === 'install' && argv.length === 3) return Object.freeze({ mode: 'install', distributionRoot: exactPath(argv[1]!), installRoot: exactPath(argv[2]!) })
-  if ((argv[0] === 'configure' || argv[0] === 'bootstrap-owner') && argv.length === 3) return Object.freeze({ mode: argv[0], installRoot: exactPath(argv[1]!), configPath: exactPath(argv[2]!) })
+  if ((argv[0] === 'configure' || argv[0] === 'bootstrap-owner' || argv[0] === 'repair-owner-receipt') && argv.length === 3) return Object.freeze({ mode: argv[0], installRoot: exactPath(argv[1]!), configPath: exactPath(argv[2]!) })
   if ((argv[0] === 'status' || argv[0] === 'remove-unused-configuration' || argv[0] === 'uninstall-unused') && argv.length === 2) return Object.freeze({ mode: argv[0], installRoot: exactPath(argv[1]!) })
   throw new Error('server admin command is invalid')
 }
@@ -21,6 +21,7 @@ export async function runServerAdminEntry(argv: readonly string[], environment: 
   if (command.mode === 'install') return bounded(command.mode, await installInactiveServer(command.installRoot, command.distributionRoot))
   if (command.mode === 'configure') { const config = exactConfigureConfig(await readPrivateJson(command.configPath), command.installRoot); return bounded(command.mode, await provisionInactiveServerConfiguration(config)) }
   if (command.mode === 'bootstrap-owner') { const config = exactOwnerConfig(await readPrivateJson(command.configPath), command.installRoot); const credential = await readCredential(credentialInput); return bounded(command.mode, await bootstrapInstalledFirstOwner(config, credential)) }
+  if (command.mode === 'repair-owner-receipt') { const config = exactOwnerRepairConfig(await readPrivateJson(command.configPath), command.installRoot); return bounded(command.mode, await repairInstalledFirstOwnerReceipt(config)) }
   if (command.mode === 'remove-unused-configuration') return bounded(command.mode, await removeUnusedServerConfiguration(command.installRoot))
   if (command.mode === 'uninstall-unused') return bounded(command.mode, await uninstallUnusedInactiveServer(command.installRoot))
   return await status(command.installRoot)
@@ -30,6 +31,7 @@ async function status(root: string): Promise<ServerAdminReceiptV1> { const state
 async function readPrivateJson(path: string): Promise<unknown> { const state = await lstat(path); const uid = process.getuid?.(); if (!state.isFile() || state.isSymbolicLink() || state.nlink !== 1 || (state.mode & 0o077) !== 0 || state.size <= 0 || state.size > 64 * 1024 || await realpath(path) !== path || (uid !== undefined && state.uid !== uid)) throw new Error('server admin config is unsafe'); try { return JSON.parse(await readFile(path, 'utf8')) } catch { throw new Error('server admin config is invalid') } }
 function exactConfigureConfig(value: unknown, installRoot: string): InactiveServerConfigurationInputV1 { const item = exactRecord(value, ['tlsKeySourcePath','tlsCertSourcePath','host','port','requestTimeoutMs','maxConnections','sshRequestTimeoutMs','planVerification']); return { ...item, installRoot } as unknown as InactiveServerConfigurationInputV1 }
 function exactOwnerConfig(value: unknown, installRoot: string): InstalledFirstOwnerInputV1 { const item = exactRecord(value, ['tenantId','tenantName','userId','displayName']); return { ...item, installRoot } as unknown as InstalledFirstOwnerInputV1 }
+function exactOwnerRepairConfig(value: unknown, installRoot: string): InstalledFirstOwnerReceiptRepairV1 { const item = exactRecord(value, ['tenantId','userId']); return { ...item, installRoot } as unknown as InstalledFirstOwnerReceiptRepairV1 }
 function exactRecord(value: unknown, keys: readonly string[]): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).sort().join(',') !== [...keys].sort().join(',')) throw new Error('server admin config is invalid'); return value as Record<string, unknown> }
 async function readCredential(input: AsyncIterable<Buffer | string>): Promise<string> { const chunks: Buffer[] = []; let size = 0; for await (const chunk of input) { const bytes = Buffer.from(chunk); size += bytes.byteLength; if (size > 258) throw new Error('server admin credential is invalid'); chunks.push(bytes) }; const bytes = Buffer.concat(chunks); let value = bytes.toString('utf8'); bytes.fill(0); value = value.replace(/\r?\n$/, ''); if (!value || /[\r\n]/.test(value)) throw new Error('server admin credential is invalid'); return value }
 function exactPath(value: string): string { if (!isAbsolute(value) || resolve(value) !== value || value === '/' || /[\r\n\0]/.test(value)) throw new Error('server admin path must be exact and absolute'); return value }
