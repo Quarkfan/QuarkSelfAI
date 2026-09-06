@@ -131,6 +131,9 @@ expected tenant/user 后补写标准 receipt。它不接受密码或替换身份
 installation 以 SQLite online backup 生成快照，密文清单不含 host path、TLS/config/runtime；解密只落新 staging，并拒绝 link、未知文件、digest 或 integrity drift。
 恢复目标必须是同 version/revision/distribution 且 runtime/state 为空的新配置安装，数据库以 no-overwrite 复制后重新核验 singleton owner，并生成绑定目标
 installation/config 的 receipt。admin entry 只返回脱敏 bundle/installation identity，service/SSH apply/auto-start/effects 继续关闭。
+[ADR 0165](adr/0165-installed-server-single-instance-lease.md) 将 installed server 的 provider ownership 前移到进程入口：closed config 固定
+`runtime/instance`，entry 必须在读取 TLS、打开 SQLite 或 edge 前取得 owner-only lease。活动 PID 阻断第二进程；只有 exact 0700 directory + single 0600
+owner record 且 PID 已消失时才 quarantine 回收，未知或扩展 state 不删除。优雅退出先关闭 TLS/SSH/provider，再以随机 token 释放 lease；服务注册与自启仍未发生。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

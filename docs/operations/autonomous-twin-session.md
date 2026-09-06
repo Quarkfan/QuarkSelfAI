@@ -1596,3 +1596,16 @@
   install/configure/owner → encrypted backup → decrypted staging → 第二个同 distribution install/configure/restore → status，bundle ID
   `sha256:290620bd0243555b637edc2112dfb479db9d1ca24e8dcc802d9ebd1f25abe645`。最终 status 为 `owner-created-inactive`，
   service/SSH apply/auto-start/effects 全为 false；一次性 identity、TLS、密码、数据库、密文和明文 staging 随私有临时根整体删除。
+
+## 2026-09-06 installed-server single-instance lease
+
+- cloud server closed config 新增唯一 installation-scoped `runtime/instance`；entry 在读取 TLS、打开 SQLite/provider 或创建 TLS/SSH edge 前必须取得 lease，
+  因此端口冲突不再是阻止第二 provider 的第一道门禁。
+- lease 只接受 process-owned 0700 canonical directory 与唯一 single-link 0600 owner record；活动 PID 直接拒绝，已退出 PID 通过 quarantine rename 后只删除
+  exact owner file/directory。未知字段、额外文件、link、公开权限或 token drift 均失败且不删除。
+- 优雅退出顺序固定为 TLS/SSH/provider close 后释放 lease。定向单元测试覆盖互斥、释放重取、合法 stale 回收和 malformed state 保留；真实回环 child
+  测试证明第一实例 ready 后第二实例稳定失败，第一实例 socket 仍健康，SIGTERM 后 socket 与 lease 均消失。
+- 本批未注册/启动常驻 service、未 apply SSH、未改变现有 consumer/provider/writer，也未解决 hard-crash 遗留 Unix socket 的受控回收。
+- 完整 `npm run check` 通过：主项目 507 项中 495 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；宿主真实回环专项 4/4。
+  架构保持 137 modules、77 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active。work-domain 101/101 且基线已同步到本批
+  脱敏证据摘要；continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，DSH/server/BlackLake/Lark 与私有包审计均通过。

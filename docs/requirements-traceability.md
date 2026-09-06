@@ -156,7 +156,8 @@ IPC，失败不输出路径或内部异常。宿主测试验证真实 child proc
 宿主测试证明 TLS 凭证失败后 socket/provider 无残留且同一路径可重开，并以真实 TLS 登录。尚无 server process entry、配置加载、信号处理或服务部署。
 
 现已提供 built 但默认禁用、未安装的 cloud server entry：只接受 exact opt-in 与 owner-only closed config，使用真实随机 token、device proof verifier 和 pinned
-plan verifier；稳定 ready receipt 在 signal handler 安装后才产生，SIGTERM 会清理两个 edge 与唯一 provider。尚未加入任何 package/deploy/service 启动入口。
+plan verifier；它在读取 TLS、打开 SQLite 或 edge 前取得 installation-scoped 单实例 lease，活动 owner 阻断第二进程。稳定 ready receipt 在 signal handler 安装后才产生，
+SIGTERM 会先清理两个 edge 与唯一 provider，再释放 exact lease。尚未加入任何 package/deploy/service 启动入口；crash 后 stale socket reconciliation 仍未完成。
 
 SSH gateway 安装面现可生成 content-addressed review plan：专用非 root 用户、合法 Ed25519 public key、forced subsystem command、public-key-only 认证，
 并同时禁止 shell 旁路所需的 TTY、forwarding、agent、X11、tunnel 与 gateway。plan 明确 `applyAllowed=false`、`reloadAllowed=false`，没有系统写入。
@@ -190,7 +191,7 @@ host config、TLS、runtime、program 或绝对路径。staging 必须全新，�
 
 service-manager 边界现可纯渲染 macOS LaunchAgent 与 systemd user unit：定义只指向 installed entry/config，显式设置 server enable gate，且不含 credential 或 tenant
 metadata；receipt 固定 prepared-inactive、unregistered、unstarted、single-provider、effects-off。renderer 不写系统目录、不调用 service manager、不启动进程；生产 system
-service 的专用非 root identity、真实注册/启动和单实例切换仍未完成。
+service 的专用非 root identity、真实注册/启动和旧 owner 切换仍未完成；process-level 单实例 lease 已闭合。
 
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
