@@ -14,7 +14,7 @@ export async function installInactiveServer(installRoot: string, distributionSou
   let created = false
   try {
     await mkdir(root, { mode: 0o700 }); created = true; await copyDistribution(distributionSourcePath, root, distribution); await verifyServerDistribution(root)
-    for (const name of ['config','runtime','state']) await mkdir(join(root, name), { mode: 0o700 })
+    for (const name of ['config','runtime','service','state']) await mkdir(join(root, name), { mode: 0o700 })
     const receipt = Object.freeze({ schemaVersion: 1 as const, installationId: `server-installation.${createHash('sha256').update(root).update('\0').update(distribution.serverVersion).digest('hex').slice(0, 32)}`, serverVersion: distribution.serverVersion, distributionDigest: distribution.artifactDigest, sourceRevision: distribution.sourceRevision, installedAt: now.toISOString(), state: 'installed-inactive' as const, configurationPresent: false as const, autoStart: false as const, serviceRegistered: false as const, sshGatewayApplied: false as const, externalEffectsEnabled: false as const })
     await writeExclusive(join(root, 'install-receipt.json'), Buffer.from(`${JSON.stringify(receipt)}\n`)); return receipt
   } catch (error) { if (created) { const { rm } = await import('node:fs/promises'); await rm(root, { recursive: true, force: true }) }; throw error }
@@ -28,7 +28,7 @@ export async function recoverInactiveServerInstallation(installRoot: string): Pr
   if (receipt.installationId !== expected) throw new Error('server installation identity drifted')
   const distribution = await verifyServerDistribution(root)
   if (distribution.serverVersion !== receipt.serverVersion || distribution.sourceRevision !== receipt.sourceRevision || distribution.artifactDigest !== receipt.distributionDigest) throw new Error('server installation distribution drifted')
-  for (const name of ['config','runtime','state']) await privateDirectory(join(root, name))
+  for (const name of ['config','runtime','service','state']) await privateDirectory(join(root, name))
   return receipt
 }
 
@@ -40,13 +40,13 @@ export async function uninstallUnusedInactiveServer(installRoot: string): Promis
   await rename(root, quarantine)
   try { await assertEmptyNamespaces(quarantine) } catch (error) { await rename(quarantine, root); throw error }
   await removeVerifiedDistribution(quarantine); await unlink(join(quarantine, 'install-receipt.json'))
-  for (const name of ['config','runtime','state']) await rmdir(join(quarantine, name)); await rmdir(quarantine); return receipt
+  for (const name of ['config','runtime','service','state']) await rmdir(join(quarantine, name)); await rmdir(quarantine); return receipt
 }
 
 async function validateNewRoot(value: string): Promise<string> { if (!isAbsolute(value) || resolve(value) !== value || value === '/' || await realpath(dirname(value)) !== dirname(value)) throw new Error('server install root must be a new exact path'); try { exactPortableUnixSocketPathV1(join(value, 'runtime/device.sock')) } catch { throw new Error('server install root cannot host a portable Unix socket') }; try { await lstat(value); throw new Error('server install root already exists') } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }; return value }
 async function validateExistingRoot(value: string): Promise<string> { if (!isAbsolute(value) || resolve(value) !== value || value === '/' || await realpath(value) !== value) throw new Error('server install root must be canonical'); await privateDirectory(value); return value }
 async function privateDirectory(path: string): Promise<void> { const state = await lstat(path); const uid = process.getuid?.(); if (!state.isDirectory() || state.isSymbolicLink() || (state.mode & 0o077) !== 0 || await realpath(path) !== path || (uid !== undefined && state.uid !== uid)) throw new Error('server installation directory is unsafe') }
-async function assertEmptyNamespaces(root: string): Promise<void> { for (const name of ['config','runtime','state']) if ((await readdir(join(root, name))).length) throw new Error('server installation contains host configuration or durable state') }
+async function assertEmptyNamespaces(root: string): Promise<void> { for (const name of ['config','runtime','service','state']) if ((await readdir(join(root, name))).length) throw new Error('server installation contains host configuration, service preparation or durable state') }
 async function copyDistribution(sourceRoot: string, destinationRoot: string, manifest: ServerDistributionManifestV1): Promise<void> { for (const file of manifest.files) { const destination = join(destinationRoot, file.path); await mkdir(dirname(destination), { recursive: true, mode: 0o700 }); await copyFile(join(sourceRoot, file.path), destination); await chmod(destination, 0o600) }; await copyFile(join(sourceRoot, 'server-distribution.json'), join(destinationRoot, 'server-distribution.json')); await chmod(join(destinationRoot, 'server-distribution.json'), 0o600) }
 async function removeVerifiedDistribution(root: string): Promise<void> { const manifest = await verifyServerDistribution(root); for (const file of [...manifest.files].sort((a, b) => b.path.localeCompare(a.path))) await unlink(join(root, file.path)); const directories = new Set<string>(); for (const file of manifest.files) { let current = dirname(join(root, file.path)); while (current !== root) { directories.add(current); current = dirname(current) } }; for (const path of [...directories].sort((a, b) => b.length - a.length)) await rmdir(path); await unlink(join(root, 'server-distribution.json')) }
 async function writeExclusive(path: string, bytes: Uint8Array): Promise<void> { const handle = await open(path, 'wx', 0o600); try { await handle.writeFile(bytes); await handle.sync() } finally { await handle.close() } }

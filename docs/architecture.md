@@ -109,9 +109,11 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 [ADR 0156](adr/0156-prepared-openssh-gateway-plan.md) 提供纯渲染的 OpenSSH gateway plan：专用非 root 用户、Ed25519 public key、forced command
 与禁止 shell/TTY/forwarding/tunnel 的双重约束均被内容寻址；plan 固定不可 apply/reload，尚未写系统文件、创建账号或连接远端。
 [ADR 0157](adr/0157-content-addressed-server-distribution.md) 将 cloud server 与 SSH subsystem entry、七个 migration 和 SPDX SBOM
-封装为私有内容寻址发行包；builder 强制 revision 等于 HEAD 且输入已提交。发行包不含 host config、credential、tenant state、服务定义，固定不自启。
+封装为私有内容寻址发行包；builder 强制 revision 等于 HEAD 且输入已提交。发行包不含 host config、credential、tenant state，固定不自启；
+[ADR 0167](adr/0167-installed-unregistered-server-service-preparation.md) 后续将两种纯模板纳入同一 sealed inventory，但仍不携带 rendered host definition。
 [ADR 0158](adr/0158-inactive-server-installation-lifecycle.md) 建立 server install/recover/unused-uninstall：复制后逐字节复核，host config/runtime/state
-使用独立私有 namespace；receipt 固定未配置、未注册、未启动。任一 namespace 出现数据即阻止卸载，不能把程序回滚变成 tenant state 删除。
+使用独立私有 namespace；ADR 0167 再增加 service preparation namespace。receipt 固定未配置、未注册、未启动；任一 namespace 出现数据即阻止卸载，
+不能把程序回滚变成 tenant state 删除。
 [ADR 0159](adr/0159-inactive-server-host-configuration.md) 将已验证且尚未使用的安装绑定到本机配置：真实校验 TLS certificate/private key 匹配，
 验证 pinned Ed25519 plan key，并只引用安装内的 migration、state 与 runtime 路径。独立 receipt 固定 listener/database/owner/service/SSH apply/auto-start/effects
 全部关闭；recovery 不开数据库或 socket，runtime/state 一旦出现内容便禁止配置回滚。数据库初始化、首个 owner、服务注册、SSH apply 与启动仍是后续独立状态。
@@ -137,6 +139,9 @@ owner record 且 PID 已消失时才 quarantine 回收，未知或扩展 state �
 [ADR 0166](adr/0166-portable-unix-socket-and-stale-recovery.md) 将 Unix socket 限为跨 macOS/Linux 可用的 103 UTF-8 bytes，installer 在复制 program 前拒绝
 无法承载 socket 的根路径。只有 exact stale lease 已证明旧 PID 消失时，entry 才可在 provider 打开前探测遗留 socket；可连接、类型/owner/mode/inode 漂移或未知错误均保留并失败，
 仅 owner-only 且 connection-refused 的原 inode 可删除。hard-crash 因此可恢复，但不会把活动 listener 当作 stale。
+[ADR 0167](adr/0167-installed-unregistered-server-service-preparation.md) 把 sealed templates 带入发行包，并在 installation 内建立独立 `service`
+namespace。bundled admin 只能从 sealed template 生成并回读一个 content-addressed `service-prepared-inactive` 定义；registered/started/auto-start/effects
+继续固定关闭。rollback 只删除 runtime 为空、lineage/layout/digest 全部复核通过的未注册 preparation，不写系统 service 目录或调用 service manager。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

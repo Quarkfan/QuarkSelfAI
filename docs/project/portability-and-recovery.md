@@ -193,6 +193,12 @@ installation。目标端自行配置新的 TLS/host path，数据库 no-overwrit
 103 UTF-8 bytes 内，避免 macOS/Linux Unix socket 路径差异延迟到启动时才失败。当前 v1 只支持 inactive SQLite 精确版本恢复；active/quiesced 备份、PostgreSQL server
 state 和跨版本迁移仍需后续独立门禁。
 
+发行包同时携带 sealed launchd/systemd user-service 模板。`prepare-service` 只把选定模板渲染到 installation 自己的私有 `service` namespace，
+以 receipt 绑定 installation/configuration lineage、definition digest 和本机 executable/log path；`status` 会从 sealed template 重新生成并逐字节核验。
+它不写 `~/Library/LaunchAgents`、systemd user directory 或任何系统路径，不调用 service manager，也不注册或启动进程。
+`remove-unregistered-service` 仅在 runtime 为空且 definition、receipt、owner lineage 均未漂移时删除这两个 preparation 文件；否则保留现场。
+服务注册、启动、health gate、单 owner 切换及其真实回滚仍需后续独立实现与演练。
+
 ## 6. 恢复安全门禁
 
 恢复实例必须先处于 `restore-safe`：
