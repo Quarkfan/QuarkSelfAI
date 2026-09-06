@@ -3,6 +3,7 @@ import type { DeviceRecordV1, TenantContextV1, TenantRecordV1, UserRecordV1 } fr
 export type TenantControlActionV1 =
   | 'tenant.create'
   | 'user.register'
+  | 'user.provision-account'
   | 'device.register'
   | 'device.list'
   | 'agent-draft.read'

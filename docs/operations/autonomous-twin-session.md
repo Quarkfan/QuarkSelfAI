@@ -1390,3 +1390,15 @@
 - 完整 `npm run check` 通过：主项目 478 项中 471 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构为 136 modules、
   76 个 platform-core Offer、120 assets、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once，work-domain 101/101
   且无 drift；assistant continuity 仍如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，DSH/server/BlackLake/Lark compatibility 均通过。
+
+## 2026-09-06 transactional tenant account provisioning
+
+- first-owner bootstrap 之后原先没有安全的后续用户入口；分别调用 user repository 与 identity provider 会产生半成品风险。本轮在同一 inactive identity
+  provider 内增加 owner-only `user.provision-account`，tenant 只由 session context 决定，member/auditor 和 tenant body 注入均失败关闭。
+- provider 在计算 bounded scrypt credential 后开启 `BEGIN IMMEDIATE`，重新检查 actor account/user/tenant 为 active，并在同一 transaction 写 user、account
+  与 privacy-bounded audit。receipt 不含 credential/hash/salt/path/session，新账号不自动登录；错误会回滚全部写入。
+- 合成非 fixture owner 已创建并登录一个 member；该 member 无法继续创建账号，SQLite readback 仅有两名用户和一条对应 actor/target/action/roles audit。
+  本批没有 listener、真实账号、邮件/邀请、MFA、密码恢复、服务启动、外部写或现网 owner 变化。
+- 隔离 evidence drift 追溯到上一已提交批次运行账本新增的一行兼容门禁名称；路径仍为 101/101、分类无变化且未新增业务正文，故仅同步 evidence digest。
+- 完整 `npm run check` 通过：主项目 478 项中 471 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构仍为 136 modules、
+  76 个 platform-core Offer、assets 增至 121、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once，连续性和全部兼容门禁通过。

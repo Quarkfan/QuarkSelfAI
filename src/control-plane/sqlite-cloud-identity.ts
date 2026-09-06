@@ -2,15 +2,35 @@ import { randomBytes, scrypt as nodeScrypt, timingSafeEqual, createHash } from '
 import { DatabaseSync } from 'node:sqlite'
 import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
-import type { CloudAuthenticationPortV1, TenantContextV1 } from './contracts.js'
+import type { CloudAuthenticationPortV1, TenantAccountAdministrationPortV1, TenantAccountProvisionReceiptV1, TenantContextV1 } from './contracts.js'
+import type { TenantAuthorizationPortV1 } from './tenant-persistence.js'
 
 const idPattern = /^[a-z0-9][a-z0-9.-]{0,63}$/
 const sessionPattern = /^session:[a-f0-9]{64}$/
 const allowedRoles = new Set(['owner', 'member', 'auditor'])
 
 /** Persistent identity adapter. Raw passwords and session references are never stored. */
-export class SqliteCloudIdentityProviderV1 implements CloudAuthenticationPortV1 {
-  constructor(private readonly database: DatabaseSync) {}
+export class SqliteCloudIdentityProviderV1 implements CloudAuthenticationPortV1, TenantAccountAdministrationPortV1 {
+  constructor(private readonly database: DatabaseSync, private readonly authorization?: TenantAuthorizationPortV1) {}
+
+  async provisionUser(context: TenantContextV1, input: { readonly userId: string; readonly displayName: string; readonly password: string; readonly roles: readonly ('owner' | 'member' | 'auditor')[] }, now = new Date()): Promise<TenantAccountProvisionReceiptV1> {
+    validateIdentity(context.tenantId, context.userId); validateIdentity(context.tenantId, input.userId); const roles = validateRoles(input.roles); const createdAt = validNow(now)
+    if (!this.authorization || !await this.authorization.authorize({ context, action: 'user.provision-account', subjectRef: `user:${input.userId}` })) throw new Error('cloud identity administration is not authorized')
+    if (!safeDisplayName(input.displayName)) throw new Error('cloud identity display name is invalid')
+    const password = passwordBytes(input.password); const salt = randomBytes(32); let hash: Buffer | undefined; let transaction = false
+    try {
+      hash = await derive(password, salt); this.database.exec('BEGIN IMMEDIATE'); transaction = true
+      const actor = this.database.prepare(`SELECT a.state AS account_state, u.state AS user_state, t.state AS tenant_state FROM cp_auth_account a JOIN cp_user u ON u.tenant_id=a.tenant_id AND u.user_id=a.user_id JOIN cp_tenant t ON t.tenant_id=a.tenant_id WHERE a.tenant_id=? AND a.user_id=?`).get(context.tenantId, context.userId) as Record<string, string> | undefined
+      if (!actor || actor.account_state !== 'active' || actor.user_state !== 'active' || actor.tenant_state !== 'active') throw new Error('cloud identity administration actor is unavailable')
+      this.database.prepare('INSERT INTO cp_user (tenant_id, user_id, display_name, state, created_at) VALUES (?, ?, ?, ?, ?)').run(context.tenantId, input.userId, input.displayName, 'active', createdAt)
+      this.database.prepare('INSERT INTO cp_auth_account (tenant_id, user_id, password_salt, password_hash, roles_json, state, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(context.tenantId, input.userId, salt, hash, JSON.stringify(roles), 'active', createdAt)
+      const auditId = `audit.${randomBytes(16).toString('hex')}`
+      this.database.prepare('INSERT INTO cp_identity_admin_audit (tenant_id, audit_id, actor_user_id, target_user_id, action, roles_json, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(context.tenantId, auditId, context.userId, input.userId, 'account.provision', JSON.stringify(roles), createdAt)
+      this.database.exec('COMMIT'); transaction = false
+      return Object.freeze({ tenantId: context.tenantId, userId: input.userId, roles, state: 'active', createdAt, sessionCreated: false, credentialRetained: false })
+    } catch (error) { if (transaction) { try { this.database.exec('ROLLBACK') } catch {} }; if (String(error).includes('UNIQUE constraint failed')) throw new Error('cloud identity user already exists'); throw error }
+    finally { password.fill(0); salt.fill(0); hash?.fill(0) }
+  }
 
   async provisionAccount(input: { readonly tenantId: string; readonly userId: string; readonly password: string; readonly roles: readonly ('owner' | 'member' | 'auditor')[] }, now = new Date()): Promise<void> {
     validateIdentity(input.tenantId, input.userId); const roles = validateRoles(input.roles); const password = passwordBytes(input.password); const salt = randomBytes(32)
@@ -66,10 +86,11 @@ export class SqliteCloudIdentityProviderV1 implements CloudAuthenticationPortV1 
   }
 }
 
-export async function openSqliteCloudIdentityProvider(databasePath: string, migrations: readonly string[]): Promise<SqliteCloudIdentityProviderV1> { const path = resolve(databasePath); await mkdir(dirname(path), { recursive: true, mode: 0o700 }); const database = new DatabaseSync(path); try { for (const migration of migrations) database.exec(await readFile(resolve(migration), 'utf8')); return new SqliteCloudIdentityProviderV1(database) } catch (error) { database.close(); throw error } }
+export async function openSqliteCloudIdentityProvider(databasePath: string, migrations: readonly string[], authorization?: TenantAuthorizationPortV1): Promise<SqliteCloudIdentityProviderV1> { const path = resolve(databasePath); await mkdir(dirname(path), { recursive: true, mode: 0o700 }); const database = new DatabaseSync(path); try { for (const migration of migrations) database.exec(await readFile(resolve(migration), 'utf8')); return new SqliteCloudIdentityProviderV1(database, authorization) } catch (error) { database.close(); throw error } }
 function validateIdentity(tenantId: string, userId: string): void { if (!idPattern.test(tenantId) || !idPattern.test(userId)) throw new Error('cloud identity scope is invalid') }
 function validateRoles(value: unknown): readonly ('owner' | 'member' | 'auditor')[] { if (!Array.isArray(value) || !value.length || value.some(role => typeof role !== 'string' || !allowedRoles.has(role)) || new Set(value).size !== value.length) throw new Error('cloud identity roles are invalid'); return Object.freeze([...value] as ('owner' | 'member' | 'auditor')[]) }
-function passwordBytes(value: string): Buffer { const bytes = Buffer.from(value, 'utf8'); if (bytes.byteLength < 12 || bytes.byteLength > 256 || /\0/.test(value)) { bytes.fill(0); throw new Error('cloud authentication failed') }; return bytes }
+function passwordBytes(value: string): Buffer { const bytes = Buffer.from(value, 'utf8'); if (bytes.byteLength < 12 || bytes.byteLength > 256 || /[\0\r\n]/.test(value)) { bytes.fill(0); throw new Error('cloud authentication failed') }; return bytes }
+function safeDisplayName(value: string): boolean { return Boolean(value.trim()) && value.length <= 200 && !/[\r\n\0]/.test(value) && !/(?:token|secret|password|private[_-]?key)\s*[:=]/i.test(value) }
 async function derive(password: Uint8Array, salt: Uint8Array): Promise<Buffer> { return await new Promise((accept, reject) => nodeScrypt(password, salt, 32, { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }, (error, value) => error ? reject(error) : accept(Buffer.from(value)))) }
 function sessionDigest(value: string): string { return createHash('sha256').update('quark-cloud-session-v1\0').update(value).digest('hex') }
 function validNow(value: Date): string { if (Number.isNaN(value.getTime())) throw new Error('cloud identity timestamp is invalid'); return value.toISOString() }

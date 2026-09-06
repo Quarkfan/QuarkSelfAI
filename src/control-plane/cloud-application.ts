@@ -1,7 +1,7 @@
 import type { ArtifactVerificationReportV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1 } from '../client-runtime/contracts.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
-import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, CloudIdentityPortV1, DeviceEnrollmentRequestV1, DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
+import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, CloudIdentityPortV1, DeviceEnrollmentRequestV1, DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantAccountAdministrationPortV1, TenantAccountProvisionReceiptV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
 
 const sessionPattern = /^session:[a-z0-9][a-z0-9._:-]{0,127}$/
 
@@ -14,7 +14,13 @@ export class InactiveCloudControlPlaneApplicationV1 {
     private readonly devices: TenantDevicePortV1,
     private readonly deviceSessions?: DeviceSessionServerPortV1,
     private readonly deviceEnrollment?: DeviceEnrollmentServerPortV1,
+    private readonly accounts?: TenantAccountAdministrationPortV1,
   ) {}
+
+  async provisionUser(sessionReference: string, input: { readonly userId: string; readonly displayName: string; readonly password: string; readonly roles: readonly ('owner' | 'member' | 'auditor')[] }, now?: Date): Promise<TenantAccountProvisionReceiptV1> {
+    if (!this.accounts) throw new Error('cloud account administration is unavailable')
+    return await this.accounts.provisionUser(await this.#context(sessionReference), input, now)
+  }
 
   async listCapabilities(sessionReference: string): Promise<readonly CapabilityCatalogRecordV1[]> {
     return await this.capabilities.listVisible(await this.#context(sessionReference))

@@ -2,13 +2,14 @@ import assert from 'node:assert/strict'
 import { chmod, mkdtemp, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 import { bootstrapFirstCloudOwnerV1 } from '../src/control-plane/cloud-owner-bootstrap.js'
 import { InactiveCloudControlPlaneCompositionV1 } from '../src/control-plane/cloud-composition.js'
 import { RoleTenantAuthorizationV1 } from '../src/control-plane/tenant-service.js'
 
 const migration = (name: string) => new URL(`../migrations/control-plane-sqlite/${name}`, import.meta.url).pathname
-const migrations = { tenant: migration('001_tenant_identity.sql'), studio: migration('002_agent_studio.sql'), capability: migration('003_capability_registry.sql'), deviceSession: migration('004_device_sessions.sql'), deviceEnrollment: migration('005_device_enrollment.sql'), identity: migration('006_cloud_identity.sql') }
+const migrations = { tenant: migration('001_tenant_identity.sql'), studio: migration('002_agent_studio.sql'), capability: migration('003_capability_registry.sql'), deviceSession: migration('004_device_sessions.sql'), deviceEnrollment: migration('005_device_enrollment.sql'), identity: migration('006_cloud_identity.sql'), identityAdministration: migration('007_identity_administration.sql') }
 const now = new Date('2026-09-06T00:00:00.000Z')
 
 test('opens one real-tenant inactive provider graph and derives every HTTP scope from login', async () => {
@@ -25,6 +26,18 @@ test('opens one real-tenant inactive provider graph and derives every HTTP scope
       assert.equal(login.status, 201)
       const sessionReference = ((login.body.session as { sessionReference: string }).sessionReference)
       for (const path of ['/v1/devices', '/v1/capabilities', '/v1/agent-drafts']) assert.equal((await composition.http.handle({ method: 'GET', path, sessionReference })).status, 200)
+      const created = await composition.http.handle({ method: 'POST', path: '/v1/users', sessionReference, body: { userId: 'member.one', displayName: 'Member One', password: 'member-password-123', roles: ['member'] } })
+      assert.equal(created.status, 201); assert.equal((created.body.item as { credentialRetained: boolean }).credentialRetained, false)
+      const memberLogin = await composition.http.handle({ method: 'POST', path: '/v1/auth/login', body: { tenantId: 'tenant.alpha', userId: 'member.one', password: 'member-password-123' } })
+      assert.equal(memberLogin.status, 201)
+      const memberSession = (memberLogin.body.session as { sessionReference: string }).sessionReference
+      assert.equal((await composition.http.handle({ method: 'POST', path: '/v1/users', sessionReference: memberSession, body: { userId: 'forbidden', displayName: 'Forbidden', password: 'forbidden-password-123', roles: ['member'] } })).status, 403)
+      assert.equal((await composition.http.handle({ method: 'POST', path: '/v1/users', sessionReference, body: { tenantId: 'tenant.other', userId: 'injected', displayName: 'Injected', password: 'injected-password-123', roles: ['member'] } })).status, 400)
+      const evidence = new DatabaseSync(databasePath, { readOnly: true })
+      try {
+        assert.deepEqual({ ...evidence.prepare('SELECT actor_user_id, target_user_id, action, roles_json FROM cp_identity_admin_audit').get() }, { actor_user_id: 'owner', target_user_id: 'member.one', action: 'account.provision', roles_json: '["member"]' })
+        assert.equal((evidence.prepare('SELECT COUNT(*) AS count FROM cp_user WHERE tenant_id=?').get('tenant.alpha') as { count: number }).count, 2)
+      } finally { evidence.close() }
       assert.equal((await composition.http.handle({ method: 'GET', path: '/v1/devices', sessionReference: 'session:missing' })).status, 401)
     } finally { await composition.close() }
   } finally { await rm(root, { recursive: true, force: true }) }

@@ -28,6 +28,11 @@ export class InactiveCloudHttpHandlerV1 {
       }
       if (request.method === 'POST' && request.path === '/v1/auth/logout') { if (!this.authentication) return response(404, 'not-found'); await this.authentication.revoke(requiredSession(request)); return response(200, 'ok') }
       if (request.method === 'GET' && request.path === '/v1/auth/me') { if (!this.authentication) return response(404, 'not-found'); const context = await this.authentication.resolveSession(requiredSession(request)); if (!context) return response(401, 'unauthenticated'); return response(200, 'ok', { identity: context }) }
+      if (request.method === 'POST' && request.path === '/v1/users') {
+        const body = exactBody(request.body, ['userId', 'displayName', 'password', 'roles'])
+        if (typeof body.userId !== 'string' || typeof body.displayName !== 'string' || typeof body.password !== 'string' || !Array.isArray(body.roles) || !body.roles.length || new Set(body.roles).size !== body.roles.length || body.roles.some(role => typeof role !== 'string' || !['owner', 'member', 'auditor'].includes(role))) return response(400, 'invalid-body')
+        return response(201, 'created', { item: await this.application.provisionUser(requiredSession(request), body as { userId: string; displayName: string; password: string; roles: ('owner' | 'member' | 'auditor')[] }) })
+      }
       if (request.method === 'GET' && request.path === '/v1/devices') return response(200, 'ok', { items: await this.application.listDevices(requiredSession(request)) })
       if (request.method === 'POST' && request.path === '/v1/device-enrollments') {
         const body = exactBody(request.body, ['tenantId', 'userId', 'deviceId', 'publicKey'])

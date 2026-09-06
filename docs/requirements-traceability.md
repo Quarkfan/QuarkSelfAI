@@ -126,6 +126,10 @@ Capability Registry、Agent Studio、device enrollment/session 与认证应用�
 `registered`，所有 HTTP tenant scope 均从真实 session 推导。closed config 强制 listener/effects 为 false，并拒绝未知字段、非 canonical migration、
 非 0600 单链接 database 或非私有 owner root。合成非 `test.*` tenant 已完成真实登录和三类 scoped read；这不是公网、多节点或 production deployment。
 
+同一 inactive composition 现提供 owner-only 的事务化 tenant account provisioning。请求无法指定 tenant；provider 在 transaction 内复核 active actor，
+同时写入 user、salted-scrypt account 和 bounded audit，receipt 不含 credential 且不创建 session。合成 member 已完成创建和独立登录，member 再创建账号、
+tenant body 注入均被拒绝。邀请、邮箱验证、密码恢复/轮换、账号禁用、MFA/passkey 和跨租户管理仍未完成。
+
 Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interface/graph/workspace 验证和注入 signer，输出可由客户端
 重新验签的统一 Envelope；当前只编译 test tenant、无 effect fixture，不构成真实 Agent Studio 或任务派发上线。
 

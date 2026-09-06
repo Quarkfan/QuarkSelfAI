@@ -13,7 +13,7 @@ import { RoleTenantAuthorizationV1, TenantControlServiceV1 } from './tenant-serv
 import type { TenantAuthorizationPortV1 } from './tenant-persistence.js'
 
 type TokenSource = { next(label: 'challenge' | 'nonce' | 'session' | 'lease'): string }
-export interface CloudControlPlaneMigrationsV1 { readonly tenant: string; readonly studio: string; readonly capability: string; readonly deviceSession: string; readonly deviceEnrollment: string; readonly identity: string }
+export interface CloudControlPlaneMigrationsV1 { readonly tenant: string; readonly studio: string; readonly capability: string; readonly deviceSession: string; readonly deviceEnrollment: string; readonly identity: string; readonly identityAdministration: string }
 export interface CloudControlPlaneCompositionConfigV1 { readonly schemaVersion: 1; readonly databasePath: string; readonly migrations: CloudControlPlaneMigrationsV1; readonly listenerEnabled: false; readonly externalEffectsEnabled: false }
 export interface CloudControlPlaneCompositionDependenciesV1 { readonly tokens: TokenSource; readonly proofVerifier: DeviceProofVerifierV1; readonly planVerifier: PlanSignatureVerifierV1; readonly authorization?: TenantAuthorizationPortV1 }
 
@@ -23,7 +23,7 @@ export class InactiveCloudControlPlaneCompositionV1 {
   readonly http: InactiveCloudHttpHandlerV1
   private constructor(identity: SqliteCloudIdentityProviderV1, readonly capabilities: SqliteInactiveCapabilityRegistryV1, readonly studio: SqliteInactiveAgentStudioV1, readonly sessions: SqliteInactiveDeviceSessionProviderV1, readonly enrollment: SqliteInactiveDeviceEnrollmentV1, readonly tenants: SqliteTenantControlRepositoryV1, authorization: TenantAuthorizationPortV1) {
     const devices = new TenantControlServiceV1(tenants, authorization)
-    this.application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment)
+    this.application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment, identity)
     this.http = new InactiveCloudHttpHandlerV1(this.application, identity)
     this.identity = identity
   }
@@ -35,7 +35,7 @@ export class InactiveCloudControlPlaneCompositionV1 {
     const authorization = dependencies.authorization ?? new RoleTenantAuthorizationV1(); const opened: Array<{ close(): Promise<void> }> = []
     try {
       const tenants = await openSqliteTenantControlRepository(config.databasePath, config.migrations.tenant); opened.push(tenants)
-      const identity = await openSqliteCloudIdentityProvider(config.databasePath, [config.migrations.tenant, config.migrations.identity]); opened.push(identity)
+      const identity = await openSqliteCloudIdentityProvider(config.databasePath, [config.migrations.tenant, config.migrations.identity, config.migrations.identityAdministration], authorization); opened.push(identity)
       const capabilities = await openSqliteInactiveCapabilityRegistry(config.databasePath, [config.migrations.tenant, config.migrations.capability], authorization, 'registered'); opened.push(capabilities)
       const studio = await openSqliteInactiveAgentStudio(config.databasePath, [config.migrations.tenant, config.migrations.studio], authorization, 'registered'); opened.push(studio)
       const sessions = await openSqliteInactiveDeviceSessionProvider(config.databasePath, [config.migrations.tenant, config.migrations.deviceSession], dependencies.tokens, dependencies.proofVerifier, dependencies.planVerifier, 'registered'); opened.push(sessions)
@@ -52,7 +52,7 @@ async function validateConfig(value: unknown): Promise<CloudControlPlaneComposit
   if (!isRecord(value)) throw new Error('cloud composition config is invalid')
   const keys = ['schemaVersion', 'databasePath', 'migrations', 'listenerEnabled', 'externalEffectsEnabled']
   if (Object.keys(value).sort().join(',') !== keys.sort().join(',') || value.schemaVersion !== 1 || value.listenerEnabled !== false || value.externalEffectsEnabled !== false || typeof value.databasePath !== 'string' || !isRecord(value.migrations)) throw new Error('cloud composition must remain inactive')
-  const migrationKeys = ['tenant', 'studio', 'capability', 'deviceSession', 'deviceEnrollment', 'identity']
+  const migrationKeys = ['tenant', 'studio', 'capability', 'deviceSession', 'deviceEnrollment', 'identity', 'identityAdministration']
   if (Object.keys(value.migrations).sort().join(',') !== migrationKeys.sort().join(',') || Object.values(value.migrations).some(path => typeof path !== 'string')) throw new Error('cloud composition migration set is invalid')
   if (!isAbsolute(value.databasePath) || resolve(value.databasePath) !== value.databasePath || /[\r\n\0]/.test(value.databasePath)) throw new Error('cloud composition database path is invalid')
   const root = dirname(value.databasePath); const state = await lstat(root); const uid = process.getuid?.()

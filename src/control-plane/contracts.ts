@@ -16,6 +16,9 @@ export interface CloudIdentityPortV1 {
   resolveSession(sessionReference: string): Promise<TenantContextV1 | undefined>
 }
 
+export interface TenantAccountProvisionReceiptV1 { readonly tenantId: string; readonly userId: string; readonly roles: readonly ('owner' | 'member' | 'auditor')[]; readonly state: 'active'; readonly createdAt: string; readonly sessionCreated: false; readonly credentialRetained: false }
+export interface TenantAccountAdministrationPortV1 { provisionUser(context: TenantContextV1, input: { readonly userId: string; readonly displayName: string; readonly password: string; readonly roles: readonly ('owner' | 'member' | 'auditor')[] }, now?: Date): Promise<TenantAccountProvisionReceiptV1> }
+
 export interface CloudAuthenticationPortV1 extends CloudIdentityPortV1 {
   authenticate(input: { readonly tenantId: string; readonly userId: string; readonly password: string }, now?: Date): Promise<{ readonly sessionReference: string; readonly expiresAt: string }>
   revoke(sessionReference: string, now?: Date): Promise<void>

@@ -65,6 +65,9 @@ provider：账号使用 tenant/user 复合外键，password 使用随机 salt+sc
 device enrollment/session 和认证应用装入同一个默认不挂载的 provider graph。独立 provider 的 admission 默认仍为 `test-only`；该 composition
 显式使用 `registered`，且 tenant/user/roles 只能由持久 session 得出。它只接受已存在的 0600 SQLite database 和完整 closed config，并强制
 `listenerEnabled=false`、`externalEffectsEnabled=false`，因此没有第二 provider、网络 listener、scheduler、executor 或写 effect owner。
+[ADR 0149](adr/0149-transactional-tenant-account-provisioning.md) 进一步加入 owner-only 的同租户账号创建：session 决定 tenant，user、scrypt account
+和脱敏授权审计在一个 transaction 中提交，失败时共同回滚且不自动创建 session。它仍在同一 inactive composition 内，不提供邀请、恢复、MFA、
+账号禁用或跨租户平台管理员。
 
 [ADR 0117](adr/0117-persistent-inactive-device-session-provider.md) 将设备协议的唯一 server port 接到同一 SQLite identity 真源：
 challenge、单活 session、no-effect test dispatch、可恢复 lease、ack 与脱敏结果都按 tenant/user/device 复合 scope 持久化。
