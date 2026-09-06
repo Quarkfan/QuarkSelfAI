@@ -1222,3 +1222,12 @@
   key id/digest/signature/key type 漂移。decoded key/signature 临时 buffer 均清零。
 - installation recovery 已改用 pinned verifier 初始化并关闭 client，不再需要测试 verifier 才能启动。未连接云端、接收真实 plan、执行 Agent/effect
   或修改现网；首次可信 key 分发和 rotation 仍需签名发行更新链路。模块/Facility 仍为 130/70。
+
+## 2026-09-06 unified installed-executor discovery
+
+- configured client 新增唯一显式 discovery provider，组合现有固定 Claude Code/Codex version、authentication readiness 与 bundled DSH closure；
+  初始化仍为零探测，调用方必须给出 canonical absolute workspace。
+- Claude Code/Codex 只有版本与认证同时通过才为 ready；DSH 只有仓库锁定五包 closure 和 inference 配置同时满足才为 ready。单项异常只把该
+  executor 标为 unavailable/not-installed/auth-required，不触发 fallback 执行或阻断其他 report。
+- fixture 验证 facade wiring、故障隔离和隐私丢弃；未运行真实工具、未选择任务 executor、未调用 Agent、未连接云端、未改变 owner/composition，
+  effects 保持 0/23。回滚删除 provider/delegate/test/ADR 与 catalog dependency 即可，已保存 report 最多五分钟后过期。

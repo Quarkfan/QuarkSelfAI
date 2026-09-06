@@ -10,8 +10,8 @@ export interface AuthProbeResultV1 {
   readonly checkedAt: string
 }
 
-type Observation = { readonly state: 'completed' | 'not-found' | 'timed-out'; readonly exitCode: number | null; readonly output: string }
-export interface FixedAuthProbeRunnerV1 { run(executorId: AuthProbeExecutorIdV1, cwd: string): Promise<Observation> }
+export interface FixedAuthProbeObservationV1 { readonly state: 'completed' | 'not-found' | 'timed-out'; readonly exitCode: number | null; readonly output: string }
+export interface FixedAuthProbeRunnerV1 { run(executorId: AuthProbeExecutorIdV1, cwd: string): Promise<FixedAuthProbeObservationV1> }
 
 const commands = Object.freeze({
   'claude-code': Object.freeze({ command: 'claude', args: Object.freeze(['auth', 'status', '--json']) }),
@@ -20,7 +20,7 @@ const commands = Object.freeze({
 
 /** Fixed read-only authentication probes. Raw output is classified in memory and never returned. */
 export class NodeFixedAuthProbeRunnerV1 implements FixedAuthProbeRunnerV1 {
-  run(executorId: AuthProbeExecutorIdV1, cwd: string): Promise<Observation> {
+  run(executorId: AuthProbeExecutorIdV1, cwd: string): Promise<FixedAuthProbeObservationV1> {
     const spec = commands[executorId]
     if (!spec) throw new Error('authentication probe must match the fixed allowlist')
     return boundedSpawn(spec.command, spec.args, cwd)
@@ -32,12 +32,13 @@ export async function inspectExecutorReadiness(cwd: string, now = new Date(), ru
   const results: AuthProbeResultV1[] = []
   for (const executorId of Object.keys(commands) as AuthProbeExecutorIdV1[]) {
     const observation = await runner.run(executorId, cwd)
-    results.push(Object.freeze({ executorId, installation: observation.state === 'not-found' ? 'not-detected' : 'detected', authentication: classify(executorId, observation), checkedAt: now.toISOString() }))
+    results.push(Object.freeze({ executorId, installation: observation.state === 'not-found' ? 'not-detected' : 'detected', authentication: classifyAuthReadiness(executorId, observation), checkedAt: now.toISOString() }))
   }
   return Object.freeze(results)
 }
 
-function classify(executorId: AuthProbeExecutorIdV1, observation: Observation): AuthReadinessV1 {
+/** Pure classifier shared by the installed-executor discovery composition. */
+export function classifyAuthReadiness(executorId: AuthProbeExecutorIdV1, observation: FixedAuthProbeObservationV1): AuthReadinessV1 {
   if (observation.state !== 'completed') return 'unknown'
   if (executorId === 'claude-code') {
     try {
@@ -53,14 +54,14 @@ function classify(executorId: AuthProbeExecutorIdV1, observation: Observation): 
   return 'unknown'
 }
 
-function boundedSpawn(command: string, args: readonly string[], cwd: string): Promise<Observation> {
+function boundedSpawn(command: string, args: readonly string[], cwd: string): Promise<FixedAuthProbeObservationV1> {
   return new Promise(resolve => {
     let output = Buffer.alloc(0)
     let settled = false
     const child = spawn(command, [...args], { cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'] })
     const append = (chunk: Buffer | string) => { if (output.byteLength < 8_192) output = Buffer.concat([output, Buffer.from(chunk).subarray(0, 8_192 - output.byteLength)]) }
     child.stdout.on('data', append); child.stderr.on('data', append)
-    const finish = (value: Observation) => { if (settled) return; settled = true; clearTimeout(timer); resolve(value) }
+    const finish = (value: FixedAuthProbeObservationV1) => { if (settled) return; settled = true; clearTimeout(timer); resolve(value) }
     child.once('error', error => finish({ state: (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'not-found' : 'completed', exitCode: (error as NodeJS.ErrnoException).code === 'ENOENT' ? null : 1, output: output.toString('utf8') }))
     child.once('close', code => finish({ state: 'completed', exitCode: code ?? 1, output: output.toString('utf8') }))
     const timer = setTimeout(() => { child.kill('SIGTERM'); finish({ state: 'timed-out', exitCode: null, output: '' }) }, 10_000)

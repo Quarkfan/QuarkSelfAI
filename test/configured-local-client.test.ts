@@ -30,6 +30,14 @@ test('assembles one configured client without connecting and resumes enrollment 
     assert.deepEqual({ autoConnect: plan.autoConnect, autoPoll: plan.autoPollEnrollment, effects: plan.externalWritesEnabled }, { autoConnect: false, autoPoll: false, effects: false })
     let client = await InactiveConfiguredLocalClientV1.initialize(plan, verifier, dependencies, now)
     assert.equal(begins, 0); assert.equal(client.snapshot(now).connection, 'disconnected')
+    const discovered = await client.refreshInstalledExecutors('/tmp/workspace', now, {
+      runtimeRoot: '/tmp/runtime',
+      versionRunner: { async run(executorId) { return { state: executorId === 'codex' ? 'not-found' as const : 'completed' as const, exitCode: executorId === 'codex' ? null : 0, output: executorId === 'codex' ? '' : '1.2.3', authentication: 'unknown' as const } } },
+      authRunner: { async run() { return { state: 'completed' as const, exitCode: 0, output: JSON.stringify({ loggedIn: true }) } } },
+      bundledDshDiscovery: async () => ({ schemaVersion: 1, executorId: 'dsh', installation: 'detected', version: '0.0.11', inferenceConfigured: false, authentication: 'required', protocolVersions: [], capabilities: [] }),
+    })
+    assert.deepEqual(discovered.map(item => [item.executorId, item.availability]), [['claude-code', 'ready'], ['codex', 'not-installed'], ['dsh', 'auth-required']])
+    assert.equal(begins, 0); assert.equal(client.snapshot(now).connection, 'disconnected')
     assert.equal((await client.beginEnrollment(now)).state, 'pending'); assert.equal(begins, 1)
     await client.close()
     client = await InactiveConfiguredLocalClientV1.initialize(plan, verifier, dependencies, now)

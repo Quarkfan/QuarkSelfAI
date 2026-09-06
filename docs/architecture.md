@@ -177,6 +177,11 @@ session transport 装入同一个 close boundary。state root 必须是 canonica
 及其 digest。具体 verifier 只接受 canonical payload digest、64-byte signature 与精确 key id，bootstrap 在 Keychain/state/network 前拒绝错误
 或非 Ed25519 key。客户端由此可脱离测试 verifier 自主恢复，但 key rotation 与 daemon 仍需后续生命周期。
 
+[ADR 0137](adr/0137-unified-installed-executor-discovery.md) 将既有固定 version probe、Claude Code/Codex authentication readiness 与 bundled
+DSH closure 检查收束为 configured client 的唯一显式 discovery provider。Claude Code/Codex 必须同时满足版本与认证，DSH 必须来自锁定的
+五包 closure 且本地 inference 已配置；单个 probe 失败只让该 executor 失败关闭。报告不含原始输出、账号、路径或配置值，初始化仍为零探测，
+且本批不进行任务选择、Agent 执行、网络连接或 effect。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述
