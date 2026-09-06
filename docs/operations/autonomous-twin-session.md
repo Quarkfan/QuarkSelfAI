@@ -1164,3 +1164,12 @@
   provider 失败恢复 pending 后可幂等重试。poll 无 browser cookie/session，仅返回 bounded pending/approved/expired 状态。
 - inactive handler 已提供 begin/approve/poll contract，但 provider 未挂载、无 listener、未真实注册设备。公网启用前仍需 rate-limit/abuse、CSRF/origin、
   retention cleanup、telemetry 和登录确认 UI。catalog/migration 为 129/129、Facility coverage 为 69/69，effects 仍为 0/23。
+
+## 2026-09-06 resumable client device enrollment
+
+- 客户端 SQLite 增加单例 enrollment resume state，仅保存 request/user-code/device/expiry/state 与 opaque poll-token reference；真实 token 写入
+  已有 AES-GCM secret store，公共 view、数据库正文和云投影均不包含 token。
+- 重复 begin 与跨 reopen 固定复用同一 pending request；poll 校验 server 的 request/device/expiry，approved/expired 先 durable 进入
+  cleanup-pending，再删除 credential 并写终态。崩溃后 token 已不存在视为清理完成；只有 fully-cleaned expired 可新建替代请求。
+- flow 仅由 encrypted inactive client 的显式方法调用，不自动联网/轮询/批准，不挂 daemon、executor 或运行 composition。catalog/migration
+  为 130/130、Facility coverage 为 70/70，effects 保持 0/23。

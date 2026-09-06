@@ -3,7 +3,8 @@ import { mkdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { CapabilityLifecycleSnapshotV1 } from '../capability-platform/manifest.js'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
-import type { DeviceIdentityV1, ExecutorCapabilityReportV1, InactiveCapabilityRemovalV1, InactiveCapabilitySelectionV1, PlanSignatureVerifierV1 } from './contracts.js'
+import type { DeviceEnrollmentRequestV1 } from '../control-plane/contracts.js'
+import type { DeviceIdentityV1, ExecutorCapabilityReportV1, InactiveCapabilityRemovalV1, InactiveCapabilitySelectionV1, LocalDeviceEnrollmentStateV1, PlanSignatureVerifierV1 } from './contracts.js'
 import { validateDeviceIdentity, validateExecutorCapabilityReport } from './validation.js'
 import { InactiveLocalRunJournalV1, type InactiveLocalRunCheckpointV1 } from './inactive-run-journal.js'
 
@@ -55,6 +56,39 @@ export class SqliteInactiveClientStateV1 {
     const row = this.#identityRow()
     if (!row || !referencePattern.test(String(row.private_key_ref))) throw new Error('local client is not enrolled')
     return deepFreeze({ identity: this.#identity(row), privateKeyRef: String(row.private_key_ref) })
+  }
+
+  savePendingDeviceEnrollment(request: DeviceEnrollmentRequestV1, pollTokenRef: string, now = new Date()): LocalDeviceEnrollmentStateV1 {
+    const identity = this.#requireIdentity()
+    if (Number.isNaN(now.getTime()) || !/^enrollment\.[a-f0-9]{32}$/.test(request.requestId) || !/^[A-F0-9]{4}(?:-[A-F0-9]{4}){3}$/.test(request.userCode) || !referencePattern.test(pollTokenRef) || request.verificationPath !== '/devices/activate' || request.pollAfterSeconds !== 5 || Date.parse(request.expiresAt) <= now.getTime()) throw new Error('local device enrollment request is invalid')
+    if (this.deviceEnrollment()) throw new Error('local device enrollment already exists')
+    this.db.prepare(`INSERT INTO local_device_enrollment (singleton,request_id,device_id,user_code,poll_token_ref,state,expires_at,poll_after_seconds,updated_at) VALUES (1,?,?,?,?, 'pending',?,?,?)`)
+      .run(request.requestId, identity.deviceId, request.userCode, pollTokenRef, request.expiresAt, request.pollAfterSeconds, now.toISOString())
+    return this.deviceEnrollment()!
+  }
+
+  deviceEnrollment(): LocalDeviceEnrollmentStateV1 | null {
+    const identity = this.#requireIdentity()
+    const row = this.db.prepare('SELECT * FROM local_device_enrollment WHERE singleton=1').get() as Row | undefined
+    if (!row) return null
+    const value = { requestId: String(row.request_id), deviceId: String(row.device_id), userCode: String(row.user_code), pollTokenRef: String(row.poll_token_ref), state: String(row.state), expiresAt: String(row.expires_at), pollAfterSeconds: Number(row.poll_after_seconds), updatedAt: String(row.updated_at) } as LocalDeviceEnrollmentStateV1
+    if (value.deviceId !== identity.deviceId || !/^enrollment\.[a-f0-9]{32}$/.test(value.requestId) || !/^[A-F0-9]{4}(?:-[A-F0-9]{4}){3}$/.test(value.userCode) || !referencePattern.test(value.pollTokenRef) || !['pending','approved-cleanup-pending','approved','expired-cleanup-pending','expired'].includes(value.state) || value.pollAfterSeconds !== 5 || Number.isNaN(Date.parse(value.expiresAt)) || Number.isNaN(Date.parse(value.updatedAt))) throw new Error('persisted local device enrollment is invalid')
+    return deepFreeze(value)
+  }
+
+  advanceDeviceEnrollment(requestId: string, state: 'approved-cleanup-pending' | 'approved' | 'expired-cleanup-pending' | 'expired', now = new Date()): LocalDeviceEnrollmentStateV1 {
+    const current = this.deviceEnrollment()
+    if (!current || current.requestId !== requestId || Number.isNaN(now.getTime())) throw new Error('local device enrollment is unavailable')
+    const allowed = current.state === 'pending' ? [`approved-cleanup-pending`, `expired-cleanup-pending`] : current.state === 'approved-cleanup-pending' ? ['approved'] : current.state === 'expired-cleanup-pending' ? ['expired'] : []
+    if (!allowed.includes(state)) throw new Error('local device enrollment transition is invalid')
+    this.db.prepare('UPDATE local_device_enrollment SET state=?, updated_at=? WHERE singleton=1').run(state, now.toISOString())
+    return this.deviceEnrollment()!
+  }
+
+  clearExpiredDeviceEnrollment(): void {
+    const current = this.deviceEnrollment()
+    if (!current || current.state !== 'expired') throw new Error('only a fully cleaned expired device enrollment can be cleared')
+    this.db.prepare(`DELETE FROM local_device_enrollment WHERE singleton=1 AND state='expired'`).run()
   }
 
   async registerWorkspace(input: { readonly handle: string; readonly root: string; readonly access: 'read' | 'read-write'; readonly grantId: string; readonly expiresAt: string }): Promise<void> {

@@ -1,9 +1,10 @@
 import { isAbsolute, resolve } from 'node:path'
-import type { DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
-import type { ClientRuntimeSnapshotV1, ExecutorCapabilityReportV1, LocalDeviceSecretStoreV1, PlanSignatureVerifierV1, RemovableLocalDeviceSecretStoreV1 } from './contracts.js'
+import type { DeviceEnrollmentServerPortV1, DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
+import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, ExecutorCapabilityReportV1, LocalDeviceSecretStoreV1, PlanSignatureVerifierV1, RemovableLocalDeviceSecretStoreV1 } from './contracts.js'
 import { InactiveArtifactStoreV1, type InactiveArtifactRecoveryReportV1 } from './inactive-artifact-store.js'
 import { runInactiveClientCycle, type InactiveClientCycleReceiptV1 } from './inactive-client-cycle.js'
 import { LocalClientInstanceLeaseV1 } from './client-instance-lease.js'
+import { InactiveClientDeviceEnrollmentV1 } from './client-device-enrollment.js'
 import { assertDeviceEnrollmentSecret, createEd25519DeviceEnrollment, type DeviceEnrollmentMaterialV1 } from './device-identity.js'
 import { InactiveExecutorDiscoveryV1 } from './discovery.js'
 import { openSqliteInactiveClientState, type SqliteInactiveClientStateV1 } from './sqlite-client-state.js'
@@ -90,6 +91,9 @@ export class InactiveLocalClientApplicationV1 {
     try { const receipt = await runInactiveClientCycle({ state: this.state, secrets, server, now }); this.#connection = 'online'; return receipt }
     catch (error) { this.#connection = 'degraded'; throw error }
   }
+
+  async beginDeviceEnrollment(server: DeviceEnrollmentServerPortV1, secrets: RemovableLocalDeviceSecretStoreV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { this.#requireOpen(); return await new InactiveClientDeviceEnrollmentV1(this.state, secrets, server).begin(now) }
+  async pollDeviceEnrollment(server: DeviceEnrollmentServerPortV1, secrets: RemovableLocalDeviceSecretStoreV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { this.#requireOpen(); return await new InactiveClientDeviceEnrollmentV1(this.state, secrets, server).poll(now) }
 
   async close(): Promise<void> {
     if (this.#closed) return

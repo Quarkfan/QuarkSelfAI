@@ -1,5 +1,5 @@
-import type { DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
-import type { ClientRuntimeSnapshotV1, LocalMasterKeyProviderV1, PlanSignatureVerifierV1 } from './contracts.js'
+import type { DeviceEnrollmentServerPortV1, DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
+import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, LocalMasterKeyProviderV1, PlanSignatureVerifierV1 } from './contracts.js'
 import { EncryptedFileDeviceSecretStoreV1 } from './encrypted-file-secret-store.js'
 import { InactiveLocalClientApplicationV1, type LocalClientEnrollmentInputV1, type LocalClientPathsV1 } from './local-client-application.js'
 import type { DeviceEnrollmentMaterialV1 } from './device-identity.js'
@@ -28,6 +28,8 @@ export class InactiveEncryptedLocalClientV1 {
   }
 
   snapshot(now = new Date()): ClientRuntimeSnapshotV1 { return this.application.snapshot(now) }
+  async beginDeviceEnrollment(server: DeviceEnrollmentServerPortV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.application.beginDeviceEnrollment(server, this.secrets, now) }
+  async pollDeviceEnrollment(server: DeviceEnrollmentServerPortV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.application.pollDeviceEnrollment(server, this.secrets, now) }
   async syncOnce(server: DeviceSessionServerPortV1, now = new Date()): Promise<InactiveClientCycleReceiptV1> { return await this.application.syncOnce(server, this.secrets, now) }
   async close(): Promise<void> { try { await this.application.close() } finally { this.secrets.close() } }
 }

@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap 与 device-code enrollment，合计 129 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap 与双端 device-code enrollment，合计 130 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -38,6 +38,10 @@ enrollment 已进入单 owner application 并支持通用 tenant identity。只�
 客户端注册不再要求接收浏览器 session/cookie：SQLite device-code provider 生成 10 分钟、64-bit user code 与 256-bit poll token，仅持久化 token
 digest；approve 从已认证云 session 推导 tenant/user 并调用唯一 device provider，poll 只返回 bounded 状态。真实 Ed25519 SPKI、scope、expiry、
 重复 pending、错误 token、失败重试和跨 reopen 已验证。该 provider 与路由仍 inactive，尚缺公网 abuse/rate-limit 门禁和真实登录 UI。
+
+客户端侧现把注册请求作为单例 durable state 保存；数据库只持有 opaque poll-token reference，token 本体由加密 secret store 管理。重复 begin、
+跨 reopen resume、approved/expired credential cleanup、清理后过期请求替换和 server scope drift 均失败关闭或幂等处理；仍未把 transport/flow
+接到安装包或后台 daemon。
 
 客户端现有单一 application composition：同一个进程 owner 持有 instance lease、SQLite、artifact store、executor discovery 和一次性
 device sync。启动先验证 enrollment 与全部已安装制品，第二实例失败关闭，死亡 PID 的合法旧 lease 可安全回收；discovery 与 sync 只能显式

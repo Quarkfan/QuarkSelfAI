@@ -11,6 +11,13 @@ export interface RemovableLocalDeviceSecretStoreV1 extends LocalDeviceSecretStor
 /** Supplies one local encryption key without exposing its origin to client composition. */
 export interface LocalMasterKeyProviderV1 { load(): Promise<Uint8Array> }
 
+export interface LocalDeviceEnrollmentStateV1 {
+  readonly requestId: string; readonly deviceId: string; readonly userCode: string; readonly pollTokenRef: string
+  readonly state: 'pending' | 'approved-cleanup-pending' | 'approved' | 'expired-cleanup-pending' | 'expired'
+  readonly expiresAt: string; readonly pollAfterSeconds: 5; readonly updatedAt: string
+}
+export interface ClientDeviceEnrollmentViewV1 { readonly requestId: string; readonly userCode: string; readonly state: 'pending' | 'approved' | 'expired'; readonly verificationPath: '/devices/activate'; readonly expiresAt: string; readonly pollAfterSeconds: 5; readonly credentialCleanupPending: boolean }
+
 export type ClientConnectionState = 'unenrolled' | 'disconnected' | 'connecting' | 'online' | 'degraded' | 'revoked'
 export type ExecutorAvailability = 'ready' | 'not-installed' | 'auth-required' | 'version-unsupported' | 'unavailable'
 

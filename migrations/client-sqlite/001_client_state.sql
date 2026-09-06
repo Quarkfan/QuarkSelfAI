@@ -51,3 +51,15 @@ CREATE TABLE IF NOT EXISTS local_run_checkpoint (
   checkpoint_json TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS local_device_enrollment (
+  singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+  request_id TEXT NOT NULL UNIQUE,
+  device_id TEXT NOT NULL,
+  user_code TEXT NOT NULL,
+  poll_token_ref TEXT NOT NULL,
+  state TEXT NOT NULL CHECK (state IN ('pending', 'approved-cleanup-pending', 'approved', 'expired-cleanup-pending', 'expired')),
+  expires_at TEXT NOT NULL,
+  poll_after_seconds INTEGER NOT NULL CHECK (poll_after_seconds = 5),
+  updated_at TEXT NOT NULL
+);
