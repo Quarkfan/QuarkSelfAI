@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "requestId": "capability-platform-executable-pilot-01",
+  "status": "completed-no-effect",
+  "approvedBaseRevision": "13e1be477288e8a5f7e5ed1d9e37b33b8c49c1a9",
+  "headAtExecution": "9399636b9e71a058ff6779ea1fd292eb9c946eb4",
+  "executedAt": "2026-09-06T03:49:32.160Z",
+  "probeEvidence": [
+    { "executorId": "claude-code", "installation": "detected", "version": "2.1.177", "authentication": "unknown", "runnable": false },
+    { "executorId": "codex", "installation": "detected", "version": "0.149.0", "authentication": "unknown", "runnable": false },
+    { "executorId": "dsh", "installation": "binary-not-detected", "version": null, "authentication": "unknown", "runnable": false }
+  ],
+  "transportEvidence": {
+    "kind": "loopback-http",
+    "binding": "127.0.0.1",
+    "ephemeralPort": true,
+    "signedPlanVerified": true,
+    "leaseCheckpointed": true,
+    "listenerStopped": true
+  },
+  "safetyEvidence": {
+    "tenantClass": "synthetic-test",
+    "executorInvoked": false,
+    "effectsActive": 0,
+    "externalWritesEnabled": false,
+    "currentOwnerPreserved": true,
+    "runtimeCompositionChanged": false,
+    "serviceRestarted": false
+  },
+  "interpretation": [
+    "A version-only probe proves installation but cannot prove authentication readiness.",
+    "The DSH fallback is repository-bundled rather than exposed as a host dsh executable, so binary discovery alone is insufficient for fallback readiness.",
+    "No executor was armed or selected by this pilot."
+  ]
+}

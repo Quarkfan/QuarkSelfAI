@@ -911,3 +911,15 @@
   创建范围，改为只申请真实 host process adapter、127.0.0.1 ephemeral listener、signed no-effect plan 往返及相应测试。
 - 允许动作和排除项不变：只探测版本/有界 auth availability，不发 prompt、不执行 Agent、不新增依赖、不改 composition、不启动或重启
   守护进程、不激活私有 pack、不迁移数据、不切换 owner、不产生外部写。精确 approval phrase 已绑定新的 Phase 5E base revision。
+
+## 2026-09-06 executable pilot 01 approved execution
+
+- Owner 已按授权单原文批准 `capability-platform-executable-pilot-01`，批准基线为
+  `13e1be477288e8a5f7e5ed1d9e37b33b8c49c1a9`；执行时主线 HEAD 为其文档后继 `9399636b9e71a058ff6779ea1fd292eb9c946eb4`。
+- 真实 fixed probe 仅执行 `claude --version`、`codex --version`、`dsh --version`。检测到 Claude Code `2.1.177` 与 Codex `0.149.0`，
+  但 version-only 不能证明登录状态，因此二者均为 `authentication=unknown`、未 armed；主机没有 `dsh` binary。仓库锁定的 DSH
+  runtime 属于另一种内建 fallback 形态，后续不得错误要求全局 CLI。
+- 真实 transport 仅在 `127.0.0.1:0` 启动一次临时 listener，完成 signed no-effect test lease 的验证与内存 checkpoint 后已关闭；
+  `executorInvoked=false`、`effectsActive=0`、external writes 关闭、current owner 保持不变。没有 prompt、Agent/lifecycle、依赖安装、
+  composition 变化、服务重启、私有包激活、数据迁移或 source 删除。
+- 回滚无需状态或服务恢复：移除本批 inactive adapter、测试和证据文件，并恢复 ADR/catalog 文档即可。

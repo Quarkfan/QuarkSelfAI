@@ -24,7 +24,10 @@ Offer 精确归并为产品级 Capability candidate；Phase 2C 增加测试租�
 Capability developer SDK；Phase 3C 增加 test-only Agent Studio draft/release store；Phase 4E 增加 Manifest evidence publication gate；
 Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计划约束的 recording-only effect sink；Phase 5C 将脱敏结果
 绑定到唯一已确认 device/plan lease；Phase 5D 增加可校验、可导入导出的 inactive 本地运行 checkpoint；Phase 5E 增加固定执行器
-探测描述、隐私有界分类和永不 armed 的选择 preflight。当前共 117 个模块，
+探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
+loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
+立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前仍共 117 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -42,8 +45,9 @@ interface ownership、graph DAG 与 workspace grant 必须闭合，编译结果�
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
 计划验证在 envelope 被交给 executor 前完成。当前 discovery 增加了 Claude Code、Codex、DSH 固定 `--version` 描述和纯观察
-分类器，但没有 process runner；客户端 snapshot 固定 disconnected 或 unenrolled 且 owner/effects 全为零。preflight 只使用注入
-fixture，并固定 `listenerStarted=false`、`executorInvoked=false`；仓库不存在真实进程探针、连接器、installer 或常驻 client daemon。
+分类器，并在获批 Pilot 01 中加入严格 allowlist 的一次性 process runner；客户端 snapshot 固定 disconnected 或 unenrolled 且
+owner/effects 全为零。preflight 与 loopback 回执固定 `executorInvoked=false`，一次性 listener 仅用于测试且已经关闭；仓库仍不存在
+真实云端连接器、installer、常驻 client daemon 或已武装 executor。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

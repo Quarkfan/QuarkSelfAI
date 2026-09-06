@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E 平台 module，合计 117 个）的拟迁移处置见
+（当前另含 Phase 1–5E 与 Pilot 01 平台实现，合计 117 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。

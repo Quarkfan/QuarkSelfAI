@@ -1,6 +1,6 @@
 # ADR 0110: Fixed executor probe preflight before host execution
 
-Status: Accepted (inactive pure provider)
+Status: Accepted (approved executable pilot; runtime inactive)
 
 ## Decision
 
@@ -21,3 +21,15 @@ selection to the shared negotiation contract. Claude Code and Codex remain prefe
 - real binary probes, login checks, loopback transport and Agent execution remain separate authorization-gated steps;
 - this provider has no process runner, socket, persistence, runtime mount or effect callback;
 - rollback is a code revert without state or service recovery.
+
+## Pilot 01 evidence
+
+Owner approval bound to revision `13e1be477288e8a5f7e5ed1d9e37b33b8c49c1a9` authorized only the fixed
+`--version` probes and a temporary IPv4 loopback round trip. The real readback detected Claude Code `2.1.177` and Codex `0.149.0`; neither was marked
+runnable because a version probe cannot establish authentication. No host `dsh` executable was detected even though the repository declares a bundled
+DSH runtime. This is an architecture distinction, not evidence that the built-in fallback is absent: a later adapter must inspect the locked bundled
+runtime and its provider readiness without inventing a CLI dependency.
+
+The same pilot started one ephemeral `127.0.0.1` listener, transported and verified a signed `test.*` no-effect lease, created an in-memory checkpoint,
+and closed the listener. It did not send a prompt, invoke an executor, activate an effect, mount a provider, change composition, persist state or restart
+the service. Machine-readable evidence is in `config/capability-platform-executable-pilot-01.json`.
