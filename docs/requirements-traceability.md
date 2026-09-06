@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1/2 客户端 contract 与治理 module，合计 104 个）的拟迁移处置见
+（当前另含 Phase 1/2 客户端与 Phase 3A 控制面 contract/治理 module，合计 106 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -21,6 +21,10 @@ client snapshot。当前“发现”只由离线 fake probe 验证，尚未调�
 
 Phase 2B 已实现六项供应链证据全通过后的 `installed-inactive` 计划，以及 installation/loading/authorization/execution/effects
 五态分离；当前 planner 不下载、不写盘、不执行 lifecycle handler，因此只证明安全安装计划边界。
+
+Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release、任务、脱敏结果和审计 contract，以及仅供 fixture
+使用的 test-tenant 内存 store。双租户同 ID、租户内用户设备/任务隔离、无 effect 派发和幂等回执已验证；尚无真实云 API、
+持久数据库、队列、对象存储、搜索、设备连接或生产租户。
 
 本文件把个人助手建设期间提出的需求映射到实现、验证和接管门禁，防止“测试很多”掩盖某条原始需求仍
 未完成。机器可读接管状态仍以 `config/feature-parity.json` 为准；本表不得单独放行生产切换。

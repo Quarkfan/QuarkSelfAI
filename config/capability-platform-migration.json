@@ -14,12 +14,12 @@
     {
       "disposition": "platform-core",
       "targetPlane": "shared-contract",
-      "moduleIds": ["module-catalog", "assistant-contracts", "authorization-contract", "channel-contract", "policy-contracts", "storage-port", "durable-state-contract", "durable-action-contracts", "durable-workflow-contracts", "durable-event-contracts", "assistant-effect-contracts", "runtime-status-contracts", "capability-platform-contracts", "local-client-contracts", "platform-api", "feishu-effect-contracts", "message-projection-contracts", "conversation-effect-contracts", "task-capability-contracts", "codex-session-effects", "followup-contracts", "work-journal-contracts"]
+      "moduleIds": ["module-catalog", "assistant-contracts", "authorization-contract", "channel-contract", "policy-contracts", "storage-port", "durable-state-contract", "durable-action-contracts", "durable-workflow-contracts", "durable-event-contracts", "assistant-effect-contracts", "runtime-status-contracts", "capability-platform-contracts", "local-client-contracts", "control-plane-contracts", "platform-api", "feishu-effect-contracts", "message-projection-contracts", "conversation-effect-contracts", "task-capability-contracts", "codex-session-effects", "followup-contracts", "work-journal-contracts"]
     },
     {
       "disposition": "platform-core",
       "targetPlane": "local-client",
-      "moduleIds": ["dsh-runtime", "lifecycle-host", "application-host", "application-composition", "durable-wake-scheduler", "workspace-boundary", "executor-router", "kernel-supervisor", "neutral-default-providers", "dsh-profile-installer", "native-product-profile", "native-product-composition", "sqlite-storage", "durable-state-host", "capability-platform-governance", "local-client-negotiation", "capability-install-planner"]
+      "moduleIds": ["dsh-runtime", "lifecycle-host", "application-host", "application-composition", "durable-wake-scheduler", "workspace-boundary", "executor-router", "kernel-supervisor", "neutral-default-providers", "dsh-profile-installer", "native-product-profile", "native-product-composition", "sqlite-storage", "durable-state-host", "capability-platform-governance", "local-client-negotiation", "capability-install-planner", "test-tenant-control-plane"]
     },
     {
       "disposition": "platform-core",

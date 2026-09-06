@@ -743,3 +743,14 @@
   固定 unloaded、unauthorized、stopped、effects disabled。
 - 当前只有纯 planner 和 fixture，没有下载、写盘、安装、handler 执行或进程启动。新增模块后 module catalog 与迁移映射均为
   104/104；现网 owner 和私有 pack 状态未变。
+
+## 2026-09-06 Capability Platform Phase 3A 测试租户控制面
+
+- 新增 tenant-scoped 用户、设备、Capability release、Blueprint release、任务派发、脱敏结果和审计 contract。参考 store 在
+  任何操作前选择 tenant partition，相同 user/device ID 可在两个测试 tenant 安全共存。
+- tenant 内普通成员只能读取自己的设备与任务；owner/auditor 也只能访问当前 tenant 的脱敏审计。没有 platform-admin 跨租户
+  正文读取 API。任务强绑定 tenant/user/device 与 signed plan scope，idempotency key 重放返回原记录。
+- inactive store 只接受 `test.*` tenant、空 allowedEffects 和空 approvalGrants；结果只保留 outcome、summary code 与 artifact
+  digest。fixture 验证租户隔离、tenant 内用户隔离、无 effect 门禁、幂等和完成状态推进。
+- 当前实现无 listener、数据库、对象存储、队列、搜索、日志后端或设备连接，也未挂载到现网。新增 2 个模块后目录和迁移
+  映射为 106/106；私有包和现网 owner 未变。
