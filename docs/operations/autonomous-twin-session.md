@@ -1315,3 +1315,24 @@
 - 完整 `npm run check` 通过：主项目 461 项中 454 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；132/132 模块
   exactly-once、72 个 platform-core Offer、effects active 0/23。work-domain isolation、assistant continuity、capability platform、DSH/server
   compatibility 与根同步校验通过，现网和私有包状态均未改变。
+
+## 2026-09-06 content-addressed installable client distribution
+
+- 复核推翻“已有 inactive installer 等于可安装客户端”的旧表述：旧安装只复制 state/migration，进程入口仍来自 checkout。现在发行 builder 将 bundle 后的
+  client/installer、DSH stdin host、完整递归 runtime dependency closure、固定 DSH 配置、SQLite migration 与 SPDX 2.3 SBOM 放入同一私有目录；路径无关
+  manifest 记录 source revision、逐文件 size/digest 和整体 artifact digest，拒绝 symlink、公开权限、未知布局、缺文件、路径逃逸和任意 byte drift。
+- install 在创建最终 receipt 前复制并重新验证完整 distribution，receipt 同时固定 root/version/source revision/distribution/config/migration；recovery 每次复算
+  发行 inventory。发行内 installer 只接受 `install|status|uninstall-unused` 与 exact absolute paths；unused uninstall 继续先 quarantine，拒绝非空 state，
+  只删除 manifest 声明的文件和空目录。migration 不再由 checkout 参数注入。
+- launchd/systemd 只形成指向 installed program 的 `prepared-inactive` 定义与 digest；不写 LaunchAgents/systemd 目录，不调用 service manager，不含凭证，
+  rollback 明确先停 future service、只移除 definition、保留 durable installation。
+- 精确 revision `f49097baf8997423860032654515be9fa11f22a6` 的真实发行 pilot 生成 30,366 个文件、428 个 runtime packages，artifact digest 为
+  `sha256:7ac70b0d7ec78dbec8b35e2fabb4de24af81f875850b4e72b7ee0fb7e984fdca`。只使用发行内 installer 在临时目录完成 install；从 `/private/tmp`
+  运行 installed client `status` 成功且输出不含路径，installed DSH discovery 为 0.1.1-rc.2/entrypoint detected/ready；随后发行内
+  `uninstall-unused` 成功并确认安装根消失，整个 pilot 临时目录已删除。
+- 完整 `npm run check` 通过：主项目 466 项中 459 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 133 modules、
+  119 assets、23/23 effects implemented、0/23 active。capability platform 133/133 exactly-once、73 platform-core，work-domain 101/101、
+  assistant continuity、DSH/server/BlackLake/Lark compatibility 与根同步门禁均通过；continuity 仍如实为 `organizationComplete=false`、
+  `work-integration-not-yet-isolated`。
+- 本批没有真实用户目录安装、Keychain provision、设备注册、云连接、worker/Agent 执行、capability activation、服务注册/启动、现网
+  composition/consumer/provider/writer 变化或服务重启。回滚删除发行模块/模板/测试/ADR，并对从未启动的安装使用同一 unused guard；有 durable state 的安装不得删除。
