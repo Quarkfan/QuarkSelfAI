@@ -100,6 +100,8 @@ SSH frame 委托该 composition 已持有的 device-session provider。配置固
 [ADR 0152](adr/0152-owner-only-ssh-subsystem-ipc.md) 固定 SSH 服务端进程边界：唯一 cloud host 在 process-owned 0700 目录创建 0600 Unix socket，
 sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打开数据库或 provider。IPC 使用 half-close 完成 unary request/response，关闭时按
 创建时 device/inode 清理 socket。真实 sshd user/key/subsystem 注册和服务激活仍未进行。
+[ADR 0153](adr/0153-sshd-subsystem-process-entry.md) 加入 built `quark-device-v1` process entry：只有显式 enable、精确命令和私有 closed config
+同时成立才读取一个 stdin frame 并调用 IPC proxy；失败只输出稳定码，不泄露 config/socket path。宿主子进程测试已闭合，但 entry 尚未安装或注册到 sshd。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

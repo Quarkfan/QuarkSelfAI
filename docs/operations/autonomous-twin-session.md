@@ -1433,3 +1433,13 @@
   response 和删除均已验证。未配置 sshd user/key/subsystem、未启动持久服务或远程连接。
 - 完整 `npm run check` 通过：主项目 483 项中 474 通过、9 项仅因 sandbox listener 限制跳过，compat 179/179；宿主 IPC 专项为 2/2。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+
+## 2026-09-06 sshd subsystem process entry
+
+- 新增 built `quark-device-v1` Node entry；只在显式 enable、精确 command 与一个 absolute config path 下运行。config 必须是 process-owned 0700 root
+  内的 single-link 0600 regular file，只含 socket path、timeout、shared-host ownership 和 effects-off。
+- entry 读取一个 bounded stdin frame，经 IPC-only proxy 返回一个 stdout frame；不导入数据库/provider、不启动 shell/远程命令，全部失败只输出稳定码。
+- 沙箱因 Unix listener 跳过；宿主真实 child process 验证 enabled 返回 exact response，disabled 为 exit 1、空 stdout、稳定 stderr 且无路径。临时 socket/config
+  均删除。未安装 entry、未配置 sshd/OS user/key、未启动服务或远程连接。
+- 完整 `npm run check` 通过：主项目 484 项中 474 通过、10 项仅因 sandbox listener 限制跳过，compat 179/179；宿主 entry 专项为 1/1。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
