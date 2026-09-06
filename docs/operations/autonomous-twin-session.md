@@ -1609,3 +1609,8 @@
 - 完整 `npm run check` 通过：主项目 507 项中 495 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；宿主真实回环专项 4/4。
   架构保持 137 modules、77 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active。work-domain 101/101 且基线已同步到本批
   脱敏证据摘要；continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，DSH/server/BlackLake/Lark 与私有包审计均通过。
+- 提交 `3feb26cf5af49fd05fe66311bcfc711245dc7f9d` 后从 clean source inputs 构建 12 文件发行包，artifact digest
+  `sha256:7e66f727599151a1b621182a25d14b9313cb836c1dd5e5cd8ff8acef35fe3b58`；bundled admin entry 完成 install/configure/owner，bundled cloud entry
+  第一实例 ready 后第二实例被 lease 稳定拒绝，第一实例 socket 保持健康，SIGTERM 后 socket/lease 均删除。最终 status 为 `owner-created-inactive`，
+  service/SSH apply/auto-start/effects 全为 false；临时发行、TLS、owner credential、database 与诊断 runner 均随私有短路径根删除。演练同时确认长安装根会触发 macOS
+  Unix socket `EINVAL`，安装路径长度必须在后续 service registration 前形成确定性门禁。
