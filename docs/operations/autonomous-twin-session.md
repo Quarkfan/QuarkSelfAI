@@ -886,3 +886,11 @@
 - restore 重新核验 checkpoint 完整性、plan 签名、device scope、无 effect 边界和 executor context；不保存 lease token、进程输出、绝对
   路径或凭证。中断于 `running` 的记录恢复为 `paused`，避免重启后重复执行；fixture 的状态转换只验证 contract，不宣称真实执行。
 - 本批不写磁盘、不调用执行器、不连云、不同步真实结果。新增模块后 catalog/migration 116/116，Facility coverage 56/56。
+
+## 2026-09-06 executable pilot 01 authorization boundary
+
+- 在 revision `1899e888612a5d82c176297e1f7b31510cfdbba4` 固化下一批机器授权单：真实 127.0.0.1 ephemeral listener、Claude Code/
+  Codex/DSH 固定 version/help probe，以及 signed no-effect plan 的 loopback 往返；本批仍不发送 prompt 或执行 Agent。
+- 授权单明确禁止新增依赖、修改当前 composition、启动守护进程、外部写、私有包激活、数据迁移与 owner 切换，并避开当前受保护的
+  `package.json` 与品牌 client 文件。
+- 当前仅记录申请，不执行任何 pilot 动作；收到精确 approval phrase 前，所有真实进程探测与 listener 保持未授权。

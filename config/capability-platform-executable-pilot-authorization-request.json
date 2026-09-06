@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "requestId": "capability-platform-executable-pilot-01",
+  "status": "awaiting-exact-owner-approval",
+  "baseRevision": "1899e888612a5d82c176297e1f7b31510cfdbba4",
+  "purpose": "Obtain the first real transport and installed-executor discovery evidence without changing the current QuarkSelfAI runtime owner.",
+  "fileScope": {
+    "create": [
+      "src/control-plane/loopback-test-server.ts",
+      "src/client-runtime/process-discovery.ts",
+      "src/client-runtime/executable-pilot.ts",
+      "scripts/run-capability-platform-pilot.ts",
+      "test/capability-platform-loopback-pilot.test.ts",
+      "test/client-process-discovery.test.ts",
+      "config/capability-platform-executable-pilot-01.json",
+      "docs/adr/0110-loopback-executable-pilot.md"
+    ],
+    "modify": [
+      "config/module-catalog.json",
+      "config/capability-platform-migration.json",
+      "docs/architecture.md",
+      "docs/requirements-traceability.md",
+      "docs/operations/autonomous-twin-session.md"
+    ],
+    "forbidden": [
+      "package.json",
+      "web/quarkfan-brand.client.d.ts",
+      "web/quarkfan-brand.client.js",
+      "cordis.patch.yml",
+      "config/product-composition.json",
+      "packages/bridge-compat/**",
+      "../QuarkSelfAI-Work/**"
+    ]
+  },
+  "architectureChange": [
+    "add a standalone test-only control-plane listener bound to 127.0.0.1 on an ephemeral port",
+    "add an allowlisted local process discovery adapter for Claude Code, Codex and DSH",
+    "send signed no-effect test plans through the loopback protocol into the existing inactive lease/checkpoint contracts",
+    "keep the installed compatibility runtime as the sole consumer/provider/writer"
+  ],
+  "allowedActions": [
+    "use only Node.js built-ins and already-installed repository dependencies",
+    "start and stop an ephemeral loopback process during tests",
+    "execute only fixed version/help probes for allowlisted Claude Code, Codex and DSH binaries",
+    "read exit code, semantic version and bounded authentication availability without retaining command output or executable path",
+    "create test.* tenants and synthetic identities in ephemeral test state",
+    "transport, verify, lease and checkpoint signed plans with zero allowed effects",
+    "commit and push the exact implementation after all gates pass"
+  ],
+  "explicitExclusions": [
+    "send a prompt to Claude Code, Codex or DSH",
+    "invoke any Agent capability or lifecycle handler",
+    "install or upgrade any dependency, binary or third-party project",
+    "listen on a non-loopback interface",
+    "use production tenants, credentials, business messages, customer data or internal identifiers",
+    "read workspace files beyond repository fixtures",
+    "enable an external write or a live effect provider",
+    "change DSH/Cordis or product runtime composition",
+    "start or restart the QuarkSelfAI daemon",
+    "activate the private Work Integration Pack",
+    "switch or duplicate a consumer, provider, scheduler or writer",
+    "migrate persistent data or delete any source"
+  ],
+  "validation": [
+    "unit fixtures for allowlist, redaction, timeout and malformed tool output",
+    "real local probe readback for each installed allowlisted executor",
+    "real loopback start, signed-plan round trip, disconnect and shutdown test",
+    "assert 127.0.0.1 binding and ephemeral test tenant only",
+    "assert executorInvoked=false and effectsActive=0",
+    "npm run check",
+    "strict assistant-continuity and work-domain-isolation audits",
+    "private pack audit and root agent sync check",
+    "remote revision readback"
+  ],
+  "rollback": {
+    "method": "Stop the ephemeral pilot process, then revert the single pilot implementation commit.",
+    "persistentStateMigrationRequired": false,
+    "serviceRestartRequired": false,
+    "currentRuntimeRecoveryRequired": false
+  },
+  "approvalPhrase": "批准 capability-platform-executable-pilot-01，基于 revision 1899e888612a5d82c176297e1f7b31510cfdbba4，严格按授权单执行。"
+}
