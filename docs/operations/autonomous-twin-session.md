@@ -863,3 +863,11 @@
   数据库或 runtime mount。设备同步层只返回 lease acknowledgement，由测试 control plane 唯一推进 task state，避免形成第二状态真源；
   stale release 和执行器策略顺序漂移均失败关闭。
 - 新增模块后 catalog/migration 114/114，Facility coverage 54/54；current owner、消费者、provider 与外部写入均不变。
+
+## 2026-09-06 Capability Platform Phase 5B recording-only effect sink
+
+- 新增先验签 signed plan、再按 tenant/user/device/agent/action/effect/scope/expiry 精确匹配 approval 的 shadow effect sink；仅保存
+  content-addressed `recorded-not-executed` 元数据和 digest，不保存原始 scope/input，也没有任何 effect callback。
+- identical attempt 幂等，single-use grant 的不同 attempt 失败关闭；Phase 5A harness 通过注入端口强制打开该 sink，并证明当前
+  no-effect plan 的记录数严格为 0。该依赖保持 workflow→port→provider，不让编排源码绑定具体 provider。
+- 本批不提供或调用真实 effect，不持久化 recording，不激活 provider。新增模块后 catalog/migration 115/115，Facility coverage 55/55。

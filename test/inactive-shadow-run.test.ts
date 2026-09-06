@@ -6,6 +6,7 @@ import type { TenantContextV1 } from '../src/control-plane/contracts.js'
 import { InactiveTestAgentStudioV1 } from '../src/control-plane/test-agent-studio.js'
 import { InactiveTestTenantControlPlaneV1 } from '../src/control-plane/test-tenant-store.js'
 import { prepareInactiveShadowRun } from '../src/orchestration/inactive-shadow-run.js'
+import { ShadowEffectRecordingSinkV1 } from '../src/orchestration/shadow-effect-sink.js'
 
 const now = new Date('2026-09-06T00:00:00.000Z')
 const expiresAt = '2026-09-06T01:00:00.000Z'
@@ -41,6 +42,7 @@ function fixture() {
   const dependencies = {
     studio, controlPlane, deviceSync,
     signer: { keyId: 'test-key', sign: async ({ payloadDigest }: { payloadDigest: string }) => `signed:${payloadDigest}` },
+    effectSinkFactory: { open: (plan: Parameters<typeof ShadowEffectRecordingSinkV1.open>[0], at: Date) => ShadowEffectRecordingSinkV1.open(plan, { verify: async ({ payloadDigest, signature }) => signature === `signed:${payloadDigest}` }, at) },
     deviceProofVerifier: { verify: async ({ challenge, signature }: { challenge: string; signature: string }) => signature === `signed:${challenge}` },
   }
   const input = {
@@ -54,7 +56,7 @@ function fixture() {
 test('connects Studio to one device lease while every executor sees identical context', async () => {
   const { dependencies, input, controlPlane } = fixture()
   const receipt = await prepareInactiveShadowRun(dependencies, input)
-  assert.deepEqual({ state: receipt.state, effects: receipt.externalWritesEnabled, invoked: receipt.executorInvoked, owner: receipt.currentOwnerPreserved }, { state: 'leased-unexecuted', effects: false, invoked: false, owner: true })
+  assert.deepEqual({ state: receipt.state, effects: receipt.externalWritesEnabled, invoked: receipt.executorInvoked, owner: receipt.currentOwnerPreserved, effectMode: receipt.effectMode, recorded: receipt.recordedEffectCount }, { state: 'leased-unexecuted', effects: false, invoked: false, owner: true, effectMode: 'recording-sink', recorded: 0 })
   assert.deepEqual(receipt.executorContexts.map(item => item.executorId), ['claude-code', 'codex', 'dsh'])
   assert.equal(new Set(receipt.executorContexts.map(item => item.normalizedContextDigest)).size, 1)
   assert.equal(controlPlane.getDispatch(context, input.taskId)?.state, 'leased')

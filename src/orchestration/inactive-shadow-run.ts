@@ -1,6 +1,6 @@
 import { executorParityInputs } from '../capability-sdk/index.js'
 import type { CapabilityManifestV1 } from '../capability-platform/manifest.js'
-import type { DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1 } from '../client-runtime/contracts.js'
+import type { DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1, SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
 import type { AgentTestReleaseV1, DispatchRecordV1, ExecutionPlanSignerV1, TenantContextV1, TestAgentStudioPortV1, TestTenantControlPlanePortV1 } from '../control-plane/contracts.js'
 import type { TestPlanCompilationInputV1 } from './blueprint-compiler.js'
 import { compileTestExecutionPlan } from './blueprint-compiler.js'
@@ -30,6 +30,8 @@ export interface InactiveShadowRunReceiptV1 {
   readonly externalWritesEnabled: false
   readonly executorInvoked: false
   readonly currentOwnerPreserved: true
+  readonly effectMode: 'recording-sink'
+  readonly recordedEffectCount: 0
 }
 
 export interface InactiveShadowRunDependenciesV1 {
@@ -37,7 +39,12 @@ export interface InactiveShadowRunDependenciesV1 {
   readonly controlPlane: TestTenantControlPlanePortV1
   readonly deviceSync: InactiveShadowDeviceSyncPortV1
   readonly signer: ExecutionPlanSignerV1
+  readonly effectSinkFactory: InactiveShadowEffectSinkFactoryPortV1
   readonly deviceProofVerifier: DeviceProofVerifierV1
+}
+
+export interface InactiveShadowEffectSinkFactoryPortV1 {
+  open(plan: SignedExecutionPlanV1, now: Date): Promise<{ snapshot(): { readonly mode: 'recording-sink'; readonly recordCount: number; readonly effectExecuted: false } }>
 }
 
 export interface InactiveShadowDeviceSyncPortV1 {
@@ -68,6 +75,7 @@ export async function prepareInactiveShadowRun(
   if (input.executorIds.length !== declaredExecutors.length || input.executorIds.some((id, index) => id !== declaredExecutors[index])) throw new Error('shadow executor adapters must exactly match Blueprint policy order')
 
   const plan = await compileTestExecutionPlan(draft.blueprint, input.manifests, compilation, dependencies.signer)
+  const effectSink = await dependencies.effectSinkFactory.open(plan, input.now)
   dependencies.controlPlane.publishBlueprint(context, {
     blueprintId: release.blueprintId,
     version: release.version,
@@ -94,6 +102,8 @@ export async function prepareInactiveShadowRun(
     executorId: adapter.executorId,
     normalizedContextDigest: adapter.normalizedContextDigest,
   }))
+  const effectSnapshot = effectSink.snapshot()
+  if (effectSnapshot.recordCount !== 0 || effectSnapshot.effectExecuted) throw new Error('no-effect shadow run unexpectedly recorded an effect')
   return deepFreeze({
     schemaVersion: 1,
     tenantId: context.tenantId,
@@ -108,6 +118,8 @@ export async function prepareInactiveShadowRun(
     externalWritesEnabled: false,
     executorInvoked: false,
     currentOwnerPreserved: true,
+    effectMode: 'recording-sink',
+    recordedEffectCount: 0,
   })
 }
 

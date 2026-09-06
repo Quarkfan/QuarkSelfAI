@@ -22,7 +22,7 @@ contract、规范化摘要和无 Cordis lifecycle 的 inactive registry，但没
 reference store；Phase 3B 增加 inactive Agent Blueprint compiler；Phase 4A 增加 module→Offer compiler；Phase 4B 将所有 artifact
 Offer 精确归并为产品级 Capability candidate；Phase 2C 增加测试租户设备会话与单任务租约协议；Phase 1C 增加可独立导入的
 Capability developer SDK；Phase 3C 增加 test-only Agent Studio draft/release store；Phase 4E 增加 Manifest evidence publication gate；
-Phase 5A 增加端到端 no-effect shadow-run harness。当前共 114 个模块，
+Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计划约束的 recording-only effect sink。当前共 115 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
