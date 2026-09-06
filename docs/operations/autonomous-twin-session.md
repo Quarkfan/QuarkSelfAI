@@ -1648,3 +1648,14 @@
   `sha256:dbb12f4ccf541ef50d63857716b47c16740693985de65ca6e05eb59c043c87a9`。发行包内 admin entry 完成
   install/configure/owner → prepare-service → status → remove-unregistered-service → status；中间状态为 `service-prepared-inactive`，最终恢复
   `owner-created-inactive`，runtime 始终为空且最终 service namespace 为空。一次性发行、TLS、credential、database、definition 与 runner 已全部删除。
+
+## 2026-09-06 bounded cloud server health route
+
+- cloud HTTP handler 新增 exact unauthenticated `GET /v1/health`，只返回 `ready`、`single-shared-host` 和 effects-off，不解析 session、读取 tenant/provider、
+  写数据库或调用 effect；同路径 POST 仍为 not-found。该 handler 只有在唯一 composition、SSH IPC 和 TLS edge 已打开后才对网络可达。
+- 完整 `npm run check` 通过：主项目 513 项中 501 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构仍为 137 modules、
+  assets 123、23/23 effects implemented、0/23 active。宿主权限下 TLS/cloud-entry 专项 3/3 通过且无跳过。
+- 提交 `0b4dc9178e7fed0c983cb5a45a7b0d6b3af4de0a` 后从 clean source inputs 构建 14 文件发行包，artifact digest
+  `sha256:aae3e7bd6f6c39de37b9737f705dde5c146ac7340cae09290c90ed4e6f7146c4`。发行包内 admin 完成 install/configure/owner，
+  bundled cloud entry 在 loopback 随机端口启动；client 以安装时证书完成 TLS 1.3 验证并得到 exact health response。SIGTERM 后 runtime 归零，status 回到
+  `owner-created-inactive`；未注册 service、未 apply SSH、未改变现网 owner，临时发行、证书、密码、数据库与 runner 均已删除。
