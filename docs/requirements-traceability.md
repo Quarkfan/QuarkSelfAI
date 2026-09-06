@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E 与 Pilot 01 平台实现，合计 117 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01 与 inactive registry provider 平台实现，合计 118 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -42,6 +42,10 @@ Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interfac
 
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；仍只接受 `test.*` 租户、manual/no-effect Blueprint，没有云 API、生产发布、调度或执行路径。
+
+Capability Registry 现已具备默认不挂载的 SQLite provider：只接收身份、canonical digest、signature、SBOM 与 evidence policy 均闭合的
+`validated-unpublished` Manifest，按 private/tenant visibility 强制 tenant/user 隔离，并固定 consumer/provider/scheduler/effects 为零。
+它不下载、安装、加载、授权或执行能力，也不提供 public marketplace 或私有 integration-pack 入口。
 
 Phase 4A 已把当前每个 module 编译为且只编译为一个隐私有界 Offer，并区分 core-bound、manifest-pending、private-pack-
 inactive 和 migration-only；该证据证明迁移目标无漏项，但 `manifest-pending` 仍须逐批形成真正 Manifest 才算能力转换完成。

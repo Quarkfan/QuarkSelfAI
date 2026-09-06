@@ -8,6 +8,8 @@ export type TenantControlActionV1 =
   | 'agent-draft.read'
   | 'agent-draft.write'
   | 'agent-release.publish-test'
+  | 'capability-release.read'
+  | 'capability-release.register-inactive'
 
 export interface TenantAuthorizationPortV1 {
   authorize(input: {

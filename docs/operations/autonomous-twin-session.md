@@ -968,3 +968,12 @@
   device/workspace reference 和 canonical digest。catalog 将原 `test-agent-studio` 准确改名为 `inactive-agent-studio-provider`。
 - 本批没有 listener、身份提供方、production database、调度、派发、执行器、runtime mount 或 external effect；当前 composition 和所有 owner
   保持不变，测试只创建并删除临时 SQLite 文件。
+
+## 2026-09-06 persistent inactive Capability Registry provider
+
+- 新增 Node 内建 SQLite Capability Registry，只接收公共 evidence gate 已形成的 `validated-unpublished` Manifest candidate，并重新核验
+  identity、canonical digest、signature、SBOM 与 evidence policy revision 后写为 `catalogued-inactive`。
+- release 以 tenant/capability/version 为不可变键；private visibility 仅 owner 可读，tenant visibility 仅租户内可读，所有操作逐次调用
+  tenant authorization port。双租户同 capability/version、同租户 private/tenant 可见性和跨 reopen persistence 均以临时数据库验证。
+- 核心 registry 明确拒绝 private integration-pack，且没有 public marketplace、download、install、load、authorize、execute、schedule、effect、
+  listener 或 runtime mount。新增模块后 catalog/migration 为 118/118、Facility coverage 为 58/58，现有 owner 和 composition 不变。

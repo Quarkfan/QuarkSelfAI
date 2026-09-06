@@ -1,5 +1,7 @@
-import type { SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
+import type { ArtifactVerificationReportV1, SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
+import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
+import type { CapabilityManifestV1 } from '../capability-platform/manifest.js'
 
 export interface TenantContextV1 {
   readonly tenantId: string
@@ -69,5 +71,27 @@ export interface PersistentAgentStudioPortV1 {
   publishTest(context: TenantContextV1, input: { readonly draftId: string; readonly expectedRevision: number }, now?: Date): Promise<AgentTestReleaseV1>
   getDraft(context: TenantContextV1, draftId: string): Promise<AgentDraftRecordV1 | undefined>
   listDrafts(context: TenantContextV1): Promise<readonly AgentDraftRecordV1[]>
+  close(): Promise<void>
+}
+
+export interface CapabilityCatalogRecordV1 {
+  readonly tenantId: string
+  readonly ownerUserId: string
+  readonly manifest: CapabilityManifestV1
+  readonly manifestDigest: string
+  readonly evidencePolicyRevision: string
+  readonly visibility: 'private' | 'tenant'
+  readonly state: 'catalogued-inactive'
+  readonly registeredAt: string
+  readonly consumerCount: 0
+  readonly providerLease: null
+  readonly schedulerCount: 0
+  readonly externalWritesEnabled: false
+}
+
+export interface PersistentCapabilityRegistryPortV1 {
+  registerInactive(context: TenantContextV1, input: { readonly candidate: ManifestPublicationCandidateV1; readonly evidence: ArtifactVerificationReportV1; readonly visibility: 'private' | 'tenant' }, now?: Date): Promise<CapabilityCatalogRecordV1>
+  get(context: TenantContextV1, capabilityId: string, version: string): Promise<CapabilityCatalogRecordV1 | undefined>
+  listVisible(context: TenantContextV1): Promise<readonly CapabilityCatalogRecordV1[]>
   close(): Promise<void>
 }
