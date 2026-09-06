@@ -141,6 +141,10 @@ SSH 备用通道已从策略/argv 脚手架推进为默认不挂载的 executabl
 完成，activation-shaped config 会在打开 dependency 前拒绝。host 本身不打开 TCP/TLS/Unix socket、不启动 ssh、不注册 sshd subsystem；真实 edge/gateway
 与进程生命周期仍未完成，但后续不能再以独立 composition 形成第二 provider。
 
+direct transport 现已有可真实启动的 TLS 1.3 edge，它只接受 shared-host handler、literal IP 和有界资源配置，certificate/key 仅以内存 bytes 注入。
+宿主测试通过临时证书完成一次真实 `127.0.0.1:0` TLS 1.3 请求并确认 listener/connection 正常关闭；wildcard ephemeral bind、独立 provider ownership
+和非法 PEM 均失败关闭。尚未挂入 server process，亦无真实域名、证书轮换、反向代理、防火墙或公网部署。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

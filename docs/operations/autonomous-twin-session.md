@@ -1413,3 +1413,13 @@
   dependencies 前失败。回滚只删除 host/test/ADR/catalog dependency，无新 schema 或 live transport state。
 - 完整 `npm run check` 通过：主项目 479 项中 472 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构保持 136 modules、
   76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+
+## 2026-09-06 explicit TLS 1.3 cloud edge
+
+- 新增显式 Node TLS edge，只包裹 caller 提供的 existing handler，禁止独立 provider ownership；closed config 限制 literal IP、port、timeout、连接数，
+  effects 固定关闭，ephemeral port 仅允许 IPv4 loopback。certificate/key 以内存 bytes 注入，不进入 JSON、argv、日志或 receipt。
+- 沙箱静态门禁通过但不允许 loopback；随后在宿主用一次性自签证书真实完成 TLS 1.3 请求。首次运行发现 close 顺序会留下句柄，改为先进入 server close
+  再清除连接后，2/2 宿主测试通过且进程正常退出，listener 和证书目录均删除。
+- 本批不挂载 server process，不配置真实证书、DNS、反向代理、防火墙或公网端口，不启动持久服务，不改变 provider/consumer/writer/effects。
+- 完整 `npm run check` 通过：主项目 481 项中 473 通过、8 项仅因 sandbox loopback 限制跳过，compat 179/179；宿主 TLS 专项则为 2/2。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。

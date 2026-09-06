@@ -17,7 +17,7 @@ export async function openEphemeralLoopbackCloudEdge(handler: InactiveCloudHttpH
   let requests = 0
   const server = createServer(async (request, response) => {
     requests += 1
-    await route(handler, request, response)
+    await routeCloudHttpRequestV1(handler, request, response)
   })
   server.requestTimeout = 5_000
   server.headersTimeout = 5_000
@@ -30,7 +30,7 @@ export async function openEphemeralLoopbackCloudEdge(handler: InactiveCloudHttpH
   return Object.freeze({ host: '127.0.0.1', port: address.port, requestCount: () => requests, close: () => close(server) })
 }
 
-async function route(handler: InactiveCloudHttpHandlerV1, request: IncomingMessage, response: ServerResponse): Promise<void> {
+export async function routeCloudHttpRequestV1(handler: Pick<InactiveCloudHttpHandlerV1, 'handle'>, request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     if ((request.method !== 'GET' && request.method !== 'POST') || !request.url || request.url.includes('?')) return send(response, 400, { code: 'invalid-request' })
     const sessionValue = request.headers[sessionHeader]

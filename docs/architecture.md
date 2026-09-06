@@ -94,6 +94,9 @@ secret-shaped 文本与异常长度失败关闭。codec 不替代 plan signature
 [ADR 0150](adr/0150-single-provider-cloud-transport-host.md) 再将两个 adapter 收敛到唯一 prepared host：HTTP 委托同一 composition 的认证 handler，
 SSH frame 委托该 composition 已持有的 device-session provider。配置固定两端 `prepared-inactive`、`singleProvider=true`、
 `activationAllowed=false`；未来 edge 只能包裹此 host，不能自行再构造 provider graph。
+[ADR 0151](adr/0151-explicit-tls-cloud-edge.md) 提供显式 Node TLS 1.3 edge：只包裹既有 handler，不能创建 provider；证书/私钥只由调用方以
+内存 bytes 注入，不进入 JSON/argv/receipt。literal IP、port、timeout、connection bound、shared-host ownership 与 effects-off 均为 closed config。
+真实 loopback TLS 1.3 握手已完成并立即关闭，但该 edge 未挂入 product/service composition，也没有真实证书、DNS 或公网端口。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
