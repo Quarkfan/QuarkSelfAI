@@ -13,12 +13,7 @@ export class InactiveTestAgentStudioV1 implements TestAgentStudioPortV1 {
     this.#context(context)
     if (!idPattern.test(input.draftId)) throw new Error('draftId is invalid')
     if (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0) throw new Error('expectedRevision must be a non-negative integer')
-    const blueprint = validateAgentBlueprint(input.blueprint)
-    if (blueprint.digest !== blueprintPayloadDigest(blueprint)) throw new Error('blueprint digest does not match its canonical payload')
-    if (blueprint.releaseState !== 'test') throw new Error('inactive Agent Studio accepts test blueprints only')
-    if (blueprint.permissions.some(permission => permission.kind === 'external-effect' || permission.effect?.externalWrite)) throw new Error('inactive Agent Studio rejects external effects')
-    if (blueprint.triggers.some(trigger => trigger.enabled && trigger.kind !== 'manual')) throw new Error('inactive Agent Studio rejects enabled automatic triggers')
-    if (unsafeValue.test(JSON.stringify(blueprint))) throw new Error('blueprint contains host-local or secret-shaped values')
+    const blueprint = validateInactiveAgentBlueprint(input.blueprint)
     const key = this.#draftKey(context, input.draftId)
     const existing = this.#drafts.get(key)
     const actualRevision = existing?.revision ?? 0
@@ -47,7 +42,10 @@ export class InactiveTestAgentStudioV1 implements TestAgentStudioPortV1 {
     const releaseKey = `${context.tenantId}\0${context.userId}\0${draft.blueprint.id}\0${draft.blueprint.version}`
     const existing = this.#releases.get(releaseKey)
     if (existing && existing.blueprintDigest !== draft.blueprint.digest) throw new Error('immutable test release already exists with another digest')
-    if (existing) return existing
+    if (existing) {
+      this.#drafts.set(key, deepFreeze({ ...draft, state: 'test-released' as const, updatedAt: now.toISOString() }))
+      return existing
+    }
     const release = Object.freeze({
       tenantId: context.tenantId,
       userId: context.userId,
@@ -82,6 +80,16 @@ export class InactiveTestAgentStudioV1 implements TestAgentStudioPortV1 {
   #draftKey(context: TenantContextV1, draftId: string): string {
     return `${context.tenantId}\0${context.userId}\0${draftId}`
   }
+}
+
+export function validateInactiveAgentBlueprint(input: Parameters<typeof validateAgentBlueprint>[0]) {
+  const blueprint = validateAgentBlueprint(input)
+  if (blueprint.digest !== blueprintPayloadDigest(blueprint)) throw new Error('blueprint digest does not match its canonical payload')
+  if (blueprint.releaseState !== 'test') throw new Error('inactive Agent Studio accepts test blueprints only')
+  if (blueprint.permissions.some(permission => permission.kind === 'external-effect' || permission.effect?.externalWrite)) throw new Error('inactive Agent Studio rejects external effects')
+  if (blueprint.triggers.some(trigger => trigger.enabled && trigger.kind !== 'manual')) throw new Error('inactive Agent Studio rejects enabled automatic triggers')
+  if (unsafeValue.test(JSON.stringify(blueprint))) throw new Error('blueprint contains host-local or secret-shaped values')
+  return blueprint
 }
 
 function deepFreeze<T>(value: T): T {

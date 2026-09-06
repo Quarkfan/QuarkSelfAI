@@ -63,3 +63,11 @@ export interface TestAgentStudioPortV1 {
   getDraft(context: TenantContextV1, draftId: string): AgentDraftRecordV1 | undefined
   listDrafts(context: TenantContextV1): readonly AgentDraftRecordV1[]
 }
+
+export interface PersistentAgentStudioPortV1 {
+  saveDraft(context: TenantContextV1, input: { readonly draftId: string; readonly blueprint: AgentBlueprintV1; readonly expectedRevision: number }, now?: Date): Promise<AgentDraftRecordV1>
+  publishTest(context: TenantContextV1, input: { readonly draftId: string; readonly expectedRevision: number }, now?: Date): Promise<AgentTestReleaseV1>
+  getDraft(context: TenantContextV1, draftId: string): Promise<AgentDraftRecordV1 | undefined>
+  listDrafts(context: TenantContextV1): Promise<readonly AgentDraftRecordV1[]>
+  close(): Promise<void>
+}

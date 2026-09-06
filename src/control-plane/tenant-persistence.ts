@@ -1,6 +1,13 @@
 import type { DeviceRecordV1, TenantContextV1, TenantRecordV1, UserRecordV1 } from './contracts.js'
 
-export type TenantControlActionV1 = 'tenant.create' | 'user.register' | 'device.register' | 'device.list'
+export type TenantControlActionV1 =
+  | 'tenant.create'
+  | 'user.register'
+  | 'device.register'
+  | 'device.list'
+  | 'agent-draft.read'
+  | 'agent-draft.write'
+  | 'agent-release.publish-test'
 
 export interface TenantAuthorizationPortV1 {
   authorize(input: {

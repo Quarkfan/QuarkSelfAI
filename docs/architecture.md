@@ -44,6 +44,10 @@ Agent Studio 的编译边界由 [ADR 0096](adr/0096-agent-blueprint-compilation.
 interface ownership、graph DAG 与 workspace grant 必须闭合，编译结果才可由注入 signer 签成所有执行器共用的 Envelope。
 当前编译器只接受 test tenant 与无 effect Blueprint，不派发计划。
 
+[ADR 0114](adr/0114-persistent-inactive-agent-studio.md) 为 Agent Studio 增加默认不挂载的 SQLite provider：仅保存
+`test.*` 租户下的无副作用草稿与不可变 test release，所有读取和写入都经过 tenant authorization port，并以
+tenant/user 复合键和 optimistic revision 隔离。它没有 listener、调度、执行器或 production release 路径。
+
 设备连接协议与具体网络通道分离。按 [ADR 0111](adr/0111-ssh-device-transport-fallback.md)，direct TLS 始终是主通道；在直连不可用时，
 客户端可选择固定 `quark-device-v1` SSH subsystem 作为候选备用通道。两者复用同一 device session、signed plan、lease、checkpoint、
 approval、workspace 和 effect contract，切换不产生第二 consumer/provider/writer。SSH 私钥只由客户端 secret reference 解析，必须 pin
@@ -51,7 +55,7 @@ host key，且禁用 remote shell、任意 command、port forwarding 与 agent f
 没有 SSH process、socket、gateway、凭证配置或 runtime mount。
 
 [ADR 0113](adr/0113-transport-neutral-device-wire-protocol.md) 固定两种 transport 共用的 `quark-device-sync.v1` wire protocol。hello、
-challenge/proof、session、poll/lease/ack、redacted result 与 heartbeat 都携带 tenant/user/device scope、message/correlation id，并使用
+challenge/proof、session、poll/lease/ack、redacted result 与 heartbeat 都携带 tenant/user/device scope、frame/causation id，并使用
 最大 256 KiB 的 length-prefixed JSON frame；decoder 支持任意 stream chunking。未知字段、未知消息、跨 scope 嵌套对象、绝对路径、
 secret-shaped 文本与异常长度失败关闭。codec 不替代 plan signature、device proof、lease 或 result gate，也不打开网络连接。
 

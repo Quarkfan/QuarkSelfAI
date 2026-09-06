@@ -40,6 +40,9 @@ Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release�
 Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interface/graph/workspace 验证和注入 signer，输出可由客户端
 重新验签的统一 Envelope；当前只编译 test tenant、无 effect fixture，不构成真实 Agent Studio 或任务派发上线。
 
+Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
+及跨 reopen persistence 均有集成测试；仍只接受 `test.*` 租户、manual/no-effect Blueprint，没有云 API、生产发布、调度或执行路径。
+
 Phase 4A 已把当前每个 module 编译为且只编译为一个隐私有界 Offer，并区分 core-bound、manifest-pending、private-pack-
 inactive 和 migration-only；该证据证明迁移目标无漏项，但 `manifest-pending` 仍须逐批形成真正 Manifest 才算能力转换完成。
 

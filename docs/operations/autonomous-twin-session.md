@@ -959,3 +959,12 @@
 - 每帧最多 256 KiB，支持任意流分片；tenant/user/device scope 不一致、proof/ack/lease device 漂移、未知字段/消息、绝对路径、
   secret-shaped 文本、无效 JSON 与异常长度均失败关闭。plan signature、device proof 和 lease 验证仍由下游原 contract 执行。
 - 本批是纯 codec 与离线测试，没有 socket、SSH process、listener、consumer、provider、scheduler、effect、composition 或服务重启。
+
+## 2026-09-06 persistent inactive Agent Studio provider
+
+- Agent Studio 新增 Node 内建 SQLite provider 与独立 migration；tenant/user/draft 复合键、逐操作 authorization、optimistic revision、
+  immutable test release 和跨 reopen persistence 均以临时数据库验证。相同 draft id 可在不同 tenant 隔离共存。
+- 持久化 provider 与内存 fixture 共用同一个 fail-closed Blueprint policy，只接受 `test.*` tenant、manual trigger、no-effect、opaque
+  device/workspace reference 和 canonical digest。catalog 将原 `test-agent-studio` 准确改名为 `inactive-agent-studio-provider`。
+- 本批没有 listener、身份提供方、production database、调度、派发、执行器、runtime mount 或 external effect；当前 composition 和所有 owner
+  保持不变，测试只创建并删除临时 SQLite 文件。
