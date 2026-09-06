@@ -161,6 +161,10 @@ credential 并完成终态；完全清理的 expired 请求才可替换。公共
 approve。outbound adapter 对生产 endpoint 强制 HTTPS，仅允许 `127.0.0.1:<port>` 明文测试，显式省略 browser credential/cookie，拒绝
 redirect、URL credential 和非封闭/超限响应。它仍是未挂载的显式调用能力，不自动连接或批准。
 
+[ADR 0133](adr/0133-validated-inactive-client-bootstrap.md) 用一份封闭的本地配置把 Keychain master-key reader、加密客户端、注册 transport 与
+session transport 装入同一个 close boundary。state root 必须是 canonical、非 symlink、仅 owner 可访问目录，所有子路径固定派生；初始化前
+重新验证整份 plan，不能以 TypeScript 类型代替信任边界。构造仍不联网、不自动轮询或探测，且未形成 installer/daemon。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

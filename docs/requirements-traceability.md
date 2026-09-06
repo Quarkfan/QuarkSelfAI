@@ -47,6 +47,10 @@ digest；approve 从已认证云 session 推导 tenant/user 并调用唯一 devi
 device sync。启动先验证 enrollment 与全部已安装制品，第二实例失败关闭，死亡 PID 的合法旧 lease 可安全回收；discovery 与 sync 只能显式
 调用，默认快照仍为 disconnected、active capability/consumer/provider/scheduler/effect 全为零。它尚不是可分发安装包或常驻 daemon。
 
+现已增加封闭的本地 bootstrap document/compiler/facade，把固定 Keychain account、加密状态、public enrollment transport 与 session transport
+装入上述唯一 owner；状态根目录、migration 和派生路径在读取 Keychain 前进行运行时复核。初始化与跨 reopen 均证明 0 自动网络请求，注册与
+no-effect sync 仍只能显式调用。安全 Keychain provisioning、安装器建目录、后台服务注册与 Windows/Linux key provider 尚未完成。
+
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
 inactive client cycle 证明真实设备 proof、签名执行器协商、local checkpoint-before-ack、server lease ack 及重连空轮询。它仍没有运行 executor、

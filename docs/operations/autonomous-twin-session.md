@@ -1183,3 +1183,13 @@
 - 宿主真实 loopback 使用合成身份和临时 SQLite 跑通 begin、pending poll、authenticated approve、approved poll，共 3 次客户端 HTTP 请求；listener
   绑定 `127.0.0.1:0` 并在退出前关闭，临时数据删除。adapter 仍默认不挂载，不自动轮询、不启动 daemon/executor、不激活 capability/effect。
 - 本批沿用 130 个模块与 70/70 Facility coverage，只扩展已有 transport 模块；回滚删除 adapter/test/ADR、恢复本地类型依赖即可，无 live 状态迁移。
+
+## 2026-09-06 validated inactive client bootstrap
+
+- 新增封闭的本地 bootstrap document/compiler，将现有 macOS Keychain reader、加密 secret/client owner、public enrollment transport 与 device-session
+  transport 装配为一个 facade。database/artifact/lease/secrets 均从单一 state root 固定派生，不能各自覆盖。
+- state root 必须已存在、canonical、非 symlink 且 group/other 权限为零；migration 必须是绝对普通文件。初始化在读取 Keychain 前重新验证完整 plan
+  与路径关系，阻断绕过 compiler 的结构伪造。配置和 projection 不包含 master key、私钥、poll token 或本机目录内容。
+- 临时目录测试证明初始化及跨 reopen 恢复均为 0 自动网络请求，重复 begin 复用相同 pending request；只有显式 begin/poll/sync 才会调用注入的
+  transport，且 sync 仍为 no-effect client cycle。本批未预置真实 Keychain、创建 installer、注册 daemon、探测/执行工具或改变现网 composition。
+- 模块与 Facility 数量维持 130/70；回滚删除 facade/test/ADR 并恢复 catalog dependency，无 schema 或 live 状态迁移。
