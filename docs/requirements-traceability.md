@@ -61,8 +61,8 @@ inactive client 现可在任意调用方指定的 canonical 绝对目录完成�
 验证正确签名并拒绝 key id、digest、signature 与 key type 漂移。恢复的客户端可直接从 pin 构建 verifier，不再依赖测试 fixture；可信 key
 首次分发与轮换仍须由后续签名发行/更新渠道闭合。
 
-configured client 现有唯一显式 installed-executor discovery：复用固定 allowlist，将 Claude Code/Codex 的版本和认证状态合并，并将仓库锁定的
-DSH 五包 closure 作为唯一基础 fallback。单项失败不会阻断其余报告，所有 raw output、账号、可执行文件路径、workspace/runtime path 与 inference
+configured client 现有唯一显式 installed-executor discovery：复用固定 allowlist，将 Claude Code/Codex 的版本和认证状态合并；DSH 必须同时具备
+锁定的产品 CLI、完整必需 peer、可验证 headless entrypoint 与 inference 配置才是基础 fallback。单项失败不会阻断其余报告，所有 raw output、账号、可执行文件路径、workspace/runtime path 与 inference
 配置值在本地丢弃；报告持久化仍是五分钟失效的隐私投影。fixture 已证明 ready/auth-required/not-installed/package-drift 与 facade wiring；初始化
 不会自动探测，本批也没有执行 Agent、选择任务 executor、连接云端或启用 effect。
 
@@ -71,9 +71,10 @@ executor port，privacy-bounded result 先落本地再提交，server 接受后�
 completed-pending-sync 会先重传结果而不重复执行。虽然签名计划现已携带完整声明式 Agent program，该 cycle 的集成测试仍使用注入 executor，尚无 daemon、自动 poll、
 电脑操作或 effect，因此仍不满足“通过统一契约真实运行 Agent”的最终完成标准。
 
-当前另有默认不挂载的 Claude Code/Codex reasoning-only process adapter：它真实实现现有 executor port，但只接受无 capability graph、context、workspace、
-approval 和 effect 的 provider-neutral 计划，并把模型正文仅保存在客户端私有 content-addressed store。测试使用注入 runner，尚未形成真实模型调用证据；
-DSH 五包 closure 也尚无可执行 host entry。因此它是可执行边界实现，不等于三个 executor 已完成真实 Agent parity。
+当前另有默认不挂载的 Claude Code/Codex/DSH reasoning-only process adapter：它真实实现现有 executor port，但只接受无 capability graph、context、workspace、
+approval 和 effect 的 provider-neutral 计划，并把模型正文仅保存在客户端私有 content-addressed store。真实公开合成 pilot 中 Claude 超时、Codex 非零退出；
+DSH 使用锁定产品 headless CLI、stdin host、allowlisted environment 和禁用全部模型工具/遥测的 overlay 成功返回，正文未投影且临时状态已删除。
+这证明 DSH 边界可执行，但 adapter 尚未挂载到自动 client cycle，不能称三个 executor parity 或生产 fallback 已完成。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；

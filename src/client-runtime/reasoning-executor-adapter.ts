@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
 import { lstat, link, mkdir, open, readFile, realpath, unlink } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { ExecutorAdapterInputV1 } from '../capability-platform/execution-envelope.js'
 import type { ExecutorAdapterInputValidationPortV1, NoEffectClientExecutorPortV1 } from './contracts.js'
 
@@ -10,11 +11,11 @@ const maxResultBytes = 128 * 1024
 const maxTimeoutMs = 120_000
 const digestPattern = /^sha256:[a-f0-9]{64}$/
 
-export type ReasoningExecutorIdV1 = 'claude-code' | 'codex'
+export type ReasoningExecutorIdV1 = 'claude-code' | 'codex' | 'dsh'
 
 export interface FixedReasoningInvocationV1 {
   readonly executorId: ReasoningExecutorIdV1
-  readonly command: 'claude' | 'codex'
+  readonly command: string
   readonly args: readonly string[]
   readonly cwd: string
   readonly stdin: string
@@ -88,7 +89,7 @@ class NodeFixedReasoningProcessRunnerV1 implements FixedReasoningProcessRunnerV1
       let stdout = Buffer.alloc(0)
       let settled = false
       let state: FixedReasoningObservationV1['state'] = 'completed'
-      const child = spawn(invocation.command, [...invocation.args], { cwd: invocation.cwd, shell: false, stdio: ['pipe', 'pipe', 'ignore'] })
+      const child = spawn(invocation.command, [...invocation.args], { cwd: invocation.cwd, env: fixedEnvironment(invocation.executorId, invocation.cwd), shell: false, stdio: ['pipe', 'pipe', 'ignore'] })
       const finish = (exitCode: number | null): void => {
         if (settled) return
         settled = true
@@ -164,7 +165,29 @@ function promptFor(input: ExecutorAdapterInputV1): string {
 
 function fixedInvocation(executorId: ReasoningExecutorIdV1, cwd: string, stdin: string, timeoutMs: number): FixedReasoningInvocationV1 {
   if (executorId === 'claude-code') return Object.freeze({ executorId, command: 'claude', args: Object.freeze(['-p', '--output-format', 'json', '--permission-mode', 'dontAsk', '--tools', '', '--no-session-persistence']), cwd, stdin, timeoutMs })
-  return Object.freeze({ executorId, command: 'codex', args: Object.freeze(['exec', '--ephemeral', '--ignore-user-config', '-c', 'model_reasoning_effort="low"', '--sandbox', 'read-only', '--skip-git-repo-check', '--color', 'never', '--json', '-']), cwd, stdin, timeoutMs })
+  if (executorId === 'codex') return Object.freeze({ executorId, command: 'codex', args: Object.freeze(['exec', '--ephemeral', '--ignore-user-config', '-c', 'model_reasoning_effort="low"', '--sandbox', 'read-only', '--skip-git-repo-check', '--color', 'never', '--json', '-']), cwd, stdin, timeoutMs })
+  return Object.freeze({ executorId, command: process.execPath, args: Object.freeze([dshStdinHostPath()]), cwd, stdin, timeoutMs })
+}
+
+function dshStdinHostPath(): string {
+  return fileURLToPath(new URL('../../dist/client-runtime/dsh-stdin-host.js', import.meta.url))
+}
+
+function fixedEnvironment(executorId: ReasoningExecutorIdV1, cwd: string): NodeJS.ProcessEnv {
+  const names = ['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'ALL_PROXY'] as const
+  const environment: NodeJS.ProcessEnv = Object.fromEntries(names.flatMap(name => process.env[name] ? [[name, process.env[name]]] : []))
+  if (executorId === 'claude-code' && process.env.CLAUDE_CONFIG_DIR) environment.CLAUDE_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR
+  if (executorId === 'codex' && process.env.CODEX_HOME) environment.CODEX_HOME = process.env.CODEX_HOME
+  if (executorId === 'dsh') {
+    environment.DSH_HOME = join(cwd, 'dsh-home')
+    environment.DSH_PERMISSION_MODE = 'read-only'
+    environment.DSH_TOOLS_MODE = 'native'
+    environment.DSH_TELEMETRY_MODE = 'DISABLED'
+    if (process.env.QUARK_INFERENCE_API_KEY) environment.QUARK_INFERENCE_API_KEY = process.env.QUARK_INFERENCE_API_KEY
+    if (process.env.QUARK_INFERENCE_BASE_URL) environment.QUARK_INFERENCE_BASE_URL = process.env.QUARK_INFERENCE_BASE_URL
+    if (process.env.QUARK_INFERENCE_MODEL) environment.QUARK_INFERENCE_MODEL = process.env.QUARK_INFERENCE_MODEL
+  }
+  return environment
 }
 
 function assertFixedInvocation(invocation: FixedReasoningInvocationV1): void {
@@ -181,6 +204,7 @@ function parseResult(executorId: ReasoningExecutorIdV1, output: string): string 
     if (typeof value.result !== 'string') throw new Error('Claude reasoning output is malformed')
     return value.result
   }
+  if (executorId === 'dsh') return output.trim()
   for (const line of output.trim().split('\n').reverse()) {
     try {
       const value = JSON.parse(line) as { type?: string; item?: { type?: string; text?: string } }

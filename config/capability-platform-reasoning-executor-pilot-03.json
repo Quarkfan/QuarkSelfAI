@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "requestId": "capability-platform-reasoning-executor-pilot-03",
+  "status": "completed-with-dsh-success",
+  "executedAgainstRevision": "68d6299fac0dd9434c160b08102f9863a797bec7",
+  "executedAt": "2026-09-06T08:16:57.000Z",
+  "inputClass": "fixed-public-synthetic",
+  "readiness": [
+    { "executorId": "claude-code", "installation": "detected", "authentication": "ready", "version": "2.1.177" },
+    { "executorId": "codex", "installation": "detected", "authentication": "ready", "version": "0.149.0" },
+    { "executorId": "dsh", "installation": "detected", "authentication": "ready", "version": "0.1.1-rc.2", "hostEntrypoint": "detected" }
+  ],
+  "actions": [
+    { "executorId": "claude-code", "attempts": 1, "outcome": "timed-out", "timeoutMs": 120000, "fallbackAttempted": false },
+    { "executorId": "codex", "attempts": 1, "outcome": "nonzero-exit", "fallbackAttempted": false },
+    { "executorId": "dsh", "attempts": 1, "outcome": "transport-failure-in-network-sandbox", "fallbackAttempted": false },
+    { "executorId": "dsh", "attempts": 1, "outcome": "succeeded-outside-network-sandbox", "fallbackAttempted": false, "artifactDigest": "sha256:c9d017c41b6f567c2418dd9efa30c28a6271cfee8728f1906fcdf06c79af3451" }
+  ],
+  "rawOutputRetained": false,
+  "artifactContentProjected": false,
+  "promptInArgv": false,
+  "toolsEnabled": false,
+  "workspaceGranted": false,
+  "contextGranted": false,
+  "externalWritesEnabled": false,
+  "effectsActive": 0,
+  "currentOwnerPreserved": true,
+  "runtimeCompositionChanged": false,
+  "serviceRestarted": false,
+  "temporaryStateRemoved": true,
+  "conclusion": "Authentication readiness alone did not prove Claude Code or Codex execution in the nested desktop host. The locked DSH product headless entrypoint completed the same signed no-effect program outside the network sandbox; its tools, workspace, context, telemetry and external effects remained disabled."
+}

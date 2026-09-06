@@ -17,7 +17,7 @@ function input(executorId: ReasoningExecutorIdV1, overrides: Record<string, unkn
     blueprint: { id: 'agent/demo', version: '1.0.0', digest: sha }, program: { role: 'concise analyst', goals: ['Explain why the sky is blue'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } },
     capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.one/action.one', deadline: '2026-09-06T00:01:00.000Z',
     budget: { tokens: 1000, durationMs: 30_000, costMinorUnits: 10 }, dataClasses: ['public'], allowedEffects: [],
-    executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: ['agent.execute'], allowedExecutors: ['claude-code', 'codex'], preferredExecutors: ['claude-code'] },
+    executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: ['agent.execute'], allowedExecutors: ['claude-code', 'codex', 'dsh'], preferredExecutors: ['claude-code'] },
     continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const }, plan: { digest: sha, signature: 'fixture', keyId: 'test-key' },
     ...overrides,
   }
@@ -55,6 +55,19 @@ test('parses Codex JSONL through a separate fixed read-only invocation', async (
   assert.equal(calls[0]!.command, 'codex')
   assert.deepEqual(calls[0]!.args.slice(0, 4), ['exec', '--ephemeral', '--ignore-user-config', '-c'])
   assert.ok(calls[0]!.args.includes('read-only') && calls[0]!.args.includes('-'))
+  assert.equal(Buffer.from(sink.content!).toString(), 'Blue wavelengths scatter more.')
+  assert.equal(result.summaryCode, 'executor.reasoning-completed')
+})
+
+test('runs DSH through the fixed stdin host without placing the task in argv', async () => {
+  const calls: FixedReasoningInvocationV1[] = []
+  const runner: FixedReasoningProcessRunnerV1 = { run: async invocation => { calls.push(invocation); return { state: 'completed', exitCode: 0, stdout: 'Blue wavelengths scatter more.\n' } } }
+  const sink = new MemorySink()
+  const result = await new FixedNoEffectReasoningExecutorV1('dsh', '/private/tmp/quark-runtime', sink, validator, runner, () => now).execute(input('dsh'))
+  assert.equal(calls[0]!.command, process.execPath)
+  assert.equal(calls[0]!.args.length, 1)
+  assert.match(calls[0]!.args[0]!, /dsh-stdin-host\.js$/)
+  assert.equal(calls[0]!.args.includes(calls[0]!.stdin), false)
   assert.equal(Buffer.from(sink.content!).toString(), 'Blue wavelengths scatter more.')
   assert.equal(result.summaryCode, 'executor.reasoning-completed')
 })

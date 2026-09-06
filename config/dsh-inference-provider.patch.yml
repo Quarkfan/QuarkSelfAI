@@ -1,0 +1,18 @@
+# Provider-neutral product inference route for the bundled DSH fallback.
+# Credential values remain process-local and are never stored in this file.
+- id: llm-pi-ai
+  config:
+    providers:
+      quark-inference:
+        displayName: Quark Inference
+        api: openai-completions
+        apiKeyEnv: QUARK_INFERENCE_API_KEY
+        baseURL: !!js process.env.QUARK_INFERENCE_BASE_URL
+        models:
+          - id: !!js process.env.QUARK_INFERENCE_MODEL || 'deepseek/openai/deepseek-v4-pro'
+            name: Quark Default
+
+- id: agent-default-model
+  config:
+    provider: quark-inference
+    model: !!js process.env.QUARK_INFERENCE_MODEL || 'deepseek/openai/deepseek-v4-pro'

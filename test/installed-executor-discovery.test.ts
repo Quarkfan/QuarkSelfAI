@@ -13,7 +13,7 @@ test('discovers Claude Code, Codex and bundled DSH through one privacy-bounded p
     runtimeRoot: '/tmp/runtime',
     bundledDshDiscovery: async root => {
       assert.equal(root, '/tmp/runtime')
-      return { schemaVersion: 1, executorId: 'dsh', installation: 'detected', version: '0.0.11', inferenceConfigured: true, authentication: 'ready', protocolVersions: ['envelope.v1'], capabilities: ['agent.execute', 'tool.execute'] }
+      return { schemaVersion: 1, executorId: 'dsh', installation: 'detected', version: '0.0.11', hostEntrypoint: 'detected', inferenceConfigured: true, authentication: 'ready', protocolVersions: ['envelope.v1'], capabilities: ['agent.execute'] }
     },
   })
 
@@ -30,7 +30,7 @@ test('isolates probe failures and never treats partial DSH closure as a ready fa
     versionRunner: { async run(executorId) { if (executorId === 'claude-code') throw new Error('private failure detail'); return { state: 'not-found' as const, exitCode: null, output: '', authentication: 'unknown' as const } } },
     authRunner: { async run() { throw new Error('must not be called when executable is absent') } },
     runtimeRoot: '/tmp/runtime',
-    bundledDshDiscovery: async () => ({ schemaVersion: 1, executorId: 'dsh', installation: 'package-drift', version: null, inferenceConfigured: true, authentication: 'required', protocolVersions: [], capabilities: [] }),
+    bundledDshDiscovery: async () => ({ schemaVersion: 1, executorId: 'dsh', installation: 'package-drift', version: null, hostEntrypoint: 'missing', inferenceConfigured: true, authentication: 'required', protocolVersions: [], capabilities: [] }),
   })
   const reports = await discovery.inspect('device.owner', now)
   assert.deepEqual(reports.map(item => [item.executorId, item.availability]), [['claude-code', 'unavailable'], ['codex', 'not-installed'], ['dsh', 'unavailable']])

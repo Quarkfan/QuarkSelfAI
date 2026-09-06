@@ -86,9 +86,11 @@ Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discove
 owner/effects 全为零。preflight 与 loopback 回执固定 `executorInvoked=false`，一次性 listener 仅用于测试且已经关闭；仓库仍不存在
 真实云端连接器、installer、常驻 client daemon 或已武装 executor。
 
-Pilot 02 已增加固定认证状态探测、bundled DSH closure 检查和只允许单 executor 的 no-effect smoke adapter。真实只读探测显示
-Claude Code/Codex 认证 ready，DSH closure 为 `0.1.1-rc.2` 但当前进程未配置 inference。唯一 Claude 合成尝试在 60 秒超时后终止，
-没有切换第二 executor、没有保留输出、没有工具/工作区读取/effect；因此该证据是 bounded failure，不能宣称 executor 已可运行。
+Pilot 02 已增加固定认证状态探测与只允许单 executor 的 no-effect smoke adapter。后续复核推翻了“DSH 五包 closure 可代表 fallback”的旧假设：
+只有锁定 `@deepseek-ai/dsh` 产品 CLI、完整必需 peer、可加载 headless composition 和 inference 配置同时成立才报告 ready。真实独立 action 证据显示
+Claude 超时、Codex 非零退出，而 DSH 在网络沙箱外通过同一签名、公开合成、零 capability/context/workspace/effect 程序成功；沙箱内仅得到 transport failure。
+DSH 经固定 stdin host 接收输入，OS argv 不含任务，工具与遥测由锁定 overlay 禁用，结果正文只进入随后删除的本地临时 store。该 adapter 仍默认不挂载，
+所以证明的是 executor boundary 可运行，不是 daemon、自动 fallback、生产激活或三执行器 parity 已完成。
 
 [ADR 0118](adr/0118-persistent-local-client-state-boundary.md) 增加独立、默认 inactive 的本地客户端 SQLite 状态域。设备私钥只以
 opaque secret/keychain reference 表示；workspace handle 到 canonical path 的映射只留本机，且每次解析重新核验根路径身份，阻断登记后

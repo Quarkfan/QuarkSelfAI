@@ -1263,3 +1263,12 @@
   adapter 未装入 configured client 或产品 composition。DSH 当前只有五包 closure、没有锁定 executable host entry，继续不得报告真实可执行 parity。
 - 完整 `npm run check` 通过：主项目 445 项中 438 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构仍为 130 modules、
   effects active 0/23。work-domain isolation、assistant continuity 和根同步审计通过，未改变 `work-integration-not-yet-isolated` 的诚实结论。
+
+## 2026-09-06 executable reasoning pilot and bundled DSH host
+
+- 真实 pilot 推翻了“安装/认证 ready 即执行 ready”的假设：Claude Code 单 action 在 120 秒超时，Codex 独立 action 非零退出；两者均未中途 fallback、未保留 raw output、未获得工具、workspace、context 或 effect。
+- 原 bundled DSH discovery 只检查五个库包，会把没有产品入口的闭包误报为可用。现在必须锁定 `@deepseek-ai/dsh` CLI、产品启动所需 peer、实际 headless entrypoint 与 inference 配置；缺任一项均不发布 protocol/capability。
+- 新增固定 stdin host 与两层通用 patch：本机推理 provider 仅从 `QUARK_INFERENCE_*` secret contract 读取，reasoning overlay 关闭文件、shell、Web、Skill、命令、目标、subagent、workflow 等模型工具和遥测。OS argv 不含任务，child environment 采用 allowlist，结果正文只写私有 content-addressed 临时 store。
+- 发布包初装暴露缺失 peer，补齐并锁定后，headless composition 可加载。相同公开合成 signed program 在网络沙箱内仅出现 transport failure，在沙箱外由 DSH 成功完成；保留的审计只含版本、稳定结果码、artifact digest 与安全属性，临时正文和 session 已删除。
+- 该 adapter、pilot 和 DSH host 仍为 `runtime=inactive`，没有挂入 configured client、daemon 或现网 composition；未切换消费者/provider/owner，未重启服务，effects 保持 0/23。回滚为移除新增 DSH 产品依赖、stdin host、两层 patch、pilot 与 discovery gate，不涉及 live 状态迁移。
+- 锁定完整 peer 后，干净 `npm ci` 通过。完整 `npm run check` 通过：主项目 449 项中 442 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 130 modules、117 assets、effects active 0/23。work-domain isolation、assistant continuity、capability evolution、capability platform、DSH/server compatibility 与根同步审计均通过；continuity 仍如实保留 `work-integration-not-yet-isolated`。
