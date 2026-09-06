@@ -1511,3 +1511,7 @@
 - 完整 `npm run check` 通过：主项目 495 项中 483 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构仍为 136 modules、
   76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once，work-domain 101/101
   且无 drift；assistant continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，全部兼容门禁通过。
+- 提交 `08182f8caafa0d4ec572d2690a3b521182b92853` 后从该 clean source input 构建 11 文件 server distribution，artifact digest
+  `sha256:175e397c96116f0ae9f284ce16c9103e416564e77f0b70cb96eccbff035f3b26`；再以一次性匹配 TLS credential 与 Ed25519 plan key 完成
+  install→configure→recover→unused config remove→unused uninstall。回读确认 configured-inactive 且 database/service/SSH apply/auto-start/effects 全为 false，
+  临时 distribution、credential 与 installation 均已删除。
