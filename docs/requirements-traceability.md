@@ -161,7 +161,7 @@ plan verifier；稳定 ready receipt 在 signal handler 安装后才产生，SIG
 SSH gateway 安装面现可生成 content-addressed review plan：专用非 root 用户、合法 Ed25519 public key、forced subsystem command、public-key-only 认证，
 并同时禁止 shell 旁路所需的 TTY、forwarding、agent、X11、tunnel 与 gateway。plan 明确 `applyAllowed=false`、`reloadAllowed=false`，没有系统写入。
 
-server distribution 现有独立 seal/verify contract 和 builder：两个 built entry、七个 SQLite migration、package manifest 与 SPDX SBOM 逐字节纳入 aggregate
+server distribution 现有独立 seal/verify contract 和 builder：cloud runtime、SSH subsystem 与 local admin 三个 built entry、七个 SQLite migration、package manifest 与 SPDX SBOM 逐字节纳入 aggregate
 digest，且 source revision 必须等于 clean HEAD。host config、TLS secret、tenant database、SSH key 和 service definition 被排除，auto-start/effects 均为 false。
 
 server 安装现可落入新的私有 root 并回读验证 receipt 与全部 distribution bytes；config/runtime/state 三个 namespace 初始为空且彼此分离。
@@ -174,7 +174,11 @@ unused uninstall 采用 quarantine 后二次空目录检查，只删除 manifest
 
 installation-scoped first-owner lifecycle 现已复用事务化 identity bootstrap，但 database 与两份 migration path 不再由调用者选择，只能从已恢复的安装派生。
 它要求 runtime/state 为空，创建恰好一个 active tenant/user/owner、零 session，并以独立 receipt 绑定 configuration digest。recovery 只读验证 SQLite integrity、
-singleton owner 与零 session；service、SSH、auto-start、listener 和 effects 均未激活。发行包内可执行管理入口、receipt 中断修复、数据库恢复与真实 owner provision 仍未完成。
+singleton owner 与零 session；service、SSH、auto-start、listener 和 effects 均未激活。receipt 中断修复、数据库恢复与真实 owner provision 仍未完成。
+
+发行包现已包含默认禁用的 local server admin entry，exact commands 仅覆盖 install、configure、bootstrap-owner、status 与两个 unused rollback；配置为 owner-only
+closed JSON，owner credential 只从 bounded stdin 进入。输出省略 credential、TLS、database path 与 tenant metadata，且不存在 start/stop、service register、SSH apply、
+effect enable 或 durable-state delete 命令。真实发行包端到端调用证据将在该 entry 提交后从 clean revision 记录。
 
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受

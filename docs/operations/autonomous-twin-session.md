@@ -1531,3 +1531,15 @@
   `sha256:59cc2bec08f2bc2b6f6286f86ee192891102b42e42977ecda490f981bb524995`；真实完成 install→configure→first owner→recover，随后用同一
   installed migration 与 database 成功认证 owner。bootstrap 未创建 session，service/SSH apply/auto-start/effects 均为 false；演练后含 credential/database
   的整个临时根已删除，未接触现网状态。
+
+## 2026-09-06 default-disabled server admin entry
+
+- server distribution 新增第三个 built entry，把 install/configure/bootstrap-owner/status/remove-unused-configuration/uninstall-unused 接到唯一既有 lifecycle owners；
+  每次运行必须显式设置本地 enable gate 并使用 exact absolute-path command。配置为 owner-only bounded closed JSON，owner credential 只从 stdin 读取。
+- bounded stdout receipt 不含 credential、TLS material、database path、tenant/user metadata 或内部异常；stable stderr 不回显路径。入口没有 start/stop、service register、
+  SSH apply/reload、effect enable 或 durable-state delete 命令，因此不改变 provider/consumer/writer 或现网 composition。
+- server manifest 现在内容寻址三个 entry；所有 synthetic distribution/install/configure/owner fixture 同步要求该文件，旧发行包仍由原 digest 独立标识。
+  提交后将从 clean revision 构建真实发行并通过 bundled entry 演练完整 inactive lifecycle。
+- 完整 `npm run check` 通过：主项目 499 项中 487 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构保持 136 modules、
+  76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once、隔离 101/101 且无 drift；
+  continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，全部兼容门禁通过。

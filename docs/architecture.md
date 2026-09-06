@@ -108,7 +108,7 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 真实 Ed25519 verifiers、随机 token、稳定 ready receipt 与 SIGTERM/SIGINT 清理均已闭合；entry 尚未进入 package script、部署 selector 或服务定义。
 [ADR 0156](adr/0156-prepared-openssh-gateway-plan.md) 提供纯渲染的 OpenSSH gateway plan：专用非 root 用户、Ed25519 public key、forced command
 与禁止 shell/TTY/forwarding/tunnel 的双重约束均被内容寻址；plan 固定不可 apply/reload，尚未写系统文件、创建账号或连接远端。
-[ADR 0157](adr/0157-content-addressed-server-distribution.md) 将 cloud server 与 SSH subsystem 两个 entry、七个 migration 和 SPDX SBOM
+[ADR 0157](adr/0157-content-addressed-server-distribution.md) 将 cloud server 与 SSH subsystem entry、七个 migration 和 SPDX SBOM
 封装为私有内容寻址发行包；builder 强制 revision 等于 HEAD 且输入已提交。发行包不含 host config、credential、tenant state、服务定义，固定不自启。
 [ADR 0158](adr/0158-inactive-server-installation-lifecycle.md) 建立 server install/recover/unused-uninstall：复制后逐字节复核，host config/runtime/state
 使用独立私有 namespace；receipt 固定未配置、未注册、未启动。任一 namespace 出现数据即阻止卸载，不能把程序回滚变成 tenant state 删除。
@@ -118,6 +118,9 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 [ADR 0160](adr/0160-installed-first-owner-bootstrap.md) 将事务化 first-owner primitive 约束到已恢复的 installation/configuration：database 与 migration
 路径全部由安装根派生，runtime/state 必须未使用，只创建一个 active tenant/user/owner 且不创建 session。回读检查 SQLite integrity、singleton owner 与零 session；
 receipt 继续固定 service/SSH apply/auto-start/effects 关闭。数据库一经创建即为不可自动删除的 durable user state，后续只能恢复前进。
+[ADR 0161](adr/0161-default-disabled-server-admin-entry.md) 再把 install/configure/bootstrap-owner/status/unused rollback 收敛为发行包内第三个 built entry。
+它需要显式本地 enable 和 exact absolute-path command，配置只读 owner-only closed JSON，owner credential 只走 bounded stdin；输出不含 credential、路径或 tenant
+metadata。entry 没有 start/stop/service/SSH apply/effect/delete-state 命令，不会成为第二个 provider 或激活入口。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。
