@@ -118,6 +118,24 @@ export function validateCapabilityManifest(value: unknown): CapabilityManifestV1
   unique(placements, 'manifest.runtime.placements')
   identifier(runtime.stateNamespace, 'manifest.runtime.stateNamespace')
   if (runtime.offlineCapable === true && !placements.includes('local') && !placements.includes('hybrid')) throw new Error('offline capability requires local or hybrid placement')
+  const requirements = array(manifest.requirements, 'manifest.requirements')
+  const requirementKeys = requirements.map((item, index) => {
+    const requirement = record(item, `manifest.requirements[${index}]`)
+    const kind = text(requirement.kind, `manifest.requirements[${index}].kind`)
+    if (!['system', 'model', 'executor', 'package', 'network', 'device', 'capability'].includes(kind)) throw new Error('manifest requirement kind is invalid')
+    const placement = text(requirement.placement, `manifest.requirements[${index}].placement`)
+    if (!placements.includes(placement)) throw new Error('manifest requirement placement is not supported by the capability')
+    return `${kind}:${identifier(requirement.id, `manifest.requirements[${index}].id`)}:${placement}`
+  })
+  unique(requirementKeys, 'manifest.requirements')
+  const lifecycle = record(manifest.lifecycle, 'manifest.lifecycle')
+  const lifecycleActions = ['install', 'load', 'start', 'stop', 'upgrade', 'uninstall', 'recover']
+  if (Object.keys(lifecycle).sort().join(',') !== [...lifecycleActions].sort().join(',')) throw new Error('manifest lifecycle must declare every supported action exactly once')
+  for (const action of lifecycleActions) {
+    const handler = record(lifecycle[action], `manifest.lifecycle.${action}`)
+    identifier(handler.handlerInterface, `manifest.lifecycle.${action}.handlerInterface`)
+    if (typeof handler.supported !== 'boolean' || !['none', 'install', 'session', 'action'].includes(text(handler.approval, `manifest.lifecycle.${action}.approval`))) throw new Error(`manifest.lifecycle.${action} is invalid`)
+  }
   const interfaces = array(manifest.interfaces, 'manifest.interfaces').map((item, index) => {
     const entry = record(item, `manifest.interfaces[${index}]`)
     return `${text(entry.kind, `manifest.interfaces[${index}].kind`)}:${identifier(entry.id, `manifest.interfaces[${index}].id`)}:${text(entry.direction, `manifest.interfaces[${index}].direction`)}`
@@ -133,6 +151,15 @@ export function validateCapabilityManifest(value: unknown): CapabilityManifestV1
   const tests = array(manifest.tests, 'manifest.tests')
   if (!tests.some(item => record(item, 'manifest.tests item').kind === 'contract' && record(item, 'manifest.tests item').required === true)) throw new Error('manifest requires a contract test')
   if (tests.some(item => !['none', 'recording-sink'].includes(text(record(item, 'manifest.tests item').effectMode, 'manifest.tests.effectMode')))) throw new Error('manifest tests cannot enable effects')
+  const healthCheckIds = array(manifest.healthChecks, 'manifest.healthChecks').map((item, index) => {
+    const check = record(item, `manifest.healthChecks[${index}]`)
+    const placement = text(check.placement, `manifest.healthChecks[${index}].placement`)
+    if (!placements.includes(placement)) throw new Error('manifest health check placement is not supported by the capability')
+    if (!Number.isSafeInteger(check.timeoutMs) || Number(check.timeoutMs) <= 0) throw new Error('manifest health check timeout must be a positive integer')
+    identifier(check.interfaceId, `manifest.healthChecks[${index}].interfaceId`)
+    return identifier(check.id, `manifest.healthChecks[${index}].id`)
+  })
+  unique(healthCheckIds, 'manifest.healthChecks')
   const recovery = record(manifest.recovery, 'manifest.recovery')
   if (recovery.restoreEffectsEnabled !== false) throw new Error('manifest recovery must restore with effects disabled')
   return value as CapabilityManifestV1
@@ -211,4 +238,3 @@ export function toExecutorAdapterInput(executorId: string, value: unknown): Exec
   const envelope = validateExecutionEnvelope(value)
   return { executorId: identifier(executorId, 'executorId'), envelope, normalizedContextDigest: contentDigest(envelope) }
 }
-

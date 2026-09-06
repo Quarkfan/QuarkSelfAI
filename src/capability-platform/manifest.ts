@@ -52,6 +52,31 @@ export interface CapabilityRuntimeV1 {
   readonly offlineCapable: boolean
 }
 
+export interface CapabilityRuntimeRequirementV1 {
+  readonly kind: 'system' | 'model' | 'executor' | 'package' | 'network' | 'device' | 'capability'
+  readonly id: string
+  readonly versionRange: string | null
+  readonly placement: CapabilityPlacement
+  readonly required: boolean
+}
+
+export type CapabilityLifecycleAction = 'install' | 'load' | 'start' | 'stop' | 'upgrade' | 'uninstall' | 'recover'
+
+export interface CapabilityLifecycleHandlerV1 {
+  /** A declared capability interface, never a shell command from the cloud plan. */
+  readonly handlerInterface: string
+  readonly supported: boolean
+  readonly approval: 'none' | 'install' | 'session' | 'action'
+}
+
+export interface CapabilityHealthCheckV1 {
+  readonly id: string
+  readonly interfaceId: string
+  readonly placement: CapabilityPlacement
+  readonly timeoutMs: number
+  readonly required: boolean
+}
+
 export interface CapabilityRecoveryV1 {
   readonly strategy: 'stateless' | 'reinstall' | 'snapshot' | 'encrypted-state'
   readonly rollbackVersion: string | null
@@ -75,11 +100,14 @@ export interface CapabilityManifestV1 {
   readonly description: string
   readonly source: CapabilitySourceV1
   readonly runtime: CapabilityRuntimeV1
+  readonly requirements: readonly CapabilityRuntimeRequirementV1[]
+  readonly lifecycle: Readonly<Record<CapabilityLifecycleAction, CapabilityLifecycleHandlerV1>>
   readonly interfaces: readonly CapabilityInterfaceV1[]
   readonly dependencies: readonly CapabilityDependencyV1[]
   readonly permissions: readonly CapabilityPermissionDeclarationV1[]
   readonly dataClasses: readonly string[]
   readonly tests: readonly CapabilityTestDeclarationV1[]
+  readonly healthChecks: readonly CapabilityHealthCheckV1[]
   readonly recovery: CapabilityRecoveryV1
 }
 
@@ -93,4 +121,3 @@ export interface CapabilityInstallationStateV1 {
   readonly activeOwnerLease: null
   readonly externalWritesEnabled: false
 }
-

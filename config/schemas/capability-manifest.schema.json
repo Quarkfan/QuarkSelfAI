@@ -4,7 +4,7 @@
   "title": "Capability Manifest V1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "name", "version", "kind", "description", "source", "runtime", "interfaces", "dependencies", "permissions", "dataClasses", "tests", "recovery"],
+  "required": ["schemaVersion", "id", "name", "version", "kind", "description", "source", "runtime", "requirements", "lifecycle", "interfaces", "dependencies", "permissions", "dataClasses", "tests", "healthChecks", "recovery"],
   "properties": {
     "schemaVersion": {"const": 1},
     "id": {"$ref": "#/$defs/id"},
@@ -38,11 +38,23 @@
         "offlineCapable": {"type": "boolean"}
       }
     },
+    "requirements": {"type": "array", "items": {"$ref": "#/$defs/requirement"}},
+    "lifecycle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["install", "load", "start", "stop", "upgrade", "uninstall", "recover"],
+      "properties": {
+        "install": {"$ref": "#/$defs/lifecycleHandler"}, "load": {"$ref": "#/$defs/lifecycleHandler"},
+        "start": {"$ref": "#/$defs/lifecycleHandler"}, "stop": {"$ref": "#/$defs/lifecycleHandler"},
+        "upgrade": {"$ref": "#/$defs/lifecycleHandler"}, "uninstall": {"$ref": "#/$defs/lifecycleHandler"},
+        "recover": {"$ref": "#/$defs/lifecycleHandler"}
+      }
+    },
     "interfaces": {"type": "array", "items": {"$ref": "#/$defs/interface"}},
     "dependencies": {"type": "array", "items": {"$ref": "#/$defs/dependency"}},
     "permissions": {"type": "array", "items": {"$ref": "#/$defs/permission"}},
     "dataClasses": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
     "tests": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/test"}},
+    "healthChecks": {"type": "array", "items": {"$ref": "#/$defs/healthCheck"}},
     "recovery": {"type": "object", "additionalProperties": false, "required": ["strategy", "rollbackVersion", "stateIncluded", "restoreEffectsEnabled"], "properties": {"strategy": {"enum": ["stateless", "reinstall", "snapshot", "encrypted-state"]}, "rollbackVersion": {"type": ["string", "null"]}, "stateIncluded": {"type": "boolean"}, "restoreEffectsEnabled": {"const": false}}}
   },
   "$defs": {
@@ -51,7 +63,10 @@
     "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
     "interface": {"type": "object", "additionalProperties": false, "required": ["kind", "id", "version", "direction", "compatibility"], "properties": {"kind": {"enum": ["tool", "port", "event", "resource", "ui", "runtime", "experience"]}, "id": {"$ref": "#/$defs/id"}, "version": {"$ref": "#/$defs/version"}, "direction": {"enum": ["provides", "requires"]}, "inputSchema": {"type": "string"}, "outputSchema": {"type": "string"}, "compatibility": {"type": "array", "items": {"type": "string"}}}},
     "dependency": {"type": "object", "additionalProperties": false, "required": ["id", "versionRange", "required"], "properties": {"id": {"$ref": "#/$defs/id"}, "versionRange": {"type": "string", "minLength": 1}, "required": {"type": "boolean"}, "placement": {"enum": ["local", "cloud", "hybrid"]}}},
+    "requirement": {"type": "object", "additionalProperties": false, "required": ["kind", "id", "versionRange", "placement", "required"], "properties": {"kind": {"enum": ["system", "model", "executor", "package", "network", "device", "capability"]}, "id": {"$ref": "#/$defs/id"}, "versionRange": {"type": ["string", "null"]}, "placement": {"enum": ["local", "cloud", "hybrid"]}, "required": {"type": "boolean"}}},
+    "lifecycleHandler": {"type": "object", "additionalProperties": false, "required": ["handlerInterface", "supported", "approval"], "properties": {"handlerInterface": {"$ref": "#/$defs/id"}, "supported": {"type": "boolean"}, "approval": {"enum": ["none", "install", "session", "action"]}}},
     "permission": {"type": "object", "additionalProperties": false, "required": ["id", "kind", "operations", "scope", "placement", "approval", "required", "dataClasses"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"enum": ["workspace", "file", "browser", "desktop", "network", "secret-reference", "process", "container", "gpu", "port", "data", "external-effect"]}, "operations": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["discover", "read", "write", "execute", "connect", "listen", "render", "persist"]}}, "scope": {"type": "string", "minLength": 1, "maxLength": 500}, "placement": {"enum": ["local", "cloud", "hybrid"]}, "approval": {"enum": ["none", "install", "session", "action"]}, "required": {"type": "boolean"}, "dataClasses": {"type": "array", "items": {"type": "string"}}, "effect": {"type": "object", "additionalProperties": false, "required": ["kind", "externalWrite", "writeVerificationRequired"], "properties": {"kind": {"type": "string", "minLength": 1}, "externalWrite": {"type": "boolean"}, "writeVerificationRequired": {"type": "boolean"}}}}},
-    "test": {"type": "object", "additionalProperties": false, "required": ["id", "kind", "required", "effectMode"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"enum": ["contract", "fixture", "redacted-replay", "health", "shadow"]}, "required": {"type": "boolean"}, "effectMode": {"enum": ["none", "recording-sink"]}}}
+    "test": {"type": "object", "additionalProperties": false, "required": ["id", "kind", "required", "effectMode"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"enum": ["contract", "fixture", "redacted-replay", "health", "shadow"]}, "required": {"type": "boolean"}, "effectMode": {"enum": ["none", "recording-sink"]}}},
+    "healthCheck": {"type": "object", "additionalProperties": false, "required": ["id", "interfaceId", "placement", "timeoutMs", "required"], "properties": {"id": {"$ref": "#/$defs/id"}, "interfaceId": {"$ref": "#/$defs/id"}, "placement": {"enum": ["local", "cloud", "hybrid"]}, "timeoutMs": {"type": "integer", "minimum": 1}, "required": {"type": "boolean"}}}
   }
 }

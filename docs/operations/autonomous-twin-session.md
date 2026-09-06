@@ -709,12 +709,16 @@
 - 确定性校验拒绝绝对本地路径、secret-shaped 值、未经 action approval 与写后核验的外部 effect、cloud-only offline 声明、
   restore 后开启 effect、跨作用域 approval 和 action 中途切换执行器。Claude Code、Codex、DSH fixture 使用同一 envelope 并
   产生同一规范化上下文摘要。
-- `InactiveCapabilityRegistryV1` 没有 Cordis lifecycle，也不安装、加载、授权或执行；注册结果固定为零 consumer、无 provider
+- `InactiveCapabilityRegistryV1` 没有 Cordis lifecycle，也不安装、加载、授权或执行；注册结果诚实标记为
+  `catalogued-inactive`（contract validation 不冒充 artifact 签名验证），并固定为零 consumer、无 provider
   lease、零 scheduler、外部写关闭。同一 id/version 不同 digest 失败关闭。架构门禁进一步要求类型 contract 与实现隔离，
   因此公共类型作为第 100 个静态 contract module，校验/registry 作为第 101 个 inactive 治理 module；两者均进入 exactly-once
   迁移映射，原 99 项处置保持不变。
 - 本批没有改变现网 composition、消费者/provider/scheduler/writer、网络、凭证、服务或数据；没有启用私有包、删除主线来源
   或重启。静态 POC 视觉证据仍 outstanding，不因开发授权被误记为验收完成。
+- 对总 Goal 逐字段复核后补齐 Manifest 的完整 lifecycle handler（install/load/start/stop/upgrade/uninstall/recover）、system/model/
+  executor/package/network/device/capability requirements 与 health check。handler 只能引用已声明接口而不是接收云端 shell command；
+  placement、action 完整性和正 timeout 由 validator 失败关闭。
 
 ## 2026-09-06 Capability Platform Phase 2A 客户端安全边界
 

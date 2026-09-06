@@ -10,7 +10,9 @@ Local Client Runtime、Capability SDK/Runtime 与 Agent Orchestration 四层组�
 消费同一个 Execution Envelope，DSH 是客户端保底执行器。
 
 整体边界仍是 `incremental-implementation / runtime-inactive`，不描述现网事实。Phase 1A 已实现公共 TypeScript/JSON
-contract、规范化摘要和无生命周期的 inactive registry，但没有挂载到 Cordis 或运行 composition。现网仍按下文的本地
+contract、规范化摘要和无 Cordis lifecycle 的 inactive registry，但没有挂载到 Cordis 或运行 composition。Manifest
+显式声明七类 lifecycle handler、系统/模型/执行器/包/网络/设备/能力依赖与 health check；handler 是接口引用，不是远程命令。
+现网仍按下文的本地
 单实例与 compatibility owner 运行；后续批次不得据此安装或激活新制品、切换 consumer/provider/scheduler/writer、上传
 本地敏感数据或删除现有来源。原 99 个模块的拟处置与控制台范围分别由
 `config/capability-platform-migration.json` 和 `config/capability-platform-console-coverage.json` 固定。

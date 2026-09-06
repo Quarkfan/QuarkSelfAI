@@ -10,7 +10,9 @@
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
 
 Phase 1A 已实现 `CapabilityManifestV1`、`AgentBlueprintV1`、`ExecutionEnvelopeV1`、权限/接口 contract、确定性
-canonical digest 和无生命周期的 inactive registry，并以 Claude Code、Codex、DSH 等价输入 fixture 验证。它只进入公共
+canonical digest 和无 Cordis lifecycle 的 inactive registry，并以 Claude Code、Codex、DSH 等价输入 fixture 验证。
+Manifest 覆盖七类 lifecycle handler、完整 runtime requirement 类别和 health check，登记态为 `catalogued-inactive`，不把
+schema validation 冒充 artifact 验证。它只进入公共
 静态 API；没有实现云控制面、客户端 daemon、安装器、执行器发现、私有包注册或任何运行 owner 切换。
 
 Phase 2A 已实现 provider-neutral 设备公开身份、隐私有界 executor report、纯 negotiation、signed plan 校验端口和 inactive

@@ -4,7 +4,7 @@ import { validateCapabilityManifest } from './validation.js'
 export interface InactiveCapabilityRecordV1 {
   readonly manifest: CapabilityManifestV1
   readonly registeredAt: string
-  readonly state: 'verified-inactive'
+  readonly state: 'catalogued-inactive'
   readonly consumerCount: 0
   readonly providerLease: null
   readonly schedulerCount: 0
@@ -27,7 +27,7 @@ export class InactiveCapabilityRegistryV1 {
       return existing
     }
     const record: InactiveCapabilityRecordV1 = Object.freeze({
-      manifest, registeredAt: now.toISOString(), state: 'verified-inactive', consumerCount: 0,
+      manifest, registeredAt: now.toISOString(), state: 'catalogued-inactive', consumerCount: 0,
       providerLease: null, schedulerCount: 0, externalWritesEnabled: false,
     })
     this.#records.set(key, record)

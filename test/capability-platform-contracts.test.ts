@@ -27,6 +27,19 @@ function manifest(overrides: Record<string, unknown> = {}): CapabilityManifestV1
       placements: ['local'], isolation: 'browser-profile', supportedPlatforms: ['darwin-arm64'],
       executorRequirements: ['tool-call-v1'], stateNamespace: 'browser.headless', offlineCapable: true,
     },
+    requirements: [
+      { kind: 'system', id: 'browser-engine', versionRange: null, placement: 'local', required: true },
+      { kind: 'executor', id: 'tool-call-v1', versionRange: '^1.0.0', placement: 'local', required: true },
+    ],
+    lifecycle: {
+      install: { handlerInterface: 'lifecycle.install', supported: true, approval: 'install' },
+      load: { handlerInterface: 'lifecycle.load', supported: true, approval: 'session' },
+      start: { handlerInterface: 'lifecycle.start', supported: true, approval: 'session' },
+      stop: { handlerInterface: 'lifecycle.stop', supported: true, approval: 'none' },
+      upgrade: { handlerInterface: 'lifecycle.upgrade', supported: true, approval: 'install' },
+      uninstall: { handlerInterface: 'lifecycle.uninstall', supported: true, approval: 'install' },
+      recover: { handlerInterface: 'lifecycle.recover', supported: true, approval: 'install' },
+    },
     interfaces: [{ kind: 'tool', id: 'browser.navigate', version: '1', direction: 'provides', compatibility: ['1'] }],
     dependencies: [],
     permissions: [{
@@ -35,6 +48,7 @@ function manifest(overrides: Record<string, unknown> = {}): CapabilityManifestV1
     }],
     dataClasses: ['user-content'],
     tests: [{ id: 'contract.default', kind: 'contract', required: true, effectMode: 'none' }],
+    healthChecks: [{ id: 'health.ready', interfaceId: 'browser.navigate', placement: 'local', timeoutMs: 5000, required: true }],
     recovery: { strategy: 'reinstall', rollbackVersion: null, stateIncluded: false, restoreEffectsEnabled: false },
     ...overrides,
   }
@@ -76,13 +90,13 @@ function envelope(overrides: Record<string, unknown> = {}): ExecutionEnvelopeV1 
   }
 }
 
-test('validates a portable capability and registers it only as verified inactive', () => {
+test('validates a portable capability and registers it only as catalogued inactive', () => {
   const candidate = manifest()
   assert.equal(validateCapabilityManifest(candidate), candidate)
   const registry = new InactiveCapabilityRegistryV1()
   const first = registry.register(candidate, new Date('2026-09-06T00:00:00.000Z'))
   assert.deepEqual({ state: first.state, consumers: first.consumerCount, provider: first.providerLease, schedulers: first.schedulerCount, writes: first.externalWritesEnabled },
-    { state: 'verified-inactive', consumers: 0, provider: null, schedulers: 0, writes: false })
+    { state: 'catalogued-inactive', consumers: 0, provider: null, schedulers: 0, writes: false })
   assert.equal(registry.register(structuredClone(candidate)), first)
   assert.throws(() => registry.register(manifest({ source: { ...candidate.source, artifactDigest: `sha256:${'b'.repeat(64)}` } })), /another digest/)
 })
@@ -94,6 +108,8 @@ test('manifest validation fails closed for host paths, secret-shaped scopes, eff
   assert.throws(() => validateCapabilityManifest(manifest({ permissions: [{ ...base.permissions[0], kind: 'external-effect', approval: 'session', effect: { kind: 'send', externalWrite: true, writeVerificationRequired: false } }] })), /action approval/)
   assert.throws(() => validateCapabilityManifest(manifest({ runtime: { ...base.runtime, placements: ['cloud'], offlineCapable: true } })), /offline capability/)
   assert.throws(() => validateCapabilityManifest(manifest({ recovery: { ...base.recovery, restoreEffectsEnabled: true } })), /effects disabled/)
+  assert.throws(() => validateCapabilityManifest(manifest({ lifecycle: { ...base.lifecycle, recover: undefined } })), /manifest.lifecycle.recover/)
+  assert.throws(() => validateCapabilityManifest(manifest({ requirements: [{ ...base.requirements[0], placement: 'cloud' }] })), /placement is not supported/)
 })
 
 test('blueprint graph and executor continuity are deterministic and fail closed', () => {
