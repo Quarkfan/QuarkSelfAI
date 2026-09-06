@@ -1547,3 +1547,15 @@
   `sha256:83cb806bd9f523e08128c5b936696dbeda07429b32c93d3608a5d3701f4b27c7`。发行目录内 admin entry 完成 install，安装后的同一 entry
   完成 configure、stdin first-owner 与 status 回读；最终为 `owner-created-inactive`，receipt 无 tenant metadata，disabled status 为 exit 1 和稳定无路径错误。
   service/SSH apply/auto-start/effects 全为 false；含一次性 credential/database 的临时根已整体删除。
+
+## 2026-09-06 prepared server user-service definitions
+
+- 新增 macOS LaunchAgent 与 systemd user unit renderer/template，只引用 installed cloud-server entry 与 config；Node/log 路径均须 absolute/normalized，systemd 进一步拒绝
+  whitespace、quote 与 backslash。定义显式设置 server enable gate，不包含 credential、tenant metadata 或 checkout path。
+- receipt 固定 `prepared-inactive`、registered/started false、single-provider true、effects false；rollback 只允许先 stop 再移除 definition 并保留 installation state。
+  本批没有写 LaunchAgents/systemd 目录、调用 service manager、创建 OS user、注册/启动进程、打开 listener 或改变现网 composition。
+- 两个 template 由 inactive cloud composition 唯一拥有，assets 从 121 增至 123；当前不纳入 server distribution，production system service 的专用非 root identity
+  与真实 install/activation 仍是独立门禁。
+- 完整 `npm run check` 通过：主项目 501 项中 489 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构保持 136 modules、
+  76 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once、隔离 101/101 且无 drift；
+  continuity 继续如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，全部兼容门禁通过。

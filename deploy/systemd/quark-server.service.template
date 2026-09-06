@@ -1,0 +1,17 @@
+[Unit]
+Description=QuarkSelfAI single-provider cloud server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=__PROGRAM_ROOT__
+Environment=QUARK_CLOUD_SERVER_ENABLE=1
+ExecStart=__NODE_EXECUTABLE__ __SERVER_ENTRY__ run __SERVER_CONFIG__
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:__STDOUT_PATH__
+StandardError=append:__STDERR_PATH__
+
+[Install]
+WantedBy=default.target

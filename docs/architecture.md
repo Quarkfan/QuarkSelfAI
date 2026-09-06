@@ -121,6 +121,9 @@ receipt 继续固定 service/SSH apply/auto-start/effects 关闭。数据库一�
 [ADR 0161](adr/0161-default-disabled-server-admin-entry.md) 再把 install/configure/bootstrap-owner/status/unused rollback 收敛为发行包内第三个 built entry。
 它需要显式本地 enable 和 exact absolute-path command，配置只读 owner-only closed JSON，owner credential 只走 bounded stdin；输出不含 credential、路径或 tenant
 metadata。entry 没有 start/stop/service/SSH apply/effect/delete-state 命令，不会成为第二个 provider 或激活入口。
+[ADR 0162](adr/0162-prepared-user-service-definitions.md) 增加 launchd LaunchAgent 与 systemd user unit 的确定性 renderer；两者只引用 installed
+server entry/config，显式设置 server enable gate，并返回 content digest 与 unregistered/unstarted/single-provider/effects-off receipt。当前只生成定义，不写 service-manager
+目录、不调用 launchctl/systemctl、不启动进程；production system service 的非 root OS identity 仍需单独设计。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

@@ -180,6 +180,10 @@ singleton owner 与零 session；service、SSH、auto-start、listener 和 effec
 closed JSON，owner credential 只从 bounded stdin 进入。输出省略 credential、TLS、database path 与 tenant metadata，且不存在 start/stop、service register、SSH apply、
 effect enable 或 durable-state delete 命令。真实发行包端到端调用证据将在该 entry 提交后从 clean revision 记录。
 
+service-manager 边界现可纯渲染 macOS LaunchAgent 与 systemd user unit：定义只指向 installed entry/config，显式设置 server enable gate，且不含 credential 或 tenant
+metadata；receipt 固定 prepared-inactive、unregistered、unstarted、single-provider、effects-off。renderer 不写系统目录、不调用 service manager、不启动进程；生产 system
+service 的专用非 root identity、真实注册/启动和单实例切换仍未完成。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。
