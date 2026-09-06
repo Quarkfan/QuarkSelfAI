@@ -189,7 +189,8 @@ custom dump inventory 非空且 bundle migration 与 checkout 精确一致；然
 
 解密必须落到新的 staging 目录；恢复必须落到另一个同 version、source revision、distribution digest，且 runtime/state 为空的 configured-inactive
 installation。目标端自行配置新的 TLS/host path，数据库 no-overwrite 写入后重新验证 owner，并生成绑定目标 installation/configuration 的 receipt。
-任何步骤都不注册服务、不 apply SSH、不自启、不启用 effect；ephemeral instance lease 和 socket 不进入恢复包。当前 v1 只支持 inactive SQLite 精确版本恢复；active/quiesced 备份、PostgreSQL server
+任何步骤都不注册服务、不 apply SSH、不自启、不启用 effect；ephemeral instance lease 和 socket 不进入恢复包。恢复目标安装根必须能将 `runtime/device.sock` 保持在
+103 UTF-8 bytes 内，避免 macOS/Linux Unix socket 路径差异延迟到启动时才失败。当前 v1 只支持 inactive SQLite 精确版本恢复；active/quiesced 备份、PostgreSQL server
 state 和跨版本迁移仍需后续独立门禁。
 
 ## 6. 恢复安全门禁

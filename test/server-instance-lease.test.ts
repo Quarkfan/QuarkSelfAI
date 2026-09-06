@@ -7,12 +7,12 @@ import { InstalledServerInstanceLeaseV1 } from '../src/control-plane/server-inst
 
 test('permits exactly one installed server provider owner and releases only its own lease', async () => {
   const root = await privateRoot(); const path = join(root, 'instance')
-  try { const first = await InstalledServerInstanceLeaseV1.acquire(path, new Date('2026-09-06T00:00:00.000Z')); await assert.rejects(InstalledServerInstanceLeaseV1.acquire(path), /another installed server/); await first.release(); await assert.rejects(lstat(path), missing); const next = await InstalledServerInstanceLeaseV1.acquire(path); await next.release() } finally { await rm(root, { recursive: true, force: true }) }
+  try { const first = await InstalledServerInstanceLeaseV1.acquire(path, new Date('2026-09-06T00:00:00.000Z')); assert.equal(first.staleOwnerReclaimed, false); await assert.rejects(InstalledServerInstanceLeaseV1.acquire(path), /another installed server/); await first.release(); await assert.rejects(lstat(path), missing); const next = await InstalledServerInstanceLeaseV1.acquire(path); assert.equal(next.staleOwnerReclaimed, false); await next.release() } finally { await rm(root, { recursive: true, force: true }) }
 })
 
 test('reclaims only a structurally valid lease whose process is gone', async () => {
   const root = await privateRoot(); const path = join(root, 'instance')
-  try { await mkdir(path, { mode: 0o700 }); await writeFile(join(path, 'owner.json'), `${JSON.stringify({ schemaVersion: 1, pid: 2_147_483_647, token: '00000000-0000-4000-8000-000000000000', createdAt: '2026-09-06T00:00:00.000Z' })}\n`, { mode: 0o600 }); const lease = await InstalledServerInstanceLeaseV1.acquire(path); await lease.release(); await assert.rejects(lstat(path), missing) } finally { await rm(root, { recursive: true, force: true }) }
+  try { await mkdir(path, { mode: 0o700 }); await writeFile(join(path, 'owner.json'), `${JSON.stringify({ schemaVersion: 1, pid: 2_147_483_647, token: '00000000-0000-4000-8000-000000000000', createdAt: '2026-09-06T00:00:00.000Z' })}\n`, { mode: 0o600 }); const lease = await InstalledServerInstanceLeaseV1.acquire(path); assert.equal(lease.staleOwnerReclaimed, true); await lease.release(); await assert.rejects(lstat(path), missing) } finally { await rm(root, { recursive: true, force: true }) }
 })
 
 test('never guesses or removes malformed stale lease state', async () => {

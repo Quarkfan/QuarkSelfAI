@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 import { proxySshSubsystemFrameV1 } from '../src/client-runtime/ssh-subsystem-ipc-proxy.js'
-import { openCloudSshIpcBridgeV1 } from '../src/control-plane/cloud-ssh-ipc.js'
+import { openCloudSshIpcBridgeV1, reconcileStaleCloudSshIpcSocketV1 } from '../src/control-plane/cloud-ssh-ipc.js'
 
 test('proxies one SSH subsystem frame to the existing cloud host over an owner-only Unix socket', async t => {
   const created = await mkdtemp(join(tmpdir(), 'quark-ssh-ipc-')); await chmod(created, 0o700); const root = await realpath(created); const socketPath = join(root, 'device.sock')
@@ -14,8 +14,10 @@ test('proxies one SSH subsystem frame to the existing cloud host over an owner-o
     try { bridge = await openCloudSshIpcBridgeV1({ schemaVersion: 1, enabled: true, socketPath, requestTimeoutMs: 2_000, providerOwnership: 'shared-host', externalEffectsEnabled: false }, host) } catch (error) { if ((error as NodeJS.ErrnoException).code === 'EPERM') { t.skip('sandbox does not permit Unix socket listeners'); return }; throw error }
     try {
       assert.equal((await lstat(socketPath)).mode & 0o077, 0)
+      await assert.rejects(reconcileStaleCloudSshIpcSocketV1(socketPath), /still active/)
+      assert.equal((await lstat(socketPath)).isSocket(), true)
       assert.equal((await proxySshSubsystemFrameV1(socketPath, Buffer.from('frame'))).toString(), 'response:frame')
-      assert.deepEqual({ calls, requests: bridge.requestCount(), mode: bridge.mode }, { calls: 1, requests: 1, mode: 'owner-only' })
+      assert.deepEqual({ calls, requests: bridge.requestCount(), mode: bridge.mode }, { calls: 1, requests: 2, mode: 'owner-only' })
     } finally { await bridge.close(); bridge = undefined }
     await assert.rejects(lstat(socketPath), error => (error as NodeJS.ErrnoException).code === 'ENOENT')
   } finally { if (bridge) await bridge.close(); await rm(root, { recursive: true, force: true }) }

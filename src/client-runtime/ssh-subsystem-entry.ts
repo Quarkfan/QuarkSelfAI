@@ -3,6 +3,7 @@ import { dirname, isAbsolute, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { MAX_DEVICE_FRAME_BYTES } from './device-codec.js'
 import { proxySshSubsystemFrameV1 } from './ssh-subsystem-ipc-proxy.js'
+import { exactPortableUnixSocketPathV1 } from './unix-socket-path.js'
 
 interface SshSubsystemEntryConfigV1 { readonly schemaVersion: 1; readonly socketPath: string; readonly timeoutMs: number; readonly providerOwnership: 'shared-host'; readonly externalEffectsEnabled: false }
 
@@ -23,7 +24,8 @@ async function loadConfig(path: string): Promise<SshSubsystemEntryConfigV1> {
   const raw = await readFile(path); if (raw.byteLength > 4096) throw new Error('SSH subsystem config is too large')
   let value: unknown; try { value = JSON.parse(raw.toString('utf8')) } finally { raw.fill(0) }
   if (!isRecord(value)) throw new Error('SSH subsystem config is invalid'); const keys = ['schemaVersion', 'socketPath', 'timeoutMs', 'providerOwnership', 'externalEffectsEnabled']
-  if (Object.keys(value).sort().join(',') !== keys.sort().join(',') || value.schemaVersion !== 1 || typeof value.socketPath !== 'string' || !isAbsolute(value.socketPath) || resolve(value.socketPath) !== value.socketPath || !Number.isSafeInteger(value.timeoutMs) || (value.timeoutMs as number) < 1_000 || (value.timeoutMs as number) > 30_000 || value.providerOwnership !== 'shared-host' || value.externalEffectsEnabled !== false) throw new Error('SSH subsystem config is invalid')
+  try { exactPortableUnixSocketPathV1(value.socketPath) } catch { throw new Error('SSH subsystem config is invalid') }
+  if (Object.keys(value).sort().join(',') !== keys.sort().join(',') || value.schemaVersion !== 1 || !Number.isSafeInteger(value.timeoutMs) || (value.timeoutMs as number) < 1_000 || (value.timeoutMs as number) > 30_000 || value.providerOwnership !== 'shared-host' || value.externalEffectsEnabled !== false) throw new Error('SSH subsystem config is invalid')
   return value as unknown as SshSubsystemEntryConfigV1
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }

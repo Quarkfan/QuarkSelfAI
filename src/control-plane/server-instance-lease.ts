@@ -7,21 +7,22 @@ interface ServerLeaseOwnerV1 { readonly schemaVersion: 1; readonly pid: number; 
 /** Owns the right to open one installed server provider graph. */
 export class InstalledServerInstanceLeaseV1 {
   #released = false
-  private constructor(private readonly path: string, private readonly owner: ServerLeaseOwnerV1) {}
+  private constructor(private readonly path: string, private readonly owner: ServerLeaseOwnerV1, readonly staleOwnerReclaimed: boolean) {}
 
   static async acquire(pathInput: string, now = new Date()): Promise<InstalledServerInstanceLeaseV1> {
     if (!isAbsolute(pathInput) || resolve(pathInput) !== pathInput || pathInput === '/' || Number.isNaN(now.getTime())) throw new Error('server instance lease input is invalid')
     const parent = await privateDirectory(dirname(pathInput)); const path = join(parent, basename(pathInput)); const owner = Object.freeze({ schemaVersion: 1 as const, pid: process.pid, token: randomUUID(), createdAt: now.toISOString() })
+    let staleOwnerReclaimed = false
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await mkdir(path, { mode: 0o700 })
         try { await writeOwner(join(path, 'owner.json'), owner) } catch (error) { await cleanupCreatedLease(path, owner); throw error }
-        return new InstalledServerInstanceLeaseV1(path, owner)
+        return new InstalledServerInstanceLeaseV1(path, owner, staleOwnerReclaimed)
       } catch (error) {
         if (!hasCode(error, 'EEXIST')) throw error
         const current = await readOwner(path); if (alive(current.pid)) throw new Error('another installed server instance owns the provider graph')
         const stale = `${path}.stale.${randomUUID()}`
-        try { await rename(path, stale); await removeExactLease(stale) } catch (reclaimError) { if (!hasCode(reclaimError, 'ENOENT')) throw reclaimError }
+        try { await rename(path, stale); await removeExactLease(stale); staleOwnerReclaimed = true } catch (reclaimError) { if (!hasCode(reclaimError, 'ENOENT')) throw reclaimError }
       }
     }
     throw new Error('could not acquire installed server instance lease')

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { chmod, copyFile, lstat, mkdir, open, readdir, readFile, realpath, rename, rmdir, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { verifyServerDistribution, type ServerDistributionManifestV1 } from './server-distribution.js'
+import { exactPortableUnixSocketPathV1 } from '../client-runtime/unix-socket-path.js'
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/
 export interface InactiveServerInstallationReceiptV1 { readonly schemaVersion: 1; readonly installationId: string; readonly serverVersion: string; readonly distributionDigest: string; readonly sourceRevision: string; readonly installedAt: string; readonly state: 'installed-inactive'; readonly configurationPresent: false; readonly autoStart: false; readonly serviceRegistered: false; readonly sshGatewayApplied: false; readonly externalEffectsEnabled: false }
@@ -42,7 +43,7 @@ export async function uninstallUnusedInactiveServer(installRoot: string): Promis
   for (const name of ['config','runtime','state']) await rmdir(join(quarantine, name)); await rmdir(quarantine); return receipt
 }
 
-async function validateNewRoot(value: string): Promise<string> { if (!isAbsolute(value) || resolve(value) !== value || value === '/' || await realpath(dirname(value)) !== dirname(value)) throw new Error('server install root must be a new exact path'); try { await lstat(value); throw new Error('server install root already exists') } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }; return value }
+async function validateNewRoot(value: string): Promise<string> { if (!isAbsolute(value) || resolve(value) !== value || value === '/' || await realpath(dirname(value)) !== dirname(value)) throw new Error('server install root must be a new exact path'); try { exactPortableUnixSocketPathV1(join(value, 'runtime/device.sock')) } catch { throw new Error('server install root cannot host a portable Unix socket') }; try { await lstat(value); throw new Error('server install root already exists') } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }; return value }
 async function validateExistingRoot(value: string): Promise<string> { if (!isAbsolute(value) || resolve(value) !== value || value === '/' || await realpath(value) !== value) throw new Error('server install root must be canonical'); await privateDirectory(value); return value }
 async function privateDirectory(path: string): Promise<void> { const state = await lstat(path); const uid = process.getuid?.(); if (!state.isDirectory() || state.isSymbolicLink() || (state.mode & 0o077) !== 0 || await realpath(path) !== path || (uid !== undefined && state.uid !== uid)) throw new Error('server installation directory is unsafe') }
 async function assertEmptyNamespaces(root: string): Promise<void> { for (const name of ['config','runtime','state']) if ((await readdir(join(root, name))).length) throw new Error('server installation contains host configuration or durable state') }

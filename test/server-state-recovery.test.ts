@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { generateKeyPairSync } from 'node:crypto'
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import test, { type TestContext } from 'node:test'
@@ -38,7 +37,7 @@ test('detects staged database drift before restore', async t => {
 })
 
 async function setup(t: TestContext): Promise<{ parent: string; source: string; target: string; mismatch: string; fakeAge: string; identity: string } | undefined> {
-  const created = await mkdtemp(join(tmpdir(), 'quark-server-state-recovery-')); await chmod(created, 0o700); const parent = await realpath(created); const distribution = join(parent, 'distribution'); const mismatchDistribution = join(parent, 'mismatch-distribution'); const source = join(parent, 'source'); const target = join(parent, 'target'); const mismatch = join(parent, 'mismatch'); const keyPath = join(parent, 'tls-key.pem'); const certPath = join(parent, 'tls-cert.pem')
+  const created = await mkdtemp(join(await realpath('/tmp'), 'qsr-')); await chmod(created, 0o700); const parent = await realpath(created); const distribution = join(parent, 'distribution'); const mismatchDistribution = join(parent, 'mismatch-distribution'); const source = join(parent, 'source'); const target = join(parent, 'target'); const mismatch = join(parent, 'mismatch'); const keyPath = join(parent, 'tls-key.pem'); const certPath = join(parent, 'tls-cert.pem')
   try {
     try { await run('/usr/bin/openssl', ['req','-x509','-newkey','rsa:2048','-nodes','-keyout',keyPath,'-out',certPath,'-subj','/CN=127.0.0.1','-days','1'], { timeout: 10_000 }) } catch { t.skip('host openssl is unavailable'); await rm(parent, { recursive: true, force: true }); return }
     await chmod(keyPath, 0o600); await chmod(certPath, 0o600); await makeDistribution(distribution, 'a'.repeat(40)); await makeDistribution(mismatchDistribution, 'b'.repeat(40)); await installInactiveServer(source, distribution); await installInactiveServer(target, distribution); await installInactiveServer(mismatch, mismatchDistribution)

@@ -157,7 +157,8 @@ IPC，失败不输出路径或内部异常。宿主测试验证真实 child proc
 
 现已提供 built 但默认禁用、未安装的 cloud server entry：只接受 exact opt-in 与 owner-only closed config，使用真实随机 token、device proof verifier 和 pinned
 plan verifier；它在读取 TLS、打开 SQLite 或 edge 前取得 installation-scoped 单实例 lease，活动 owner 阻断第二进程。稳定 ready receipt 在 signal handler 安装后才产生，
-SIGTERM 会先清理两个 edge 与唯一 provider，再释放 exact lease。尚未加入任何 package/deploy/service 启动入口；crash 后 stale socket reconciliation 仍未完成。
+SIGTERM 会先清理两个 edge 与唯一 provider，再释放 exact lease。installer 与两个 IPC 端共享 103-byte portable Unix socket 门禁；SIGKILL 遗留 state 只在 exact lease
+证明旧 PID 消失、socket owner/mode/inode 未漂移且 connection-refused 时回收。尚未加入任何 package/deploy/service 启动入口。
 
 SSH gateway 安装面现可生成 content-addressed review plan：专用非 root 用户、合法 Ed25519 public key、forced subsystem command、public-key-only 认证，
 并同时禁止 shell 旁路所需的 TTY、forwarding、agent、X11、tunnel 与 gateway。plan 明确 `applyAllowed=false`、`reloadAllowed=false`，没有系统写入。

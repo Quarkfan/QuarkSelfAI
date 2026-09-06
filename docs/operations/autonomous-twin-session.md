@@ -1614,3 +1614,15 @@
   第一实例 ready 后第二实例被 lease 稳定拒绝，第一实例 socket 保持健康，SIGTERM 后 socket/lease 均删除。最终 status 为 `owner-created-inactive`，
   service/SSH apply/auto-start/effects 全为 false；临时发行、TLS、owner credential、database 与诊断 runner 均随私有短路径根删除。演练同时确认长安装根会触发 macOS
   Unix socket `EINVAL`，安装路径长度必须在后续 service registration 前形成确定性门禁。
+
+## 2026-09-06 portable Unix socket and hard-crash recovery
+
+- installer、cloud IPC 与 sshd-side proxy 共享 103 UTF-8 bytes 的 canonical absolute path contract；过长安装根在复制 program 或创建 durable state 前失败，避免 macOS
+  `sockaddr_un` 限制只在启动时暴露。既有 server lifecycle fixture 改用短 canonical `/tmp` 根以表达真实可安装路径。
+- SIGKILL 后只有 structurally valid lease 明确回收了 dead PID owner，entry 才在读取 TLS、打开 SQLite/provider/edge 前检查遗留 socket。仅 single-link、owner-owned、
+  0600、connection-refused 且复核 device/inode/owner/mode 未漂移的 socket 可 unlink；可连接、timeout、未知错误或任何 metadata drift 都失败并保留现场。
+- 活动 socket 测试证明 liveness probe 只产生一个 empty local connection，不调用 frame handler 且拒绝删除；真实 cloud entry 测试证明 hard-crash 后 lease/socket 均残留，
+  第二次启动完成受控回收并 ready，最终 SIGTERM 后两者均消失。本批仍未注册 service、apply SSH、启用 effect 或改变现网 owner。
+- 完整 `npm run check` 通过：主项目 509 项中 497 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；宿主路径/lease/IPC/cloud entry 专项 10/10。
+  架构保持 137 modules、77 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active；work-domain 101/101 无 drift，continuity 继续如实为
+  `organizationComplete=false`、`work-integration-not-yet-isolated`，server/DSH 兼容通过。
