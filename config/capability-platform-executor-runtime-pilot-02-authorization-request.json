@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "requestId": "capability-platform-executor-runtime-pilot-02",
+  "status": "awaiting-exact-owner-approval",
+  "baseRevision": "40f314e4c276f9476d7cb6a45b87af085c8e10c7",
+  "purpose": "Prove bounded authentication readiness, bundled DSH fallback discovery and one normalized no-effect executor response without changing the current runtime owner.",
+  "fileScope": {
+    "create": [
+      "src/client-runtime/executor-readiness-probe.ts",
+      "src/client-runtime/bundled-dsh-discovery.ts",
+      "src/client-runtime/no-effect-executor-smoke.ts",
+      "scripts/run-capability-platform-executor-pilot.ts",
+      "test/client-executor-readiness-probe.test.ts",
+      "test/client-bundled-dsh-discovery.test.ts",
+      "test/client-no-effect-executor-smoke.test.ts",
+      "config/capability-platform-executor-runtime-pilot-02.json"
+    ],
+    "modify": [
+      "src/client-runtime/executable-pilot.ts",
+      "config/module-catalog.json",
+      "config/capability-platform-migration.json",
+      "docs/adr/0110-fixed-executor-probe-preflight.md",
+      "docs/architecture.md",
+      "docs/requirements-traceability.md",
+      "docs/operations/autonomous-twin-session.md"
+    ],
+    "forbidden": [
+      "package.json",
+      "cordis.patch.yml",
+      "config/product-composition.json",
+      "packages/bridge-compat/**",
+      "web/quarkfan-brand.client.d.ts",
+      "web/quarkfan-brand.client.js",
+      "../QuarkSelfAI-Work/**"
+    ]
+  },
+  "architectureChange": [
+    "separate installation, authentication and task-compatibility evidence for Claude Code, Codex and bundled DSH",
+    "discover DSH from the repository-locked runtime instead of requiring a global dsh executable",
+    "run one synthetic no-tool no-effect response through the shared normalized execution context",
+    "keep the compatibility runtime as the sole consumer, provider, scheduler and writer"
+  ],
+  "allowedActions": [
+    "execute only claude auth status --json and codex login status as fixed bounded authentication probes",
+    "read only repository package manifests and boolean presence of DSH inference configuration without reading or emitting secret values",
+    "use a temporary empty fixture workspace outside user workspaces",
+    "send one fixed public synthetic prompt to exactly one eligible executor with tools, workspace writes and continuation disabled",
+    "retain only executor id, protocol result code, bounded timing and content digest; discard raw response and process output",
+    "use no effect grants and no external write provider",
+    "commit and push the exact implementation after all gates pass"
+  ],
+  "explicitExclusions": [
+    "send user, business, customer, message, repository or internal data to any executor",
+    "invoke more than one executor or retry the synthetic action on another executor",
+    "enable tools, local file access, shell commands, browser, desktop, network tools or external writes inside the smoke action",
+    "install or upgrade a package, CLI, model or third-party project",
+    "start a cloud service, daemon, non-loopback listener or SSH connection",
+    "change DSH/Cordis or product runtime composition",
+    "activate the private Work Integration Pack",
+    "switch or duplicate a consumer, provider, scheduler or writer",
+    "migrate persistent data, delete a source or restart a service"
+  ],
+  "validation": [
+    "unit fixtures for command allowlist, output redaction, timeout, missing configuration and DSH package drift",
+    "real bounded authentication readback for installed Claude Code and Codex",
+    "real bundled DSH version and configuration-availability readback",
+    "one real synthetic no-effect response with no tools and no workspace data",
+    "assert one executor attempt, executorInvoked=true, effectsActive=0 and currentOwnerPreserved=true",
+    "npm run check",
+    "strict assistant-continuity and work-domain-isolation audits",
+    "private pack audit and root agent sync check",
+    "remote revision readback"
+  ],
+  "rollback": {
+    "method": "Terminate the one-shot child if still present, remove the temporary empty fixture workspace, then revert the single implementation commit.",
+    "persistentStateMigrationRequired": false,
+    "serviceRestartRequired": false,
+    "currentRuntimeRecoveryRequired": false
+  },
+  "sshTrackPrerequisites": [
+    "owner-selected SSH gateway endpoint reference",
+    "verified SHA256 host-key fingerprint stored behind the local identity reference",
+    "least-privilege subsystem-only SSH identity and local credential reference",
+    "server-side quark-device-v1 subsystem implementation and synthetic test window"
+  ],
+  "approvalPhrase": "批准 capability-platform-executor-runtime-pilot-02，基于 revision 40f314e4c276f9476d7cb6a45b87af085c8e10c7，严格按授权单执行。"
+}

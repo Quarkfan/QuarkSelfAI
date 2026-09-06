@@ -933,3 +933,12 @@
   forwarding。transport 切换必须保留同一 device session、signed plan、lease、checkpoint、approval、workspace、effect 与 idempotency。
 - 当前仅新增纯 contract、validator、默认 inactive 配置与离线测试；没有运行 `ssh`、打开 socket、配置 endpoint/凭证、启动 gateway、
   改 composition 或重启服务。真实 SSH adapter 与连接演练仍需绑定明确 endpoint、host key、文件范围和回滚的单独批准。
+
+## 2026-09-06 executor runtime pilot 02 authorization boundary
+
+- 基于 SSH contract revision `40f314e4c276f9476d7cb6a45b87af085c8e10c7` 固化下一批机器授权单：固定读取 Claude Code/Codex
+  auth status，按锁定 package 与配置存在性发现 bundled DSH，并只让一个 eligible executor 处理一个公开、无工具、无 effect 的合成输入。
+- Pilot 只保留 executor id、结果码、耗时与 content digest，丢弃 raw response/process output；禁止用户/业务/客户/消息/仓库内容、workspace
+  访问、工具、外部写、重试到第二 executor、依赖安装、composition 变化、服务重启与 owner 切换。
+- SSH 真实连接不在该授权单内；它仍缺 owner 选择的 gateway endpoint、真实 pinned host-key、least-privilege subsystem identity、客户端
+  credential reference 与服务端 synthetic test window。缺少任一项都不得运行 `ssh` 或建立通道。

@@ -16,8 +16,9 @@ schema validation 冒充 artifact 验证。它只进入公共
 静态 API；没有实现云控制面、客户端 daemon、安装器、执行器发现、私有包注册或任何运行 owner 切换。
 
 Phase 2A/5E 已实现 provider-neutral 设备公开身份、隐私有界 executor report、纯 negotiation、signed plan 校验端口、inactive
-client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃分类器。当前只使用注入 observation，preflight 永不启动
-listener 或 executor；因此属于客户端协议基础，不满足真实设备注册、真实执行器发现或电脑操作完成标准。
+client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃分类器。获批 Pilot 01 已真实运行固定 version probe，并完成一次
+临时 loopback signed no-effect lease/checkpoint 往返；Claude Code/Codex 安装已检测但认证未知，DSH 需要从 bundled runtime 而非全局 CLI
+发现。当前未启动 executor，仍不满足真实设备注册、真实 Agent 执行或电脑操作完成标准。
 
 设备协议已增加 direct TLS 主通道与 SSH subsystem 备用通道的静态 contract。SSH 只允许客户端主动出站到固定
 `quark-device-v1` subsystem，host key 与 credential 使用本地 opaque reference，禁止 shell、任意 command、port/agent forwarding，
