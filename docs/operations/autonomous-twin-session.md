@@ -878,3 +878,11 @@
   `leased` 后才能接受结果；`queued` task、其他 device/plan 和无效 evidence 一律失败关闭。
 - 第一份脱敏结果不可变；完全相同的重试幂等返回，冲突结果不能覆盖。result 仍不携带原始输出、lease token、本地路径或凭证。
 - 本批不接网络、不运行 Agent、不写持久数据库、不改变运行 owner/effect；模块总数与 Facility coverage 保持 115/115、55/55。
+
+## 2026-09-06 Capability Platform Phase 5D inactive local run checkpoints
+
+- 新增 in-memory local run journal：验签 no-effect plan 后形成 `leased → running ↔ paused → completed-pending-sync → synced` 状态机，
+  并把规范化 executor context digest、signed plan 与脱敏结果封装为带 checkpoint digest 的可导入导出记录。
+- restore 重新核验 checkpoint 完整性、plan 签名、device scope、无 effect 边界和 executor context；不保存 lease token、进程输出、绝对
+  路径或凭证。中断于 `running` 的记录恢复为 `paused`，避免重启后重复执行；fixture 的状态转换只验证 contract，不宣称真实执行。
+- 本批不写磁盘、不调用执行器、不连云、不同步真实结果。新增模块后 catalog/migration 116/116，Facility coverage 56/56。

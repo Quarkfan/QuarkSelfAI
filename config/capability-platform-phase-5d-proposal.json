@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-5d-inactive-local-run-checkpoints",
+  "status": "implemented-inactive",
+  "baseRevision": "4d35aa677c38234eb5dd548fb57057970d4fb9b3",
+  "architectureChange": "Add an integrity-protected in-memory local run journal for signed no-effect plans, pause/resume and pending result sync.",
+  "allowedActions": ["verify and cache signed no-effect plan state", "model pause and resume", "retain privacy-bounded pending results", "export and restore immutable checkpoints", "run offline fixtures"],
+  "explicitExclusions": ["write checkpoints to disk", "invoke an executor", "connect to a cloud service", "accept effectful plans", "sync a real result", "runtime composition change", "service restart", "owner working-tree files"],
+  "rollback": {"method":"Revert the Phase 5D commit.","stateMigrationRequired":false,"serviceRestartRequired":false,"dataRecoveryRequired":false},
+  "ownerAuthorization": {"basis":"Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.","runtimeActivationAuthorized":false}
+}
