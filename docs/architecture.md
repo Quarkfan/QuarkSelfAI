@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前仍共 123 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 124 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -122,6 +122,11 @@ candidate、evidence 与 private/tenant visibility，tenant/user 从 cloud sessi
 known-hosts 只能从 policy 中相同 opaque reference 解析；launch 固定 subsystem、strict host-key pin、isolated config、batch/identities-only，
 并禁用 TTY、agent/all forwarding 与 local command。当前真实只读探测确认 OpenSSH `10.2p1` 可用，但没有启动 SSH process、连接 gateway、
 配置 credential、获取 lease 或挂载 transport owner。
+
+[ADR 0125](adr/0125-content-addressed-inactive-artifact-store.md) 把安装计划推进为本地真实制品落盘：客户端只接收已形成的
+`installed-inactive` plan 与调用方给出的本地普通文件，流式复核 SHA-256 后以内容 digest 原子落入 0600 blob，并写入不含来源路径的
+不可变 receipt。SQLite 是已安装快照和当前/前一版本指针的唯一状态 owner；upgrade/rollback 只切换已验证的本地版本，始终保持
+unloaded、unauthorized、stopped、effects-disabled。当前没有下载、解包、执行 lifecycle handler、加载或运行代码，也未挂载客户端。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

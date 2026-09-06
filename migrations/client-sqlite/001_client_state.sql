@@ -34,6 +34,15 @@ CREATE TABLE IF NOT EXISTS local_capability_state (
   PRIMARY KEY (capability_id, version)
 );
 
+CREATE TABLE IF NOT EXISTS local_capability_selection (
+  capability_id TEXT PRIMARY KEY,
+  current_version TEXT NOT NULL,
+  previous_version TEXT,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (capability_id, current_version) REFERENCES local_capability_state(capability_id, version),
+  FOREIGN KEY (capability_id, previous_version) REFERENCES local_capability_state(capability_id, version)
+);
+
 CREATE TABLE IF NOT EXISTS local_run_checkpoint (
   task_id TEXT PRIMARY KEY,
   device_id TEXT NOT NULL,

@@ -98,6 +98,14 @@ export interface InactiveInstallationPlanV1 {
   readonly createdAt: string
 }
 
+/** Local-only version pointer. Selection never implies loading, authorization or execution. */
+export interface InactiveCapabilitySelectionV1 {
+  readonly capabilityId: string
+  readonly currentVersion: string
+  readonly previousVersion: string | null
+  readonly updatedAt: string
+}
+
 export interface ExecutorDiscoveryProbeV1 {
   readonly executorId: string
   inspect(deviceId: string, now: Date): Promise<ExecutorCapabilityReportV1>

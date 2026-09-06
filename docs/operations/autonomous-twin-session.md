@@ -1109,3 +1109,12 @@
   agent/all forwarding 与 local command；Blueprint/云消息不能注入 ssh option、ProxyCommand、remote command 或 subsystem。
 - 实际只读运行 `ssh -V` 返回 OpenSSH `10.2p1`，原始输出未进入持久状态。当前没有启动 SSH、连接 gateway、配置真实 credential、获取
   device lease 或挂载 transport owner；回滚删除 adapter/test/ADR/catalog 映射即可。
+
+## 2026-09-06 content-addressed inactive artifact store
+
+- 将 supply-chain evidence 已闭合的 installation plan 接到真实本地落盘：普通文件在复制前和 staging 后均流式核验 SHA-256，blob 以 digest
+  寻址、0600 权限和原子 hard-link 提交；symlink source、路径逃逸、digest 漂移与既有 blob 篡改均失败关闭。
+- 每个 capability/version 的 receipt 不保存 artifact source/root；client SQLite 是 installed snapshot 与 selected/previous version 的唯一 owner。
+  upgrade 先安装再切换，rollback 先复核前一 blob 再交换指针，跨 reopen 验证通过。
+- 全程不下载、不解包、不调用 lifecycle handler、不加载/授权/运行代码，不创建 consumer/provider/scheduler/effect，也不挂载 composition。
+  新增模块后 catalog/migration 为 124/124、Facility coverage 为 64/64；回滚只删除本批 provider/schema/test/ADR 与目录登记。

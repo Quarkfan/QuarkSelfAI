@@ -3,7 +3,7 @@ import { mkdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { CapabilityLifecycleSnapshotV1 } from '../capability-platform/manifest.js'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
-import type { DeviceIdentityV1, ExecutorCapabilityReportV1, PlanSignatureVerifierV1 } from './contracts.js'
+import type { DeviceIdentityV1, ExecutorCapabilityReportV1, InactiveCapabilitySelectionV1, PlanSignatureVerifierV1 } from './contracts.js'
 import { validateDeviceIdentity, validateExecutorCapabilityReport } from './validation.js'
 import { InactiveLocalRunJournalV1, type InactiveLocalRunCheckpointV1 } from './inactive-run-journal.js'
 
@@ -30,7 +30,6 @@ export interface LocalClientCloudProjectionV1 {
 }
 
 export interface LocalClientEnrollmentV1 { readonly identity: DeviceIdentityV1; readonly privateKeyRef: string }
-
 /** Local-only durable state. Secret references and canonical paths never enter its cloud projection. */
 export class SqliteInactiveClientStateV1 {
   constructor(private readonly db: DatabaseSync, private readonly planVerifier: PlanSignatureVerifierV1) {}
@@ -98,6 +97,46 @@ export class SqliteInactiveClientStateV1 {
     return deepFreeze(structuredClone(state))
   }
 
+  inactiveCapability(capabilityId: string, version: string): CapabilityLifecycleSnapshotV1 | null {
+    const identity = this.#requireIdentity()
+    if (!idPattern.test(capabilityId) || !versionPattern.test(version)) throw new Error('inactive capability identity is invalid')
+    const row = this.db.prepare(`SELECT * FROM local_capability_state WHERE capability_id=? AND version=?`).get(capabilityId, version) as Row | undefined
+    if (!row) return null
+    const snapshot = JSON.parse(String(row.state_json)) as CapabilityLifecycleSnapshotV1
+    if (!isInactiveSnapshot(snapshot, identity) || snapshot.capabilityId !== row.capability_id || snapshot.version !== row.version || snapshot.deviceId !== row.device_id || snapshot.updatedAt !== row.updated_at) throw new Error('persisted inactive capability state drifted')
+    return deepFreeze(snapshot)
+  }
+
+  inactiveCapabilitySelection(capabilityId: string): InactiveCapabilitySelectionV1 | null {
+    this.#requireIdentity()
+    if (!idPattern.test(capabilityId)) throw new Error('inactive capability identity is invalid')
+    const row = this.db.prepare(`SELECT * FROM local_capability_selection WHERE capability_id=?`).get(capabilityId) as Row | undefined
+    if (!row) return null
+    const value = { capabilityId, currentVersion: String(row.current_version), previousVersion: row.previous_version === null ? null : String(row.previous_version), updatedAt: String(row.updated_at) }
+    if (!versionPattern.test(value.currentVersion) || (value.previousVersion !== null && !versionPattern.test(value.previousVersion)) || Number.isNaN(Date.parse(value.updatedAt)) || !this.inactiveCapability(capabilityId, value.currentVersion) || (value.previousVersion !== null && !this.inactiveCapability(capabilityId, value.previousVersion))) throw new Error('persisted inactive capability selection drifted')
+    return deepFreeze(value)
+  }
+
+  selectInactiveCapability(capabilityId: string, version: string, now = new Date()): InactiveCapabilitySelectionV1 {
+    const selected = this.inactiveCapability(capabilityId, version)
+    if (!selected || Number.isNaN(now.getTime())) throw new Error('only an installed inactive capability version can be selected')
+    const current = this.inactiveCapabilitySelection(capabilityId)
+    if (current?.currentVersion === version) return current
+    this.db.prepare(`INSERT INTO local_capability_selection (capability_id, current_version, previous_version, updated_at) VALUES (?, ?, ?, ?)
+      ON CONFLICT (capability_id) DO UPDATE SET current_version=excluded.current_version, previous_version=local_capability_selection.current_version, updated_at=excluded.updated_at`)
+      .run(capabilityId, version, current?.currentVersion ?? null, now.toISOString())
+    return this.inactiveCapabilitySelection(capabilityId)!
+  }
+
+  rollbackInactiveCapability(capabilityId: string, now = new Date()): InactiveCapabilitySelectionV1 {
+    const current = this.inactiveCapabilitySelection(capabilityId)
+    if (!current?.previousVersion || Number.isNaN(now.getTime())) throw new Error('inactive capability has no rollback version')
+    if (!this.inactiveCapability(capabilityId, current.previousVersion)) throw new Error('inactive capability rollback target is not installed')
+    this.db.prepare(`UPDATE local_capability_selection SET current_version=?, previous_version=?, updated_at=? WHERE capability_id=?`)
+      .run(current.previousVersion, current.currentVersion, now.toISOString(), capabilityId)
+    return this.inactiveCapabilitySelection(capabilityId)!
+  }
+
   async saveRunCheckpoint(checkpoint: InactiveLocalRunCheckpointV1, now = new Date()): Promise<InactiveLocalRunCheckpointV1> {
     const identity = this.#requireIdentity()
     if (checkpoint.deviceId !== identity.deviceId) throw new Error('run checkpoint belongs to another device')
@@ -149,3 +188,6 @@ export async function openSqliteInactiveClientState(databasePath: string, migrat
 }
 
 function deepFreeze<T>(value: T): T { if (value && typeof value === 'object' && !Object.isFrozen(value)) { for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child); Object.freeze(value) }; return value }
+function isInactiveSnapshot(state: CapabilityLifecycleSnapshotV1, identity: DeviceIdentityV1): boolean {
+  return idPattern.test(state.capabilityId) && versionPattern.test(state.version) && digestPattern.test(state.artifactDigest) && !Number.isNaN(Date.parse(state.updatedAt)) && state.deviceId === identity.deviceId && state.installation === 'installed' && state.loading === 'unloaded' && state.authorization === 'unauthorized' && state.execution === 'stopped' && state.effects === 'disabled'
+}
