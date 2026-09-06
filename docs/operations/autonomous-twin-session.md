@@ -1626,3 +1626,7 @@
 - 完整 `npm run check` 通过：主项目 509 项中 497 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；宿主路径/lease/IPC/cloud entry 专项 10/10。
   架构保持 137 modules、77 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active；work-domain 101/101 无 drift，continuity 继续如实为
   `organizationComplete=false`、`work-integration-not-yet-isolated`，server/DSH 兼容通过。
+- 提交 `1c5f567a4a7ffd99c1efb7558a5435160c4cee73` 后从 clean inputs 构建 12 文件发行包，artifact digest
+  `sha256:ceab6ccb0341ba30231af6b9bda883275dfab2eb09792d938782ef3d4718ecbe`；bundled entry 的 SIGKILL 真实留下 lease/socket，下一实例完成受控回收并 ready，
+  其活动期间第三实例继续被拒绝，最终 SIGTERM 清除 lease/socket。status 保持 `owner-created-inactive`，service/SSH apply/auto-start/effects 全为 false；
+  一次性发行、TLS、credential、database 与 runtime 已随私有临时根删除。
