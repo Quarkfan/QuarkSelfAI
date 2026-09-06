@@ -763,3 +763,12 @@
   返回签名后才形成 SignedExecutionPlan，客户端 fixture 可独立验证 digest 和签名。
 - inactive 边界拒绝非 `test.*` tenant 和任何 external effect；不派发、不连接设备、不接触真实 signing key。新增模块后
   catalog 与迁移映射为 107/107，现网 composition 与 owner 未变。
+
+## 2026-09-06 Capability Platform Phase 4A Module Offer
+
+- 新增 module→Capability Offer compiler，把 module catalog 与 migration design 逐项合并；重复、漏项、未知 module、非 40 位
+  revision、允许 activation 或允许 composition change 均失败关闭。
+- 当前 108 个 module 各有且只有一个 Offer：platform core 使用 `core-bound`，通用/体验/运维转换目标使用 `manifest-pending`，
+  六个 work integration 使用 `private-pack-inactive`，五个 migration module 使用 `migration-only` 并保留 exit criteria。
+- 每个 Offer 固定保留 current owner 且 activation=false；私有 Offer 不暴露主线 source reference。本批没有发布 Manifest、写入
+  registry、复制私有内容、切换 owner 或改变运行状态。

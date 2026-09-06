@@ -19,7 +19,12 @@ contract、规范化摘要和无 Cordis lifecycle 的 inactive registry，但没
 新增的 `capability-platform-contracts` 是第 100 个、静态且无 provider 的公共 contract module；校验与 inactive registry
 被隔离为第 101 个、默认 inactive 的治理 module。Phase 2A 再增加静态 `local-client-contracts` 和 inactive
 `local-client-negotiation`；Phase 2B 增加 inactive `capability-install-planner`；Phase 3A 增加控制面 contract 与 test-tenant
-reference store；Phase 3B 增加 inactive Agent Blueprint compiler。当前共 107 个模块，均已纳入 exactly-once 映射。
+reference store；Phase 3B 增加 inactive Agent Blueprint compiler；Phase 4A 增加 module→Offer compiler。当前共 108 个模块，
+均已纳入 exactly-once 映射。
+
+Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
+私有 pack 和 migration tool 保留不同语义；未形成 Manifest 的模块明确为 `manifest-pending`，所有 Offer 保留当前 owner 且
+activation 关闭。私有 Offer 不输出主线工作域 source path。
 
 Phase 3A 的隔离边界由 [ADR 0095](adr/0095-test-tenant-control-plane-isolation.md) 定义。用户、设备、Capability/Blueprint
 release、任务、脱敏结果和审计先选择 tenant partition；普通用户只能读取自己的设备与任务，不存在平台管理员跨租户正文
