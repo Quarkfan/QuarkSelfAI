@@ -115,8 +115,11 @@ Phase 2B 已实现六项供应链证据全通过后的 `installed-inactive` 计�
 Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release、任务、脱敏结果和审计 contract、test-tenant 内存 store，
 以及默认不挂载的 SQLite tenant/user/device repository 和 authorization service。双租户同 ID、复合主外键隔离、跨 reopen persistence、
 租户内用户设备/任务隔离、授权失败关闭和无 effect 派发均已验证；后续已补默认不挂载的持久身份 provider：随机 salt+scrypt、session digest、
-服务端 expiry/revocation、持久账号级登录 throttle 与账号/用户/租户状态复核均已验证。账号 bootstrap/recovery、MFA/passkey、edge/IP abuse protection、TLS termination、生产 PostgreSQL RLS、
+服务端 expiry/revocation、持久账号级登录 throttle 与账号/用户/租户状态复核均已验证。一般账号管理/recovery、MFA/passkey、edge/IP abuse protection、TLS termination、生产 PostgreSQL RLS、
 队列、对象存储、搜索、设备 consumer 与 production tenant 仍未完成。
+
+First-owner bootstrap 已以独立操作边界实现：仅允许 process-owned 私有 canonical 目录中的空 identity database，在单一 transaction 内创建 tenant、user
+和固定 owner account；credential 只走 bounded stdin，既不进入 argv/config/receipt，也不创建 session。一般账号管理、密码恢复和真实 bootstrap 运行仍未完成。
 
 Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interface/graph/workspace 验证和注入 signer，输出可由客户端
 重新验签的统一 Envelope；当前只编译 test tenant、无 effect fixture，不构成真实 Agent Studio 或任务派发上线。

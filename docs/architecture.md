@@ -57,7 +57,8 @@ authorization/execution/effects 五态均未打开。private release 只对 owne
 context 只由该 port 返回，API body 无法覆盖。[ADR 0145](adr/0145-persistent-multi-tenant-cloud-identity.md) 补齐默认不挂载的 SQLite identity
 provider：账号使用 tenant/user 复合外键，password 使用随机 salt+scrypt，session 只持久化 domain-separated digest，并在每次解析时重新检查账号、
 用户、租户状态和服务端过期时间；同账号 15 分钟内五次失败会持久阻断 15 分钟。可选 login/me/logout 不使用 cookie；当前仍无 production listener、TLS termination、MFA/passkey、edge/IP abuse protection、
-账号恢复或真实账号，因此不构成已上线的公网身份服务。
+账号恢复或真实账号，因此不构成已上线的公网身份服务。[ADR 0147](adr/0147-transactional-first-cloud-owner-bootstrap.md) 提供仅限空 identity database
+的事务化 first-owner bootstrap：密码只从 bounded stdin 输入，固定创建 owner 且不生成 session；它不是一般账号管理或恢复接口，本批也未执行。
 
 [ADR 0117](adr/0117-persistent-inactive-device-session-provider.md) 将设备协议的唯一 server port 接到同一 SQLite identity 真源：
 challenge、单活 session、no-effect test dispatch、可恢复 lease、ack 与脱敏结果都按 tenant/user/device 复合 scope 持久化。

@@ -1363,3 +1363,15 @@
   consumer、writer 或 effects。回滚删除两个 adapter、恢复未激活的 V1 payload 与 catalog mapping；没有 live/persisted transport state。
 - 完整 `npm run check` 通过：主项目 473 项中 466 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构为 135 modules、
   75 个 platform-core Offer、120 assets、effects active 0/23。提交前继续复核 exactly-once、隔离、连续性、兼容和根同步门禁。
+
+## 2026-09-06 transactional first cloud owner bootstrap
+
+- 持久云身份此前只能认证已 provision 的账号，却没有建立 first owner 的安全入口。本轮新增独立 bootstrap：数据库必须位于 process-owned、
+  0700、canonical 目录，拒绝 symlink/hard-link database 与非普通 migration，并在 `BEGIN IMMEDIATE` 内确认 tenant/user/account 三表全空。
+- 唯一允许的写入固定为一个 active tenant、一个 active user 和一个 owner account，三者同 transaction 成功或回滚；不接受 caller roles，
+  不创建 session。可执行入口还要求显式 enable 与 exact command，credential 仅从 258-byte bounded stdin 读取，不进入 argv、config、receipt 或稳定错误。
+- 合成 SQLite 测试验证 owner-only 文件权限、真实 scrypt 登录、原始数据库无明文 credential、第二次 bootstrap 拒绝，以及非法 credential 后可以干净重试。
+  本批未运行 entry、未创建真实 database/account/credential，未启动 listener/service，也未改变 composition、consumer、provider 或 effects。
+- 回滚删除 bootstrap function/entry/test/ADR 和 identity module ownership；未来显式创建的 database 属于 durable user state，代码回滚不得删除。
+- 完整 `npm run check` 通过：主项目 475 项中 468 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构仍为 135 modules、
+  75 个 platform-core Offer、120 assets、effects active 0/23。提交前继续复核隔离、连续性、兼容与根同步门禁。
