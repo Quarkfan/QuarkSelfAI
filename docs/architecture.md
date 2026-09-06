@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前仍共 117 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前仍共 119 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -85,6 +85,10 @@ Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discove
 分类器，并在获批 Pilot 01 中加入严格 allowlist 的一次性 process runner；客户端 snapshot 固定 disconnected 或 unenrolled 且
 owner/effects 全为零。preflight 与 loopback 回执固定 `executorInvoked=false`，一次性 listener 仅用于测试且已经关闭；仓库仍不存在
 真实云端连接器、installer、常驻 client daemon 或已武装 executor。
+
+Pilot 02 已增加固定认证状态探测、bundled DSH closure 检查和只允许单 executor 的 no-effect smoke adapter。真实只读探测显示
+Claude Code/Codex 认证 ready，DSH closure 为 `0.1.1-rc.2` 但当前进程未配置 inference。唯一 Claude 合成尝试在 60 秒超时后终止，
+没有切换第二 executor、没有保留输出、没有工具/工作区读取/effect；因此该证据是 bounded failure，不能宣称 executor 已可运行。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

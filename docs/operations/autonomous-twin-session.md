@@ -1039,3 +1039,13 @@
 - listenerClosed=true；临时 SQLite reopen 后设备计数为 `[1,1]`，随后关闭并删除目录；executorInvoked=false、effectsActive=0、
   externalWritesEnabled=false、currentOwnerPreserved=true、runtimeCompositionChanged=false、serviceRestarted=false。
 - 本批没有公网/TLS/SSH、真实身份或数据、Agent/tool/lifecycle、依赖安装、私有 pack、数据迁移、owner 切换或服务重启。
+
+## 2026-09-06 Executor Runtime Pilot 02 bounded failure
+
+- Goal 全面授权覆盖此前固定的 Pilot 02 范围。固定只读认证探测只运行 `claude auth status --json` 与 `codex login status`，两者均分类为
+  installed/authentication-ready，原始输出未返回或持久化。
+- bundled DSH 通过仓库 package、baseline 与五个 runtime package manifest 证明 closure 版本 `0.1.1-rc.2`；pilot 进程只检查配置是否存在，
+  没有读取/输出秘密值，结果 inferenceConfigured=false、authentication=required。
+- 唯一真实合成尝试按顺序选择 Claude Code，输入只是固定公开 token 请求，tools disabled、空临时 workspace、无 continuation/effect。
+  60 秒未返回后进程被终止，raw output 丢弃，临时目录删除；没有重试或切换 Codex/DSH。
+- 状态如实记为 `completed-bounded-failure`。executorInvoked=true 仅说明发起了一次进程，不证明运行成功；现网 owner/composition 未变。

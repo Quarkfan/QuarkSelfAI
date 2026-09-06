@@ -122,3 +122,4 @@
 
 - Persistent cloud/client scaffolds must reuse the tenant device identity source and the versioned device-session port. Session validity is decided with server time; client timestamps are evidence only. Until an explicit composition gate is passed, these providers remain test-tenant-only and runtime-inactive, with no listener, scheduler, executor, or external effects.
 - A loopback pilot is evidence, not activation: its listener must use `127.0.0.1:0`, synthetic tenants and temporary state, and must close before exit. It never authorizes a public bind or a product-composition mount.
+- Executor readiness keeps installation, authentication and task success separate. A timed-out synthetic run is a bounded failure; never retry it on another executor under a single-attempt pilot or report authentication readiness as execution success.

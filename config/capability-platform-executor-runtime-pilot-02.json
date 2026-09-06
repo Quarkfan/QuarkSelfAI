@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "requestId": "capability-platform-executor-runtime-pilot-02",
+  "status": "completed-bounded-failure",
+  "approvedBaseRevision": "40f314e4c276f9476d7cb6a45b87af085c8e10c7",
+  "authorization": "owner-approved-goal-wide",
+  "inputClass": "fixed-public-synthetic",
+  "executedAt": "2026-09-06T05:04:13Z",
+  "headAtExecution": "a14ede4a0fe34f40115e79a425c3a7d10246fff4",
+  "readiness": [
+    { "executorId": "claude-code", "installation": "detected", "authentication": "ready" },
+    { "executorId": "codex", "installation": "detected", "authentication": "ready" },
+    { "executorId": "dsh", "installation": "detected", "version": "0.1.1-rc.2", "authentication": "required", "inferenceConfigured": false }
+  ],
+  "selectedExecutorId": "claude-code",
+  "executorAttemptLimit": 1,
+  "executorAttempts": 1,
+  "outcome": "timed-out",
+  "timeoutMs": 60000,
+  "rawOutputRetained": false,
+  "fallbackAttempted": false,
+  "temporaryWorkspaceRemoved": true,
+  "toolsEnabled": false,
+  "workspaceDataRead": false,
+  "effectsActive": 0,
+  "externalWritesEnabled": false,
+  "currentOwnerPreserved": true,
+  "runtimeCompositionChanged": false,
+  "serviceRestarted": false
+}

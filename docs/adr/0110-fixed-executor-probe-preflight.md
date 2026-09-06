@@ -33,3 +33,9 @@ runtime and its provider readiness without inventing a CLI dependency.
 The same pilot started one ephemeral `127.0.0.1` listener, transported and verified a signed `test.*` no-effect lease, created an in-memory checkpoint,
 and closed the listener. It did not send a prompt, invoke an executor, activate an effect, mount a provider, change composition, persist state or restart
 the service. Machine-readable evidence is in `config/capability-platform-executable-pilot-01.json`.
+
+## Pilot 02 evidence
+
+Goal-wide owner authorization allowed the previously frozen Pilot 02 scope to run. Fixed `claude auth status --json` and `codex login status` probes classified both installed CLIs as authentication-ready without retaining their output. Repository manifests proved the bundled DSH closure at `0.1.1-rc.2`; inference configuration was absent from the pilot process, so DSH correctly remained authentication-required.
+
+The one allowed synthetic attempt selected Claude Code. Its fixed public prompt disabled tools, used an empty temporary workspace and had no continuation or effects, but it did not return within the 60-second hard timeout. The process was terminated, raw output was discarded, the temporary workspace was removed, and no fallback executor was tried. Pilot 02 therefore records `completed-bounded-failure`, not executor parity or a successful Agent run.
