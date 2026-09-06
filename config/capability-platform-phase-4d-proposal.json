@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-4d-facility-plane-correction",
+  "status": "implemented-descriptive",
+  "baseRevision": "87e45b3f50a09babe60755e48a14db8374660c42",
+  "architectureChange": "Separate cloud control-plane facilities from the local client facility in migration metadata.",
+  "allowedActions": ["reclassify descriptive core offers", "add a cloud control-plane facility", "run local tests and audits"],
+  "explicitExclusions": ["move source files", "change source dependencies", "change runtime composition", "start a cloud service", "activate a client", "external effects", "service restart", "owner working-tree files"],
+  "rollback": {"method":"Revert the Phase 4D commit.","stateMigrationRequired":false,"serviceRestartRequired":false,"dataRecoveryRequired":false},
+  "ownerAuthorization": {"basis":"Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.","runtimeActivationAuthorized":false}
+}

@@ -819,3 +819,11 @@
   executor adapter 仍由 host ports 和授权门禁持有。
 - `package.json` 存在 owner 的 client export 与 DSH client 配置改动；本批通过精确 index hunk 只提交 capability SDK export 和
   dist 清单，owner 改动继续保持未暂存。新增模块后 catalog/migration 为 111/111，Platform Facility core coverage 为 51/51。
+
+## 2026-09-06 Capability Platform facility plane correction
+
+- 复核发现首版 Facility 把 test tenant store、Blueprint/Offer compiler 与 device session/task lease coordinator 错归入 local client。
+  现新增独立 `cloud-control-plane` facility，并将这 5 个描述性 Offer 移入；local client 保留 DSH/Cordis host、workspace、executor
+  discovery/routing 和 inactive install，durable runtime 继续独立。
+- 该修正只改变迁移目录元数据，不改 source import、composition、listener、process 或 owner。四个 Facility 仍 exactly-once 覆盖
+  51 个 core Offer，私有 pack 不能替换任何核心设施。
