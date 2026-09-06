@@ -977,3 +977,11 @@
   tenant authorization port。双租户同 capability/version、同租户 private/tenant 可见性和跨 reopen persistence 均以临时数据库验证。
 - 核心 registry 明确拒绝 private integration-pack，且没有 public marketplace、download、install、load、authorize、execute、schedule、effect、
   listener 或 runtime mount。新增模块后 catalog/migration 为 118/118、Facility coverage 为 58/58，现有 owner 和 composition 不变。
+
+## 2026-09-06 authenticated cloud control-plane application boundary
+
+- 新增默认不挂载的应用服务，把 opaque session reference 经 identity port 解析为冻结 tenant/user context，再调用 Capability Registry 与
+  Agent Studio；公开方法不接受 tenantId/userId，阻断请求参数伪造租户。
+- malformed、secret-shaped、绝对路径和未认证 session 在 provider 调用前失败关闭；fixture 证明每个操作都重新认证且不缓存跨用户上下文。
+- 本批没有身份提供方、HTTP listener、cookie/token parser、scheduler、dispatcher、executor、effect 或服务启动。新增模块后 catalog/
+  migration 为 119/119、Facility coverage 为 59/59，composition 与 owner 不变。
