@@ -52,8 +52,10 @@ Capability Registry 现已具备默认不挂载的 SQLite provider：只接收�
 
 无 listener HTTP handler 已覆盖 `/v1/devices` 注册/查询、Capability 列表和 Agent draft 列表，使用 closed request body 和稳定脱敏错误码；
 它仅验证 API 语义，不代表公网服务、TLS、认证 provider 或客户端注册已经上线。
-同一 handler 现已覆盖 device challenge/proof/session/poll/lease/ack API contract，但 server port 仍为注入接口，尚无持久 session provider、
-真实签名 verifier 或网络连接。脱敏 result upload 已有 port/route，但尚无持久 task/result provider。
+同一 handler 现已覆盖 device challenge/proof/session/poll/lease/ack/result API contract。默认不挂载的 SQLite provider 从唯一 tenant/device
+identity 真源读取公钥，持久化 challenge、单活 session、no-effect test dispatch、lease/ack 和脱敏 result；双租户同 ID、challenge replay、
+foreign lease、跨 reopen 结果幂等、effectful plan 与会话过期均有集成测试。真实 verifier 仍由 adapter 注入，且尚无网络连接、scheduler、
+executor 或 external effect，因此不构成设备在线或任务执行完成。
 
 Phase 4A 已把当前每个 module 编译为且只编译为一个隐私有界 Offer，并区分 core-bound、manifest-pending、private-pack-
 inactive 和 migration-only；该证据证明迁移目标无漏项，但 `manifest-pending` 仍须逐批形成真正 Manifest 才算能力转换完成。

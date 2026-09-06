@@ -1019,3 +1019,13 @@
   临时 SQLite 与两个纯合成 test tenant，验证认证 API、tenant isolation 和关闭清理。
 - 明确排除公网/TLS/SSH、真实身份或数据、Agent/executor/tool/effect、依赖安装、composition/owner 变化、私有 pack、迁移和服务重启。
 - 当前仅记录申请，不创建 adapter、不打开 listener；收到授权单中的精确 approval phrase 前不得执行 Pilot 03。
+
+## 2026-09-06 persistent inactive device-session provider
+
+- Owner 随后明确表示该 Goal 内无需逐批等待授权单、全面批准；实施仍受不泄密、单 owner、无双写、逐门禁验证和可回滚边界约束。
+- 设备 challenge/session/dispatch/lease/ack/result 现在由同一个默认不挂载的 SQLite provider 持久化，并直接读取 `cp_device` 唯一身份真源；
+  没有复制 device registry，也没有 listener、scheduler、executor、effect 或 composition 变化。
+- provider 只接受 `test.*`、签名闭合、无 allowed effect 且无 approval grant 的计划。challenge 单次消费，session 单活，dispatch/idempotency
+  不可变，lease 可恢复，result 与任务终态事务提交；session 过期只信任服务端时间，客户端 `completedAt` 不能延长会话。
+- 临时 SQLite 集成测试覆盖两个租户相同 device/task id、challenge replay、foreign lease、跨 reopen 结果幂等、effectful plan、冲突 idempotency
+  与 session expiry。回滚仅删除本批 provider/migration/test/ADR 并恢复目录登记，不涉及 live 数据或服务。

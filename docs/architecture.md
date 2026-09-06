@@ -56,6 +56,11 @@ authorization/execution/effects 五态均未打开。private release 只对 owne
 云控制面应用边界通过 `CloudIdentityPortV1` 接收 adapter 已解析的 opaque session reference，所有 Registry/Studio 操作的 tenant/user
 context 只由该 port 返回，API body 无法覆盖。当前应用层不含 HTTP listener、credential parser、scheduler 或 runtime mount。
 
+[ADR 0117](adr/0117-persistent-inactive-device-session-provider.md) 将设备协议的唯一 server port 接到同一 SQLite identity 真源：
+challenge、单活 session、no-effect test dispatch、可恢复 lease、ack 与脱敏结果都按 tenant/user/device 复合 scope 持久化。
+provider 只接受 `test.*` 租户和签名验证通过且无 effect/approval grant 的计划，不拥有 listener、scheduler、executor 或外部写；
+客户端完成时间只作为结果证据，session 有效性始终以服务端时间判断。
+
 [ADR 0116](adr/0116-inactive-cloud-api-boundary.md) 进一步定义无 listener 的 `/v1` handler：设备注册/查询、能力目录和 Agent 草稿
 使用同一认证应用层，closed body 阻断 tenant 注入，错误响应不回传内部异常。TLS、HTTP listener、rate limit 与凭证解析仍属于未来 edge adapter。
 设备 challenge/proof/session/poll/ack 也通过单一 `DeviceSessionServerPortV1` 暴露；应用层不复制 device repository，避免第二份设备身份真源。

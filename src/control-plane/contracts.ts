@@ -106,5 +106,9 @@ export interface DeviceSessionServerPortV1 {
   openSession(proof: DeviceSessionProofV1, now?: Date): Promise<DeviceSessionV1>
   poll(sessionId: string, now?: Date): Promise<DeviceTaskLeaseV1 | null>
   acknowledge(sessionId: string, input: { readonly leaseToken: string; readonly taskId: string }, now?: Date): Promise<DeviceTaskLeaseAcknowledgementV1>
-  submitResult(sessionId: string, input: Omit<RedactedResultV1, 'tenantId' | 'userId'>): Promise<RedactedResultV1>
+  submitResult(sessionId: string, input: Omit<RedactedResultV1, 'tenantId' | 'userId'>, now?: Date): Promise<RedactedResultV1>
+}
+
+export interface DeviceDispatchQueuePortV1 {
+  enqueue(dispatch: DispatchRecordV1, now?: Date): Promise<DispatchRecordV1>
 }
