@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry provider 与认证应用层，合计 119 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry provider 与认证应用层，合计 120 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -24,6 +24,10 @@ client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃
 客户端本地状态现可在独立 SQLite 中跨 reopen 保存公开设备身份、opaque 私钥引用、workspace handle 映射、脱敏 executor report、
 installed-inactive capability 和 no-effect run checkpoint。云投影测试证明不含 key reference、workspace handle/路径或 checkpoint 正文，
 workspace 根被 symlink 替换时失败关闭，checkpoint rollback 被拒绝。尚无安装包、常驻 daemon、云连接和真实 capability lifecycle 执行。
+
+设备身份现使用真实 Ed25519 生成、签名和验签 adapter：云端只持有 SPKI 公钥，客户端私钥必须留在 `LocalDeviceSecretStoreV1` 后方并只以
+opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥不匹配均失败关闭。当前仍未选择生产 OS secret-store adapter，也未
+注册真实设备或连接云端。
 
 设备协议已增加 direct TLS 主通道与 SSH subsystem 备用通道的静态 contract。SSH 只允许客户端主动出站到固定
 `quark-device-v1` subsystem，host key 与 credential 使用本地 opaque reference，禁止 shell、任意 command、port/agent forwarding，

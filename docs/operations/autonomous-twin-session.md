@@ -1058,3 +1058,11 @@
   删除并替换为 symlink 会失败关闭。cloud projection 不含 key reference、workspace handle/路径或 checkpoint 正文。
 - 集成测试覆盖跨 reopen 恢复、过期投影过滤基础、foreign device、active capability、checkpoint integrity/rollback 与 symlink root swap。
   provider 固定 disconnected、owner counts=0、effects=false；回滚只移除本批 provider/migration/test/ADR。
+
+## 2026-09-06 client-owned Ed25519 device identity
+
+- 新增真实 Ed25519 设备密钥生成、challenge 签名和服务端公钥验签 adapter。云端身份只包含 SPKI 公钥；PKCS8 私钥通过
+  `LocalDeviceSecretStoreV1` 写入 `secret:`/`keychain:` opaque reference，返回对象和协议均不包含私钥或引用。
+- 签名前强制 tenant/user/device scope 完全一致，并从私钥重新派生公钥核对已登记 identity；scope 漂移、引用复用、错配密钥和篡改 nonce
+  均失败关闭。当前仅使用内存 secret-store fixture，没有读写真实 keychain、注册 live device、启动连接/daemon 或改变 composition。
+- 回滚只移除本批 adapter、测试、ADR 和 catalog/migration/docs 映射；没有 live key 或服务状态需要恢复。
