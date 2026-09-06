@@ -12,7 +12,7 @@ const verifier = { verify: async ({ payloadDigest, signature }: { payloadDigest:
 function signedPlan(): SignedExecutionPlanV1 {
   const unsigned = {
     schemaVersion: 1 as const, tenantId: 'test.alpha', userId: 'user.owner', deviceId: 'device.owner', agentId: 'agent/demo', runId: 'run.001', actionId: 'action.001',
-    blueprint: { id: 'agent/demo', version: '1.0.0', digest: sha }, capabilities: [], context: [{ id: 'context.1', kind: 'fixture', dataClass: 'public', location: 'local' as const, opaqueReference: 'context:one' }], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.001/action.001', deadline: later,
+    blueprint: { id: 'agent/demo', version: '1.0.0', digest: sha }, program: { role: 'worker', goals: ['Complete the fixture'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } }, capabilities: [], context: [{ id: 'context.1', kind: 'fixture', dataClass: 'public', location: 'local' as const, opaqueReference: 'context:one' }], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.001/action.001', deadline: later,
     budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [], executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['executor-a'], preferredExecutors: ['executor-a'] }, continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const }, plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' },
   }
   const digest = executionEnvelopePayloadDigest(unsigned)

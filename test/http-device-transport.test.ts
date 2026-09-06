@@ -28,7 +28,7 @@ const planVerifier = { verify: async ({ payloadDigest, signature }: { payloadDig
 
 function plan(at: Date, later: string): SignedExecutionPlanV1 {
   const unsigned = { schemaVersion: 1 as const, tenantId: context.tenantId, userId: context.userId, deviceId: 'device.owner', agentId: 'agent.demo', runId: 'run.http', actionId: 'action.http',
-    blueprint: { id: 'agent.demo', version: '1.0.0', digest: sha }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.http/action.http', deadline: later,
+    blueprint: { id: 'agent.demo', version: '1.0.0', digest: sha }, program: { role: 'worker', goals: ['Complete the fixture'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.http/action.http', deadline: later,
     budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [], executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['executor-a'], preferredExecutors: ['executor-a'] },
     continuity: { sessionId: null, continuationToken: null, fallbackAllowed: false, midActionSwitchAllowed: false as const }, plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' } }
   const digest = executionEnvelopePayloadDigest(unsigned); const envelope = { ...unsigned, plan: { digest, signature: `signed:${digest}`, keyId: 'test-key' } }

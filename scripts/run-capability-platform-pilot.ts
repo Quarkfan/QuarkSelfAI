@@ -41,7 +41,7 @@ function signedNoEffectLease(now: Date): DeviceTaskLeaseV1 {
   const expiresAt = new Date(now.getTime() + 60_000).toISOString()
   const unsigned = {
     schemaVersion: 1 as const, tenantId: 'test.pilot', userId: 'user.pilot', deviceId: 'device.pilot', agentId: 'agent/pilot', runId: 'run.pilot', actionId: 'action.pilot',
-    blueprint: { id: 'agent/pilot', version: '1.0.0', digest: `sha256:${'a'.repeat(64)}` }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [],
+    blueprint: { id: 'agent/pilot', version: '1.0.0', digest: `sha256:${'a'.repeat(64)}` }, program: { role: 'pilot', goals: ['Validate the no-effect fixture'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [],
     idempotencyKey: 'run.pilot/action.pilot', deadline: expiresAt, budget: { tokens: 0, durationMs: 1_000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [],
     executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['claude-code', 'codex', 'dsh'], preferredExecutors: ['claude-code', 'codex'] },
     continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const },

@@ -26,7 +26,7 @@ function tokenSource() { let sequence = 0; return { next: (label: 'challenge' | 
 function plan(context: TenantContextV1, taskId: string, deviceId = 'device.owner'): SignedExecutionPlanV1 {
   const unsigned = {
     schemaVersion: 1 as const, tenantId: context.tenantId, userId: context.userId, deviceId, agentId: 'agent.demo', runId: `run.${taskId}`, actionId: `action.${taskId}`,
-    blueprint: { id: 'agent.demo', version: '1.0.0', digest: sha }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: `${context.tenantId}.${taskId}`, deadline: later,
+    blueprint: { id: 'agent.demo', version: '1.0.0', digest: sha }, program: { role: 'worker', goals: ['Complete the fixture'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: `${context.tenantId}.${taskId}`, deadline: later,
     budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [], executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['executor-a'], preferredExecutors: ['executor-a'] }, continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const }, plan: { digest: `sha256:${'0'.repeat(64)}`, signature: 'unsigned', keyId: 'test-key' },
   }
   const digest = executionEnvelopePayloadDigest(unsigned)

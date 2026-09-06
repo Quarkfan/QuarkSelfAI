@@ -10,7 +10,8 @@
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
 
 Phase 1A 已实现 `CapabilityManifestV1`、`AgentBlueprintV1`、`ExecutionEnvelopeV1`、权限/接口 contract、确定性
-canonical digest 和无 Cordis lifecycle 的 inactive registry，并以 Claude Code、Codex、DSH 等价输入 fixture 验证。
+canonical digest 和无 Cordis lifecycle 的 inactive registry，并以 Claude Code、Codex、DSH 等价输入 fixture 验证。Envelope 的签名 payload 已包含
+role、goals、capability graph 与 model policy，graph 只能引用同计划 pin 住的 artifact；本地路径、secret-shaped 值和直接 executable payload 不得随计划下发。
 Manifest 覆盖七类 lifecycle handler、完整 runtime requirement 类别和 health check，登记态为 `catalogued-inactive`，不把
 schema validation 冒充 artifact 验证。它只进入公共
 静态 API；没有实现云控制面、客户端 daemon、安装器、执行器发现、私有包注册或任何运行 owner 切换。
@@ -67,7 +68,7 @@ DSH 五包 closure 作为唯一基础 fallback。单项失败不会阻断其余�
 
 客户端另有显式 no-effect execution cycle：只接受 signed no-effect lease，先 checkpoint leased、精确 ack 后再 checkpoint accepted，才将同一 `ExecutorAdapterInputV1` 交给精确选中的
 executor port，privacy-bounded result 先落本地再提交，server 接受后才标记 synced。合成失败跨 reopen 恢复为同 executor，未调用备用 port；
-completed-pending-sync 会先重传结果而不重复执行。当前 port 仅由测试注入，尚无真实 Claude Code/Codex/DSH execution adapter、daemon、自动 poll、
+completed-pending-sync 会先重传结果而不重复执行。当前 port 仅由测试注入；虽然签名计划现已携带完整声明式 Agent program，仍无真实 Claude Code/Codex/DSH execution adapter、daemon、自动 poll、
 电脑操作或 effect，因此仍不满足“通过统一契约真实运行 Agent”的最终完成标准。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，

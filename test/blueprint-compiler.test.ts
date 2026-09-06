@@ -41,6 +41,7 @@ const signer = { keyId: 'test-key', sign: async ({ payloadDigest }: { payloadDig
 test('compiles an immutable blueprint and pinned artifacts into one verifiable no-effect plan', async () => {
   const plan = await compileTestExecutionPlan(blueprint(), [manifest], compileInput, signer)
   assert.deepEqual(plan.envelope.capabilities, [{ id: 'tool/search', version: '1.2.0', artifactDigest }])
+  assert.deepEqual(plan.envelope.program, { role: 'researcher', goals: ['Find facts'], graph: { nodes: [{ id: 'search', capabilityId: 'tool/search', interfaceId: 'search.query', configuration: {} }], edges: [] }, modelPolicy: { allowed: ['model-a'], preferred: 'model-a' } })
   assert.deepEqual(plan.envelope.allowedEffects, [])
   assert.equal(plan.envelope.continuity.midActionSwitchAllowed, false)
   await assert.doesNotReject(() => verifySignedExecutionPlan(plan, { verify: async input => input.signature === `signed:${input.payloadDigest}` }, new Date('2026-09-06T00:30:00.000Z')))

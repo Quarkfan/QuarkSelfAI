@@ -85,6 +85,7 @@ function envelope(overrides: Record<string, unknown> = {}): ExecutionEnvelopeV1 
     tenantId: 'tenant.demo', userId: 'user.demo', deviceId: 'device.demo', agentId: 'agent.research',
     runId: 'run.001', actionId: 'action.001',
     blueprint: { id: 'agent/research', version: '1.0.0', digest: sha },
+    program: { role: 'researcher', goals: ['Research the fixture'], graph: { nodes: [{ id: 'browse', capabilityId: 'browser/headless', interfaceId: 'browser.navigate', configuration: {} }], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } },
     capabilities: [{ id: 'browser/headless', version: '1.0.0', artifactDigest: sha }],
     context: [{ id: 'task', kind: 'instruction', dataClass: 'user-content', location: 'cloud', opaqueReference: 'context:task-001' }],
     workspaceGrants: [{ handle: 'workspace:project', access: 'read', expiresAt: later, grantId: 'grant.workspace' }],
@@ -135,6 +136,7 @@ test('blueprint graph and executor continuity are deterministic and fail closed'
   assert.throws(() => validateAgentBlueprint(blueprint({ graph: { nodes: [{ id: 'browse', capabilityId: 'tool/missing', interfaceId: 'browser.navigate', configuration: {} }], edges: [] } })), /undeclared capability/)
   assert.throws(() => validateAgentBlueprint(blueprint({ executorPolicy: { ...base.executorPolicy, fallback: ['claude-code'] } })), /must not overlap/)
   assert.throws(() => validateAgentBlueprint(blueprint({ modelPolicy: { allowed: ['model-a'], preferred: 'model-b' } })), /must be allowed/)
+  assert.throws(() => validateAgentBlueprint(blueprint({ graph: { nodes: [{ ...base.graph.nodes[0], configuration: { command: 'echo unsafe' } }], edges: [] } })), /executable payload/)
   assert.throws(() => validateAgentBlueprint({ ...base, name: 'changed-after-digest' }), /digest does not match/)
 })
 
@@ -154,6 +156,10 @@ test('all executors receive one normalized envelope and approvals remain exactly
   assert.throws(() => validateExecutionEnvelope(envelope({ context: [{ ...base.context[0], opaqueReference: '/private/workspace' }] })), /opaque references/)
   assert.throws(() => validateExecutionEnvelope(envelope({ executorRequirement: { ...base.executorRequirement, preferredExecutors: ['other'] } })), /outside the signed allowlist/)
   assert.throws(() => validateExecutionEnvelope(envelope({ continuity: { ...base.continuity, midActionSwitchAllowed: true } })), /mid-action/)
+  assert.throws(() => validateExecutionEnvelope(envelope({ program: { ...base.program, goals: ['token=plaintext'] } })), /secret-shaped/)
+  assert.throws(() => validateExecutionEnvelope(envelope({ program: { ...base.program, graph: { nodes: [{ ...base.program.graph.nodes[0], capabilityId: 'tool/missing' }], edges: [] } } })), /unpinned capability/)
+  assert.throws(() => validateExecutionEnvelope(envelope({ program: { ...base.program, graph: { nodes: [{ ...base.program.graph.nodes[0], configuration: { script: 'echo unsafe' } }], edges: [] } } })), /executable payload/)
+  assert.throws(() => validateExecutionEnvelope({ ...base, remoteCommand: 'echo unsafe' }), /unknown fields/)
 })
 
 test('canonical digests are stable and public schemas remain closed', async () => {

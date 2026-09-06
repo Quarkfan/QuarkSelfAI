@@ -4,11 +4,12 @@
   "title": "Execution Envelope V1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "tenantId", "userId", "deviceId", "agentId", "runId", "actionId", "blueprint", "capabilities", "context", "workspaceGrants", "approvalGrants", "idempotencyKey", "deadline", "budget", "dataClasses", "allowedEffects", "executorRequirement", "continuity", "plan"],
+  "required": ["schemaVersion", "tenantId", "userId", "deviceId", "agentId", "runId", "actionId", "blueprint", "program", "capabilities", "context", "workspaceGrants", "approvalGrants", "idempotencyKey", "deadline", "budget", "dataClasses", "allowedEffects", "executorRequirement", "continuity", "plan"],
   "properties": {
     "schemaVersion": {"const": 1},
     "tenantId": {"$ref": "#/$defs/id"}, "userId": {"$ref": "#/$defs/id"}, "deviceId": {"$ref": "#/$defs/id"}, "agentId": {"$ref": "#/$defs/id"}, "runId": {"$ref": "#/$defs/id"}, "actionId": {"$ref": "#/$defs/id"},
     "blueprint": {"type": "object", "additionalProperties": false, "required": ["id", "version", "digest"], "properties": {"id": {"$ref": "#/$defs/id"}, "version": {"$ref": "#/$defs/version"}, "digest": {"$ref": "#/$defs/digest"}}},
+    "program": {"$ref": "#/$defs/agentProgram"},
     "capabilities": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "version", "artifactDigest"], "properties": {"id": {"$ref": "#/$defs/id"}, "version": {"$ref": "#/$defs/version"}, "artifactDigest": {"$ref": "#/$defs/digest"}}}},
     "context": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "kind", "dataClass", "location", "opaqueReference"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"type": "string"}, "dataClass": {"type": "string"}, "location": {"enum": ["local", "cloud"]}, "opaqueReference": {"type": "string", "minLength": 1}}}},
     "workspaceGrants": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["handle", "access", "expiresAt", "grantId"], "properties": {"handle": {"type": "string", "minLength": 1}, "access": {"enum": ["read", "read-write"]}, "expiresAt": {"type": "string", "format": "date-time"}, "grantId": {"type": "string", "minLength": 1}}}},
@@ -23,6 +24,21 @@
     "plan": {"type": "object", "additionalProperties": false, "required": ["digest", "signature", "keyId"], "properties": {"digest": {"$ref": "#/$defs/digest"}, "signature": {"type": "string", "minLength": 1}, "keyId": {"type": "string", "minLength": 1}}}
   },
   "$defs": {
+    "agentProgram": {
+      "type": "object", "additionalProperties": false, "required": ["role", "goals", "graph", "modelPolicy"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1, "maxLength": 500},
+        "goals": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1, "maxLength": 2000}},
+        "graph": {
+          "type": "object", "additionalProperties": false, "required": ["nodes", "edges"],
+          "properties": {
+            "nodes": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "capabilityId", "interfaceId", "configuration"], "properties": {"id": {"$ref": "#/$defs/id"}, "capabilityId": {"$ref": "#/$defs/id"}, "interfaceId": {"$ref": "#/$defs/id"}, "configuration": {"type": "object"}}}},
+            "edges": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["from", "to", "output", "input"], "properties": {"from": {"$ref": "#/$defs/id"}, "to": {"$ref": "#/$defs/id"}, "output": {"type": "string", "minLength": 1, "maxLength": 200}, "input": {"type": "string", "minLength": 1, "maxLength": 200}}}}
+          }
+        },
+        "modelPolicy": {"type": "object", "additionalProperties": false, "required": ["allowed", "preferred"], "properties": {"allowed": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "preferred": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}}}
+      }
+    },
     "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,63}(/[a-z0-9][a-z0-9.-]{0,63})?$"},
     "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"},
     "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}

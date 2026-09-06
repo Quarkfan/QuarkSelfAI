@@ -60,6 +60,15 @@ export async function compileTestExecutionPlan(
     runId: input.runId,
     actionId: input.actionId,
     blueprint: { id: blueprint.id, version: blueprint.version, digest: blueprint.digest },
+    program: {
+      role: blueprint.role,
+      goals: [...blueprint.goals],
+      graph: {
+        nodes: blueprint.graph.nodes.map(node => ({ ...node, configuration: structuredClone(node.configuration) })),
+        edges: blueprint.graph.edges.map(edge => ({ ...edge })),
+      },
+      modelPolicy: { allowed: [...blueprint.modelPolicy.allowed], preferred: blueprint.modelPolicy.preferred },
+    },
     capabilities: selected.map(manifest => ({ id: manifest.id, version: manifest.version, artifactDigest: manifest.source.artifactDigest })),
     context: [...input.context],
     workspaceGrants: [...input.workspaceGrants],

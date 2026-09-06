@@ -1,4 +1,5 @@
 import type { ApprovalGrantV1, WorkspaceGrantV1 } from './permissions.js'
+import type { AgentGraphEdgeV1, AgentGraphNodeV1 } from './blueprint.js'
 
 export interface ExecutionCapabilityRefV1 {
   readonly id: string
@@ -14,6 +15,19 @@ export interface ExecutionContextReferenceV1 {
   readonly opaqueReference: string
 }
 
+export interface ExecutionAgentProgramV1 {
+  readonly role: string
+  readonly goals: readonly string[]
+  readonly graph: {
+    readonly nodes: readonly AgentGraphNodeV1[]
+    readonly edges: readonly AgentGraphEdgeV1[]
+  }
+  readonly modelPolicy: {
+    readonly allowed: readonly string[]
+    readonly preferred: string | null
+  }
+}
+
 export interface ExecutionEnvelopeV1 {
   readonly schemaVersion: 1
   readonly tenantId: string
@@ -23,6 +37,7 @@ export interface ExecutionEnvelopeV1 {
   readonly runId: string
   readonly actionId: string
   readonly blueprint: { readonly id: string; readonly version: string; readonly digest: string }
+  readonly program: ExecutionAgentProgramV1
   readonly capabilities: readonly ExecutionCapabilityRefV1[]
   readonly context: readonly ExecutionContextReferenceV1[]
   readonly workspaceGrants: readonly WorkspaceGrantV1[]

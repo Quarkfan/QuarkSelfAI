@@ -1240,3 +1240,15 @@
   会先于新 lease poll 重传且不重复执行，禁止 mid-action fallback。
 - 当前只有注入式 fixture，没有真实 Claude Code/Codex/DSH process adapter、自动 polling、daemon、workspace 读写、电脑操作或 external effect；现网
   owner/composition 未变，effects 仍为 0/23。回滚删除 port/cycle delegates/test/ADR 与新增 catalog dependency，无 live 状态迁移。
+
+## 2026-09-06 signed executable Agent program
+
+- 在实现真实 executor adapter 前复核发现，原 `ExecutionEnvelopeV1` 只签名 Blueprint identity 与 artifact pins，没有携带 role、goals、graph 和 model policy；
+  executor 无法从统一契约恢复实际 Agent，若另行拼 prompt 会形成未签名的第二执行语义通道。
+- V1 尚未激活，因此直接修正闭合 contract、JSON Schema 与 compiler：`program` 进入原 canonical digest/signature，三个执行器获得同一不可变程序。
+  validator 要求 graph 只引用已 pin capability、保持唯一且无环，并拒绝绝对路径、secret-shaped 值、超限配置及 command/script/shell/argv/executable 载荷。
+- 定向测试已覆盖 compiler preservation、executor parity、digest drift 和失败关闭；本批没有进程 adapter、网络、daemon、安装、能力激活、运行 owner 或 effect 变化，
+  也没有持久状态迁移。回滚恢复旧 contract/compiler/schema/fixtures 并删除 ADR 0139 即可。
+- 完整 `npm run check` 通过：主项目 441 项中 434 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 130 modules、
+  23/23 effects implemented、0/23 active。work-domain isolation、assistant continuity、capability evolution portability 与根同步审计均通过；
+  continuity 继续如实报告 `organizationComplete=false` 和 `work-integration-not-yet-isolated`。

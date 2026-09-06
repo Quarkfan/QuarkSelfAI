@@ -187,6 +187,11 @@ leased，server 精确确认后再持久化 accepted，之后才调用精确 id 
 恢复同一 executor，不在 action 中途 fallback；待同步结果也会先于新 poll 发送且不重复执行。当前只有注入式合成 executor，不含真实进程 adapter、
 daemon、effect 或运行 composition。
 
+[ADR 0139](adr/0139-signed-executable-agent-program.md) 修正尚未激活的 V1 Execution Envelope：签名 payload 现在必须包含 Blueprint 的 role、goals、
+capability graph 与 model policy，Claude Code、Codex、DSH 因而接收同一份完整声明式 Agent 程序。graph 只能引用同 envelope 中已 pin 的 artifact，
+配置必须是有界 canonical JSON，并拒绝绝对路径、secret-shaped 值和 command/script/shell/argv/executable 直接执行载荷。本批只改变 contract、compiler、
+schema 和 fixture；不运行 executor、不迁移持久状态、不改变 composition 或 effect owner。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

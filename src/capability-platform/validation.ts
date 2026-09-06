@@ -92,6 +92,29 @@ function assertAcyclic(adjacency: ReadonlyMap<string, readonly string[]>, messag
   for (const node of adjacency.keys()) visit(node)
 }
 
+function validateDeclarativeConfiguration(value: unknown, label: string): void {
+  const serialized = canonicalJson(value)
+  if (serialized.length > 65_536) throw new Error(`${label} exceeds 65536 canonical JSON characters`)
+  const visit = (item: unknown, path: string): void => {
+    if (typeof item === 'string') {
+      if (item.length > 8_192) throw new Error(`${path} exceeds 8192 characters`)
+      if (absolutePathPattern.test(item) || secretAssignmentPattern.test(item)) throw new Error(`${path} cannot contain an absolute path or secret-shaped value`)
+      return
+    }
+    if (Array.isArray(item)) {
+      item.forEach((child, index) => visit(child, `${path}[${index}]`))
+      return
+    }
+    if (item && typeof item === 'object') {
+      for (const [key, child] of Object.entries(item as Record<string, unknown>)) {
+        if (/^(?:command|commands|script|shell|argv|executable)$/i.test(key)) throw new Error(`${path}.${key} cannot carry an executable payload`)
+        visit(child, `${path}.${key}`)
+      }
+    }
+  }
+  visit(value, label)
+}
+
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value)
   if (typeof value === 'number') {
@@ -328,7 +351,7 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprintV1 {
     const capabilityId = identifier(node.capabilityId, `blueprint.graph.nodes[${index}].capabilityId`)
     if (!capabilitySet.has(capabilityId)) throw new Error('blueprint graph node references an undeclared capability')
     identifier(node.interfaceId, `blueprint.graph.nodes[${index}].interfaceId`)
-    canonicalJson(record(node.configuration, `blueprint.graph.nodes[${index}].configuration`))
+    validateDeclarativeConfiguration(record(node.configuration, `blueprint.graph.nodes[${index}].configuration`), `blueprint.graph.nodes[${index}].configuration`)
     return id
   })
   unique(nodes, 'blueprint.graph.nodes')
@@ -404,14 +427,64 @@ export function validateAgentBlueprint(value: unknown): AgentBlueprintV1 {
 
 export function validateExecutionEnvelope(value: unknown): ExecutionEnvelopeV1 {
   const envelope = record(value, 'envelope')
+  exactKeys(envelope, ['schemaVersion', 'tenantId', 'userId', 'deviceId', 'agentId', 'runId', 'actionId', 'blueprint', 'program', 'capabilities', 'context', 'workspaceGrants', 'approvalGrants', 'idempotencyKey', 'deadline', 'budget', 'dataClasses', 'allowedEffects', 'executorRequirement', 'continuity', 'plan'], 'envelope')
   if (envelope.schemaVersion !== 1) throw new Error('envelope.schemaVersion must be 1')
   for (const field of ['tenantId', 'userId', 'deviceId', 'agentId', 'runId', 'actionId'] as const) identifier(envelope[field], `envelope.${field}`)
   const blueprint = record(envelope.blueprint, 'envelope.blueprint')
   identifier(blueprint.id, 'envelope.blueprint.id')
   version(blueprint.version, 'envelope.blueprint.version')
   digest(blueprint.digest, 'envelope.blueprint.digest')
+  const program = record(envelope.program, 'envelope.program')
+  exactKeys(program, ['role', 'goals', 'graph', 'modelPolicy'], 'envelope.program')
+  const role = text(program.role, 'envelope.program.role', 500)
+  if (absolutePathPattern.test(role) || secretAssignmentPattern.test(role)) throw new Error('execution program role cannot contain an absolute path or secret-shaped value')
+  const goals = array(program.goals, 'envelope.program.goals').map((item, index) => text(item, `envelope.program.goals[${index}]`, 2000))
+  if (!goals.length) throw new Error('execution program goals cannot be empty')
+  for (const goal of goals) if (absolutePathPattern.test(goal) || secretAssignmentPattern.test(goal)) throw new Error('execution program goals cannot contain absolute paths or secret-shaped values')
   const capabilities = array(envelope.capabilities, 'envelope.capabilities')
-  for (const [index, value] of capabilities.entries()) digest(record(value, `envelope.capabilities[${index}]`).artifactDigest, `envelope.capabilities[${index}].artifactDigest`)
+  const capabilityIds = capabilities.map((value, index) => {
+    const capability = record(value, `envelope.capabilities[${index}]`)
+    exactKeys(capability, ['id', 'version', 'artifactDigest'], `envelope.capabilities[${index}]`)
+    const id = identifier(capability.id, `envelope.capabilities[${index}].id`)
+    version(capability.version, `envelope.capabilities[${index}].version`)
+    digest(capability.artifactDigest, `envelope.capabilities[${index}].artifactDigest`)
+    return id
+  })
+  unique(capabilityIds, 'envelope.capabilities')
+  const graph = record(program.graph, 'envelope.program.graph')
+  exactKeys(graph, ['nodes', 'edges'], 'envelope.program.graph')
+  const nodeIds = array(graph.nodes, 'envelope.program.graph.nodes').map((value, index) => {
+    const node = record(value, `envelope.program.graph.nodes[${index}]`)
+    exactKeys(node, ['id', 'capabilityId', 'interfaceId', 'configuration'], `envelope.program.graph.nodes[${index}]`)
+    const id = identifier(node.id, `envelope.program.graph.nodes[${index}].id`)
+    const capabilityId = identifier(node.capabilityId, `envelope.program.graph.nodes[${index}].capabilityId`)
+    if (!capabilityIds.includes(capabilityId)) throw new Error('execution program node references an unpinned capability')
+    identifier(node.interfaceId, `envelope.program.graph.nodes[${index}].interfaceId`)
+    validateDeclarativeConfiguration(record(node.configuration, `envelope.program.graph.nodes[${index}].configuration`), `envelope.program.graph.nodes[${index}].configuration`)
+    return id
+  })
+  unique(nodeIds, 'envelope.program.graph.nodes')
+  const nodeSet = new Set(nodeIds)
+  const adjacency = new Map(nodeIds.map(node => [node, [] as string[]]))
+  const edgeKeys: string[] = []
+  for (const [index, value] of array(graph.edges, 'envelope.program.graph.edges').entries()) {
+    const edge = record(value, `envelope.program.graph.edges[${index}]`)
+    exactKeys(edge, ['from', 'to', 'output', 'input'], `envelope.program.graph.edges[${index}]`)
+    const from = identifier(edge.from, `envelope.program.graph.edges[${index}].from`)
+    const to = identifier(edge.to, `envelope.program.graph.edges[${index}].to`)
+    if (!nodeSet.has(from) || !nodeSet.has(to)) throw new Error('execution program edge references an unknown node')
+    const output = text(edge.output, `envelope.program.graph.edges[${index}].output`, 200)
+    const input = text(edge.input, `envelope.program.graph.edges[${index}].input`, 200)
+    edgeKeys.push(`${from}\u0000${to}\u0000${output}\u0000${input}`)
+    adjacency.get(from)!.push(to)
+  }
+  unique(edgeKeys, 'envelope.program.graph.edges')
+  assertAcyclic(adjacency, 'execution program graph contains a cycle')
+  const modelPolicy = record(program.modelPolicy, 'envelope.program.modelPolicy')
+  exactKeys(modelPolicy, ['allowed', 'preferred'], 'envelope.program.modelPolicy')
+  const allowedModels = array(modelPolicy.allowed, 'envelope.program.modelPolicy.allowed').map((item, index) => identifier(item, `envelope.program.modelPolicy.allowed[${index}]`))
+  unique(allowedModels, 'envelope.program.modelPolicy.allowed')
+  if (modelPolicy.preferred !== null && !allowedModels.includes(identifier(modelPolicy.preferred, 'envelope.program.modelPolicy.preferred'))) throw new Error('execution program preferred model must be allowed')
   const context = array(envelope.context, 'envelope.context')
   for (const [index, value] of context.entries()) {
     const reference = record(value, `envelope.context[${index}]`)

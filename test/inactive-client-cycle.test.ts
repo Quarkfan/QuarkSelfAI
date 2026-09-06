@@ -27,7 +27,7 @@ const planVerifier = { verify: async ({ payloadDigest, signature }: { payloadDig
 function signedPlan(): SignedExecutionPlanV1 {
   const unsigned = {
     schemaVersion: 1 as const, tenantId: context.tenantId, userId: context.userId, deviceId: 'device.owner', agentId: 'agent.demo', runId: 'run.one', actionId: 'action.one',
-    blueprint: { id: 'agent.demo', version: '1.0.0', digest: sha }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.one/action.one',
+    blueprint: { id: 'agent.demo', version: '1.0.0', digest: sha }, program: { role: 'worker', goals: ['Complete the fixture'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [], idempotencyKey: 'run.one/action.one',
     deadline: later, budget: { tokens: 1, durationMs: 1000, costMinorUnits: 0 }, dataClasses: ['public'], allowedEffects: [],
     executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: ['tool.execute'], allowedExecutors: ['executor-a', 'dsh'], preferredExecutors: ['executor-a'] },
     continuity: { sessionId: null, continuationToken: null, fallbackAllowed: true, midActionSwitchAllowed: false as const },

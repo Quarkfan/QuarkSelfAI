@@ -13,7 +13,7 @@ function plan(tenantId: string, userId: string, deviceId: string, allowedEffects
     schemaVersion: 1, planId: 'plan.001', issuedAt: now.toISOString(), expiresAt: later, keyId: 'test-key', algorithm: 'ed25519', payloadDigest: sha, signature: 'fixture',
     envelope: {
       schemaVersion: 1, tenantId, userId, deviceId, agentId: 'agent.demo', runId: 'run.001', actionId: 'action.001',
-      blueprint: { id: 'agent/demo', version: '1.0.0', digest: sha }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [],
+      blueprint: { id: 'agent/demo', version: '1.0.0', digest: sha }, program: { role: 'worker', goals: ['Complete the fixture'], graph: { nodes: [], edges: [] }, modelPolicy: { allowed: ['provider-neutral'], preferred: null } }, capabilities: [], context: [], workspaceGrants: [], approvalGrants: [],
       idempotencyKey: 'dispatch.001', deadline: later, budget: { tokens: 100, durationMs: 1000, costMinorUnits: 1 }, dataClasses: [], allowedEffects,
       executorRequirement: { protocolVersions: ['envelope.v1'], capabilities: [], allowedExecutors: ['executor-a'], preferredExecutors: ['executor-a'] },
       continuity: { sessionId: null, continuationToken: null, fallbackAllowed: false, midActionSwitchAllowed: false },
