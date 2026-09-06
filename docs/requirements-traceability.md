@@ -169,20 +169,24 @@ unused uninstall 采用 quarantine 后二次空目录检查，只删除 manifest
 
 已安装 server 现可执行独立的 host configuration provisioning：TLS key/certificate 必须来自 owner-only canonical 文件并通过真实公钥匹配，plan verifier
 必须是 pinned Ed25519；生成的 closed config 只引用安装内 program/runtime/state，独立 receipt 固定 database/owner/service/listener/SSH apply/auto-start/effects
-均未激活。recovery 逐字节复核且不打开数据库或 socket；只有 runtime/state 仍为空时才能移除配置。真实数据库 bootstrap/restore、首个 owner、service/SSH apply
-和 process activation 仍未执行。
+均未激活。recovery 逐字节复核且不打开数据库或 socket；只有 runtime/state 仍为空时才能移除配置。首个 owner 与精确版本 SQLite restore 已有 inactive
+contract；service/SSH apply 和 process activation 仍未执行。
 
 installation-scoped first-owner lifecycle 现已复用事务化 identity bootstrap，但 database 与两份 migration path 不再由调用者选择，只能从已恢复的安装派生。
 它要求 runtime/state 为空，创建恰好一个 active tenant/user/owner、零 session，并以独立 receipt 绑定 configuration digest。recovery 只读验证 SQLite integrity、
-singleton owner 与零 session；service、SSH、auto-start、listener 和 effects 均未激活。数据库恢复与真实 owner provision 仍未完成。
+singleton owner 与零 session；service、SSH、auto-start、listener 和 effects 均未激活。真实 owner provision 仍未执行。
 
 first-owner receipt crash window 现有前向修复：bootstrap 在 receipt 前 checkpoint 并将尚未运行的 database 置为 DELETE journal；若 state 只有该 database，
 repair 会核验 installation/config lineage、SQLite integrity、singleton active owner、相同 persisted timestamp、零 session 和 expected tenant/user，再补写同一 inactive receipt。
-它不接收 password、不改变 identity 数据、不删除 state。一般数据库备份恢复和真实 owner provision 仍未完成。
+它不接收 password、不改变 identity 数据、不删除 state。真实 owner provision 仍未执行。
 
-发行包现已包含默认禁用的 local server admin entry，exact commands 仅覆盖 install、configure、bootstrap-owner、status 与两个 unused rollback；配置为 owner-only
-closed JSON，owner credential 只从 bounded stdin 进入；另有无 credential 的 exact owner-receipt repair。输出省略 credential、TLS、database path 与 tenant metadata，且不存在 start/stop、service register、SSH apply、
-effect enable 或 durable-state delete 命令。真实发行包端到端调用证据将在该 entry 提交后从 clean revision 记录。
+发行包现已包含默认禁用的 local server admin entry，exact commands 覆盖 install/configure/bootstrap/status、owner-receipt repair、两个 unused rollback，
+以及 encrypted state backup/stage/fresh-inactive restore。配置为 owner-only closed JSON，owner credential 只从 bounded stdin 进入；输出省略 credential、TLS、database path
+与 tenant metadata，且不存在 start/stop、service register、SSH apply、effect enable 或 durable-state delete 命令。
+
+installed-server state recovery 只备份经完整回读的 singleton-owner SQLite，以 online backup、integrity、content digest 与 age encryption 闭环；密文不含
+host config、TLS、runtime、program 或绝对路径。staging 必须全新，恢复目标必须同 version/revision/distribution 且 runtime/state 为空；数据库 no-overwrite
+复制后重新核验 owner 并绑定目标 configuration receipt。当前只覆盖 inactive SQLite 精确版本，不覆盖 active/quiesced、PostgreSQL 或跨版本迁移。
 
 service-manager 边界现可纯渲染 macOS LaunchAgent 与 systemd user unit：定义只指向 installed entry/config，显式设置 server enable gate，且不含 credential 或 tenant
 metadata；receipt 固定 prepared-inactive、unregistered、unstarted、single-provider、effects-off。renderer 不写系统目录、不调用 service manager、不启动进程；生产 system

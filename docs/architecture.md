@@ -127,6 +127,10 @@ server entry/config，显式设置 server enable gate，并返回 content digest
 [ADR 0163](adr/0163-first-owner-receipt-forward-repair.md) 关闭 SQLite transaction 已提交但 receipt 尚未写入的 crash window：inactive database 在 receipt
 前 checkpoint 并切为 DELETE journal；repair 只接受 state 中唯一 database，核验 integrity、singleton active owner、persisted timestamp、零 session 及调用者给出的
 expected tenant/user 后补写标准 receipt。它不接受密码或替换身份，不删除或修改 tenant state，也不改变任何 activation flag。
+[ADR 0164](adr/0164-encrypted-installed-server-state-recovery.md) 为已安装云端服务增加独立的加密状态恢复契约：只从完整回读的 inactive owner
+installation 以 SQLite online backup 生成快照，密文清单不含 host path、TLS/config/runtime；解密只落新 staging，并拒绝 link、未知文件、digest 或 integrity drift。
+恢复目标必须是同 version/revision/distribution 且 runtime/state 为空的新配置安装，数据库以 no-overwrite 复制后重新核验 singleton owner，并生成绑定目标
+installation/config 的 receipt。admin entry 只返回脱敏 bundle/installation identity，service/SSH apply/auto-start/effects 继续关闭。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

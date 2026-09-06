@@ -181,6 +181,17 @@ custom dump inventory 非空且 bundle migration 与 checkout 精确一致；然
 `pg_restore`/`psql` argv。成功后生成与 SQLite 相同的 `control-only`、loopback、`TAKEOVER_CONFIRMED=false`
 配置；恢复后核验失败时不会自动 drop 数据库，而会明确要求检查或丢弃这个隔离目标。
 
+### 5.2 已安装云端服务状态
+
+云端发行包内的默认禁用 admin entry 另提供 `backup-state`、`stage-state` 和 `prepare-state-restore`。它不复用 checkout 的
+`var` 清单，也不备份 TLS key/certificate、host config、runtime socket 或程序文件。备份仅在 installation、configuration 和 singleton owner
+全部回读通过时，以 SQLite online backup 捕获 `control.sqlite3`，执行 integrity check，再将内容寻址 manifest 与数据库直接加密给 age recipient。
+
+解密必须落到新的 staging 目录；恢复必须落到另一个同 version、source revision、distribution digest，且 runtime/state 为空的 configured-inactive
+installation。目标端自行配置新的 TLS/host path，数据库 no-overwrite 写入后重新验证 owner，并生成绑定目标 installation/configuration 的 receipt。
+任何步骤都不注册服务、不 apply SSH、不自启、不启用 effect。当前 v1 只支持 inactive SQLite 精确版本恢复；active/quiesced 备份、PostgreSQL server
+state 和跨版本迁移仍需后续独立门禁。
+
 ## 6. 恢复安全门禁
 
 恢复实例必须先处于 `restore-safe`：

@@ -1575,3 +1575,19 @@
   `sha256:e0e6ab92a68fb5072dd1b5d40c4229bb192852994352ef279a2cbb301b2cf5a9`；bundled admin entry 完成 install/configure/owner 后，
   演练精确删除临时 receipt 模拟 crash，再以 expected identity 成功 repair 并由 status 回读 `owner-created-inactive`。全部 activation flag 仍关闭，
   含一次性 credential/database 的临时根已整体删除。
+
+## 2026-09-06 encrypted installed-server state recovery
+
+- 新增 installed-server 专用 `backup-state`：仅接受 distribution/configuration/owner 全部回读通过且 runtime 为空的 installation，使用 Node SQLite online backup
+  捕获数据库并执行 integrity check；密文只含数据库与内容寻址 manifest，不携带绝对路径、TLS/config、runtime、program 或 credential。
+- `stage-state` 只创建新的 caller-owned plaintext staging，拒绝 link、未知/重复路径、未登记文件、manifest identity、digest 和 SQLite integrity drift。
+  `prepare-state-restore` 只接受同 version/revision/distribution 且 runtime/state 为空的新 configured installation，以 no-overwrite 复制数据库，复核 singleton owner，
+  再生成绑定新 installation/config digest 的标准 receipt。
+- 三个操作均通过发行包内默认禁用 admin entry 暴露；bounded receipt 不含 tenant/user/path/TLS 信息，service/SSH apply/auto-start/effects 固定 false。
+  当前只覆盖 inactive SQLite 精确版本恢复，不宣称 active/quiesced、PostgreSQL 或跨版本迁移。
+- 定向测试覆盖加密、解密 staging、完整回读、目标重绑、重复恢复拒绝与数据库篡改失败；提交后再以 clean built distribution 和真实 age 完成临时演练。
+- 架构检查将 `age`/`tar` host process 调用隔离为独立 adapter，cloud composition 只依赖该窄接口；机器迁移矩阵现在覆盖 137/137 modules，
+  其中 77 个 core-bound Offer 均映射为不可安装、不可由私有包替换的平台设施。
+- 完整 `npm run check` 通过：主项目 504 项中 492 通过、12 项仅因 sandbox listener 限制跳过，compatibility 179/179；
+  23/23 effects implemented、0/23 active。strict work-domain isolation、assistant continuity、DSH/server/BlackLake/Lark compatibility 与私有包审计均通过；
+  continuity 仍如实报告 `organizationComplete=false` 和 `work-integration-not-yet-isolated`。

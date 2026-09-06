@@ -12,6 +12,7 @@
 | 兼容期 handoff 状态 | `var/handoff` | 约 9.3 MiB | 高 | 在兼容运行结束前归档；原生迁移完成后按 ADR 退出 |
 | 运行环境与兼容配置 | `var/runtime.env`、`COMPAT_CONFIG_PATH` | 小于 20 KiB | 极高 | 仅加密备份；新机重写路径和新生成控制令牌 |
 | 能力进化持久状态 | `var/capability-evolution` | 约 8 KiB | 中 | 备份脱敏账本与未决 proposal 关联，不备份消息正文 |
+| 已安装云端控制面 SQLite | installation `state/control.sqlite3` | 尚无真实部署数据 | 极高 | 独立 age 密文；只恢复到同 distribution 的新 inactive installation，不恢复 host config/TLS/runtime |
 
 能力进化分为两类真源：调度意图和任务正文进入 Git；最近运行账本进入加密恢复包。本机 Codex automation 的 project id
 属于设备绑定，不进入 Git 或恢复包；新终端登录 Codex 后按仓库蓝图重建为暂停任务，核验后再切换为唯一活动调度。
@@ -26,6 +27,10 @@ SQLite 和 DSH 目录中可能同时存在数据库/WAL，备份实现必须先�
 PostgreSQL 备份额外记录不含凭证的 `server_version_num` 与精确 migration 清单。恢复只接受与 checkout revision 和
 bundle ID 精确匹配的 staging，要求目标 major 不低于来源且没有用户关系；连接密码只进入 libpq 子进程环境和新 clone
 权限 `0600` 的 restore-safe 配置，不进入 argv、receipt 或 Git。
+
+已安装云端控制面使用独立的 server-state bundle，不把 installation 绝对路径、TLS 私钥/证书、host config、runtime socket 或 program
+复制进状态包。目标端先安装同 version/revision/digest 的发行包并重新配置 host，再以 no-overwrite 方式恢复数据库和重建目标 receipt；当前只支持
+inactive singleton-owner SQLite。
 
 ## 2. 可重新登录或从秘密管理器恢复的身份
 
