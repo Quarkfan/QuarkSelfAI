@@ -1,7 +1,7 @@
 import type { ArtifactVerificationReportV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1 } from '../client-runtime/contracts.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
-import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
+import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
 
 const sessionPattern = /^session:[a-z0-9][a-z0-9._:-]{0,127}$/
 
@@ -54,6 +54,7 @@ export class InactiveCloudControlPlaneApplicationV1 {
   async openDeviceSession(proof: DeviceSessionProofV1, now?: Date): Promise<DeviceSessionV1> { return await this.#sessions().openSession(proof, now) }
   async pollDeviceSession(sessionId: string, now?: Date): Promise<DeviceTaskLeaseV1 | null> { return await this.#sessions().poll(sessionId, now) }
   async acknowledgeDeviceLease(sessionId: string, input: { readonly leaseToken: string; readonly taskId: string }, now?: Date): Promise<DeviceTaskLeaseAcknowledgementV1> { return await this.#sessions().acknowledge(sessionId, input, now) }
+  async submitDeviceResult(sessionId: string, input: Omit<RedactedResultV1, 'tenantId' | 'userId'>): Promise<RedactedResultV1> { return await this.#sessions().submitResult(sessionId, input) }
 
   async #context(sessionReference: string): Promise<TenantContextV1> {
     if (!sessionPattern.test(sessionReference)) throw new Error('cloud session reference is invalid')

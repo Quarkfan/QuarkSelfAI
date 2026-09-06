@@ -20,6 +20,7 @@ function handler() {
     async openSession(proof: { deviceId: string }) { calls.push(`proof:${proof.deviceId}`); return { sessionId: 'session.device' } as never },
     async poll(sessionId: string) { calls.push(`poll:${sessionId}`); return null },
     async acknowledge(sessionId: string, input: { taskId: string }) { calls.push(`ack:${sessionId}:${input.taskId}`); return { state: 'accepted' } as never },
+    async submitResult(sessionId: string, input: { taskId: string }) { calls.push(`result:${sessionId}:${input.taskId}`); return { tenantId: 'test.alpha', userId: 'owner', ...input } as never },
   }
   const application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions)
   return { handler: new InactiveCloudHttpHandlerV1(application), calls }
@@ -44,11 +45,12 @@ test('returns bounded errors and rejects tenant injection before a provider call
   assert.deepEqual(fixture.calls, [])
 })
 
-test('routes device challenge, proof, poll and acknowledgement through one session provider', async () => {
+test('routes device challenge, proof, poll, acknowledgement and result through one session provider', async () => {
   const fixture = handler()
   assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-sessions/challenge', sessionReference: 'session:valid', body: { deviceId: 'device.one' } })).status, 201)
   assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-sessions/proof', body: { proof: { schemaVersion: 1, deviceId: 'device.one' } } })).status, 201)
   assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-sessions/poll', body: { sessionId: 'session.device' } })).status, 200)
   assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-sessions/ack', body: { sessionId: 'session.device', leaseToken: 'lease.one', taskId: 'task.one' } })).status, 200)
-  assert.deepEqual(fixture.calls, ['challenge:test.alpha:device.one', 'proof:device.one', 'poll:session.device', 'ack:session.device:task.one'])
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-sessions/result', body: { sessionId: 'session.device', result: { deviceId: 'device.one', taskId: 'task.one', planId: 'plan.one', outcome: 'succeeded', summaryCode: 'ok', artifactDigests: [], completedAt: '2026-09-06T00:00:00.000Z' } } })).status, 200)
+  assert.deepEqual(fixture.calls, ['challenge:test.alpha:device.one', 'proof:device.one', 'poll:session.device', 'ack:session.device:task.one', 'result:session.device:task.one'])
 })

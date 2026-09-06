@@ -999,3 +999,10 @@
   使用已认证 user session，proof/poll/ack 使用设备协议自身的 challenge/session/lease 凭据。
 - 没有把持久 device repository 复制进现有 in-memory coordinator；未来 provider 必须从唯一持久身份源读取，避免双 provider/双状态写。
 - 本批只验证路由和 scope 语义，没有持久 session provider、真实 verifier、result upload、listener、网络、executor 或 effect。
+
+## 2026-09-06 redacted device result upload API
+
+- 单一 `DeviceSessionServerPortV1` 增加 result acceptance；客户端只提交 device/task/plan、bounded outcome/summaryCode、artifact digests 与
+  completedAt，tenant/user 必须由 server session scope 推导，不能由请求体指定。
+- `/v1/device-sessions/result` 与 challenge/proof/poll/ack 共用同一 provider port，API 不另存 lease 或 result，避免第二 writer。
+- 当前只有 route/port fixture；没有持久 task/result provider、真实网络、executor、原始输出上传或 external effect。
