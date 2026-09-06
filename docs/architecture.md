@@ -115,6 +115,9 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 [ADR 0159](adr/0159-inactive-server-host-configuration.md) 将已验证且尚未使用的安装绑定到本机配置：真实校验 TLS certificate/private key 匹配，
 验证 pinned Ed25519 plan key，并只引用安装内的 migration、state 与 runtime 路径。独立 receipt 固定 listener/database/owner/service/SSH apply/auto-start/effects
 全部关闭；recovery 不开数据库或 socket，runtime/state 一旦出现内容便禁止配置回滚。数据库初始化、首个 owner、服务注册、SSH apply 与启动仍是后续独立状态。
+[ADR 0160](adr/0160-installed-first-owner-bootstrap.md) 将事务化 first-owner primitive 约束到已恢复的 installation/configuration：database 与 migration
+路径全部由安装根派生，runtime/state 必须未使用，只创建一个 active tenant/user/owner 且不创建 session。回读检查 SQLite integrity、singleton owner 与零 session；
+receipt 继续固定 service/SSH apply/auto-start/effects 关闭。数据库一经创建即为不可自动删除的 durable user state，后续只能恢复前进。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

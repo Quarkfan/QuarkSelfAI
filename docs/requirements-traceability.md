@@ -172,6 +172,10 @@ unused uninstall 采用 quarantine 后二次空目录检查，只删除 manifest
 均未激活。recovery 逐字节复核且不打开数据库或 socket；只有 runtime/state 仍为空时才能移除配置。真实数据库 bootstrap/restore、首个 owner、service/SSH apply
 和 process activation 仍未执行。
 
+installation-scoped first-owner lifecycle 现已复用事务化 identity bootstrap，但 database 与两份 migration path 不再由调用者选择，只能从已恢复的安装派生。
+它要求 runtime/state 为空，创建恰好一个 active tenant/user/owner、零 session，并以独立 receipt 绑定 configuration digest。recovery 只读验证 SQLite integrity、
+singleton owner 与零 session；service、SSH、auto-start、listener 和 effects 均未激活。发行包内可执行管理入口、receipt 中断修复、数据库恢复与真实 owner provision 仍未完成。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

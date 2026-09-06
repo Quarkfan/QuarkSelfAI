@@ -1515,3 +1515,15 @@
   `sha256:175e397c96116f0ae9f284ce16c9103e416564e77f0b70cb96eccbff035f3b26`；再以一次性匹配 TLS credential 与 Ed25519 plan key 完成
   install→configure→recover→unused config remove→unused uninstall。回读确认 configured-inactive 且 database/service/SSH apply/auto-start/effects 全为 false，
   临时 distribution、credential 与 installation 均已删除。
+
+## 2026-09-06 installed first cloud owner bootstrap
+
+- 新增 installation-scoped first-owner bootstrap：先回读 distribution 与 inactive host config，再要求 runtime/state 为空；database、tenant migration 与 identity
+  migration 均从安装根派生，调用方不能换成 checkout 或其他 state。复用既有 transaction 只创建一个 active tenant/user/owner，不创建 session。
+- owner receipt 绑定 installation/config digest，固定 service/SSH apply/auto-start/effects false。只读 recovery 验证 exact state layout、0600 single-link database、
+  SQLite integrity、singleton active owner 和零 browser session；credential 不进入 receipt，原始 database bytes 也不含明文。
+- durable database 创建后不提供删除/回滚 API；receipt 写入中断必须由后续恢复能力向前修复，不能自动删 tenant state。本批没有真实 owner、server entry 管理命令、
+  listener/service/sshd 启动、客户端连接或 external effect。
+- 完整 `npm run check` 通过：主项目 497 项中 485 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构保持 136 modules、
+  76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once，work-domain 101/101
+  且无 drift；assistant continuity 仍如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，DSH/server/BlackLake/Lark 兼容均通过。
