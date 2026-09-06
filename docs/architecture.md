@@ -97,8 +97,10 @@ fallback 或挂入 daemon，因此证明的是安装客户端边界已经真实�
 
 [ADR 0142](adr/0142-single-owner-no-effect-client-worker.md) 增加客户端自己的 no-effect worker：封闭配置必须显式 `enabled=true`、
 workspace canonical、周期有界且 external writes 关闭；构造保持静止，`start()` 后每一轮必须在上一轮结束后才调度下一轮。discovery 按独立
-周期刷新，失败只保留稳定降级码并继续同一 owner 的有界重试，`stop()` 取消未来 timer 后等待唯一在途 pass。该 worker 仍未形成 CLI、
-安装激活或 launchd/systemd 服务，也未挂入当前 composition。
+周期刷新，失败只保留稳定降级码并继续同一 owner 的有界重试，`stop()` 取消未来 timer 后等待唯一在途 pass。
+[ADR 0143](adr/0143-installed-client-process-entry.md) 将安装恢复、Keychain-backed configured client 与 worker 收束到一个 close owner，并增加
+直接 Node `status|run` 入口。`status` 只验证安装且不创建状态；`run` 还必须通过本地显式 enable gate，SIGTERM/SIGINT 先 drain worker 再释放
+client lease。当前仍没有 package bin、安装激活或 launchd/systemd 注册，也未挂入现网 composition。
 
 [ADR 0118](adr/0118-persistent-local-client-state-boundary.md) 增加独立、默认 inactive 的本地客户端 SQLite 状态域。设备私钥只以
 opaque secret/keychain reference 表示；workspace handle 到 canonical path 的映射只留本机，且每次解析重新核验根路径身份，阻断登记后

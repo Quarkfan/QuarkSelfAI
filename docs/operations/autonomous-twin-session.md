@@ -1303,3 +1303,15 @@
 - 完整 `npm run check` 通过：主项目 457 项中 450 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 132 modules、
   72 个 platform-core Offer、117 assets、effects active 0/23。capability platform 132/132 exactly-once、DSH/server compatibility、
   work-domain isolation、assistant continuity 与根同步校验均通过；`work-integration-not-yet-isolated` 状态未改变。
+
+## 2026-09-06 installed-client process entry
+
+- 新增单一 installed-client process owner：先复核 inactive installation，再打开 pinned-verifier/Keychain-backed configured client 和 worker；
+  open 不启动，close 先 drain worker 再关闭 client 并释放 instance lease，半途构造失败也会关闭已打开 client。
+- 直接 Node entry 只接受 `status|run`。status 仅回读安装 receipt；run 必须设置本地 `QUARK_CLIENT_ENABLE_NO_EFFECT_WORKER=1`，并从本地环境读取
+  install root/workspace 与有界周期。SIGTERM/SIGINT 走相同 close；失败输出固定码，不转发嵌套异常或路径。
+- 真实子进程测试创建临时 inactive installation 后执行 built `status`，输出仅含 installation id/version/state/关闭门禁，state 目录仍为空。
+  本批未读取真实 Keychain、启动 run、连接网络、执行模型、注册服务或改变现网 composition/effect。回滚删除 process/entry/test/ADR/catalog ownership。
+- 完整 `npm run check` 通过：主项目 461 项中 454 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；132/132 模块
+  exactly-once、72 个 platform-core Offer、effects active 0/23。work-domain isolation、assistant continuity、capability platform、DSH/server
+  compatibility 与根同步校验通过，现网和私有包状态均未改变。

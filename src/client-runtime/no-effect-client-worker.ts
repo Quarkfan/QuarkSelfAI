@@ -133,7 +133,7 @@ export class NoEffectConfiguredClientWorkerV1 {
 }
 
 const nodeSchedule: ClientWorkerSchedulePortV1 = {
-  schedule(delayMs, callback) { const timer = setTimeout(callback, delayMs); timer.unref(); return timer },
+  schedule(delayMs, callback) { return setTimeout(callback, delayMs) },
   cancel(handle) { clearTimeout(handle as NodeJS.Timeout) },
 }
 

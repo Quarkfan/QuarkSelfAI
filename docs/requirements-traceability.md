@@ -79,8 +79,9 @@ DSH 使用锁定产品 headless CLI、stdin host、allowlisted environment 和�
 pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallback 已完成。
 
 客户端现有独立 no-effect worker，可在显式 start 后由单 owner 串行驱动 executor discovery 与 signed reasoning cycle；失败只记录稳定码并按
-有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。它目前仍是 `runtime=inactive` 的库组件，没有 CLI、安装激活、服务注册或真实云
-连接，不能称客户端 daemon 已可分发运行。
+有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。installed-client process 已把安装恢复、pinned verifier、Keychain-backed client
+与 worker 收束为同一 close boundary，并提供 `status|run` Node 入口；run 必须显式设置本地 enable gate，status 的真实子进程测试不会创建状态或
+泄露路径。它仍没有 package bin、安装激活、服务注册或真实云连接，不能称客户端 daemon 已可分发运行。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
