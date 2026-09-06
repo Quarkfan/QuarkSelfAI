@@ -5,7 +5,7 @@ import { auditCapabilityPlatformDesign } from '../scripts/audit-capability-platf
 test('covers every current module and every console requirement without activating runtime', async () => {
   const report = await auditCapabilityPlatformDesign(process.cwd())
   assert.equal(report.ok, true, report.blockers.join('\n'))
-  assert.equal(report.moduleCatalogCount, 133)
+  assert.equal(report.moduleCatalogCount, 134)
   assert.equal(report.migratedModuleCount, report.moduleCatalogCount)
   assert.equal(report.consoleRequirementCount, 50)
   assert.equal(report.consoleCompleteCount, report.consoleRequirementCount)

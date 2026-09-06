@@ -1,4 +1,5 @@
 import type { InactiveCloudControlPlaneApplicationV1 } from './cloud-application.js'
+import type { CloudAuthenticationPortV1 } from './contracts.js'
 
 export interface CloudHttpRequestV1 {
   readonly method: 'GET' | 'POST'
@@ -14,11 +15,19 @@ export interface CloudHttpResponseV1 {
 
 /** A fetch-independent request handler. It never opens a listener and never parses raw cookies or bearer credentials. */
 export class InactiveCloudHttpHandlerV1 {
-  constructor(private readonly application: InactiveCloudControlPlaneApplicationV1) {}
+  constructor(private readonly application: InactiveCloudControlPlaneApplicationV1, private readonly authentication?: CloudAuthenticationPortV1) {}
 
   async handle(request: CloudHttpRequestV1): Promise<CloudHttpResponseV1> {
     if (!['GET', 'POST'].includes(request.method) || !request.path.startsWith('/v1/') || request.path.length > 200) return response(400, 'invalid-request')
     try {
+      if (request.method === 'POST' && request.path === '/v1/auth/login') {
+        const body = exactBody(request.body, ['tenantId', 'userId', 'password'])
+        if (typeof body.tenantId !== 'string' || typeof body.userId !== 'string' || typeof body.password !== 'string') return response(400, 'invalid-body')
+        if (!this.authentication) return response(404, 'not-found')
+        return response(201, 'created', { session: await this.authentication.authenticate({ tenantId: body.tenantId, userId: body.userId, password: body.password }) })
+      }
+      if (request.method === 'POST' && request.path === '/v1/auth/logout') { if (!this.authentication) return response(404, 'not-found'); await this.authentication.revoke(requiredSession(request)); return response(200, 'ok') }
+      if (request.method === 'GET' && request.path === '/v1/auth/me') { if (!this.authentication) return response(404, 'not-found'); const context = await this.authentication.resolveSession(requiredSession(request)); if (!context) return response(401, 'unauthenticated'); return response(200, 'ok', { identity: context }) }
       if (request.method === 'GET' && request.path === '/v1/devices') return response(200, 'ok', { items: await this.application.listDevices(requiredSession(request)) })
       if (request.method === 'POST' && request.path === '/v1/device-enrollments') {
         const body = exactBody(request.body, ['tenantId', 'userId', 'deviceId', 'publicKey'])
@@ -64,7 +73,7 @@ export class InactiveCloudHttpHandlerV1 {
       return response(404, 'not-found')
     } catch (error) {
       const message = String(error)
-      if (/not authenticated|session reference/.test(message)) return response(401, 'unauthenticated')
+      if (/authentication failed|not authenticated|session reference/.test(message)) return response(401, 'unauthenticated')
       if (/not authorized/.test(message)) return response(403, 'forbidden')
       if (/conflict|immutable|concurrently/.test(message)) return response(409, 'conflict')
       if (/body/.test(message)) return response(400, 'invalid-body')

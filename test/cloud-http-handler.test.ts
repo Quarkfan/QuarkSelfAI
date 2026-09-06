@@ -6,7 +6,7 @@ import type { TenantContextV1 } from '../src/control-plane/contracts.js'
 
 const context: TenantContextV1 = { tenantId: 'test.alpha', userId: 'owner', roles: ['owner'] }
 
-function handler() {
+function handler(authentication?: { authenticate(input: { tenantId: string; userId: string; password: string }): Promise<{ sessionReference: string; expiresAt: string }>; revoke(reference: string): Promise<void>; resolveSession(reference: string): Promise<TenantContextV1 | undefined> }) {
   const calls: string[] = []
   const identity = { async resolveSession(reference: string) { return reference === 'session:valid' ? context : undefined } }
   const capabilities = {
@@ -37,8 +37,24 @@ function handler() {
     async poll(input: { requestId: string }) { calls.push(`enrollment.poll:${input.requestId}`); return { state: 'pending' } as never },
   }
   const application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment)
-  return { handler: new InactiveCloudHttpHandlerV1(application), calls }
+  return { handler: new InactiveCloudHttpHandlerV1(application, authentication), calls }
 }
+
+test('exposes bounded login, identity and logout without accepting a tenant on later operations', async () => {
+  let active = true
+  const authentication = {
+    async authenticate(input: { tenantId: string; userId: string; password: string }) { if (input.password !== 'synthetic-password') throw new Error('cloud authentication failed'); return { sessionReference: 'session:valid', expiresAt: '2026-09-06T08:00:00.000Z' } },
+    async revoke(reference: string) { assert.equal(reference, 'session:valid'); active = false },
+    async resolveSession(reference: string) { return active && reference === 'session:valid' ? context : undefined },
+  }
+  const fixture = handler(authentication)
+  const login = await fixture.handler.handle({ method: 'POST', path: '/v1/auth/login', body: { tenantId: 'test.alpha', userId: 'owner', password: 'synthetic-password' } })
+  assert.equal(login.status, 201); assert.deepEqual(login.body.session, { sessionReference: 'session:valid', expiresAt: '2026-09-06T08:00:00.000Z' })
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/auth/login', body: { tenantId: 'test.alpha', userId: 'owner', password: 'wrong' } })).status, 401)
+  assert.deepEqual((await fixture.handler.handle({ method: 'GET', path: '/v1/auth/me', sessionReference: 'session:valid' })).body.identity, context)
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/auth/logout', sessionReference: 'session:valid' })).status, 200)
+  assert.equal((await fixture.handler.handle({ method: 'GET', path: '/v1/auth/me', sessionReference: 'session:valid' })).status, 401)
+})
 
 test('keeps browser credentials out of the public device enrollment request and requires login only for approval', async () => {
   const fixture = handler()

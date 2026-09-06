@@ -1336,3 +1336,17 @@
   `work-integration-not-yet-isolated`。
 - 本批没有真实用户目录安装、Keychain provision、设备注册、云连接、worker/Agent 执行、capability activation、服务注册/启动、现网
   composition/consumer/provider/writer 变化或服务重启。回滚删除发行模块/模板/测试/ADR，并对从未启动的安装使用同一 unused guard；有 durable state 的安装不得删除。
+
+## 2026-09-06 persistent multi-tenant cloud identity
+
+- 新增默认不挂载的 SQLite 云身份 provider。账号由 canonical tenant/user 复合外键限定，密码使用随机 32-byte salt 与 bounded scrypt；成功登录生成
+  256-bit opaque session reference，数据库只保存 domain-separated digest，并在每次解析时重新检查 session、账号、用户、租户状态及服务端过期时间。
+- 同账号 15 分钟内五次失败会持久阻断 15 分钟，provider reopen 后仍生效；失败路径继续执行 bounded derivation，错误不区分未知账号和错误密码。
+  HTTP boundary 仅在显式注入 provider 时提供 login/me/logout，除 login 外所有操作只从 session scope 取得身份。
+- 合成双租户测试验证同 user id 的账号/session 彼此隔离，并覆盖 expiry、revoke、弱密码、重复账号、未知 session、throttle persistence 和 HTTP 生命周期；
+  SQLite 原始 bytes 不包含明文密码或 session reference。当前未提供真实账号、bootstrap/recovery、MFA/passkey、TLS edge 或公网 listener。
+- 本批不创建账号、凭证、网络 listener 或服务，不连接真实客户端，不激活 provider，不改变现网 composition/consumer/writer，也不重启进程。
+  回滚删除 provider、可选 HTTP routes、migration、测试、ADR 与 catalog mapping；因未挂载且无 live state，不需要数据或 owner 切换。
+- 隔离审计保持 101 个已分类路径、无未分类或歧义；基线漂移追溯到前一批已提交验证记录新增的一行兼容门禁名称，复核未新增路径、运行依赖或业务正文后仅同步 evidence digest。
+- 完整 `npm run check` 通过：主项目 470 项中 463 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构为 134 modules、
+  74 个 platform-core Offer、120 assets、effects active 0/23。capability platform 134/134 exactly-once；其余隔离、连续性和兼容门禁将在提交前再次复核。

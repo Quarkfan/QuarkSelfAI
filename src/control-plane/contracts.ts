@@ -9,6 +9,16 @@ export interface TenantContextV1 {
   readonly roles: readonly ('owner' | 'member' | 'auditor')[]
 }
 
+export interface CloudIdentityPortV1 {
+  /** Resolves an opaque adapter-owned session reference; raw credentials must not cross this port. */
+  resolveSession(sessionReference: string): Promise<TenantContextV1 | undefined>
+}
+
+export interface CloudAuthenticationPortV1 extends CloudIdentityPortV1 {
+  authenticate(input: { readonly tenantId: string; readonly userId: string; readonly password: string }, now?: Date): Promise<{ readonly sessionReference: string; readonly expiresAt: string }>
+  revoke(sessionReference: string, now?: Date): Promise<void>
+}
+
 export interface TenantRecordV1 { readonly tenantId: string; readonly name: string; readonly state: 'test' | 'active' | 'suspended'; readonly createdAt: string }
 export interface UserRecordV1 { readonly tenantId: string; readonly userId: string; readonly displayName: string; readonly state: 'active' | 'disabled'; readonly createdAt: string }
 export interface DeviceRecordV1 { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly publicKey: string; readonly state: 'pending' | 'registered' | 'revoked'; readonly createdAt: string }

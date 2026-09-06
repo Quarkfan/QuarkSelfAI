@@ -1,14 +1,9 @@
 import type { ArtifactVerificationReportV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1 } from '../client-runtime/contracts.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
-import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, DeviceEnrollmentRequestV1, DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
+import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, CloudIdentityPortV1, DeviceEnrollmentRequestV1, DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
 
 const sessionPattern = /^session:[a-z0-9][a-z0-9._:-]{0,127}$/
-
-export interface CloudIdentityPortV1 {
-  /** Resolves an opaque adapter-owned session reference; raw credentials must not cross this port. */
-  resolveSession(sessionReference: string): Promise<TenantContextV1 | undefined>
-}
 
 /** Authenticated application boundary. It has no HTTP listener, cookie/token parser, scheduler, dispatcher or runtime mount. */
 export class InactiveCloudControlPlaneApplicationV1 {
