@@ -1630,3 +1630,21 @@
   `sha256:ceab6ccb0341ba30231af6b9bda883275dfab2eb09792d938782ef3d4718ecbe`；bundled entry 的 SIGKILL 真实留下 lease/socket，下一实例完成受控回收并 ready，
   其活动期间第三实例继续被拒绝，最终 SIGTERM 清除 lease/socket。status 保持 `owner-created-inactive`，service/SSH apply/auto-start/effects 全为 false；
   一次性发行、TLS、credential、database 与 runtime 已随私有临时根删除。
+
+## 2026-09-06 installed unregistered server service preparation
+
+- sealed server distribution 现在包含 launchd/systemd user-service templates，并以 manifest 固定两条精确路径；installation 新增独立 0700 `service`
+  namespace。bundled admin 的 `prepare-service` 只从 sealed template 生成 definition 与 content-addressed receipt，状态固定为
+  `service-prepared-inactive`，registered/started/auto-start/effects 均为 false。
+- recovery 会重新读取 installation/configuration/singleton-owner lineage，从 sealed template 重渲染并核对 exact 两文件 layout 与 definition digest。
+  `remove-unregistered-service` 先要求 runtime 为空，再只删除未漂移的 definition/receipt；未知文件、link、权限、内容或 lineage 漂移均保留现场并失败。
+- 本批没有写 `~/Library/LaunchAgents`、systemd user directory 或系统路径，没有调用 `launchctl`/`systemctl`、注册/启动服务、打开 listener、apply SSH，
+  也没有改变 consumer/provider/scheduler/writer。真实注册、health-confirmed start 与单 owner 切换仍是后续独立 transition。
+- 完整 `npm run check` 通过：主项目 512 项中 500 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179；架构保持 137 modules、
+  77 个 platform-core Offer、assets 123、23/23 effects implemented、0/23 active。work-domain 101/101 无 drift；recovery、continuity、capability evolution、
+  server/DSH/Lark/BlackLake compatibility 与私有包审计通过。foundation strict 仍按预期因 work integration 隔离、跨设备恢复、PostgreSQL 与单写切换
+  尚未完成而返回 blocked，未被本批错误标为完成。
+- 提交 `770a8e83d6e9f4280fbe64449950f37fa952f822` 后从 clean source inputs 构建 14 文件发行包，artifact digest
+  `sha256:dbb12f4ccf541ef50d63857716b47c16740693985de65ca6e05eb59c043c87a9`。发行包内 admin entry 完成
+  install/configure/owner → prepare-service → status → remove-unregistered-service → status；中间状态为 `service-prepared-inactive`，最终恢复
+  `owner-created-inactive`，runtime 始终为空且最终 service namespace 为空。一次性发行、TLS、credential、database、definition 与 runner 已全部删除。
