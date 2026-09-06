@@ -40,6 +40,16 @@ function handler(authentication?: { authenticate(input: { tenantId: string; user
   return { handler: new InactiveCloudHttpHandlerV1(application, authentication), calls }
 }
 
+test('reports only bounded process readiness without authentication or provider access', async () => {
+  const fixture = handler()
+  assert.deepEqual(await fixture.handler.handle({ method: 'GET', path: '/v1/health' }), {
+    status: 200,
+    body: { code: 'ok', state: 'ready', providerOwnership: 'single-shared-host', externalEffectsEnabled: false },
+  })
+  assert.deepEqual(fixture.calls, [])
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/health', body: {} })).status, 404)
+})
+
 test('exposes bounded login, identity and logout without accepting a tenant on later operations', async () => {
   let active = true
   const authentication = {

@@ -20,6 +20,7 @@ export class InactiveCloudHttpHandlerV1 {
   async handle(request: CloudHttpRequestV1): Promise<CloudHttpResponseV1> {
     if (!['GET', 'POST'].includes(request.method) || !request.path.startsWith('/v1/') || request.path.length > 200) return response(400, 'invalid-request')
     try {
+      if (request.method === 'GET' && request.path === '/v1/health') return response(200, 'ok', { state: 'ready', providerOwnership: 'single-shared-host', externalEffectsEnabled: false })
       if (request.method === 'POST' && request.path === '/v1/auth/login') {
         const body = exactBody(request.body, ['tenantId', 'userId', 'password'])
         if (typeof body.tenantId !== 'string' || typeof body.userId !== 'string' || typeof body.password !== 'string') return response(400, 'invalid-body')
