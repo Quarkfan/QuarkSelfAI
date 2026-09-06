@@ -1,4 +1,4 @@
-import type { ArtifactVerificationReportV1, SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
+import type { ArtifactVerificationReportV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1, SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { CapabilityManifestV1 } from '../capability-platform/manifest.js'
@@ -99,4 +99,11 @@ export interface PersistentCapabilityRegistryPortV1 {
 export interface TenantDevicePortV1 {
   registerDevice(context: TenantContextV1, input: { readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceRecordV1>
   listDevices(context: TenantContextV1): Promise<readonly DeviceRecordV1[]>
+}
+
+export interface DeviceSessionServerPortV1 {
+  issueChallenge(context: TenantContextV1, deviceId: string, now?: Date): Promise<DeviceSessionChallengeV1>
+  openSession(proof: DeviceSessionProofV1, now?: Date): Promise<DeviceSessionV1>
+  poll(sessionId: string, now?: Date): Promise<DeviceTaskLeaseV1 | null>
+  acknowledge(sessionId: string, input: { readonly leaseToken: string; readonly taskId: string }, now?: Date): Promise<DeviceTaskLeaseAcknowledgementV1>
 }

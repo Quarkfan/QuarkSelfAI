@@ -3,7 +3,7 @@ import type { InactiveCloudControlPlaneApplicationV1 } from './cloud-application
 export interface CloudHttpRequestV1 {
   readonly method: 'GET' | 'POST'
   readonly path: string
-  readonly sessionReference: string
+  readonly sessionReference?: string
   readonly body?: unknown
 }
 
@@ -19,14 +19,18 @@ export class InactiveCloudHttpHandlerV1 {
   async handle(request: CloudHttpRequestV1): Promise<CloudHttpResponseV1> {
     if (!['GET', 'POST'].includes(request.method) || !request.path.startsWith('/v1/') || request.path.length > 200) return response(400, 'invalid-request')
     try {
-      if (request.method === 'GET' && request.path === '/v1/devices') return response(200, 'ok', { items: await this.application.listDevices(request.sessionReference) })
+      if (request.method === 'GET' && request.path === '/v1/devices') return response(200, 'ok', { items: await this.application.listDevices(requiredSession(request)) })
       if (request.method === 'POST' && request.path === '/v1/devices') {
         const body = exactBody(request.body, ['deviceId', 'publicKey'])
         if (typeof body.deviceId !== 'string' || typeof body.publicKey !== 'string') return response(400, 'invalid-body')
-        return response(201, 'created', { item: await this.application.registerDevice(request.sessionReference, { deviceId: body.deviceId, publicKey: body.publicKey }) })
+        return response(201, 'created', { item: await this.application.registerDevice(requiredSession(request), { deviceId: body.deviceId, publicKey: body.publicKey }) })
       }
-      if (request.method === 'GET' && request.path === '/v1/capabilities') return response(200, 'ok', { items: await this.application.listCapabilities(request.sessionReference) })
-      if (request.method === 'GET' && request.path === '/v1/agent-drafts') return response(200, 'ok', { items: await this.application.listAgentDrafts(request.sessionReference) })
+      if (request.method === 'POST' && request.path === '/v1/device-sessions/challenge') { const body = exactBody(request.body, ['deviceId']); if (typeof body.deviceId !== 'string') return response(400, 'invalid-body'); return response(201, 'created', { item: await this.application.issueDeviceChallenge(requiredSession(request), body.deviceId) }) }
+      if (request.method === 'POST' && request.path === '/v1/device-sessions/proof') { const body = exactBody(request.body, ['proof']); return response(201, 'created', { item: await this.application.openDeviceSession(body.proof as never) }) }
+      if (request.method === 'POST' && request.path === '/v1/device-sessions/poll') { const body = exactBody(request.body, ['sessionId']); if (typeof body.sessionId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.pollDeviceSession(body.sessionId) }) }
+      if (request.method === 'POST' && request.path === '/v1/device-sessions/ack') { const body = exactBody(request.body, ['sessionId', 'leaseToken', 'taskId']); if (typeof body.sessionId !== 'string' || typeof body.leaseToken !== 'string' || typeof body.taskId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.acknowledgeDeviceLease(body.sessionId, { leaseToken: body.leaseToken, taskId: body.taskId }) }) }
+      if (request.method === 'GET' && request.path === '/v1/capabilities') return response(200, 'ok', { items: await this.application.listCapabilities(requiredSession(request)) })
+      if (request.method === 'GET' && request.path === '/v1/agent-drafts') return response(200, 'ok', { items: await this.application.listAgentDrafts(requiredSession(request)) })
       return response(404, 'not-found')
     } catch (error) {
       const message = String(error)
@@ -38,6 +42,8 @@ export class InactiveCloudHttpHandlerV1 {
     }
   }
 }
+
+function requiredSession(request: CloudHttpRequestV1): string { if (typeof request.sessionReference !== 'string') throw new Error('cloud session reference is invalid'); return request.sessionReference }
 
 function exactBody(value: unknown, keys: readonly string[]): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('request body must be an object')

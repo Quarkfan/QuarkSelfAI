@@ -992,3 +992,10 @@
 - 新增 fetch-independent `/v1` handler，覆盖 device registration/list、capability list 与 agent-draft list；closed body 拒绝 tenant 注入，
   unauthenticated/forbidden/conflict/rejected 使用稳定 code 且不泄露 exception details。
 - 本批没有 HTTP/TLS listener、raw token/cookie parser、rate limiter、identity provider、服务启动或 composition 变化；模块仍为 inactive 119/119。
+
+## 2026-09-06 inactive device-session API completion
+
+- `/v1` handler 增加 challenge、proof、poll 与 lease acknowledgement 路由，应用层只依赖单一 `DeviceSessionServerPortV1`；challenge
+  使用已认证 user session，proof/poll/ack 使用设备协议自身的 challenge/session/lease 凭据。
+- 没有把持久 device repository 复制进现有 in-memory coordinator；未来 provider 必须从唯一持久身份源读取，避免双 provider/双状态写。
+- 本批只验证路由和 scope 语义，没有持久 session provider、真实 verifier、result upload、listener、网络、executor 或 effect。
