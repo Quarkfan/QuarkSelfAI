@@ -80,6 +80,9 @@ provider factory 默认只接受 `test.*` 租户；registered composition 仍只
 [ADR 0168](adr/0168-bounded-cloud-server-health-route.md) 增加唯一无需 session 的 `GET /v1/health`：只返回 ready、single-shared-host 与
 effects-off，不读取 tenant/provider 或写数据库。该响应只在 composition、SSH IPC 与 TLS edge 全部打开后可达，后续服务激活必须再以 installed certificate
 pin 经 TLS 验证，不能把 process/service-manager 状态当成 ready。
+[ADR 0169](adr/0169-pinned-tls-server-health-probe.md) 实现该窄 host probe：literal IP、固定端口、显式 certificate trust anchor、TLS 1.3、
+bounded timeout/body 与 closed response 必须同时成立；证书或 ownership/effect drift 均失败。installed wrapper 先复核 distribution/config 与 server/cert digest，
+bundled admin 只以显式 `probe-health` 暴露脱敏结果；probe 不启动进程或调用 service manager。
 经 Goal 全面授权执行的 Pilot 03 只用 Node 内建模块在 `127.0.0.1:0` 打开一次临时 edge，两个合成租户分别注册同名设备并读取空
 Capability/Agent 列表，tenant body 注入被拒绝；SQLite reopen 后两租户设备各为 1，随后 listener 与临时目录均关闭删除。该 adapter
 仍未进入 composition，不提供公网、TLS、真实 identity、executor、scheduler 或 effect。
