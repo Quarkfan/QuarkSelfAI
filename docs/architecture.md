@@ -128,6 +128,11 @@ known-hosts 只能从 policy 中相同 opaque reference 解析；launch 固定 s
 不可变 receipt。SQLite 是已安装快照和当前/前一版本指针的唯一状态 owner；upgrade/rollback 只切换已验证的本地版本，始终保持
 unloaded、unauthorized、stopped、effects-disabled。当前没有下载、解包、执行 lifecycle handler、加载或运行代码，也未挂载客户端。
 
+[ADR 0126](adr/0126-inactive-artifact-uninstall-and-recovery.md) 补齐同一未激活存储的卸载、恢复审计和无引用垃圾回收。卸载先在 SQLite
+事务内解除选中/前一版本引用并删除 installed snapshot，再删除 receipt 和仅被该版本引用的 blob；文件清理失败以 `cleanupPending`
+显式返回，不会恢复已解除的逻辑安装态。恢复会逐项重新校验 snapshot、receipt 和 blob digest，且拒绝目录中的 symlink 或未知形态；
+GC 只删除 SQLite 引用集合以外、名称合法的本地文件。所有操作仍固定 effects-disabled，未进入 composition。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

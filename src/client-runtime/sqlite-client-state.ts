@@ -3,7 +3,7 @@ import { mkdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { CapabilityLifecycleSnapshotV1 } from '../capability-platform/manifest.js'
 import { WorkspacePolicy } from '../execution/workspace-policy.js'
-import type { DeviceIdentityV1, ExecutorCapabilityReportV1, InactiveCapabilitySelectionV1, PlanSignatureVerifierV1 } from './contracts.js'
+import type { DeviceIdentityV1, ExecutorCapabilityReportV1, InactiveCapabilityRemovalV1, InactiveCapabilitySelectionV1, PlanSignatureVerifierV1 } from './contracts.js'
 import { validateDeviceIdentity, validateExecutorCapabilityReport } from './validation.js'
 import { InactiveLocalRunJournalV1, type InactiveLocalRunCheckpointV1 } from './inactive-run-journal.js'
 
@@ -107,6 +107,16 @@ export class SqliteInactiveClientStateV1 {
     return deepFreeze(snapshot)
   }
 
+  inactiveCapabilities(): readonly CapabilityLifecycleSnapshotV1[] {
+    this.#requireIdentity()
+    const rows = this.db.prepare(`SELECT capability_id, version FROM local_capability_state ORDER BY capability_id, version`).all() as unknown as Row[]
+    return deepFreeze(rows.map(row => {
+      const value = this.inactiveCapability(String(row.capability_id), String(row.version))
+      if (!value) throw new Error('persisted inactive capability index drifted')
+      return value
+    }))
+  }
+
   inactiveCapabilitySelection(capabilityId: string): InactiveCapabilitySelectionV1 | null {
     this.#requireIdentity()
     if (!idPattern.test(capabilityId)) throw new Error('inactive capability identity is invalid')
@@ -135,6 +145,24 @@ export class SqliteInactiveClientStateV1 {
     this.db.prepare(`UPDATE local_capability_selection SET current_version=?, previous_version=?, updated_at=? WHERE capability_id=?`)
       .run(current.previousVersion, current.currentVersion, now.toISOString(), capabilityId)
     return this.inactiveCapabilitySelection(capabilityId)!
+  }
+
+  removeInactiveCapability(capabilityId: string, version: string, now = new Date()): InactiveCapabilityRemovalV1 {
+    const removed = this.inactiveCapability(capabilityId, version)
+    if (!removed || Number.isNaN(now.getTime())) throw new Error('inactive capability version is not installed')
+    const selection = this.inactiveCapabilitySelection(capabilityId)
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      if (selection?.currentVersion === version) {
+        if (selection.previousVersion) this.db.prepare(`UPDATE local_capability_selection SET current_version=?, previous_version=NULL, updated_at=? WHERE capability_id=?`).run(selection.previousVersion, now.toISOString(), capabilityId)
+        else this.db.prepare(`DELETE FROM local_capability_selection WHERE capability_id=?`).run(capabilityId)
+      } else if (selection?.previousVersion === version) {
+        this.db.prepare(`UPDATE local_capability_selection SET previous_version=NULL, updated_at=? WHERE capability_id=?`).run(now.toISOString(), capabilityId)
+      }
+      this.db.prepare(`DELETE FROM local_capability_state WHERE capability_id=? AND version=?`).run(capabilityId, version)
+      this.db.exec('COMMIT')
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+    return deepFreeze({ removed, selection: this.inactiveCapabilitySelection(capabilityId) })
   }
 
   async saveRunCheckpoint(checkpoint: InactiveLocalRunCheckpointV1, now = new Date()): Promise<InactiveLocalRunCheckpointV1> {

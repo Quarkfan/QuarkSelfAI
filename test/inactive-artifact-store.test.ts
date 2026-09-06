@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -39,6 +39,14 @@ test('lands verified blobs, upgrades and rolls back only the selected inactive v
     assert.deepEqual({ current: rolledBack.currentVersion, previous: rolledBack.previousVersion }, { current: '1.0.0', previous: '2.0.0' })
     const projection = state.cloudProjection(at); assert.deepEqual({ installed: projection.installedCapabilityCount, active: projection.activeCapabilityCount, consumers: projection.ownedConsumers, providers: projection.ownedProviders, schedulers: projection.ownedSchedulers, effects: projection.externalWritesEnabled }, { installed: 2, active: 0, consumers: 0, providers: 0, schedulers: 0, effects: false })
     assert.equal(JSON.stringify(projection).includes(root), false); assert.equal(JSON.stringify(projection).includes(digest('artifact-one')), false)
+    const removedFirst = await store.uninstall('tool/example', '1.0.0', new Date('2026-09-06T00:03:00.000Z'))
+    assert.deepEqual({ selected: removedFirst.selectedVersion, blob: removedFirst.blobRemoved, pending: removedFirst.cleanupPending, effects: removedFirst.effects }, { selected: '2.0.0', blob: true, pending: false, effects: 'disabled' })
+    assert.deepEqual(await store.verifyRecovery(), { schemaVersion: 1, installedVersionCount: 1, selectedCapabilityCount: 1, orphanBlobCount: 0, orphanReceiptCount: 0, loading: 'unloaded', authorization: 'unauthorized', execution: 'stopped', effects: 'disabled' })
+    assert.equal((await store.uninstall('tool/example', '2.0.0', new Date('2026-09-06T00:04:00.000Z'))).selectedVersion, null)
+    const orphanDigest = 'f'.repeat(64); await writeFile(join(root, 'blobs', orphanDigest), 'orphan'); const orphanDirectory = join(root, 'installations', 'tool__orphan'); await mkdir(orphanDirectory); await writeFile(join(orphanDirectory, '9.0.0.json'), '{}')
+    const orphanReport = await store.verifyRecovery(); assert.deepEqual({ installed: orphanReport.installedVersionCount, selected: orphanReport.selectedCapabilityCount, blobs: orphanReport.orphanBlobCount, receipts: orphanReport.orphanReceiptCount, effects: orphanReport.effects }, { installed: 0, selected: 0, blobs: 1, receipts: 1, effects: 'disabled' })
+    assert.deepEqual(await store.garbageCollect(), { schemaVersion: 1, removedBlobCount: 1, removedReceiptCount: 1, effects: 'disabled' })
+    assert.equal((await store.verifyRecovery()).installedVersionCount, 0)
     await state.close()
   } finally { await rm(directory, { recursive: true, force: true }) }
 })

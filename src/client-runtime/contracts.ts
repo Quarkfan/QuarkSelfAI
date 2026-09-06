@@ -1,4 +1,5 @@
 import type { ExecutionEnvelopeV1 } from '../capability-platform/execution-envelope.js'
+import type { CapabilityLifecycleSnapshotV1 } from '../capability-platform/manifest.js'
 
 export type ClientConnectionState = 'unenrolled' | 'disconnected' | 'connecting' | 'online' | 'degraded' | 'revoked'
 export type ExecutorAvailability = 'ready' | 'not-installed' | 'auth-required' | 'version-unsupported' | 'unavailable'
@@ -104,6 +105,11 @@ export interface InactiveCapabilitySelectionV1 {
   readonly currentVersion: string
   readonly previousVersion: string | null
   readonly updatedAt: string
+}
+
+export interface InactiveCapabilityRemovalV1 {
+  readonly removed: CapabilityLifecycleSnapshotV1
+  readonly selection: InactiveCapabilitySelectionV1 | null
 }
 
 export interface ExecutorDiscoveryProbeV1 {

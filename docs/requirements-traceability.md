@@ -25,7 +25,8 @@ client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃
 installed-inactive capability、选定/前一版本和 no-effect run checkpoint。真实本地制品存储会先复核 SHA-256，再以内容 digest 原子落入
 0600 blob，并以不可变 receipt 联结 SQLite；upgrade/rollback 只切换已安装且重新验真的 inactive 版本。云投影不含 key reference、
 workspace handle/路径、artifact root/来源路径或 checkpoint 正文，workspace symlink 替换、制品篡改和路径逃逸均失败关闭。尚无客户端
-安装包、常驻 daemon、云连接、下载/解包或 capability lifecycle 执行。
+安装包、常驻 daemon、云连接、下载/解包或 capability lifecycle 执行。卸载现会先事务解除 SQLite 引用再清理文件；恢复审计逐版本
+重验，垃圾回收只删除无引用 blob/receipt，且清理失败不会伪装成文件已删除。
 
 设备身份现使用真实 Ed25519 生成、签名和验签 adapter：云端只持有 SPKI 公钥，客户端私钥必须留在 `LocalDeviceSecretStoreV1` 后方并只以
 opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥不匹配均失败关闭。当前仍未选择生产 OS secret-store adapter，也未
@@ -52,7 +53,8 @@ Direct TLS 与 SSH 已共享 `quark-device-sync.v1` framed message contract，�
 
 Phase 2B 已实现六项供应链证据全通过后的 `installed-inactive` 计划，以及 installation/loading/authorization/execution/effects
 五态分离。后续 inactive store 已真实写入并跨 reopen 校验本地 content-addressed blob、receipt、版本 upgrade/rollback；它仍不下载、解包、
-加载、授权、运行或执行 lifecycle handler，因此只证明安全的本地安装态与可恢复版本选择。
+加载、授权、运行或执行 lifecycle handler。当前还验证了选中版本卸载后的安全回退、最后版本卸载、恢复审计、篡改失败关闭和无引用 GC，
+因此证明了未激活本地安装态的安装/升级/回滚/卸载/恢复闭环，但不等于可执行 runtime 已完成。
 
 Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release、任务、脱敏结果和审计 contract、test-tenant 内存 store，
 以及默认不挂载的 SQLite tenant/user/device repository 和 authorization service。双租户同 ID、复合主外键隔离、跨 reopen persistence、

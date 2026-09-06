@@ -1118,3 +1118,12 @@
   upgrade 先安装再切换，rollback 先复核前一 blob 再交换指针，跨 reopen 验证通过。
 - 全程不下载、不解包、不调用 lifecycle handler、不加载/授权/运行代码，不创建 consumer/provider/scheduler/effect，也不挂载 composition。
   新增模块后 catalog/migration 为 124/124、Facility coverage 为 64/64；回滚只删除本批 provider/schema/test/ADR 与目录登记。
+
+## 2026-09-06 inactive artifact uninstall and recovery
+
+- 卸载顺序固定为先验证 exact version，再在 SQLite `BEGIN IMMEDIATE` 事务中解除 selected/previous 引用并删除 installed snapshot，最后清理
+  receipt 与无其他引用的 blob；删除当前版本会安全回退到已记录前一版本，删除最后版本会清空 selection。
+- 恢复审计跨 reopen 逐项重新验证 SQLite snapshot、selection、receipt identity 与 blob digest；目录中出现 symlink、未知文件类型或非法命名时
+  失败关闭。GC 只清理 SQLite 引用集外的合法 blob/receipt，测试验证 1 个 orphan blob 与 1 个 orphan receipt 被精确删除。
+- 文件清理异常通过 `cleanupPending` 返回，不会把数据库逻辑卸载回滚成已安装。操作全程 effects-disabled，不加载/执行制品、不改变现网 owner、
+  composition、consumer、provider 或 scheduler。
