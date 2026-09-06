@@ -1006,3 +1006,9 @@
   completedAt，tenant/user 必须由 server session scope 推导，不能由请求体指定。
 - `/v1/device-sessions/result` 与 challenge/proof/poll/ack 共用同一 provider port，API 不另存 lease 或 result，避免第二 writer。
 - 当前只有 route/port fixture；没有持久 task/result provider、真实网络、executor、原始输出上传或 external effect。
+
+## 2026-09-06 device API closed-schema hardening
+
+- HTTP boundary 不再把 proof/result unknown object 直接透传：proof 精确限制 schema/challenge/device/key/algorithm/signature；result 精确限制
+  device/task/plan/outcome/summaryCode/artifact digests/completedAt，tenant/user 或其他未知字段在 provider 前拒绝。
+- result summary 拒绝绝对路径与 secret-shaped assignment，artifact 只接受 sha256 digest；底层 provider 仍须独立复核 session/lease scope 和幂等。

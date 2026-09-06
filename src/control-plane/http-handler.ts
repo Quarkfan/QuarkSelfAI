@@ -26,10 +26,10 @@ export class InactiveCloudHttpHandlerV1 {
         return response(201, 'created', { item: await this.application.registerDevice(requiredSession(request), { deviceId: body.deviceId, publicKey: body.publicKey }) })
       }
       if (request.method === 'POST' && request.path === '/v1/device-sessions/challenge') { const body = exactBody(request.body, ['deviceId']); if (typeof body.deviceId !== 'string') return response(400, 'invalid-body'); return response(201, 'created', { item: await this.application.issueDeviceChallenge(requiredSession(request), body.deviceId) }) }
-      if (request.method === 'POST' && request.path === '/v1/device-sessions/proof') { const body = exactBody(request.body, ['proof']); return response(201, 'created', { item: await this.application.openDeviceSession(body.proof as never) }) }
+      if (request.method === 'POST' && request.path === '/v1/device-sessions/proof') { const body = exactBody(request.body, ['proof']); return response(201, 'created', { item: await this.application.openDeviceSession(deviceProof(body.proof)) }) }
       if (request.method === 'POST' && request.path === '/v1/device-sessions/poll') { const body = exactBody(request.body, ['sessionId']); if (typeof body.sessionId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.pollDeviceSession(body.sessionId) }) }
       if (request.method === 'POST' && request.path === '/v1/device-sessions/ack') { const body = exactBody(request.body, ['sessionId', 'leaseToken', 'taskId']); if (typeof body.sessionId !== 'string' || typeof body.leaseToken !== 'string' || typeof body.taskId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.acknowledgeDeviceLease(body.sessionId, { leaseToken: body.leaseToken, taskId: body.taskId }) }) }
-      if (request.method === 'POST' && request.path === '/v1/device-sessions/result') { const body = exactBody(request.body, ['sessionId', 'result']); if (typeof body.sessionId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.submitDeviceResult(body.sessionId, body.result as never) }) }
+      if (request.method === 'POST' && request.path === '/v1/device-sessions/result') { const body = exactBody(request.body, ['sessionId', 'result']); if (typeof body.sessionId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.submitDeviceResult(body.sessionId, redactedResult(body.result)) }) }
       if (request.method === 'GET' && request.path === '/v1/capabilities') return response(200, 'ok', { items: await this.application.listCapabilities(requiredSession(request)) })
       if (request.method === 'GET' && request.path === '/v1/agent-drafts') return response(200, 'ok', { items: await this.application.listAgentDrafts(requiredSession(request)) })
       return response(404, 'not-found')
@@ -51,5 +51,17 @@ function exactBody(value: unknown, keys: readonly string[]): Record<string, unkn
   const body = value as Record<string, unknown>
   if (Object.keys(body).some(key => !keys.includes(key)) || keys.some(key => !(key in body))) throw new Error('request body fields are invalid')
   return body
+}
+function deviceProof(value: unknown) {
+  const proof = exactBody(value, ['schemaVersion', 'challengeId', 'deviceId', 'keyId', 'algorithm', 'signature'])
+  if (proof.schemaVersion !== 1 || proof.algorithm !== 'ed25519' || ['challengeId', 'deviceId', 'keyId', 'signature'].some(key => typeof proof[key] !== 'string' || !(proof[key] as string).trim())) throw new Error('request body device proof is invalid')
+  return proof as unknown as { schemaVersion: 1; challengeId: string; deviceId: string; keyId: string; algorithm: 'ed25519'; signature: string }
+}
+function redactedResult(value: unknown) {
+  const result = exactBody(value, ['deviceId', 'taskId', 'planId', 'outcome', 'summaryCode', 'artifactDigests', 'completedAt'])
+  if (['deviceId', 'taskId', 'planId', 'summaryCode', 'completedAt'].some(key => typeof result[key] !== 'string' || !(result[key] as string).trim()) ||
+      !['succeeded', 'failed', 'cancelled'].includes(String(result.outcome)) || !Array.isArray(result.artifactDigests) || result.artifactDigests.some(value => typeof value !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(value)) ||
+      Number.isNaN(Date.parse(String(result.completedAt))) || /^(?:\/|[A-Za-z]:[\\/]|~[\\/])|(?:token|secret|password|private[_-]?key)\s*[:=]/i.test(String(result.summaryCode))) throw new Error('request body result is invalid')
+  return result as unknown as { deviceId: string; taskId: string; planId: string; outcome: 'succeeded' | 'failed' | 'cancelled'; summaryCode: string; artifactDigests: readonly string[]; completedAt: string }
 }
 function response(status: CloudHttpResponseV1['status'], code: string, value: Record<string, unknown> = {}): CloudHttpResponseV1 { return Object.freeze({ status, body: Object.freeze({ code, ...value }) }) }
