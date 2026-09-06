@@ -1659,3 +1659,16 @@
   `sha256:aae3e7bd6f6c39de37b9737f705dde5c146ac7340cae09290c90ed4e6f7146c4`。发行包内 admin 完成 install/configure/owner，
   bundled cloud entry 在 loopback 随机端口启动；client 以安装时证书完成 TLS 1.3 验证并得到 exact health response。SIGTERM 后 runtime 归零，status 回到
   `owner-created-inactive`；未注册 service、未 apply SSH、未改变现网 owner，临时发行、证书、密码、数据库与 runner 均已删除。
+
+## 2026-09-06 pinned installed-server health probe
+
+- 新增窄 TLS health host adapter：只接受 literal IP、固定非零端口、预期 PEM certificate 与 1–30 秒 timeout；正常证书/IP name verification、TLS 1.3、
+  4 KiB body bound、exact content-type/status/schema 和 effects-off/single-provider 必须全部通过。错误 certificate、扩权 response 与不完整输入失败关闭。
+- installed wrapper 先完整 recovery distribution/configuration，再二次核对 server/certificate digest 后才派生 endpoint；bundled default-disabled admin 新增显式
+  `probe-health`，公开 receipt 不含 endpoint、certificate、tenant 或 path，也不启动/停止进程或调用 service manager。
+- 完整 `npm run check` 通过：主项目 515 项中 502 通过、13 项因 sandbox listener 限制跳过，compat 179/179；架构仍为 137 modules、
+  assets 123、23/23 effects implemented、0/23 active。宿主权限下 health/TLS 专项 4/4 通过且无跳过；work-domain 101/101、continuity 与 server compatibility 通过。
+- 提交 `9a2969f084dd64ba2ef987f65dca054b6a823607` 后从 clean source inputs 构建 14 文件发行包，artifact digest
+  `sha256:b3adf1220d9228d1fa783cd7d0ea4821423bfe2929f4baa78ad070faae60e66c`。发行包内 admin 完成 install/configure/owner，
+  bundled cloud entry 启动后由同一 installed admin `probe-health` 得到 `ready-effects-off`；SIGTERM 后 runtime 归零且 status 回到
+  `owner-created-inactive`。service/SSH/effects 保持未激活，临时发行、证书、密码、数据库与 runner 已全部删除。
