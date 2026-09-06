@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-3b-blueprint-compiler",
+  "status": "implemented-inactive",
+  "baseRevision": "15f55b258a481e153e9cb260ebd6b41aa8aafdc6",
+  "architectureChange": "Add an unmounted Agent Blueprint compiler that resolves immutable artifacts, validates graph and workspace grants, and emits a signed no-effect test plan.",
+  "allowedActions": ["compile offline blueprint fixtures", "resolve exact artifact digests", "topologically validate capability graphs", "invoke an injected fixture signer", "verify the resulting signed envelope"],
+  "explicitExclusions": ["production tenant", "external effect", "task dispatch", "device connection", "real signing key", "network service", "runtime mount", "consumer provider or scheduler ownership", "service restart", "owner working-tree files"],
+  "rollback": {"method": "Revert the Phase 3B commit.", "stateMigrationRequired": false, "serviceRestartRequired": false, "dataRecoveryRequired": false},
+  "ownerAuthorization": {"basis": "Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.", "serviceActivationAuthorized": false}
+}

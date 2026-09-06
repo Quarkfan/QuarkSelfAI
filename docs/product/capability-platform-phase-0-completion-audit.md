@@ -22,7 +22,7 @@
 | 本地敏感数据不上传 | PRD 3/10、DAT-01–03 | 本地证据、secret reference、分类与 retention 已进入设计 |
 | 第三方供应链治理 | PRD 10、CAP-04/CAP-06 | revision/digest/license/SBOM/风险/候选决策已覆盖 |
 | 单 consumer/provider/scheduler/writer | PRD 2/10、OBS-02 | fail-closed、lease、handoff/rehearsal 已进入设计 |
-| 现有能力无遗漏迁移 | `config/capability-platform-migration.json` | 原 99 项保持覆盖；Phase 1–3A 新增模块后当前 module catalog 106/106 exactly-once |
+| 现有能力无遗漏迁移 | `config/capability-platform-migration.json` | 原 99 项保持覆盖；Phase 1–3B 新增模块后当前 module catalog 107/107 exactly-once |
 | 私有工作包不成为核心依赖 | ADR 0092、INT-01、既有私有包审计 | 当前仍 inactive；目标依赖方向明确 |
 | 控制台控制/监测/管理完整 | `config/capability-platform-console-coverage.json` | 50/50 需求均有 control/monitor/manage 和唯一 POC anchor |
 | 工具、包、浏览器、私有集成、交互应用 | CAP/INT/EXP 覆盖项和 POC | 五类及其统一治理已进入设计 |
@@ -32,7 +32,7 @@
 ## 控制台覆盖口径
 
 覆盖率以目标需求为分母，而不是以已有页面为分母。50 项要求跨 15 个业务域；每项必须有非空 `control`、`monitor`、
-`manage`、目标 screen 和唯一 `data-coverage` POC anchor。`scripts/audit-capability-platform-design.ts` 同时验证当前 106 个模块
+`manage`、目标 screen 和唯一 `data-coverage` POC anchor。`scripts/audit-capability-platform-design.ts` 同时验证当前 107 个模块
 exactly-once、危险运行开关为 false、PRD 核心抽象和 POC 可见计数。
 
 50/50 只证明需求到静态控制面的设计闭合，不证明云 API、客户端、数据隔离或运行链路已经实现。

@@ -24,3 +24,8 @@ export interface TestTenantControlPlanePortV1 {
   dispatch(context: TenantContextV1, input: Omit<DispatchRecordV1, 'tenantId' | 'userId' | 'state' | 'createdAt'>, now?: Date): DispatchRecordV1
   complete(context: TenantContextV1, result: Omit<RedactedResultV1, 'tenantId' | 'userId'>): RedactedResultV1
 }
+
+export interface ExecutionPlanSignerV1 {
+  readonly keyId: string
+  sign(input: { readonly algorithm: 'ed25519'; readonly payloadDigest: string }): Promise<string>
+}

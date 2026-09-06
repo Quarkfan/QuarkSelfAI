@@ -19,11 +19,15 @@ contract、规范化摘要和无 Cordis lifecycle 的 inactive registry，但没
 新增的 `capability-platform-contracts` 是第 100 个、静态且无 provider 的公共 contract module；校验与 inactive registry
 被隔离为第 101 个、默认 inactive 的治理 module。Phase 2A 再增加静态 `local-client-contracts` 和 inactive
 `local-client-negotiation`；Phase 2B 增加 inactive `capability-install-planner`；Phase 3A 增加控制面 contract 与 test-tenant
-reference store。当前共 106 个模块，均已纳入 exactly-once 映射。
+reference store；Phase 3B 增加 inactive Agent Blueprint compiler。当前共 107 个模块，均已纳入 exactly-once 映射。
 
 Phase 3A 的隔离边界由 [ADR 0095](adr/0095-test-tenant-control-plane-isolation.md) 定义。用户、设备、Capability/Blueprint
 release、任务、脱敏结果和审计先选择 tenant partition；普通用户只能读取自己的设备与任务，不存在平台管理员跨租户正文
 入口。当前 store 只存在于测试内存、只接受 `test.*` tenant 和无 effect 计划，不是已运行的云服务。
+
+Agent Studio 的编译边界由 [ADR 0096](adr/0096-agent-blueprint-compilation.md) 定义：Blueprint digest、artifact digest、
+interface ownership、graph DAG 与 workspace grant 必须闭合，编译结果才可由注入 signer 签成所有执行器共用的 Envelope。
+当前编译器只接受 test tenant 与无 effect Blueprint，不派发计划。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

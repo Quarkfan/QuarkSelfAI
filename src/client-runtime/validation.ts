@@ -1,5 +1,5 @@
 import type { DeviceIdentityV1, ExecutorCapabilityReportV1, PlanSignatureVerifierV1, SignedExecutionPlanV1 } from './contracts.js'
-import { contentDigest, validateExecutionEnvelope } from '../capability-platform/validation.js'
+import { executionEnvelopePayloadDigest, validateExecutionEnvelope } from '../capability-platform/validation.js'
 
 const idPattern = /^[a-z0-9][a-z0-9.-]{0,63}$/
 const digestPattern = /^sha256:[a-f0-9]{64}$/
@@ -35,12 +35,6 @@ export function validateExecutorCapabilityReport(value: ExecutorCapabilityReport
   if (value.availability === 'ready' && (!value.version || !value.protocolVersions.length)) throw new Error('ready executor report requires a version and protocol')
   if (validTime(value.expiresAt, 'executor report expiresAt') <= validTime(value.discoveredAt, 'executor report discoveredAt')) throw new Error('executor report must expire after discovery')
   return value
-}
-
-export function executionEnvelopePayloadDigest(value: SignedExecutionPlanV1['envelope']): string {
-  const envelope = validateExecutionEnvelope(value)
-  const { plan: _signatureMetadata, ...payload } = envelope
-  return contentDigest(payload)
 }
 
 export async function verifySignedExecutionPlan(value: SignedExecutionPlanV1, verifier: PlanSignatureVerifierV1, now = new Date()): Promise<SignedExecutionPlanV1> {

@@ -754,3 +754,12 @@
   digest。fixture 验证租户隔离、tenant 内用户隔离、无 effect 门禁、幂等和完成状态推进。
 - 当前实现无 listener、数据库、对象存储、队列、搜索、日志后端或设备连接，也未挂载到现网。新增 2 个模块后目录和迁移
   映射为 106/106；私有包和现网 owner 未变。
+
+## 2026-09-06 Capability Platform Phase 3B Blueprint 编译器
+
+- Blueprint 使用排除自身 digest 字段后的 canonical digest。编译时每个 capability reference 必须按 id、version range、
+  artifact digest 唯一解析；node interface 必须由对应 Manifest 提供，graph 必须为 DAG，workspace handle 必须有 action grant。
+- 编译器生成包含锁定 artifact、预算、数据等级、幂等键与不中途换执行器语义的统一 Execution Envelope；只有注入 signer
+  返回签名后才形成 SignedExecutionPlan，客户端 fixture 可独立验证 digest 和签名。
+- inactive 边界拒绝非 `test.*` tenant 和任何 external effect；不派发、不连接设备、不接触真实 signing key。新增模块后
+  catalog 与迁移映射为 107/107，现网 composition 与 owner 未变。

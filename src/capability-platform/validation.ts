@@ -72,6 +72,17 @@ export function contentDigest(value: unknown): string {
   return `sha256:${createHash('sha256').update(canonicalJson(value)).digest('hex')}`
 }
 
+export function blueprintPayloadDigest(value: AgentBlueprintV1): string {
+  const { digest: _digest, ...payload } = value
+  return contentDigest(payload)
+}
+
+export function executionEnvelopePayloadDigest(value: ExecutionEnvelopeV1): string {
+  const envelope = validateExecutionEnvelope(value)
+  const { plan: _signatureMetadata, ...payload } = envelope
+  return contentDigest(payload)
+}
+
 function validatePermission(value: unknown, placement: readonly string[], label: string): void {
   const permission = record(value, label)
   identifier(permission.id, `${label}.id`)

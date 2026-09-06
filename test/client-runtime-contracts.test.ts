@@ -4,7 +4,8 @@ import { InactiveExecutorDiscoveryV1 } from '../src/client-runtime/discovery.js'
 import { createInactiveClientSnapshot } from '../src/client-runtime/inactive-client.js'
 import { negotiateExecutor } from '../src/client-runtime/negotiation.js'
 import type { ExecutorCapabilityReportV1, SignedExecutionPlanV1 } from '../src/client-runtime/contracts.js'
-import { executionEnvelopePayloadDigest, validateDeviceIdentity, validateExecutorCapabilityReport, verifySignedExecutionPlan } from '../src/client-runtime/validation.js'
+import { executionEnvelopePayloadDigest } from '../src/capability-platform/validation.js'
+import { validateDeviceIdentity, validateExecutorCapabilityReport, verifySignedExecutionPlan } from '../src/client-runtime/validation.js'
 
 const now = new Date('2026-09-06T00:00:00.000Z')
 const later = '2026-09-06T01:00:00.000Z'
