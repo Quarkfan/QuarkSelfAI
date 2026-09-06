@@ -1473,3 +1473,13 @@
 - 本批只生成内容与 digest，没有写 authorized_keys/sshd_config、创建用户、安装 key、执行 `sshd -t`、reload 服务或建立 SSH 连接。
 - 完整 `npm run check` 通过：主项目 488 项中 476 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+
+## 2026-09-06 content-addressed server distribution
+
+- 新增独立 server distribution：两个 bundled entry、七个 control-plane migration、最小 package manifest 与 SPDX 2.3 SBOM 全部进入排序文件清单和
+  aggregate digest；manifest 固定 auto-start、SSH gateway apply 与 external effects 为 false，不携带 host config、TLS key/cert、tenant DB 或服务定义。
+- verifier 重算每个 byte，并拒绝未知 layout、缺文件、link、公开权限、超限和 digest drift。合成测试已覆盖完整 seal/reopen、tamper、缺失、public 与重复 seal。
+- 首次真实构建发现旧版 builder 能把未提交源码标为当前 HEAD；现已增加 `revision == HEAD` 和 `src/migrations/builder` 输入必须已提交的 provenance 门禁。
+  因该门禁有意阻止当前未提交实现，本条提交后再从干净 revision 生成真实发行包并另记回读证据。
+- 完整 `npm run check` 通过：主项目 490 项中 478 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
