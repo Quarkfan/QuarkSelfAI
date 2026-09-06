@@ -28,9 +28,10 @@ client snapshot，以及 Claude Code/Codex/DSH 固定命令描述与输出丢弃
 Phase 2B 已实现六项供应链证据全通过后的 `installed-inactive` 计划，以及 installation/loading/authorization/execution/effects
 五态分离；当前 planner 不下载、不写盘、不执行 lifecycle handler，因此只证明安全安装计划边界。
 
-Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release、任务、脱敏结果和审计 contract，以及仅供 fixture
-使用的 test-tenant 内存 store。双租户同 ID、租户内用户设备/任务隔离、无 effect 派发和幂等回执已验证；尚无真实云 API、
-持久数据库、队列、对象存储、搜索、设备连接或生产租户。
+Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release、任务、脱敏结果和审计 contract、test-tenant 内存 store，
+以及默认不挂载的 SQLite tenant/user/device repository 和 authorization service。双租户同 ID、复合主外键隔离、跨 reopen persistence、
+租户内用户设备/任务隔离、授权失败关闭和无 effect 派发均已验证；尚无真实云 API、身份提供方、生产 PostgreSQL RLS、队列、对象
+存储、搜索、设备 consumer 或生产租户。
 
 Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interface/graph/workspace 验证和注入 signer，输出可由客户端
 重新验签的统一 Envelope；当前只编译 test tenant、无 effect fixture，不构成真实 Agent Studio 或任务派发上线。

@@ -942,3 +942,12 @@
   访问、工具、外部写、重试到第二 executor、依赖安装、composition 变化、服务重启与 owner 切换。
 - SSH 真实连接不在该授权单内；它仍缺 owner 选择的 gateway endpoint、真实 pinned host-key、least-privilege subsystem identity、客户端
   credential reference 与服务端 synthetic test window。缺少任一项都不得运行 `ssh` 或建立通道。
+
+## 2026-09-06 persistent tenant control-plane identity provider
+
+- 把原 test-store-only 模块演进为仍默认 inactive 的 tenant control-plane provider：保留 no-effect 内存 fixture，并新增 Node 内建 SQLite
+  repository、独立 migration 与 authorization-enforcing service。没有引入新依赖或 server listener。
+- tenant/user/device 使用 `(tenant_id, ...)` 复合键与 foreign key；相同 user/device id 可在不同 tenant 并存。所有 service operation 都先
+  使用 tenant context，再通过注入 authorization port 校验 exact action/subject；不存在 platform admin 或 unscoped list API。
+- 临时数据库集成测试覆盖双租户隔离、跨 reopen persistence、拒绝未授权写、拒绝 foreign user 设备以及 device owner/public-key 漂移。
+  当前 provider 未进入 product composition，不启动 consumer/provider/scheduler/effect；production PostgreSQL RLS 与真实身份提供方仍未实现。

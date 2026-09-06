@@ -35,8 +35,10 @@ Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将�
 activation 关闭。私有 Offer 不输出主线工作域 source path。
 
 Phase 3A 的隔离边界由 [ADR 0095](adr/0095-test-tenant-control-plane-isolation.md) 定义。用户、设备、Capability/Blueprint
-release、任务、脱敏结果和审计先选择 tenant partition；普通用户只能读取自己的设备与任务，不存在平台管理员跨租户正文
-入口。当前 store 只存在于测试内存、只接受 `test.*` tenant 和无 effect 计划，不是已运行的云服务。
+release、任务、脱敏结果和审计先选择 tenant partition；普通用户只能读取自己的设备与任务，不存在平台管理员跨租户正文入口。
+[ADR 0112](adr/0112-persistent-tenant-control-plane.md) 又加入未挂载的 SQLite 多租户 identity repository 与授权 service：tenant/user/device
+使用复合 tenant key 和 foreign key，写入逐 action 调用注入的 authorization port，跨 reopen 仍保持隔离。原 `test.*` store 继续用于
+no-effect orchestration fixture。当前没有云 listener、身份提供方、设备 consumer 或 production PostgreSQL RLS，不能称为云服务上线。
 
 Agent Studio 的编译边界由 [ADR 0096](adr/0096-agent-blueprint-compilation.md) 定义：Blueprint digest、artifact digest、
 interface ownership、graph DAG 与 workspace grant 必须闭合，编译结果才可由注入 signer 签成所有执行器共用的 Envelope。

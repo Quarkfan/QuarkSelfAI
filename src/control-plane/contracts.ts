@@ -16,6 +16,8 @@ export interface DispatchRecordV1 { readonly tenantId: string; readonly userId: 
 export interface RedactedResultV1 { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly taskId: string; readonly planId: string; readonly outcome: 'succeeded' | 'failed' | 'cancelled'; readonly summaryCode: string; readonly artifactDigests: readonly string[]; readonly completedAt: string }
 export interface TenantAuditRecordV1 { readonly tenantId: string; readonly auditId: string; readonly actorUserId: string; readonly action: string; readonly subjectRef: string; readonly outcome: 'allowed' | 'denied'; readonly occurredAt: string }
 
+export type { TenantAuthorizationPortV1, TenantControlActionV1, TenantControlRepositoryV1 } from './tenant-persistence.js'
+
 export interface TestTenantControlPlanePortV1 {
   createTestTenant(input: { readonly tenantId: string; readonly name: string }, now?: Date): TenantRecordV1
   registerUser(context: TenantContextV1, input: { readonly userId: string; readonly displayName: string }, now?: Date): UserRecordV1
