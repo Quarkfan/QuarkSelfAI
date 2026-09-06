@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份与 device wire codec 生命周期，合计 135 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec 与 registered-tenant inactive composition，合计 136 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -116,10 +116,15 @@ Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release�
 以及默认不挂载的 SQLite tenant/user/device repository 和 authorization service。双租户同 ID、复合主外键隔离、跨 reopen persistence、
 租户内用户设备/任务隔离、授权失败关闭和无 effect 派发均已验证；后续已补默认不挂载的持久身份 provider：随机 salt+scrypt、session digest、
 服务端 expiry/revocation、持久账号级登录 throttle 与账号/用户/租户状态复核均已验证。一般账号管理/recovery、MFA/passkey、edge/IP abuse protection、TLS termination、生产 PostgreSQL RLS、
-队列、对象存储、搜索、设备 consumer 与 production tenant 仍未完成。
+队列、对象存储、搜索、设备 consumer 与 production deployment 仍未完成。
 
 First-owner bootstrap 已以独立操作边界实现：仅允许 process-owned 私有 canonical 目录中的空 identity database，在单一 transaction 内创建 tenant、user
 和固定 owner account；credential 只走 bounded stdin，既不进入 argv/config/receipt，也不创建 session。一般账号管理、密码恢复和真实 bootstrap 运行仍未完成。
+
+默认不挂载的 cloud composition 现可打开该已 bootstrap 的 SQLite 真源，并以同一个 role authorization 组装 identity、tenant/device、
+Capability Registry、Agent Studio、device enrollment/session 与认证应用。独立 provider 仍默认 `test-only`；只有 composition 显式使用
+`registered`，所有 HTTP tenant scope 均从真实 session 推导。closed config 强制 listener/effects 为 false，并拒绝未知字段、非 canonical migration、
+非 0600 单链接 database 或非私有 owner root。合成非 `test.*` tenant 已完成真实登录和三类 scoped read；这不是公网、多节点或 production deployment。
 
 Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interface/graph/workspace 验证和注入 signer，输出可由客户端
 重新验签的统一 Envelope；当前只编译 test tenant、无 effect fixture，不构成真实 Agent Studio 或任务派发上线。
@@ -130,7 +135,7 @@ SSH 备用通道已从策略/argv 脚手架推进为默认不挂载的 executabl
 
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
-`test.*` 租户、manual/no-effect Blueprint，没有 production release、调度或执行路径。
+manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。
 
 Capability Registry 现已具备默认不挂载的 SQLite provider：只接收身份、canonical digest、signature、SBOM 与 evidence policy 均闭合的
 `validated-unpublished` Manifest，按 private/tenant visibility 强制 tenant/user 隔离，并固定 consumer/provider/scheduler/effects 为零。

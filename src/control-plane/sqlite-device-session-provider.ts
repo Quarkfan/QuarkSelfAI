@@ -3,7 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { DeviceProofVerifierV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1, PlanSignatureVerifierV1, SignedExecutionPlanV1 } from '../client-runtime/contracts.js'
 import { verifySignedExecutionPlan } from '../client-runtime/validation.js'
-import type { DeviceDispatchQueuePortV1, DeviceSessionServerPortV1, DispatchRecordV1, RedactedResultV1 } from './contracts.js'
+import type { DeviceDispatchQueuePortV1, DeviceSessionServerPortV1, DispatchRecordV1, RedactedResultV1, TenantAdmissionModeV1 } from './contracts.js'
 
 type Row = Record<string, string | number | null>
 type TokenSource = { next(label: 'challenge' | 'nonce' | 'session' | 'lease'): string }
@@ -13,10 +13,10 @@ const unsafeText = /^(?:\/|[A-Za-z]:[\\/]|~[\\/])|(?:token|secret|password|priva
 
 /** Persistent no-effect device protocol provider. It owns no listener, executor, scheduler or external effect. */
 export class SqliteInactiveDeviceSessionProviderV1 implements DeviceSessionServerPortV1, DeviceDispatchQueuePortV1 {
-  constructor(private readonly db: DatabaseSync, private readonly tokens: TokenSource, private readonly proofVerifier: DeviceProofVerifierV1, private readonly planVerifier: PlanSignatureVerifierV1) {}
+  constructor(private readonly db: DatabaseSync, private readonly tokens: TokenSource, private readonly proofVerifier: DeviceProofVerifierV1, private readonly planVerifier: PlanSignatureVerifierV1, private readonly tenantMode: TenantAdmissionModeV1 = 'test-only') {}
 
   async issueChallenge(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string }, now = new Date(), ttlMs = 60_000): Promise<DeviceSessionChallengeV1> {
-    deviceScope(input); positive(ttlMs, 'challenge ttl')
+    deviceScope(input, this.tenantMode); positive(ttlMs, 'challenge ttl')
     const device = this.db.prepare(`SELECT d.user_id, d.state, u.state AS user_state FROM cp_device d JOIN cp_user u ON u.tenant_id=d.tenant_id AND u.user_id=d.user_id WHERE d.tenant_id = ? AND d.device_id = ?`).get(input.tenantId, input.deviceId) as Row | undefined
     if (!device || device.user_id !== input.userId || device.state !== 'registered' || device.user_state !== 'active') throw new Error('registered device is unavailable')
     const challenge = Object.freeze({ schemaVersion: 1 as const, challengeId: this.#token('challenge'), tenantId: input.tenantId, userId: input.userId,
@@ -47,7 +47,7 @@ export class SqliteInactiveDeviceSessionProviderV1 implements DeviceSessionServe
   }
 
   async enqueue(dispatch: DispatchRecordV1, now = new Date()): Promise<DispatchRecordV1> {
-    if (!dispatch.tenantId.startsWith('test.') || dispatch.state !== 'queued' || dispatch.plan.envelope.allowedEffects.length || dispatch.plan.envelope.approvalGrants.length) throw new Error('inactive device queue accepts no-effect test dispatches only')
+    if ((this.tenantMode === 'test-only' && !dispatch.tenantId.startsWith('test.')) || dispatch.state !== 'queued' || dispatch.plan.envelope.allowedEffects.length || dispatch.plan.envelope.approvalGrants.length) throw new Error('inactive device queue accepts admitted no-effect dispatches only')
     if (dispatch.plan.envelope.tenantId !== dispatch.tenantId || dispatch.plan.envelope.userId !== dispatch.userId || dispatch.plan.envelope.deviceId !== dispatch.deviceId) throw new Error('dispatch plan scope mismatch')
     await verifySignedExecutionPlan(dispatch.plan, this.planVerifier, now)
     const device = this.db.prepare(`SELECT user_id, state FROM cp_device WHERE tenant_id = ? AND device_id = ?`).get(dispatch.tenantId, dispatch.deviceId) as Row | undefined
@@ -120,15 +120,15 @@ export class SqliteInactiveDeviceSessionProviderV1 implements DeviceSessionServe
   #token(label: 'challenge' | 'nonce' | 'session' | 'lease'): string { const value = this.tokens.next(label); if (!tokenPattern.test(value)) throw new Error(`${label} token is invalid`); return value }
 }
 
-export async function openSqliteInactiveDeviceSessionProvider(databasePath: string, migrations: readonly string[], tokens: TokenSource, proofVerifier: DeviceProofVerifierV1, planVerifier: PlanSignatureVerifierV1) {
+export async function openSqliteInactiveDeviceSessionProvider(databasePath: string, migrations: readonly string[], tokens: TokenSource, proofVerifier: DeviceProofVerifierV1, planVerifier: PlanSignatureVerifierV1, tenantMode: TenantAdmissionModeV1 = 'test-only') {
   const path = resolve(databasePath); await mkdir(dirname(path), { recursive: true, mode: 0o700 }); const db = new DatabaseSync(path)
-  try { for (const migration of migrations) db.exec(await readFile(resolve(migration), 'utf8')); return new SqliteInactiveDeviceSessionProviderV1(db, tokens, proofVerifier, planVerifier) } catch (error) { db.close(); throw error }
+  try { for (const migration of migrations) db.exec(await readFile(resolve(migration), 'utf8')); return new SqliteInactiveDeviceSessionProviderV1(db, tokens, proofVerifier, planVerifier, tenantMode) } catch (error) { db.close(); throw error }
 }
 
 function sessionFrom(row: Row): DeviceSessionV1 { return Object.freeze({ schemaVersion: 1, sessionId: String(row.session_id), tenantId: String(row.tenant_id), userId: String(row.user_id), deviceId: String(row.device_id), issuedAt: String(row.issued_at), expiresAt: String(row.expires_at), state: String(row.state) as DeviceSessionV1['state'] }) }
 function dispatchFrom(row: Row): DispatchRecordV1 { return Object.freeze({ tenantId: String(row.tenant_id), userId: String(row.user_id), taskId: String(row.task_id), deviceId: String(row.device_id), plan: JSON.parse(String(row.plan_json)), idempotencyKey: String(row.idempotency_key), state: String(row.state) as DispatchRecordV1['state'], createdAt: String(row.created_at) }) }
 function lease(row: Row, plan: SignedExecutionPlanV1): DeviceTaskLeaseV1 { return Object.freeze({ schemaVersion: 1, taskId: String(row.task_id), planId: String(row.plan_id), plan, deviceId: String(row.device_id), leaseToken: String(row.lease_token), attempt: Number(row.lease_attempt), leasedAt: String(row.leased_at), expiresAt: String(row.lease_expires_at), externalWritesEnabled: false }) }
-function deviceScope(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string }): void { if (!input.tenantId.startsWith('test.') || !tokenPattern.test(input.tenantId) || !tokenPattern.test(input.userId) || !tokenPattern.test(input.deviceId)) throw new Error('inactive device provider accepts valid test device scopes only') }
+function deviceScope(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string }, tenantMode: TenantAdmissionModeV1): void { if (!['test-only', 'registered'].includes(tenantMode) || (tenantMode === 'test-only' && !input.tenantId.startsWith('test.')) || !tokenPattern.test(input.tenantId) || !tokenPattern.test(input.userId) || !tokenPattern.test(input.deviceId)) throw new Error('inactive device provider tenant admission is invalid') }
 function positive(value: number, label: string): void { if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${label} must be positive`) }
 function timestamp(value: Date): string { if (Number.isNaN(value.getTime())) throw new Error('timestamp is invalid'); return value.toISOString() }
 function validateResult(input: Omit<RedactedResultV1, 'tenantId' | 'userId'>): void {

@@ -1375,3 +1375,18 @@
 - 回滚删除 bootstrap function/entry/test/ADR 和 identity module ownership；未来显式创建的 database 属于 durable user state，代码回滚不得删除。
 - 完整 `npm run check` 通过：主项目 475 项中 468 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构仍为 135 modules、
   75 个 platform-core Offer、120 assets、effects active 0/23。提交前继续复核隔离、连续性、兼容与根同步门禁。
+
+## 2026-09-06 registered-tenant inactive cloud composition
+
+- 复核发现持久云 provider 虽有真实 identity 与 first-owner bootstrap，standalone factory 仍统一限制 `test.*`，不存在证明非 fixture tenant 可进入同一
+  provider graph 的组合边界。本轮保留 factory 的 `test-only` 默认值，只允许独立 inactive cloud composition 显式选择 `registered`。
+- composition 复用一个 SQLite tenant/identity 真源和一个封闭 owner/member/auditor authorization，组装 tenant/device、Capability Registry、Agent Studio、
+  device enrollment/session、认证 application 与无 listener handler。tenant/user/roles 只从 scrypt identity session 推导，不接受请求覆盖，也不存在管理员旁路。
+- 配置必须 exact，要求已存在的 process-owned 0700 canonical root、0600 单链接 database 与 canonical regular migrations；listener 和 external effects 必须精确为 false。
+  composition 不含 scheduler、dispatcher、executor、capability lifecycle 或 effect port，并作为独立 inactive operations module 管理，不把 provider import 倒灌到 workflow。
+- 合成非 `test.*` tenant 已用事务 bootstrap 创建后，通过真实 scrypt login 读取 device、Capability 与 Agent draft scope；另有门禁覆盖 closed role matrix、未知 role、
+  activation flag、未知配置字段与不安全 database mode。测试状态会删除，未创建真实账号或服务，未产生网络连接、执行或外部写。
+- 回滚删除 composition/test/ADR/catalog mapping，并移除三个 provider 的可选 admission mode即可；standalone 默认从未变化，且没有 live composition 或 durable test state。
+- 完整 `npm run check` 通过：主项目 478 项中 471 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构为 136 modules、
+  76 个 platform-core Offer、120 assets、23/23 effects implemented、0/23 active。capability platform 136/136 exactly-once，work-domain 101/101
+  且无 drift；assistant continuity 仍如实为 `organizationComplete=false`、`work-integration-not-yet-isolated`，DSH/server/BlackLake/Lark compatibility 均通过。

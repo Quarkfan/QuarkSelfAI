@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 132 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 136 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -45,8 +45,9 @@ interface ownership、graph DAG 与 workspace grant 必须闭合，编译结果�
 当前编译器只接受 test tenant 与无 effect Blueprint，不派发计划。
 
 [ADR 0114](adr/0114-persistent-inactive-agent-studio.md) 为 Agent Studio 增加默认不挂载的 SQLite provider：仅保存
-`test.*` 租户下的无副作用草稿与不可变 test release，所有读取和写入都经过 tenant authorization port，并以
-tenant/user 复合键和 optimistic revision 隔离。它没有 listener、调度、执行器或 production release 路径。
+无副作用草稿与不可变 test release，所有读取和写入都经过 tenant authorization port，并以 tenant/user 复合键和
+optimistic revision 隔离。provider factory 默认仍只接受 `test.*`；只有 [ADR 0148](adr/0148-registered-tenant-inactive-cloud-composition.md)
+的封闭组合显式选择 registered tenant admission。它没有 listener、调度、执行器或 production release 路径。
 
 [ADR 0115](adr/0115-persistent-inactive-capability-registry.md) 增加对称的 Capability Registry provider。它只接收已通过公共
 Manifest evidence gate 的 `validated-unpublished` 候选，持久化为 `catalogued-inactive`，并保持 installation/loading/
@@ -60,9 +61,14 @@ provider：账号使用 tenant/user 复合外键，password 使用随机 salt+sc
 账号恢复或真实账号，因此不构成已上线的公网身份服务。[ADR 0147](adr/0147-transactional-first-cloud-owner-bootstrap.md) 提供仅限空 identity database
 的事务化 first-owner bootstrap：密码只从 bounded stdin 输入，固定创建 owner 且不生成 session；它不是一般账号管理或恢复接口，本批也未执行。
 
+[ADR 0148](adr/0148-registered-tenant-inactive-cloud-composition.md) 将 bootstrapped identity、tenant/device、Capability Registry、Agent Studio、
+device enrollment/session 和认证应用装入同一个默认不挂载的 provider graph。独立 provider 的 admission 默认仍为 `test-only`；该 composition
+显式使用 `registered`，且 tenant/user/roles 只能由持久 session 得出。它只接受已存在的 0600 SQLite database 和完整 closed config，并强制
+`listenerEnabled=false`、`externalEffectsEnabled=false`，因此没有第二 provider、网络 listener、scheduler、executor 或写 effect owner。
+
 [ADR 0117](adr/0117-persistent-inactive-device-session-provider.md) 将设备协议的唯一 server port 接到同一 SQLite identity 真源：
 challenge、单活 session、no-effect test dispatch、可恢复 lease、ack 与脱敏结果都按 tenant/user/device 复合 scope 持久化。
-provider 只接受 `test.*` 租户和签名验证通过且无 effect/approval grant 的计划，不拥有 listener、scheduler、executor 或外部写；
+provider factory 默认只接受 `test.*` 租户；registered composition 仍只接收签名验证通过且无 effect/approval grant 的计划。它不拥有 listener、scheduler、executor 或外部写；
 客户端完成时间只作为结果证据，session 有效性始终以服务端时间判断。
 
 [ADR 0116](adr/0116-inactive-cloud-api-boundary.md) 进一步定义无 listener 的 `/v1` handler：设备注册/查询、能力目录和 Agent 草稿

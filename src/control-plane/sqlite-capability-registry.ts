@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { contentDigest, validateCapabilityManifest } from '../capability-platform/validation.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { ArtifactVerificationReportV1 } from '../client-runtime/contracts.js'
-import type { CapabilityCatalogRecordV1, PersistentCapabilityRegistryPortV1, TenantContextV1 } from './contracts.js'
+import type { CapabilityCatalogRecordV1, PersistentCapabilityRegistryPortV1, TenantAdmissionModeV1, TenantContextV1 } from './contracts.js'
 import type { TenantAuthorizationPortV1, TenantControlActionV1 } from './tenant-persistence.js'
 
 type Row = Record<string, string | number>
@@ -14,10 +14,10 @@ const requiredChecks = ['license', 'signature', 'sbom', 'malware', 'maintenance'
 
 /** Persistent catalog only: no installation, loading, authorization, execution, scheduling, or effect ownership. */
 export class SqliteInactiveCapabilityRegistryV1 implements PersistentCapabilityRegistryPortV1 {
-  constructor(private readonly database: DatabaseSync, private readonly authorization: TenantAuthorizationPortV1) {}
+  constructor(private readonly database: DatabaseSync, private readonly authorization: TenantAuthorizationPortV1, private readonly tenantMode: TenantAdmissionModeV1 = 'test-only') {}
 
   async registerInactive(context: TenantContextV1, input: { readonly candidate: ManifestPublicationCandidateV1; readonly evidence: ArtifactVerificationReportV1; readonly visibility: 'private' | 'tenant' }, now = new Date()): Promise<CapabilityCatalogRecordV1> {
-    validateContext(context)
+    validateContext(context, this.tenantMode)
     await this.#authorize(context, 'capability-release.register-inactive', `capability:${input.candidate.candidateId}`)
     const candidate = validateCandidate(input.candidate)
     validateEvidence(candidate, input.evidence)
@@ -44,14 +44,14 @@ export class SqliteInactiveCapabilityRegistryV1 implements PersistentCapabilityR
   }
 
   async get(context: TenantContextV1, capabilityId: string, version: string): Promise<CapabilityCatalogRecordV1 | undefined> {
-    validateContext(context); validId(capabilityId, 'capabilityId'); validVersion(version)
+    validateContext(context, this.tenantMode); validId(capabilityId, 'capabilityId'); validVersion(version)
     await this.#authorize(context, 'capability-release.read', `capability:${capabilityId}@${version}`)
     const record = this.#get(context.tenantId, capabilityId, version)
     return record && visible(record, context) ? record : undefined
   }
 
   async listVisible(context: TenantContextV1): Promise<readonly CapabilityCatalogRecordV1[]> {
-    validateContext(context)
+    validateContext(context, this.tenantMode)
     await this.#authorize(context, 'capability-release.read', `capabilities:tenant:${context.tenantId}`)
     const rows = this.database.prepare(`SELECT * FROM cp_capability_release
       WHERE tenant_id = ? AND (visibility = 'tenant' OR owner_user_id = ?)
@@ -73,14 +73,14 @@ export class SqliteInactiveCapabilityRegistryV1 implements PersistentCapabilityR
 }
 
 export async function openSqliteInactiveCapabilityRegistry(
-  databasePath: string, migrationPaths: readonly string[], authorization: TenantAuthorizationPortV1,
+  databasePath: string, migrationPaths: readonly string[], authorization: TenantAuthorizationPortV1, tenantMode: TenantAdmissionModeV1 = 'test-only',
 ): Promise<SqliteInactiveCapabilityRegistryV1> {
   const path = resolve(databasePath)
   await mkdir(dirname(path), { recursive: true, mode: 0o700 })
   const database = new DatabaseSync(path)
   try {
     for (const migrationPath of migrationPaths) database.exec(await readFile(resolve(migrationPath), 'utf8'))
-    return new SqliteInactiveCapabilityRegistryV1(database, authorization)
+    return new SqliteInactiveCapabilityRegistryV1(database, authorization, tenantMode)
   } catch (error) { database.close(); throw error }
 }
 
@@ -111,8 +111,8 @@ function recordFromRow(row: Row): CapabilityCatalogRecordV1 {
 }
 
 function visible(record: CapabilityCatalogRecordV1, context: TenantContextV1): boolean { return record.visibility === 'tenant' || record.ownerUserId === context.userId }
-function validateContext(context: TenantContextV1): void {
-  if (!context.tenantId.startsWith('test.')) throw new Error('inactive Capability Registry accepts test tenants only')
+function validateContext(context: TenantContextV1, tenantMode: TenantAdmissionModeV1): void {
+  if (!['test-only', 'registered'].includes(tenantMode) || (tenantMode === 'test-only' && !context.tenantId.startsWith('test.'))) throw new Error('Capability Registry tenant admission is invalid')
   validId(context.tenantId, 'tenantId'); validId(context.userId, 'userId')
   if (!context.roles.length || new Set(context.roles).size !== context.roles.length || context.roles.some(role => !['owner', 'member', 'auditor'].includes(role))) throw new Error('tenant roles are invalid')
 }

@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
-import type { AgentDraftRecordV1, AgentTestReleaseV1, PersistentAgentStudioPortV1, TenantContextV1 } from './contracts.js'
+import type { AgentDraftRecordV1, AgentTestReleaseV1, PersistentAgentStudioPortV1, TenantAdmissionModeV1, TenantContextV1 } from './contracts.js'
 import type { TenantAuthorizationPortV1, TenantControlActionV1 } from './tenant-persistence.js'
 import { validateInactiveAgentBlueprint } from './test-agent-studio.js'
 
@@ -11,10 +11,10 @@ const digestPattern = /^sha256:[a-f0-9]{64}$/
 
 /** Persistent, tenant-scoped Agent Studio provider. It owns no listener, scheduler, dispatcher, executor, or runtime mount. */
 export class SqliteInactiveAgentStudioV1 implements PersistentAgentStudioPortV1 {
-  constructor(private readonly database: DatabaseSync, private readonly authorization: TenantAuthorizationPortV1) {}
+  constructor(private readonly database: DatabaseSync, private readonly authorization: TenantAuthorizationPortV1, private readonly tenantMode: TenantAdmissionModeV1 = 'test-only') {}
 
   async saveDraft(context: TenantContextV1, input: { readonly draftId: string; readonly blueprint: Parameters<typeof validateInactiveAgentBlueprint>[0]; readonly expectedRevision: number }, now = new Date()): Promise<AgentDraftRecordV1> {
-    validateContext(context)
+    validateContext(context, this.tenantMode)
     validId(input.draftId, 'draftId')
     validRevision(input.expectedRevision)
     await this.#authorize(context, 'agent-draft.write', `agent-draft:${input.draftId}`)
@@ -42,7 +42,7 @@ export class SqliteInactiveAgentStudioV1 implements PersistentAgentStudioPortV1 
   }
 
   async publishTest(context: TenantContextV1, input: { readonly draftId: string; readonly expectedRevision: number }, now = new Date()): Promise<AgentTestReleaseV1> {
-    validateContext(context)
+    validateContext(context, this.tenantMode)
     validId(input.draftId, 'draftId')
     validRevision(input.expectedRevision)
     await this.#authorize(context, 'agent-release.publish-test', `agent-draft:${input.draftId}`)
@@ -88,14 +88,14 @@ export class SqliteInactiveAgentStudioV1 implements PersistentAgentStudioPortV1 
   }
 
   async getDraft(context: TenantContextV1, draftId: string): Promise<AgentDraftRecordV1 | undefined> {
-    validateContext(context)
+    validateContext(context, this.tenantMode)
     validId(draftId, 'draftId')
     await this.#authorize(context, 'agent-draft.read', `agent-draft:${draftId}`)
     return this.#draft(context, draftId)
   }
 
   async listDrafts(context: TenantContextV1): Promise<readonly AgentDraftRecordV1[]> {
-    validateContext(context)
+    validateContext(context, this.tenantMode)
     await this.#authorize(context, 'agent-draft.read', `agent-drafts:user:${context.userId}`)
     const rows = this.database.prepare(`SELECT * FROM cp_agent_draft
       WHERE tenant_id = ? AND user_id = ? ORDER BY updated_at DESC, draft_id`).all(context.tenantId, context.userId) as unknown as Row[]
@@ -125,13 +125,14 @@ export async function openSqliteInactiveAgentStudio(
   databasePath: string,
   migrationPaths: readonly string[],
   authorization: TenantAuthorizationPortV1,
+  tenantMode: TenantAdmissionModeV1 = 'test-only',
 ): Promise<SqliteInactiveAgentStudioV1> {
   const path = resolve(databasePath)
   await mkdir(dirname(path), { recursive: true, mode: 0o700 })
   const database = new DatabaseSync(path)
   try {
     for (const migrationPath of migrationPaths) database.exec(await readFile(resolve(migrationPath), 'utf8'))
-    return new SqliteInactiveAgentStudioV1(database, authorization)
+    return new SqliteInactiveAgentStudioV1(database, authorization, tenantMode)
   } catch (error) { database.close(); throw error }
 }
 
@@ -149,9 +150,10 @@ function releaseFromRow(row: Row): AgentTestReleaseV1 {
     draftRevision: Number(row.draft_revision), state: 'test', createdAt: String(row.created_at) })
 }
 
-function validateContext(context: TenantContextV1): void {
+function validateContext(context: TenantContextV1, tenantMode: TenantAdmissionModeV1): void {
   validId(context.tenantId, 'tenantId'); validId(context.userId, 'userId')
-  if (!context.tenantId.startsWith('test.') || !context.roles.length || new Set(context.roles).size !== context.roles.length || context.roles.some(role => !['owner', 'member', 'auditor'].includes(role))) throw new Error('inactive Agent Studio accepts scoped test tenants only')
+  if (tenantMode === 'test-only' && !context.tenantId.startsWith('test.')) throw new Error('inactive Agent Studio accepts scoped test tenants only')
+  if (!['test-only', 'registered'].includes(tenantMode) || !context.roles.length || new Set(context.roles).size !== context.roles.length || context.roles.some(role => !['owner', 'member', 'auditor'].includes(role))) throw new Error('Agent Studio tenant admission is invalid')
 }
 function validId(value: string, label: string): void { if (!idPattern.test(value)) throw new Error(`${label} is invalid`) }
 function validRevision(value: number): void { if (!Number.isSafeInteger(value) || value < 0) throw new Error('expectedRevision must be a non-negative integer') }

@@ -52,10 +52,23 @@ export class TenantControlServiceV1 {
   }
 }
 
+/** Closed default authorization for authenticated tenant roles; it grants no cross-tenant or external-effect action. */
+export class RoleTenantAuthorizationV1 implements TenantAuthorizationPortV1 {
+  async authorize(input: { readonly context: TenantContextV1; readonly action: TenantControlActionV1; readonly subjectRef: string }): Promise<boolean> {
+    validateContext(input.context)
+    if (!/^[a-z][a-z-]{1,31}:[a-z0-9][a-z0-9._:@/-]{0,255}$/.test(input.subjectRef)) return false
+    if (input.context.roles.includes('owner')) return true
+    const read = new Set<TenantControlActionV1>(['device.list', 'agent-draft.read', 'capability-release.read'])
+    if (input.context.roles.includes('auditor')) return read.has(input.action)
+    const member = new Set<TenantControlActionV1>([...read, 'device.register', 'agent-draft.write', 'agent-release.publish-test', 'capability-release.register-inactive'])
+    return input.context.roles.includes('member') && member.has(input.action)
+  }
+}
+
 function validateContext(context: TenantContextV1): void {
   validId(context.tenantId, 'tenantId')
   validId(context.userId, 'userId')
-  if (!context.roles.length || new Set(context.roles).size !== context.roles.length) throw new Error('tenant roles are invalid')
+  if (!context.roles.length || new Set(context.roles).size !== context.roles.length || context.roles.some(role => !['owner', 'member', 'auditor'].includes(role))) throw new Error('tenant roles are invalid')
 }
 
 function validId(value: string, label: string): void {

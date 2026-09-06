@@ -9,6 +9,8 @@ export interface TenantContextV1 {
   readonly roles: readonly ('owner' | 'member' | 'auditor')[]
 }
 
+export type TenantAdmissionModeV1 = 'test-only' | 'registered'
+
 export interface CloudIdentityPortV1 {
   /** Resolves an opaque adapter-owned session reference; raw credentials must not cross this port. */
   resolveSession(sessionReference: string): Promise<TenantContextV1 | undefined>
