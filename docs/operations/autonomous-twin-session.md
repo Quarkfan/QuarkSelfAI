@@ -1202,3 +1202,14 @@
   均清零，malformed、平台错误和不可验证结果失败关闭。configured client 在调用 lifecycle 前再次复核完整 inactive plan。
 - 单测只使用注入 runner，未写真实 Keychain；没有启动客户端、注册设备、联网、执行工具、改变 consumer/provider/composition 或启用 effect。
   模块与 Facility 数量仍为 130/70。回滚移除 provisioner/lifecycle/delegate/test/ADR，无外部状态清理。
+
+## 2026-09-06 inactive client installation lifecycle
+
+- 新增真实本地 install/recover/unused-uninstall 生命周期。install root 必须尚不存在且 parent canonical；安装独占创建 0700 root/state/runtime，
+  复制 0600 migration，并最后写入 0600 bootstrap config 与 root+version 绑定、config/migration digest 覆盖的 inactive receipt。
+- recovery 复核精确顶层布局、regular/non-symlink/private 文件、canonical 目录、installation identity、digest 与 state-root 归属；恢复出的 plan 已在
+  临时安装中实际初始化并关闭单一 configured client，初始化为 0 自动网络请求。
+- unused uninstall 遇到任何 durable state 立即拒绝；空状态先原子 rename 到 sibling quarantine，再次复核后只 unlink 三个已验证文件并 rmdir
+  空目录，永不递归删除 state。测试覆盖 migration 篡改、权限漂移、未知布局、无效 endpoint 清理和已初始化状态保护。
+- 测试只使用临时目录和注入 master key；未真实 provision Keychain、安装到用户目录、注册/启动 daemon、连接云端、运行 executor 或 effect。
+  catalog 与 Facility 数量仍为 130/70，回滚删除 lifecycle/test/ADR 与 ownership 映射。

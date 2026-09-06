@@ -169,6 +169,10 @@ session transport 装入同一个 close boundary。state root 必须是 canonica
 从 stdin 接收进程内随机生成值，创建后重新读取并恒时核对，所有临时 buffer 清零。它只由已复核的 inactive bootstrap plan 显式调用；当前
 测试不写真实 Keychain，installer UI、应用 ACL 与其他平台 provider 仍未形成。
 
+[ADR 0135](adr/0135-inactive-client-installation-lifecycle.md) 提供真实但未激活的本地安装事务：独占创建私有目录，复制并 digest 校验 migration，
+写入封闭 bootstrap config 与绑定 install root/version 的 receipt；恢复会复核布局、权限、identity 和摘要。unused uninstall 先 quarantine 并
+二次确认 state 为空，只删除已验证文件与空目录，永不递归删除客户端状态。它仍不注册或启动后台服务。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

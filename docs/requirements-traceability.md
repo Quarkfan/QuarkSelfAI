@@ -49,8 +49,12 @@ device sync。启动先验证 enrollment 与全部已安装制品，第二实例
 
 现已增加封闭的本地 bootstrap document/compiler/facade，把固定 Keychain account、加密状态、public enrollment transport 与 session transport
 装入上述唯一 owner；状态根目录、migration 和派生路径在读取 Keychain 前进行运行时复核。初始化与跨 reopen 均证明 0 自动网络请求，注册与
-no-effect sync 仍只能显式调用。macOS Keychain provisioning 已形成独立显式 lifecycle；安装器建目录、后台服务注册、原生应用 ACL 与
+no-effect sync 仍只能显式调用。macOS Keychain provisioning 已形成独立显式 lifecycle；发行安装包、后台服务注册、原生应用 ACL 与
 Windows/Linux key provider 尚未完成。
+
+inactive client 现可在任意调用方指定的 canonical 绝对目录完成真实安装：0700 root/state/runtime、0600 migration/config/receipt、root+version
+绑定 identity 与 config/migration digest 均可恢复复核，恢复 plan 已真实初始化并关闭唯一客户端 owner。unused uninstall 通过原子 quarantine
+与空目录删除证明不会递归删除 durable state；后台服务注册、发行包签名、公证、真实 Keychain/设备注册和 active lifecycle 仍未完成。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
