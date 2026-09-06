@@ -20,6 +20,19 @@ export class InactiveCloudHttpHandlerV1 {
     if (!['GET', 'POST'].includes(request.method) || !request.path.startsWith('/v1/') || request.path.length > 200) return response(400, 'invalid-request')
     try {
       if (request.method === 'GET' && request.path === '/v1/devices') return response(200, 'ok', { items: await this.application.listDevices(requiredSession(request)) })
+      if (request.method === 'POST' && request.path === '/v1/device-enrollments') {
+        const body = exactBody(request.body, ['tenantId', 'userId', 'deviceId', 'publicKey'])
+        if (['tenantId', 'userId', 'deviceId', 'publicKey'].some(key => typeof body[key] !== 'string')) return response(400, 'invalid-body')
+        return response(201, 'created', { item: await this.application.beginDeviceEnrollment(body as { tenantId: string; userId: string; deviceId: string; publicKey: string }) })
+      }
+      if (request.method === 'POST' && request.path === '/v1/device-enrollments/approve') {
+        const body = exactBody(request.body, ['userCode']); if (typeof body.userCode !== 'string') return response(400, 'invalid-body')
+        return response(200, 'ok', { item: await this.application.approveDeviceEnrollment(requiredSession(request), body.userCode) })
+      }
+      if (request.method === 'POST' && request.path === '/v1/device-enrollments/poll') {
+        const body = exactBody(request.body, ['requestId', 'pollToken']); if (typeof body.requestId !== 'string' || typeof body.pollToken !== 'string') return response(400, 'invalid-body')
+        return response(200, 'ok', { item: await this.application.pollDeviceEnrollment({ requestId: body.requestId, pollToken: body.pollToken }) })
+      }
       if (request.method === 'POST' && request.path === '/v1/devices') {
         const body = exactBody(request.body, ['deviceId', 'publicKey'])
         if (typeof body.deviceId !== 'string' || typeof body.publicKey !== 'string') return response(400, 'invalid-body')

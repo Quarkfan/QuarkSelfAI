@@ -1155,3 +1155,12 @@
   tenant/user/device/reference。重启会派生并比对公钥，错误 master key、identity 漂移或私钥不匹配均在探测/连接前失败关闭。
 - 未通过 `security add-generic-password` 写入新 key，因为该路径会把 secret 暴露到 argv；生产 provisioning 留给后续原生 OS API。当前也未实现
   Windows/Linux provider、安装包、daemon、真实云注册或自动连接。catalog/migration 为 128/128、Facility coverage 为 68/68，effects 为 0/23。
+
+## 2026-09-06 durable device-code enrollment
+
+- 新增 10 分钟 device-code 注册协议：public begin 只接 tenant/user hint、device id 和真实 Ed25519 SPKI，返回 64-bit user code 与独立 256-bit
+  poll token；SQLite 仅保存 poll-token SHA-256 digest，跨 reopen 可继续 poll。
+- approve 必须由 opaque cloud session 推导出的同 tenant/user 调用，并只委托既有 `TenantDevicePortV1` 写设备；`approving` 状态串行化并发批准，
+  provider 失败恢复 pending 后可幂等重试。poll 无 browser cookie/session，仅返回 bounded pending/approved/expired 状态。
+- inactive handler 已提供 begin/approve/poll contract，但 provider 未挂载、无 listener、未真实注册设备。公网启用前仍需 rate-limit/abuse、CSRF/origin、
+  retention cleanup、telemetry 和登录确认 UI。catalog/migration 为 129/129、Facility coverage 为 69/69，effects 仍为 0/23。

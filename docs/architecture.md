@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 128 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 129 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -147,6 +147,11 @@ sync 都是显式方法，当前 sync 仍只接受 no-effect lease 并在持久 
 bootstrap owner。Keychain adapter 只执行固定 generic-password read，secret 不进入参数、错误、持久状态或云投影；bootstrap 在单一 instance
 lease 内首次注册或精确匹配已有 identity，并在恢复时证明私钥与已保存公钥相符。它仍需安装器/原生 UI 以无 argv 泄露方式预置 Keychain item，
 且默认不探测、不联网、不运行 executor。
+
+[ADR 0130](adr/0130-durable-device-code-enrollment.md) 以持久 device-code flow 分离浏览器登录与客户端注册。客户端只提交其真实 Ed25519
+公钥和声明 scope，收到 64-bit 展示码及 256-bit poll token；数据库只存 token digest。已登录用户必须在同 tenant/user scope 内确认，注册成功后
+客户端才可用原 poll credential 领取 approved 状态。inactive HTTP handler 已声明 begin/approve/poll 路由，但 provider 未挂入 composition，公网
+rate-limit/abuse gate 未形成前不得启动。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与

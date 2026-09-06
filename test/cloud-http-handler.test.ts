@@ -31,9 +31,23 @@ function handler() {
     async acknowledge(sessionId: string, input: { taskId: string }) { calls.push(`ack:${sessionId}:${input.taskId}`); return { state: 'accepted' } as never },
     async submitResult(sessionId: string, input: { taskId: string }) { calls.push(`result:${sessionId}:${input.taskId}`); return { tenantId: 'test.alpha', userId: 'owner', ...input } as never },
   }
-  const application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions)
+  const enrollment = {
+    async begin(input: { tenantId: string; userId: string; deviceId: string }) { calls.push(`enrollment.begin:${input.tenantId}:${input.userId}:${input.deviceId}`); return { requestId: 'enrollment.one' } as never },
+    async approve(resolved: TenantContextV1, userCode: string) { calls.push(`enrollment.approve:${resolved.tenantId}:${resolved.userId}:${userCode}`); return { state: 'approved' } as never },
+    async poll(input: { requestId: string }) { calls.push(`enrollment.poll:${input.requestId}`); return { state: 'pending' } as never },
+  }
+  const application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment)
   return { handler: new InactiveCloudHttpHandlerV1(application), calls }
 }
+
+test('keeps browser credentials out of the public device enrollment request and requires login only for approval', async () => {
+  const fixture = handler()
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-enrollments', body: { tenantId: 'test.alpha', userId: 'owner', deviceId: 'device.one', publicKey: 'public-key' } })).status, 201)
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-enrollments/poll', body: { requestId: 'enrollment.one', pollToken: 'opaque-poll-token' } })).status, 200)
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-enrollments/approve', sessionReference: 'session:valid', body: { userCode: 'AAAA-BBBB-CCCC-DDDD' } })).status, 200)
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/device-enrollments/approve', body: { userCode: 'AAAA-BBBB-CCCC-DDDD' } })).status, 401)
+  assert.deepEqual(fixture.calls, ['enrollment.begin:test.alpha:owner:device.one', 'enrollment.poll:enrollment.one', 'enrollment.approve:test.alpha:owner:AAAA-BBBB-CCCC-DDDD'])
+})
 
 test('routes authenticated device and catalog requests without accepting tenant input', async () => {
   const fixture = handler()

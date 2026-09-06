@@ -1,7 +1,7 @@
 import type { ArtifactVerificationReportV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1 } from '../client-runtime/contracts.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
-import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
+import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, DeviceEnrollmentRequestV1, DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
 
 const sessionPattern = /^session:[a-z0-9][a-z0-9._:-]{0,127}$/
 
@@ -18,6 +18,7 @@ export class InactiveCloudControlPlaneApplicationV1 {
     private readonly studio: PersistentAgentStudioPortV1,
     private readonly devices: TenantDevicePortV1,
     private readonly deviceSessions?: DeviceSessionServerPortV1,
+    private readonly deviceEnrollment?: DeviceEnrollmentServerPortV1,
   ) {}
 
   async listCapabilities(sessionReference: string): Promise<readonly CapabilityCatalogRecordV1[]> {
@@ -48,6 +49,10 @@ export class InactiveCloudControlPlaneApplicationV1 {
     return await this.devices.listDevices(await this.#context(sessionReference))
   }
 
+  async beginDeviceEnrollment(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceEnrollmentRequestV1> { return await this.#enrollment().begin(input, now) }
+  async approveDeviceEnrollment(sessionReference: string, userCode: string, now?: Date): Promise<DeviceEnrollmentStatusV1> { return await this.#enrollment().approve(await this.#context(sessionReference), userCode, now) }
+  async pollDeviceEnrollment(input: { readonly requestId: string; readonly pollToken: string }, now?: Date): Promise<DeviceEnrollmentStatusV1> { return await this.#enrollment().poll(input, now) }
+
   async issueDeviceChallenge(sessionReference: string, deviceId: string, now?: Date): Promise<DeviceSessionChallengeV1> {
     const context = await this.#context(sessionReference)
     return await this.#sessions().issueChallenge({ tenantId: context.tenantId, userId: context.userId, deviceId }, now)
@@ -67,6 +72,7 @@ export class InactiveCloudControlPlaneApplicationV1 {
     return deepFreeze(structuredClone(context))
   }
   #sessions(): DeviceSessionServerPortV1 { if (!this.deviceSessions) throw new Error('device session provider is unavailable'); return this.deviceSessions }
+  #enrollment(): DeviceEnrollmentServerPortV1 { if (!this.deviceEnrollment) throw new Error('device enrollment provider is unavailable'); return this.deviceEnrollment }
 }
 
 function deepFreeze<T>(value: T): T { if (value && typeof value === 'object' && !Object.isFrozen(value)) { for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child); Object.freeze(value) }; return value }

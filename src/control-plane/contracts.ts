@@ -12,6 +12,8 @@ export interface TenantContextV1 {
 export interface TenantRecordV1 { readonly tenantId: string; readonly name: string; readonly state: 'test' | 'active' | 'suspended'; readonly createdAt: string }
 export interface UserRecordV1 { readonly tenantId: string; readonly userId: string; readonly displayName: string; readonly state: 'active' | 'disabled'; readonly createdAt: string }
 export interface DeviceRecordV1 { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly publicKey: string; readonly state: 'pending' | 'registered' | 'revoked'; readonly createdAt: string }
+export interface DeviceEnrollmentRequestV1 { readonly schemaVersion: 1; readonly requestId: string; readonly userCode: string; readonly pollToken: string; readonly verificationPath: '/devices/activate'; readonly expiresAt: string; readonly pollAfterSeconds: 5 }
+export interface DeviceEnrollmentStatusV1 { readonly schemaVersion: 1; readonly requestId: string; readonly deviceId: string; readonly state: 'pending' | 'approved' | 'expired'; readonly expiresAt: string }
 export interface CapabilityReleaseRecordV1 { readonly tenantId: string; readonly capabilityId: string; readonly version: string; readonly artifactDigest: string; readonly visibility: 'private' | 'tenant' | 'public'; readonly state: 'draft' | 'verified' | 'retired'; readonly createdAt: string }
 export interface BlueprintReleaseRecordV1 { readonly tenantId: string; readonly blueprintId: string; readonly version: string; readonly blueprintDigest: string; readonly state: 'draft' | 'test' | 'shadow' | 'released' | 'retired'; readonly createdAt: string }
 export interface DispatchRecordV1 { readonly tenantId: string; readonly userId: string; readonly taskId: string; readonly deviceId: string; readonly plan: SignedExecutionPlanV1; readonly idempotencyKey: string; readonly state: 'queued' | 'leased' | 'completed' | 'failed' | 'cancelled'; readonly createdAt: string }
@@ -99,6 +101,12 @@ export interface PersistentCapabilityRegistryPortV1 {
 export interface TenantDevicePortV1 {
   registerDevice(context: TenantContextV1, input: { readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceRecordV1>
   listDevices(context: TenantContextV1): Promise<readonly DeviceRecordV1[]>
+}
+
+export interface DeviceEnrollmentServerPortV1 {
+  begin(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceEnrollmentRequestV1>
+  approve(context: TenantContextV1, userCode: string, now?: Date): Promise<DeviceEnrollmentStatusV1>
+  poll(input: { readonly requestId: string; readonly pollToken: string }, now?: Date): Promise<DeviceEnrollmentStatusV1>
 }
 
 export interface DeviceSessionServerPortV1 {
