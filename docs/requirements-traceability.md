@@ -164,6 +164,9 @@ SSH gateway 安装面现可生成 content-addressed review plan：专用非 root
 server distribution 现有独立 seal/verify contract 和 builder：两个 built entry、七个 SQLite migration、package manifest 与 SPDX SBOM 逐字节纳入 aggregate
 digest，且 source revision 必须等于 clean HEAD。host config、TLS secret、tenant database、SSH key 和 service definition 被排除，auto-start/effects 均为 false。
 
+server 安装现可落入新的私有 root 并回读验证 receipt 与全部 distribution bytes；config/runtime/state 三个 namespace 初始为空且彼此分离。
+unused uninstall 采用 quarantine 后二次空目录检查，只删除 manifest-owned 文件；任何配置、运行文件或 tenant state 都阻止删除。尚未 provision 或启动服务。
+
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
 manual/no-effect Blueprint；factory 默认仅 `test.*`，registered admission 只由上述 inactive composition 使用。没有 production release、调度或执行路径。

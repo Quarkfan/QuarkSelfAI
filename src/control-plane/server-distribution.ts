@@ -24,7 +24,8 @@ export async function sealServerDistribution(root: string, serverVersion: string
 /** Recomputes the complete private inventory before a future installer may consume it. */
 export async function verifyServerDistribution(root: string): Promise<ServerDistributionManifestV1> {
   const canonical = await privateCanonicalDirectory(root)
-  if ((await readdir(canonical)).sort().join(',') !== 'program,server-distribution.json') throw new Error('server distribution layout is invalid')
+  const top = (await readdir(canonical)).sort().join(',')
+  if (!['program,server-distribution.json', 'config,install-receipt.json,program,runtime,server-distribution.json,state'].includes(top)) throw new Error('server distribution layout is invalid')
   const bytes = await boundedPrivateFile(resolve(canonical, 'server-distribution.json'), 16 * 1024 * 1024)
   let parsed: unknown; try { parsed = JSON.parse(bytes.toString('utf8')) } catch { throw new Error('server distribution manifest is invalid') }
   const manifest = exactManifest(parsed); const actual = await inventory(canonical)

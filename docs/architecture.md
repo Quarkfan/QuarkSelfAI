@@ -110,6 +110,8 @@ sshd subsystem wrapper 只能代理一个 bounded stdin/stdout frame，不能打
 与禁止 shell/TTY/forwarding/tunnel 的双重约束均被内容寻址；plan 固定不可 apply/reload，尚未写系统文件、创建账号或连接远端。
 [ADR 0157](adr/0157-content-addressed-server-distribution.md) 将 cloud server 与 SSH subsystem 两个 entry、七个 migration 和 SPDX SBOM
 封装为私有内容寻址发行包；builder 强制 revision 等于 HEAD 且输入已提交。发行包不含 host config、credential、tenant state、服务定义，固定不自启。
+[ADR 0158](adr/0158-inactive-server-installation-lifecycle.md) 建立 server install/recover/unused-uninstall：复制后逐字节复核，host config/runtime/state
+使用独立私有 namespace；receipt 固定未配置、未注册、未启动。任一 namespace 出现数据即阻止卸载，不能把程序回滚变成 tenant state 删除。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

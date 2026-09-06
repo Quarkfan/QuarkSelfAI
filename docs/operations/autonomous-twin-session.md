@@ -1486,3 +1486,13 @@
 - 提交 `40a17576ae2e1500b80b1b8b1450dc899d96e8e1` 后从该 clean HEAD 真实构建并独立回读：11 个文件，artifact digest
   `sha256:9ad2414a88774fc5946e81d16aa5e58b2eb0b0f3950508dca64e2dd2fef3e46e`，auto-start/SSH apply/effects 均为 false。
   两个 bundle 从发行目录直接加载并在未 enable 时返回各自稳定失败码；临时发行目录已删除，未安装或启动。
+
+## 2026-09-06 inactive server installation lifecycle
+
+- 新增 server install/recover/unused-uninstall：只从已验证 distribution 复制全部 manifest-owned bytes，复制后再次独立校验，再创建空的私有
+  config/runtime/state namespace 并最后写 receipt；receipt 固定未配置、未自启、未注册 service、未 apply SSH、effects off。
+- recovery 不打开 database 或 credential，只复核 receipt identity、revision/digest 与程序字节。uninstall 先检查三个 namespace 为空，quarantine 后再检查，
+  仅逐项删除 manifest 文件和已知空目录；合成 durable state 会阻止卸载且安装路径保持不变，程序 tamper 会阻止恢复。
+- 本批未 provision host config/TLS、未创建 tenant DB、未注册 service/SSH 或启动进程。提交后将从 clean revision 构建真实 distribution 并执行临时安装演练。
+- 完整 `npm run check` 通过：主项目 492 项中 480 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179。
+  架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
