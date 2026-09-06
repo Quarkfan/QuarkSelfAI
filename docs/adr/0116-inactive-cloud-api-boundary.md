@@ -11,8 +11,11 @@ A fetch-independent HTTP handler defines the initial `/v1/devices`, `/v1/capabil
 
 The handler does not open a listener, parse bearer tokens or cookies, own TLS, select an identity provider, or mount into the current product composition.
 
+A test-only Node adapter may wrap this handler on exactly one ephemeral IPv4 loopback listener. It accepts only bounded JSON, maps one opaque session header into the handler request, exposes no public/fixed bind option, and remains absent from product composition. Pilot 03 used it with two synthetic tenants and temporary SQLite, then closed the listener and removed the fixture state.
+
 ## Consequences
 
 - Device onboarding and control-plane reads have executable API semantics before a network surface is authorized.
 - A future HTTP/TLS adapter remains responsible for request-size limits, credential parsing, rate limits and listener lifecycle.
 - Rollback removes the unmounted application/handler and tests; no live state or service requires restoration.
+- The loopback adapter is evidence for edge semantics only; it is not a production HTTP/TLS service or an activated cloud control plane.

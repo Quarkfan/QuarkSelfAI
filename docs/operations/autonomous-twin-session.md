@@ -1029,3 +1029,13 @@
   不可变，lease 可恢复，result 与任务终态事务提交；session 过期只信任服务端时间，客户端 `completedAt` 不能延长会话。
 - 临时 SQLite 集成测试覆盖两个租户相同 device/task id、challenge replay、foreign lease、跨 reopen 结果幂等、effectful plan、冲突 idempotency
   与 session expiry。回滚仅删除本批 provider/migration/test/ADR 并恢复目录登记，不涉及 live 数据或服务。
+
+## 2026-09-06 Cloud Edge Pilot 03 completed
+
+- Owner 的 Goal 全面授权覆盖了此前已固定的 Pilot 03 范围；执行基线为 `fb8bec17d0c2f194191e6258b4c586bda8cfde16`，批准单所绑定的
+  `fdfb10b...` 仍作为原始风险基线保留，没有扩大文件范围或动作范围。
+- Node 内建 edge 仅在 `127.0.0.1:0` 打开一个临时 listener。两个合成 test tenant 以各自 opaque session 注册相同 user/device id，
+  Capability 和 Agent draft 均为空，带 tenantId 的 body 注入返回 400；共执行 7 个固定请求。
+- listenerClosed=true；临时 SQLite reopen 后设备计数为 `[1,1]`，随后关闭并删除目录；executorInvoked=false、effectsActive=0、
+  externalWritesEnabled=false、currentOwnerPreserved=true、runtimeCompositionChanged=false、serviceRestarted=false。
+- 本批没有公网/TLS/SSH、真实身份或数据、Agent/tool/lifecycle、依赖安装、私有 pack、数据迁移、owner 切换或服务重启。

@@ -52,6 +52,8 @@ Capability Registry 现已具备默认不挂载的 SQLite provider：只接收�
 
 无 listener HTTP handler 已覆盖 `/v1/devices` 注册/查询、Capability 列表和 Agent draft 列表，使用 closed request body 和稳定脱敏错误码；
 它仅验证 API 语义，不代表公网服务、TLS、认证 provider 或客户端注册已经上线。
+Pilot 03 已通过一次真实临时 loopback edge 验证：两个合成租户共 7 个固定请求、同名设备各 1、tenant 注入拒绝、SQLite reopen
+持久隔离、listener 关闭和临时数据删除；executorInvoked=false、effectsActive=0、现网 owner/composition 不变。它不满足公网云服务或真实客户端门禁。
 同一 handler 现已覆盖 device challenge/proof/session/poll/lease/ack/result API contract。默认不挂载的 SQLite provider 从唯一 tenant/device
 identity 真源读取公钥，持久化 challenge、单活 session、no-effect test dispatch、lease/ack 和脱敏 result；双租户同 ID、challenge replay、
 foreign lease、跨 reopen 结果幂等、effectful plan 与会话过期均有集成测试。真实 verifier 仍由 adapter 注入，且尚无网络连接、scheduler、

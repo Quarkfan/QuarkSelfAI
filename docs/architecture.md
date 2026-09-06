@@ -64,6 +64,9 @@ provider 只接受 `test.*` 租户和签名验证通过且无 effect/approval gr
 [ADR 0116](adr/0116-inactive-cloud-api-boundary.md) 进一步定义无 listener 的 `/v1` handler：设备注册/查询、能力目录和 Agent 草稿
 使用同一认证应用层，closed body 阻断 tenant 注入，错误响应不回传内部异常。TLS、HTTP listener、rate limit 与凭证解析仍属于未来 edge adapter。
 设备 challenge/proof/session/poll/ack 也通过单一 `DeviceSessionServerPortV1` 暴露；应用层不复制 device repository，避免第二份设备身份真源。
+经 Goal 全面授权执行的 Pilot 03 只用 Node 内建模块在 `127.0.0.1:0` 打开一次临时 edge，两个合成租户分别注册同名设备并读取空
+Capability/Agent 列表，tenant body 注入被拒绝；SQLite reopen 后两租户设备各为 1，随后 listener 与临时目录均关闭删除。该 adapter
+仍未进入 composition，不提供公网、TLS、真实 identity、executor、scheduler 或 effect。
 
 设备连接协议与具体网络通道分离。按 [ADR 0111](adr/0111-ssh-device-transport-fallback.md)，direct TLS 始终是主通道；在直连不可用时，
 客户端可选择固定 `quark-device-v1` SSH subsystem 作为候选备用通道。两者复用同一 device session、signed plan、lease、checkpoint、
