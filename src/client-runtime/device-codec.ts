@@ -5,7 +5,7 @@ const id = /^[a-z0-9][a-z0-9._:-]{0,127}$/
 const digest = /^sha256:[a-f0-9]{64}$/
 const absolutePath = /^(?:\/|[A-Za-z]:[\\/]|~(?:[\\/]|$))/
 const secretAssignment = /(?:token|secret|password|private[_-]?key)\s*[:=]/i
-const payloadKinds = new Set(['client.hello', 'server.challenge', 'client.proof', 'server.session', 'client.poll', 'server.lease', 'client.ack', 'client.result', 'client.heartbeat'])
+const payloadKinds = new Set(['client.hello', 'server.challenge', 'client.proof', 'server.session', 'client.poll', 'server.lease', 'client.ack-request', 'server.ack', 'client.result-submit', 'server.result', 'client.heartbeat', 'server.error'])
 
 export function validateDeviceProtocolMessage(value: unknown): DeviceProtocolMessageV1 {
   if (!record(value)) throw new Error('device protocol message must be an object')
@@ -62,19 +62,23 @@ function validatePayload(payload: DeviceProtocolPayloadV1, message: Record<strin
   const scoped = payload.kind === 'server.challenge' ? payload.challenge
     : payload.kind === 'server.session' ? payload.session
       : payload.kind === 'server.lease' ? payload.lease?.plan.envelope
-        : payload.kind === 'client.result' ? payload.result
+        : payload.kind === 'server.result' ? payload.result
           : undefined
   if (scoped && (scoped.tenantId !== message.tenantId || ('userId' in scoped && scoped.userId !== message.userId) || ('deviceId' in scoped && scoped.deviceId !== message.deviceId))) throw new Error('device payload scope differs from message scope')
   if (payload.kind === 'client.proof' && payload.proof.deviceId !== message.deviceId) throw new Error('device proof scope differs from message scope')
-  if (payload.kind === 'client.ack' && payload.acknowledgement.deviceId !== message.deviceId) throw new Error('device acknowledgement scope differs from message scope')
+  if (payload.kind === 'server.ack' && payload.acknowledgement.deviceId !== message.deviceId) throw new Error('device acknowledgement scope differs from message scope')
+  if (payload.kind === 'client.result-submit' && payload.result.deviceId !== message.deviceId) throw new Error('device result scope differs from message scope')
   if (payload.kind === 'server.lease' && payload.lease && (payload.lease.deviceId !== message.deviceId || payload.lease.planId !== payload.lease.plan.planId)) throw new Error('device lease scope differs from message scope')
   if (payload.kind === 'client.poll' || payload.kind === 'client.heartbeat') exactKeys(payload, ['kind', 'sessionId'], payload.kind)
   if (payload.kind === 'server.challenge') exactKeys(payload, ['kind', 'challenge'], payload.kind)
   if (payload.kind === 'client.proof') exactKeys(payload, ['kind', 'proof'], payload.kind)
   if (payload.kind === 'server.session') exactKeys(payload, ['kind', 'session'], payload.kind)
   if (payload.kind === 'server.lease') exactKeys(payload, ['kind', 'lease'], payload.kind)
-  if (payload.kind === 'client.ack') exactKeys(payload, ['kind', 'acknowledgement'], payload.kind)
-  if (payload.kind === 'client.result') exactKeys(payload, ['kind', 'result'], payload.kind)
+  if (payload.kind === 'client.ack-request') exactKeys(payload, ['kind', 'sessionId', 'leaseToken', 'taskId'], payload.kind)
+  if (payload.kind === 'server.ack') exactKeys(payload, ['kind', 'acknowledgement'], payload.kind)
+  if (payload.kind === 'client.result-submit') exactKeys(payload, ['kind', 'sessionId', 'result'], payload.kind)
+  if (payload.kind === 'server.result') exactKeys(payload, ['kind', 'result'], payload.kind)
+  if (payload.kind === 'server.error') { exactKeys(payload, ['kind', 'code'], payload.kind); if (!['request-rejected', 'temporarily-unavailable'].includes(payload.code)) throw new Error('device error payload is invalid') }
 }
 
 function rejectSensitiveStrings(value: unknown): void {

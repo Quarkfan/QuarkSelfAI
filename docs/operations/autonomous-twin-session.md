@@ -1350,3 +1350,16 @@
 - 隔离审计保持 101 个已分类路径、无未分类或歧义；基线漂移追溯到前一批已提交验证记录新增的一行兼容门禁名称，复核未新增路径、运行依赖或业务正文后仅同步 evidence digest。
 - 完整 `npm run check` 通过：主项目 470 项中 463 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构为 134 modules、
   74 个 platform-core Offer、120 assets、effects active 0/23。capability platform 134/134 exactly-once；其余隔离、连续性和兼容门禁将在提交前再次复核。
+
+## 2026-09-06 executable unary SSH fallback transport
+
+- 复核确认此前 SSH 仅有 fallback policy、transport label 和固定 argv builder，wire contract 的 acknowledgement/result 方向也不足以表达
+  `DeviceSessionServerPortV1`。由于 V1 从未激活，本轮将其闭合为明确的 ack request/response 与 result submit/response，而不保留第二套协议。
+- 新增默认不挂载的 unary client/server adapter。client 每次只启动固定 `quark-device-v1` subsystem，frame 只走 stdin/stdout，环境为 allowlist，
+  stderr 丢弃，response/timeout 有界；server 只委托唯一 canonical session provider，并把异常压缩为稳定 rejection code。
+- byte-level fixture 覆盖 challenge、proof、poll、ack 和 result 完整生命周期、frame correlation、租户/用户/设备 scope、provider 错误脱敏，以及分块
+  stdin 到单次 stdout response。codec 独立为 inactive adapter module，消息声明继续保持 pure contract。
+- 本批未配置 gateway、sshd、账号、key、known-hosts 或网络连接，未挂载 client composition，未与 direct TLS 并行，也未改变 scheduler、provider、
+  consumer、writer 或 effects。回滚删除两个 adapter、恢复未激活的 V1 payload 与 catalog mapping；没有 live/persisted transport state。
+- 完整 `npm run check` 通过：主项目 473 项中 466 通过、7 项仅因 sandbox loopback 限制跳过，compat 179/179；架构为 135 modules、
+  75 个 platform-core Offer、120 assets、effects active 0/23。提交前继续复核 exactly-once、隔离、连续性、兼容和根同步门禁。

@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行与云身份生命周期，合计 134 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份与 device wire codec 生命周期，合计 135 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -120,6 +120,10 @@ Phase 3A 已实现 tenant-scoped 用户、设备、Capability/Blueprint release�
 
 Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interface/graph/workspace 验证和注入 signer，输出可由客户端
 重新验签的统一 Envelope；当前只编译 test tenant、无 effect fixture，不构成真实 Agent Studio 或任务派发上线。
+
+SSH 备用通道已从策略/argv 脚手架推进为默认不挂载的 executable unary adapter：V1 wire contract 现在完整表达 challenge、proof、poll、ack request/response
+和 result submit/response；client 每次只启动固定 subsystem 并以 stdin/stdout 交换一个相关 frame，server 委托唯一持久 device-session provider。
+尚未配置 gateway/sshd、账号、key、known-hosts 或 client composition，也未与 direct TLS 并行运行，因此不构成已部署访问通道。
 
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
 及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受

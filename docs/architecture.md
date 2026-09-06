@@ -138,8 +138,10 @@ candidate、evidence 与 private/tenant visibility，tenant/user 从 cloud sessi
 
 [ADR 0124](adr/0124-pinned-ssh-subsystem-launch-boundary.md) 将 SSH fallback 从 policy 推进为固定本地 launch builder。gateway/user/key/
 known-hosts 只能从 policy 中相同 opaque reference 解析；launch 固定 subsystem、strict host-key pin、isolated config、batch/identities-only，
-并禁用 TTY、agent/all forwarding 与 local command。当前真实只读探测确认 OpenSSH `10.2p1` 可用，但没有启动 SSH process、连接 gateway、
-配置 credential、获取 lease 或挂载 transport owner。
+并禁用 TTY、agent/all forwarding 与 local command。[ADR 0146](adr/0146-executable-unary-ssh-device-transport.md) 又补齐与唯一
+`DeviceSessionServerPortV1` 对接的 unary client/server adapter：每次调用只用 stdin/stdout 承载一对有界 frame，session/lease 继续由同一持久 provider
+持有，错误只返回稳定码。当前真实只读探测确认 OpenSSH `10.2p1` 可用，但 adapter 未装入 client composition，也没有 gateway、sshd subsystem、
+账号、key、known-hosts、真实连接、lease 或 transport owner。
 
 [ADR 0125](adr/0125-content-addressed-inactive-artifact-store.md) 把安装计划推进为本地真实制品落盘：客户端只接收已形成的
 `installed-inactive` plan 与调用方给出的本地普通文件，流式复核 SHA-256 后以内容 digest 原子落入 0600 blob，并写入不含来源路径的

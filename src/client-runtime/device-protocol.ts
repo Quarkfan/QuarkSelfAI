@@ -19,9 +19,12 @@ export type DeviceProtocolPayloadV1 =
   | { readonly kind: 'server.session'; readonly session: DeviceSessionV1 }
   | { readonly kind: 'client.poll'; readonly sessionId: string }
   | { readonly kind: 'server.lease'; readonly lease: DeviceTaskLeaseV1 | null }
-  | { readonly kind: 'client.ack'; readonly acknowledgement: DeviceTaskLeaseAcknowledgementV1 }
-  | { readonly kind: 'client.result'; readonly result: DeviceRedactedResultV1 }
+  | { readonly kind: 'client.ack-request'; readonly sessionId: string; readonly leaseToken: string; readonly taskId: string }
+  | { readonly kind: 'server.ack'; readonly acknowledgement: DeviceTaskLeaseAcknowledgementV1 }
+  | { readonly kind: 'client.result-submit'; readonly sessionId: string; readonly result: Omit<DeviceRedactedResultV1, 'tenantId' | 'userId'> }
+  | { readonly kind: 'server.result'; readonly result: DeviceRedactedResultV1 }
   | { readonly kind: 'client.heartbeat'; readonly sessionId: string }
+  | { readonly kind: 'server.error'; readonly code: 'request-rejected' | 'temporarily-unavailable' }
 
 export interface DeviceProtocolMessageV1 {
   readonly schemaVersion: 1
