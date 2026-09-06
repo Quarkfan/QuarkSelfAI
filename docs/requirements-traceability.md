@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap 与双端 device-code enrollment，合计 131 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap 与双端 device-code enrollment，合计 132 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -77,6 +77,10 @@ approval 和 effect 的 provider-neutral 计划，并把模型正文仅保存在
 DSH 使用锁定产品 headless CLI、stdin host、allowlisted environment 和禁用全部模型工具/遥测的 overlay 成功返回，正文未投影且临时状态已删除。
 这证明 DSH 边界可执行；三 adapter 已可由 configured client 的显式方法进入 durable cycle，但仍未挂入自动 client daemon。Claude/Codex 的真实
 pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallback 已完成。
+
+客户端现有独立 no-effect worker，可在显式 start 后由单 owner 串行驱动 executor discovery 与 signed reasoning cycle；失败只记录稳定码并按
+有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。它目前仍是 `runtime=inactive` 的库组件，没有 CLI、安装激活、服务注册或真实云
+连接，不能称客户端 daemon 已可分发运行。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；

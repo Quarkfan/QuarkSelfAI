@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 131 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 132 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -94,6 +94,11 @@ DSH 经固定 stdin host 接收输入，OS argv 不含任务，工具与遥测�
 只有显式 `executeSignedReasoningNoEffectOnce` 才会创建 adapter 并进入既有 device proof、lease、checkpoint-before-ack、精确选择与 digest-only result sync。
 DSH 每个 action 使用独立临时 home 并在结束时删除，不在持久 runtime 下形成第二 session 真源。composition 仍为 inactive，不自动连接、poll、
 fallback 或挂入 daemon，因此证明的是安装客户端边界已经真实接线，不是生产激活或三执行器成功率 parity 已完成。
+
+[ADR 0142](adr/0142-single-owner-no-effect-client-worker.md) 增加客户端自己的 no-effect worker：封闭配置必须显式 `enabled=true`、
+workspace canonical、周期有界且 external writes 关闭；构造保持静止，`start()` 后每一轮必须在上一轮结束后才调度下一轮。discovery 按独立
+周期刷新，失败只保留稳定降级码并继续同一 owner 的有界重试，`stop()` 取消未来 timer 后等待唯一在途 pass。该 worker 仍未形成 CLI、
+安装激活或 launchd/systemd 服务，也未挂入当前 composition。
 
 [ADR 0118](adr/0118-persistent-local-client-state-boundary.md) 增加独立、默认 inactive 的本地客户端 SQLite 状态域。设备私钥只以
 opaque secret/keychain reference 表示；workspace handle 到 canonical path 的映射只留本机，且每次解析重新核验根路径身份，阻断登记后

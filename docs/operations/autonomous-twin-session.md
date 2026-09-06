@@ -1289,3 +1289,17 @@
   evolution、DSH/server/BlackLake/Lark compatibility 与根同步审计均通过；continuity 仍如实保留 `work-integration-not-yet-isolated`。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`；`failureReason=none`、`failureStage=none`。本轮没有启动 Claude Code、Codex
   或 DSH 的真实模型 action，集成执行使用注入的固定 runner。
+
+## 2026-09-06 single-owner no-effect client worker
+
+- 新增默认 inactive 的客户端 worker，封闭配置只接受显式 enabled、canonical workspace、5 秒至 5 分钟 cycle、30 秒至 1 小时 discovery
+  周期和 `externalWritesEnabled=false`。构造不执行动作，start 后立即运行一次，下一轮只在上一轮完全结束后调度，不可能重叠 poll/executor。
+- discovery 使用独立刷新周期；任一异常只落 `client-cycle-failed` 稳定码，不保留原始异常、路径、prompt、凭证或结果，后续仍由同一个 worker
+  有界重试并可在成功后恢复。stop 先取消 future timer，再等待唯一在途 pass，停止期间不会生成替代 owner。
+- 本批只使用注入 client 与虚拟 scheduler 测试，没有连接网络、运行真实 executor、注册 launchd/systemd、启动进程、挂载当前 composition 或
+  启用 capability/effect。回滚删除 worker/test/ADR/catalog/migration 映射即可，无持久状态需要迁移。
+- 隔离审计的路径集合仍为 101/101 且无未分类/歧义；前一批验证记录新增了一行只含兼容门禁名称的治理证据，因此经复核后只更新
+  evidence digest，不改变路径、分类、迁移处置或任何业务内容。
+- 完整 `npm run check` 通过：主项目 457 项中 450 通过、7 项仅因沙箱 loopback 限制跳过，compat 179/179；架构为 132 modules、
+  72 个 platform-core Offer、117 assets、effects active 0/23。capability platform 132/132 exactly-once、DSH/server compatibility、
+  work-domain isolation、assistant continuity 与根同步校验均通过；`work-integration-not-yet-isolated` 状态未改变。
