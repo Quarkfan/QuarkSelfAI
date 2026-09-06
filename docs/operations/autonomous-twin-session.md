@@ -1127,3 +1127,12 @@
   失败关闭。GC 只清理 SQLite 引用集外的合法 blob/receipt，测试验证 1 个 orphan blob 与 1 个 orphan receipt 被精确删除。
 - 文件清理异常通过 `cleanupPending` 返回，不会把数据库逻辑卸载回滚成已安装。操作全程 effects-disabled，不加载/执行制品、不改变现网 owner、
   composition、consumer、provider 或 scheduler。
+
+## 2026-09-06 single-owner inactive client composition
+
+- 新增未挂载的本地客户端 application root，由同一 owner 组合 enrollment SQLite、artifact store、executor discovery 与一次性 no-effect sync；
+  `open` 必须先取得 instance lease、确认 enrollment 并完成全部已安装制品恢复审计。
+- instance lease 使用 0700 原子目录和 0600 owner record；同 PID 第二实例被拒绝，合法死亡 PID lease 先原子 rename 再回收，格式错误、不可读或
+  symlink 状态失败关闭。集成测试验证第二实例阻断、关闭释放与跨 reopen 恢复。
+- `open` 不探测、不联网、不加载/运行能力；discover/sync 均须显式调用，sync 仍不执行 executor。catalog/migration 为 125/125、Facility
+  coverage 为 65/65，active capability/consumer/provider/scheduler/effect 仍全部为零，现网 composition 未变。

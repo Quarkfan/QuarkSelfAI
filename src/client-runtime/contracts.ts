@@ -60,7 +60,7 @@ export interface SignedExecutionPlanV1 {
 export interface ClientRuntimeSnapshotV1 {
   readonly deviceId: string | null
   readonly connection: ClientConnectionState
-  readonly registeredCapabilities: 0
+  readonly registeredCapabilities: number
   readonly activeCapabilities: 0
   readonly ownedConsumers: 0
   readonly ownedProviders: 0

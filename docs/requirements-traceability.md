@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider 与本地制品存储，合计 124 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储与客户端 composition，合计 125 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -31,6 +31,10 @@ workspace handle/路径、artifact root/来源路径或 checkpoint 正文，work
 设备身份现使用真实 Ed25519 生成、签名和验签 adapter：云端只持有 SPKI 公钥，客户端私钥必须留在 `LocalDeviceSecretStoreV1` 后方并只以
 opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥不匹配均失败关闭。当前仍未选择生产 OS secret-store adapter，也未
 注册真实设备或连接云端。
+
+客户端现有单一 application composition：同一个进程 owner 持有 instance lease、SQLite、artifact store、executor discovery 和一次性
+device sync。启动先验证 enrollment 与全部已安装制品，第二实例失败关闭，死亡 PID 的合法旧 lease 可安全回收；discovery 与 sync 只能显式
+调用，默认快照仍为 disconnected、active capability/consumer/provider/scheduler/effect 全为零。它尚不是可分发安装包或常驻 daemon。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
