@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "proposalId": "capability-platform-phase-1a-contract-sdk",
-  "status": "awaiting-owner-visual-and-architecture-approval",
+  "status": "implemented-inactive",
   "baseRevision": "c746e70c1fdbf54a3617816e5ad887e8e679ebe2",
   "architectureChange": "Add runtime-neutral public Capability Manifest, Agent Blueprint, Execution Envelope, permission, state, interface and validation contracts plus an unmounted inactive registry seam.",
   "fileScope": {
@@ -22,9 +22,14 @@
       "src/platform/index.ts",
       "config/module-catalog.json",
       "config/capability-platform-migration.json",
+      "config/capability-platform-phase-1a-proposal.json",
       "docs/architecture.md",
+      "docs/adr/0092-cloud-control-local-execution-capability-platform.md",
+      "docs/product/capability-platform-phase-0-completion-audit.md",
       "docs/requirements-traceability.md",
-      "docs/operations/autonomous-twin-session.md"
+      "docs/operations/autonomous-twin-session.md",
+      "scripts/audit-capability-platform-design.ts",
+      "test/capability-platform-design.test.ts"
     ]
   },
   "allowedActions": [
@@ -64,7 +69,9 @@
   },
   "ownerApproval": {
     "visualApproved": false,
-    "architectureApproved": false,
-    "approvedRevision": null
+    "architectureApproved": true,
+    "approvedRevision": "362685c7d87c8025143d35fe129c0b92f4fae17c",
+    "basis": "Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.",
+    "visualVerificationOutstanding": true
   }
 }

@@ -379,6 +379,8 @@ for (const filename of files) {
     if (from === 'src/platform/index.ts' && outside(to, [
       'src/platform/', 'src/domain/contracts', 'src/domain/authorization', 'src/storage/types', 'src/storage/ports', 'src/storage/service-contract',
       'src/policy/types', 'src/execution/workspace-policy', 'src/execution/ledger-contract', 'src/events/contracts', 'src/workflow/contracts',
+      'src/capability-platform/permissions', 'src/capability-platform/interfaces', 'src/capability-platform/manifest',
+      'src/capability-platform/blueprint', 'src/capability-platform/execution-envelope',
     ])) {
       violations.push(`${from} exports non-contract implementation ${to}`)
     }

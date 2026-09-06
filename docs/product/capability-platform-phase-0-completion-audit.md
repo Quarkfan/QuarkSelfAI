@@ -4,7 +4,8 @@
 
 审计基线：`c746e70c1fdbf54a3617816e5ad887e8e679ebe2`
 
-结论：机器与静态设计门禁可闭合；真实视觉门禁未闭合，因此 Phase 1A 仍未获放行。
+结论：机器与静态设计门禁可闭合；真实视觉门禁仍未闭合。owner 后续直接授权按总 Goal 连续实施，因此 Phase 1A
+公共 contract 可推进，但这不构成 POC 视觉验收，也不放行运行 composition 或高影响 effects。
 
 ## 需求到证据
 
@@ -21,7 +22,7 @@
 | 本地敏感数据不上传 | PRD 3/10、DAT-01–03 | 本地证据、secret reference、分类与 retention 已进入设计 |
 | 第三方供应链治理 | PRD 10、CAP-04/CAP-06 | revision/digest/license/SBOM/风险/候选决策已覆盖 |
 | 单 consumer/provider/scheduler/writer | PRD 2/10、OBS-02 | fail-closed、lease、handoff/rehearsal 已进入设计 |
-| 现有能力无遗漏迁移 | `config/capability-platform-migration.json` | 当前 module catalog 99/99 exactly-once |
+| 现有能力无遗漏迁移 | `config/capability-platform-migration.json` | 原 99 项保持覆盖；新增 contract/治理模块后当前 module catalog 101/101 exactly-once |
 | 私有工作包不成为核心依赖 | ADR 0092、INT-01、既有私有包审计 | 当前仍 inactive；目标依赖方向明确 |
 | 控制台控制/监测/管理完整 | `config/capability-platform-console-coverage.json` | 50/50 需求均有 control/monitor/manage 和唯一 POC anchor |
 | 工具、包、浏览器、私有集成、交互应用 | CAP/INT/EXP 覆盖项和 POC | 五类及其统一治理已进入设计 |
@@ -31,7 +32,7 @@
 ## 控制台覆盖口径
 
 覆盖率以目标需求为分母，而不是以已有页面为分母。50 项要求跨 15 个业务域；每项必须有非空 `control`、`monitor`、
-`manage`、目标 screen 和唯一 `data-coverage` POC anchor。`scripts/audit-capability-platform-design.ts` 同时验证当前 99 个模块
+`manage`、目标 screen 和唯一 `data-coverage` POC anchor。`scripts/audit-capability-platform-design.ts` 同时验证当前 101 个模块
 exactly-once、危险运行开关为 false、PRD 核心抽象和 POC 可见计数。
 
 50/50 只证明需求到静态控制面的设计闭合，不证明云 API、客户端、数据隔离或运行链路已经实现。
@@ -47,9 +48,9 @@ exactly-once、危险运行开关为 false、PRD 核心抽象和 POC 可见计�
 在 owner 本机打开 `docs/prototypes/capability-platform-console/index.html` 并确认方向前，Phase 0 状态保持
 `machine-complete / visual-awaiting-owner`，不得称控制台 POC 已完全验收。
 
-## Phase 1A 放行条件
+## Phase 1A 放行记录
 
-1. owner 明确确认 POC 信息架构、关键流程和视觉方向；
-2. owner 按 `config/capability-platform-phase-1a-proposal.json` 精确批准公共 contract/SDK 边界；
-3. 开始时重新核验 HEAD、用户未提交改动和提案文件范围；
-4. 任一范围扩大或需要修改受保护 `package.json` 时重新批准。
+1. owner 在 2026-09-06 指示以附件总 Goal 连续开发、不再等待中间批准；该授权覆盖 Phase 1A 提案列明的静态公共 contract 范围；
+2. 开始时已重新核验 HEAD、用户未提交改动和提案文件范围；
+3. POC 视觉证据仍未取得，继续如实标记 outstanding；
+4. Phase 1A 不修改受保护 `package.json`，也不放行运行 composition、外部写、私有包激活或来源删除。

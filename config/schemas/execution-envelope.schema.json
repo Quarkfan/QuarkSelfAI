@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quarkself.ai/schemas/execution-envelope-v1.json",
+  "title": "Execution Envelope V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "tenantId", "userId", "deviceId", "agentId", "runId", "actionId", "blueprint", "capabilities", "context", "workspaceGrants", "approvalGrants", "idempotencyKey", "deadline", "budget", "dataClasses", "allowedEffects", "continuity", "plan"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "tenantId": {"$ref": "#/$defs/id"}, "userId": {"$ref": "#/$defs/id"}, "deviceId": {"$ref": "#/$defs/id"}, "agentId": {"$ref": "#/$defs/id"}, "runId": {"$ref": "#/$defs/id"}, "actionId": {"$ref": "#/$defs/id"},
+    "blueprint": {"type": "object", "additionalProperties": false, "required": ["id", "version", "digest"], "properties": {"id": {"$ref": "#/$defs/id"}, "version": {"$ref": "#/$defs/version"}, "digest": {"$ref": "#/$defs/digest"}}},
+    "capabilities": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "version", "artifactDigest"], "properties": {"id": {"$ref": "#/$defs/id"}, "version": {"$ref": "#/$defs/version"}, "artifactDigest": {"$ref": "#/$defs/digest"}}}},
+    "context": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "kind", "dataClass", "location", "opaqueReference"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"type": "string"}, "dataClass": {"type": "string"}, "location": {"enum": ["local", "cloud"]}, "opaqueReference": {"type": "string", "minLength": 1}}}},
+    "workspaceGrants": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["handle", "access", "expiresAt", "grantId"], "properties": {"handle": {"type": "string", "minLength": 1}, "access": {"enum": ["read", "read-write"]}, "expiresAt": {"type": "string", "format": "date-time"}, "grantId": {"type": "string", "minLength": 1}}}},
+    "approvalGrants": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["grantId", "tenantId", "userId", "deviceId", "agentId", "releaseDigest", "actionId", "effectKind", "scope", "grantedAt", "expiresAt", "singleUse"], "properties": {"grantId": {"type": "string"}, "tenantId": {"$ref": "#/$defs/id"}, "userId": {"$ref": "#/$defs/id"}, "deviceId": {"$ref": "#/$defs/id"}, "agentId": {"$ref": "#/$defs/id"}, "releaseDigest": {"$ref": "#/$defs/digest"}, "actionId": {"$ref": "#/$defs/id"}, "effectKind": {"type": "string"}, "scope": {"type": "string"}, "grantedAt": {"type": "string", "format": "date-time"}, "expiresAt": {"type": "string", "format": "date-time"}, "singleUse": {"type": "boolean"}}}},
+    "idempotencyKey": {"type": "string", "minLength": 1},
+    "deadline": {"type": "string", "format": "date-time"},
+    "budget": {"type": "object", "additionalProperties": false, "required": ["tokens", "durationMs", "costMinorUnits"], "properties": {"tokens": {"type": "integer", "minimum": 0}, "durationMs": {"type": "integer", "minimum": 0}, "costMinorUnits": {"type": "integer", "minimum": 0}}},
+    "dataClasses": {"type": "array", "items": {"type": "string"}},
+    "allowedEffects": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "continuity": {"type": "object", "additionalProperties": false, "required": ["sessionId", "continuationToken", "fallbackAllowed", "midActionSwitchAllowed"], "properties": {"sessionId": {"type": ["string", "null"]}, "continuationToken": {"type": ["string", "null"]}, "fallbackAllowed": {"type": "boolean"}, "midActionSwitchAllowed": {"const": false}}},
+    "plan": {"type": "object", "additionalProperties": false, "required": ["digest", "signature", "keyId"], "properties": {"digest": {"$ref": "#/$defs/digest"}, "signature": {"type": "string", "minLength": 1}, "keyId": {"type": "string", "minLength": 1}}}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,63}(/[a-z0-9][a-z0-9.-]{0,63})?$"},
+    "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"},
+    "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+  }
+}

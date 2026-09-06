@@ -696,3 +696,22 @@
 - 机器审计已验证 99/99 模块处置和 50/50 control/monitor/manage POC anchor；完整仓库、连续性、工作域和私有包审计通过。
   当前应用内浏览器安全策略禁止打开本地 `file://`，且不允许改用替代浏览器绕过，因此真实桌面/窄屏视觉确认仍是 Phase 0
   唯一未闭合门禁；在 owner 打开静态 POC 确认前，不把“机器覆盖率 100%”表述为“控制台视觉验收完成”。
+
+## 2026-09-06 Capability Platform Phase 1A 公共契约
+
+- owner 以附件总 Goal 要求连续开发、不等待中间批准；本批严格使用既有 Phase 1A 机器提案范围，不把该指令解释为运行
+  切换、外部写、凭证、私有包激活或不可逆删除授权。开始时主线为
+  `362685c7d87c8025143d35fe129c0b92f4fae17c`，私有包为 `3b9623bb31dca2e3991e6fec17fcb6d8411c7b85`；
+  owner 的 `package.json`、品牌 client 与 `.DS_Store` 改动保持未暂存。
+- 新增公共 `CapabilityManifestV1`、`AgentBlueprintV1`、`ExecutionEnvelopeV1`、权限与接口 contract，以及闭合 JSON Schema。
+  Capability Artifact 覆盖 Skill、知识、工作流、package/SDK/CLI/binary、Git 项目、浏览器、容器、应用、游戏、私有 pack、
+  Agent 和 composite；source revision/digest/license/signature/SBOM、placement/isolation、权限、测试和恢复均为显式字段。
+- 确定性校验拒绝绝对本地路径、secret-shaped 值、未经 action approval 与写后核验的外部 effect、cloud-only offline 声明、
+  restore 后开启 effect、跨作用域 approval 和 action 中途切换执行器。Claude Code、Codex、DSH fixture 使用同一 envelope 并
+  产生同一规范化上下文摘要。
+- `InactiveCapabilityRegistryV1` 没有 Cordis lifecycle，也不安装、加载、授权或执行；注册结果固定为零 consumer、无 provider
+  lease、零 scheduler、外部写关闭。同一 id/version 不同 digest 失败关闭。架构门禁进一步要求类型 contract 与实现隔离，
+  因此公共类型作为第 100 个静态 contract module，校验/registry 作为第 101 个 inactive 治理 module；两者均进入 exactly-once
+  迁移映射，原 99 项处置保持不变。
+- 本批没有改变现网 composition、消费者/provider/scheduler/writer、网络、凭证、服务或数据；没有启用私有包、删除主线来源
+  或重启。静态 POC 视觉证据仍 outstanding，不因开发授权被误记为验收完成。

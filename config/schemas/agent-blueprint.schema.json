@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quarkself.ai/schemas/agent-blueprint-v1.json",
+  "title": "Agent Blueprint V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "name", "version", "revision", "digest", "releaseState", "role", "goals", "capabilities", "graph", "triggers", "executorPolicy", "deviceSelector", "workspaceHandles", "permissions", "modelPolicy", "budget", "retry", "notifications", "retention"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "id": {"$ref": "#/$defs/id"},
+    "name": {"type": "string", "minLength": 1},
+    "version": {"$ref": "#/$defs/version"},
+    "revision": {"type": "string", "minLength": 1},
+    "digest": {"$ref": "#/$defs/digest"},
+    "releaseState": {"enum": ["draft", "test", "shadow", "released", "retired"]},
+    "role": {"type": "string", "minLength": 1},
+    "goals": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "capabilities": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "versionRange", "artifactDigest", "required"], "properties": {"id": {"$ref": "#/$defs/id"}, "versionRange": {"type": "string"}, "artifactDigest": {"$ref": "#/$defs/digest"}, "required": {"type": "boolean"}}}},
+    "graph": {"type": "object", "additionalProperties": false, "required": ["nodes", "edges"], "properties": {"nodes": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "capabilityId", "interfaceId", "configuration"], "properties": {"id": {"$ref": "#/$defs/id"}, "capabilityId": {"$ref": "#/$defs/id"}, "interfaceId": {"$ref": "#/$defs/id"}, "configuration": {"type": "object"}}}}, "edges": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["from", "to", "output", "input"], "properties": {"from": {"$ref": "#/$defs/id"}, "to": {"$ref": "#/$defs/id"}, "output": {"type": "string"}, "input": {"type": "string"}}}}}},
+    "triggers": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "kind", "specification", "enabled"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"enum": ["manual", "event", "schedule"]}, "specification": {"type": "string"}, "timezone": {"type": "string"}, "enabled": {"type": "boolean"}}}},
+    "executorPolicy": {"type": "object", "additionalProperties": false, "required": ["preferred", "fallback", "allowInfrastructureFallback", "allowMidActionSwitch", "preserveSessionContinuity"], "properties": {"preferred": {"type": "array", "items": {"type": "string"}}, "fallback": {"type": "array", "items": {"type": "string"}}, "allowInfrastructureFallback": {"type": "boolean"}, "allowMidActionSwitch": {"const": false}, "preserveSessionContinuity": {"const": true}}},
+    "deviceSelector": {"type": "string", "minLength": 1},
+    "workspaceHandles": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "permissions": {"type": "array"},
+    "modelPolicy": {"type": "object", "additionalProperties": false, "required": ["allowed", "preferred"], "properties": {"allowed": {"type": "array", "items": {"type": "string"}}, "preferred": {"type": ["string", "null"]}}},
+    "budget": {"$ref": "#/$defs/budget"},
+    "retry": {"type": "object", "additionalProperties": false, "required": ["infrastructureAttempts", "deterministicAttempts"], "properties": {"infrastructureAttempts": {"type": "integer", "minimum": 0}, "deterministicAttempts": {"const": 1}}},
+    "notifications": {"type": "object", "additionalProperties": false, "required": ["channels", "on"], "properties": {"channels": {"type": "array", "items": {"type": "string"}}, "on": {"type": "array", "items": {"enum": ["approval", "completion", "failure"]}}}},
+    "retention": {"type": "object", "additionalProperties": false, "required": ["localRawDays", "cloudSummaryDays"], "properties": {"localRawDays": {"type": "integer", "minimum": 0}, "cloudSummaryDays": {"type": "integer", "minimum": 0}}}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,63}(/[a-z0-9][a-z0-9.-]{0,63})?$"},
+    "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"},
+    "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "budget": {"type": "object", "additionalProperties": false, "required": ["tokens", "durationMs", "costMinorUnits"], "properties": {"tokens": {"type": "integer", "minimum": 0}, "durationMs": {"type": "integer", "minimum": 0}, "costMinorUnits": {"type": "integer", "minimum": 0}}}
+  }
+}

@@ -1,8 +1,8 @@
 # ADR 0092：云端控制、本地执行的能力与 Agent 编排平台
 
-- 状态：Proposed / inactive
+- 状态：Accepted for incremental implementation / runtime inactive
 - 日期：2026-09-06
-- 决策者：常东旭（目标）；实现边界待逐批批准
+- 决策者：常东旭（目标与连续实施授权）；高影响运行切换仍按精确对象门禁
 
 ## 背景
 
@@ -14,7 +14,7 @@
 
 云端只编排声明式计划与脱敏状态，本地客户端持有设备凭证、工作区 grant、原始运行证据和 effect gateway。DSH 是本地保底执行器，不是云端绕过客户端的远程控制通道。私有 Work Integration Pack 仅实现公共 ports。
 
-ADR 0091 的依赖方向、单 owner 和恢复约束继续有效，但其 host contract 将在获批后被 Capability SDK/Runtime 的更通用 contract 吸收。当前不修改 0091 的运行状态。
+ADR 0091 的依赖方向、单 owner 和恢复约束继续有效；其 host contract 由 Capability SDK/Runtime 的更通用 contract 渐进吸收。当前不修改 0091 的运行状态。
 
 ## 不变量
 
@@ -27,8 +27,9 @@ ADR 0091 的依赖方向、单 owner 和恢复约束继续有效，但其 host c
 
 ## 当前影响
 
-仅增加 PRD、迁移/覆盖清单、审计和静态 POC。没有运行 composition、网络、凭证、provider、consumer、scheduler、effect、服务或数据变化。
+Phase 0 增加 PRD、迁移/覆盖清单、审计和静态 POC。Phase 1A 增加公共 contract、JSON Schema、确定性校验和未挂载的
+inactive registry。没有运行 composition、网络、凭证、provider、consumer、scheduler、effect、服务或数据变化。
 
 ## 后续批准点
 
-公共 SDK、客户端身份与 plan signature、云 API/存储、多租户隔离、执行器发现、第三方制品安装、私有包接入、shadow/cutover 和旧来源删除分别作为独立批次批准。
+客户端身份与 plan signature、云 API/存储、多租户隔离、执行器发现、第三方制品安装、私有包接入、shadow/cutover 和旧来源删除分别保持独立、可回滚批次；运行 owner、外部写、凭证与不可逆数据动作继续要求精确对象门禁。

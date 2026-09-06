@@ -9,10 +9,13 @@ Local Client Runtime、Capability SDK/Runtime 与 Agent Orchestration 四层组�
 应用、游戏和私有集成都统一成为可安装、可授权、可测试、可恢复的 Capability Artifact。Claude Code、Codex 与 DSH
 消费同一个 Execution Envelope，DSH 是客户端保底执行器。
 
-该边界当前是 `design-candidate / inactive`，不描述现网事实。现网仍按下文的本地单实例与 compatibility owner 运行；
-未取得分批批准前，不得据此改变 DSH/Cordis composition、安装或激活新制品、切换 consumer/provider/scheduler/writer、
-上传本地敏感数据或删除现有来源。99 个当前模块的拟处置与控制台范围分别由
+整体边界仍是 `incremental-implementation / runtime-inactive`，不描述现网事实。Phase 1A 已实现公共 TypeScript/JSON
+contract、规范化摘要和无生命周期的 inactive registry，但没有挂载到 Cordis 或运行 composition。现网仍按下文的本地
+单实例与 compatibility owner 运行；后续批次不得据此安装或激活新制品、切换 consumer/provider/scheduler/writer、上传
+本地敏感数据或删除现有来源。原 99 个模块的拟处置与控制台范围分别由
 `config/capability-platform-migration.json` 和 `config/capability-platform-console-coverage.json` 固定。
+新增的 `capability-platform-contracts` 是第 100 个、静态且无 provider 的公共 contract module；校验与 inactive registry
+被隔离为第 101 个、默认 inactive 的治理 module。两者均已纳入 exactly-once 映射。
 
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
@@ -58,12 +61,12 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 三源真源读取当前入口、索引和 skill frontmatter，返回内容哈希并验证建议 skill 真实存在；QuarkSelfAI
 不复制三源业务规则。多步链路候选必须同时包含 `virtual-employee-operation-chain`。
 
-阶段 2 的目标边界由 [ADR 0091](adr/0091-generic-work-integration-host-contract.md) 定义，目前仍是未批准、未激活设计。
+阶段 2 的目标边界由 [ADR 0091](adr/0091-generic-work-integration-host-contract.md) 定义，目前仍是未激活设计。
 目标形态中，核心只依赖通用 work-integration contract 和唯一 Cordis registry；私有 pack 反向依赖该 contract，并通过
 设备本地、精确 revision/digest、默认关闭的 operator overlay 注册。pack 不拥有消费者、durable scheduler、审批真源、
 executor router 或 workspace allowlist。Codex、Claude Code 与 DSH 共用一个规范化执行上下文；本地路径只由核心
 workspace policy 在 adapter 边界解析。当前 `@quarkfan/quark-self-ai/blacklake`、compatibility host 和产品 composition
-均未因该设计改变，不能把 ADR 状态解释为已经迁移或切换。
+均未因该设计或 Phase 1A 静态 contract 改变，不能把 ADR 状态解释为已经迁移或切换。
 
 `blacklakeReferences.planResearch` 把路由结论接入 durable action ledger。`skip` 不创建 action；`confirm`
 创建带精确 approval 的只读 action，批准前同样不可 claim；`start` 仅允许生产、安全或客户阻塞风险，且

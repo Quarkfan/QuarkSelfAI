@@ -65,7 +65,7 @@ export async function auditCapabilityPlatformDesign(rootInput = projectRoot) {
   if (coveragePercent !== 100) blockers.push(`console-coverage-not-complete:${coveragePercent}`)
   if (!poc.includes(`POC requirement anchors</span><b>${coverage.requirements.length} / ${coverage.requirements.length}</b>`)) blockers.push('poc-visible-coverage-count-drift')
   if (!prd.includes('Capability Artifact') || !prd.includes('Agent Blueprint') || !prd.includes('Execution Envelope')) blockers.push('prd-missing-core-abstractions')
-  if (!adr.includes('Proposed / inactive') || !poc.includes('所有写入关闭')) blockers.push('inactive-design-safety-marker-missing')
+  if (!adr.includes('runtime inactive') || !poc.includes('所有写入关闭')) blockers.push('inactive-design-safety-marker-missing')
 
   return {
     ok: blockers.length === 0,
