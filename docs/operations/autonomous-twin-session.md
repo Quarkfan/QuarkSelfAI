@@ -1100,3 +1100,12 @@
   tenant/user 只从 opaque session 推导，拒绝 scope 注入与 public visibility。
 - provider 继续执行 Manifest/evidence/canonical digest 真门禁并固定 `catalogued-inactive`、零 consumer/provider/scheduler/effect。本批不下载、
   安装、加载、授权、执行或发布 marketplace artifact；回滚删除 route、测试和 ADR，既有 inactive catalog 无需迁移。
+
+## 2026-09-06 pinned SSH subsystem launch boundary
+
+- SSH fallback 从纯 policy 增加固定本地 launch builder：gateway、remote user、identity file 与 known-hosts file 必须对应 policy 中相同 opaque
+  reference；host/user/port/绝对本地路径校验后才形成参数。
+- launch 固定 `shell=false`、`quark-device-v1` subsystem、`StrictHostKeyChecking=yes`、isolated config、BatchMode/IdentitiesOnly，并禁用 TTY、
+  agent/all forwarding 与 local command；Blueprint/云消息不能注入 ssh option、ProxyCommand、remote command 或 subsystem。
+- 实际只读运行 `ssh -V` 返回 OpenSSH `10.2p1`，原始输出未进入持久状态。当前没有启动 SSH、连接 gateway、配置真实 credential、获取
+  device lease 或挂载 transport owner；回滚删除 adapter/test/ADR/catalog 映射即可。

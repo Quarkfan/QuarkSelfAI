@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry provider 与认证应用层，合计 122 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry provider 与认证应用层，合计 123 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -40,8 +40,9 @@ rate limit、常驻连接或 client daemon，因此仍不满足可部署连接�
 
 设备协议已增加 direct TLS 主通道与 SSH subsystem 备用通道的静态 contract。SSH 只允许客户端主动出站到固定
 `quark-device-v1` subsystem，host key 与 credential 使用本地 opaque reference，禁止 shell、任意 command、port/agent forwarding，
-并要求切换前释放旧 transport lease。当前 policy 固定 `configured-inactive`/`activationAllowed=false`，尚无真实 SSH adapter、gateway、
-凭证或连接证据，因此不满足服务器可达性完成标准。
+并要求切换前释放旧 transport lease。现已增加固定 launch builder 与 `ssh -V` 探测，宿主 OpenSSH `10.2p1` 可用；policy 仍固定
+`configured-inactive`/`activationAllowed=false`，尚无真实 gateway、凭证、SSH process/subsystem stream 或连接证据，因此不满足服务器
+可达性完成标准。
 
 Direct TLS 与 SSH 已共享 `quark-device-sync.v1` framed message contract，覆盖设备认证、session、poll/lease/ack、脱敏 result 与 heartbeat；
 分片重组、256 KiB 上限、unknown-field、cross-scope、路径和 secret-shaped 数据均有失败关闭测试。当前只是无 socket codec，不代表设备
