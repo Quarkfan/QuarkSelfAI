@@ -1086,3 +1086,10 @@
   仍是建立 session 的唯一凭据，未知设备只返回既有 bounded rejected code。
 - 沙箱按预期禁止 listener；在宿主精确运行测试后，真实 loopback 完成 challenge/proof/poll/checkpoint-before-ack 共 4 次请求并立即关闭
   listener、server/client 临时 SQLite。没有公网 bind/TLS credential、常驻 client、executor/effect 或 composition 改动。
+
+## 2026-09-06 Agent Studio authenticated write API
+
+- 持久 Agent Studio 原先已有 draft/test-release provider，但 HTTP 仅支持 list，无法承载控制台实际保存与版本化操作。新增 save draft 与
+  publish test 两个 authenticated route，tenant/user 只从 opaque session 推导，closed body 拒绝 scope 注入并保留 optimistic revision。
+- provider 的 test-tenant、manual/no-effect、immutable test release 门禁不变；本批不 compile/schedule/dispatch、不启动 listener、不产生
+  production release 或 effect。回滚删除两条 route、测试和 ADR，既有 inactive SQLite 数据无需迁移。

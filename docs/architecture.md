@@ -110,6 +110,10 @@ executor allowlist/preference 与所需 capability，客户端不能在计划外
 challenge/proof/poll/ack 请求后关闭唯一临时 listener 和两端临时 SQLite。该证据不构成 production TLS、public bind、常驻 daemon
 或 composition 激活。
 
+[ADR 0122](adr/0122-agent-studio-write-api-boundary.md) 为持久 inactive Agent Studio 增加认证 save-draft 与 publish-test API。
+tenant/user 只能从 opaque cloud session 推导，body 只能携带 draft、Blueprint 与 optimistic revision，不能注入 scope。provider 继续限制
+test tenant、manual/no-effect Blueprint 和不可变 test release；路由不编译、不调度、不派发，也不是 production release。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

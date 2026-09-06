@@ -33,6 +33,16 @@ export class InactiveCloudHttpHandlerV1 {
       if (request.method === 'POST' && request.path === '/v1/device-sessions/result') { const body = exactBody(request.body, ['sessionId', 'result']); if (typeof body.sessionId !== 'string') return response(400, 'invalid-body'); return response(200, 'ok', { item: await this.application.submitDeviceResult(body.sessionId, redactedResult(body.result)) }) }
       if (request.method === 'GET' && request.path === '/v1/capabilities') return response(200, 'ok', { items: await this.application.listCapabilities(requiredSession(request)) })
       if (request.method === 'GET' && request.path === '/v1/agent-drafts') return response(200, 'ok', { items: await this.application.listAgentDrafts(requiredSession(request)) })
+      if (request.method === 'POST' && request.path === '/v1/agent-drafts') {
+        const body = exactBody(request.body, ['draftId', 'blueprint', 'expectedRevision'])
+        if (typeof body.draftId !== 'string' || !Number.isSafeInteger(body.expectedRevision) || !body.blueprint || typeof body.blueprint !== 'object' || Array.isArray(body.blueprint)) return response(400, 'invalid-body')
+        return response(201, 'created', { item: await this.application.saveAgentDraft(requiredSession(request), { draftId: body.draftId, blueprint: body.blueprint as never, expectedRevision: Number(body.expectedRevision) }) })
+      }
+      if (request.method === 'POST' && request.path === '/v1/agent-drafts/publish-test') {
+        const body = exactBody(request.body, ['draftId', 'expectedRevision'])
+        if (typeof body.draftId !== 'string' || !Number.isSafeInteger(body.expectedRevision)) return response(400, 'invalid-body')
+        return response(201, 'created', { item: await this.application.publishAgentTest(requiredSession(request), { draftId: body.draftId, expectedRevision: Number(body.expectedRevision) }) })
+      }
       return response(404, 'not-found')
     } catch (error) {
       const message = String(error)

@@ -59,7 +59,8 @@ Phase 3B 已实现 Blueprint canonical digest、artifact 唯一解析、interfac
 重新验签的统一 Envelope；当前只编译 test tenant、无 effect fixture，不构成真实 Agent Studio 或任务派发上线。
 
 Agent Studio 现已具备默认不挂载的 SQLite provider：tenant/user 复合键、逐操作授权、草稿 optimistic revision、不可变 test release
-及跨 reopen persistence 均有集成测试；仍只接受 `test.*` 租户、manual/no-effect Blueprint，没有云 API、生产发布、调度或执行路径。
+及跨 reopen persistence 均有集成测试；认证 HTTP 边界现可保存草稿和发布不可变 test release，tenant/user 只从 session 推导。它仍只接受
+`test.*` 租户、manual/no-effect Blueprint，没有 production release、调度或执行路径。
 
 Capability Registry 现已具备默认不挂载的 SQLite provider：只接收身份、canonical digest、signature、SBOM 与 evidence policy 均闭合的
 `validated-unpublished` Manifest，按 private/tenant visibility 强制 tenant/user 隔离，并固定 consumer/provider/scheduler/effects 为零。

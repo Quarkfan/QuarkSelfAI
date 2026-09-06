@@ -10,7 +10,12 @@ function handler() {
   const calls: string[] = []
   const identity = { async resolveSession(reference: string) { return reference === 'session:valid' ? context : undefined } }
   const capabilities = { async listVisible() { calls.push('capabilities.list'); return [] }, async registerInactive() { throw new Error('unused') }, async get() { return undefined }, async close() {} }
-  const studio = { async listDrafts() { calls.push('drafts.list'); return [] }, async saveDraft() { throw new Error('unused') }, async publishTest() { throw new Error('unused') }, async getDraft() { return undefined }, async close() {} }
+  const studio = {
+    async listDrafts() { calls.push('drafts.list'); return [] },
+    async saveDraft(resolved: TenantContextV1, input: { draftId: string; expectedRevision: number }) { calls.push(`drafts.save:${resolved.tenantId}:${input.draftId}:${input.expectedRevision}`); return { tenantId: resolved.tenantId, draftId: input.draftId } as never },
+    async publishTest(resolved: TenantContextV1, input: { draftId: string; expectedRevision: number }) { calls.push(`drafts.publish:${resolved.tenantId}:${input.draftId}:${input.expectedRevision}`); return { tenantId: resolved.tenantId, draftId: input.draftId } as never },
+    async getDraft() { return undefined }, async close() {},
+  }
   const devices = {
     async listDevices() { calls.push('devices.list'); return [] },
     async registerDevice(resolved: TenantContextV1, input: { deviceId: string; publicKey: string }) { calls.push(`devices.register:${resolved.tenantId}:${input.deviceId}`); return { tenantId: resolved.tenantId, userId: resolved.userId, deviceId: input.deviceId, publicKey: input.publicKey, state: 'registered' as const, createdAt: '2026-09-06T00:00:00.000Z' } },
@@ -43,6 +48,16 @@ test('returns bounded errors and rejects tenant injection before a provider call
   assert.equal((await fixture.handler.handle({ method: 'GET', path: '/v1/devices', sessionReference: 'session:missing' })).status, 401)
   assert.equal((await fixture.handler.handle({ method: 'GET', path: '/v1/unknown', sessionReference: 'session:valid' })).status, 404)
   assert.deepEqual(fixture.calls, [])
+})
+
+test('saves and publishes a test Agent draft without accepting tenant scope from the body', async () => {
+  const fixture = handler()
+  const blueprint = { schemaVersion: 1 }
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/agent-drafts', sessionReference: 'session:valid', body: { draftId: 'draft.one', blueprint, expectedRevision: 0 } })).status, 201)
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/agent-drafts/publish-test', sessionReference: 'session:valid', body: { draftId: 'draft.one', expectedRevision: 1 } })).status, 201)
+  assert.deepEqual(fixture.calls, ['drafts.save:test.alpha:draft.one:0', 'drafts.publish:test.alpha:draft.one:1'])
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/agent-drafts', sessionReference: 'session:valid', body: { tenantId: 'test.beta', draftId: 'draft.one', blueprint, expectedRevision: 1 } })).status, 400)
+  assert.equal(fixture.calls.length, 2)
 })
 
 test('routes device challenge, proof, poll, acknowledgement and result through one session provider', async () => {
