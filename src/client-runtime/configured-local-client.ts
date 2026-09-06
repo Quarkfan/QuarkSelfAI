@@ -1,11 +1,11 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import type { DeviceEnrollmentClientPortV1, DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
-import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, ExecutorCapabilityReportV1, LocalMasterKeyProviderV1, LocalMasterKeyProvisionerV1, PlanSignatureVerifierV1 } from './contracts.js'
+import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, ExecutorCapabilityReportV1, LocalMasterKeyProviderV1, LocalMasterKeyProvisionerV1, NoEffectClientExecutorPortV1, PlanSignatureVerifierV1 } from './contracts.js'
 import { InactiveEncryptedLocalClientV1, type EncryptedLocalClientConfigV1 } from './encrypted-local-client.js'
 import { NodeInactiveHttpDeviceEnrollmentTransportV1 } from './http-device-enrollment-transport.js'
 import { NodeInactiveHttpDeviceTransportV1 } from './http-device-transport.js'
-import type { InactiveClientCycleReceiptV1 } from './inactive-client-cycle.js'
+import type { InactiveClientCycleReceiptV1, NoEffectClientExecutionReceiptV1 } from './inactive-client-cycle.js'
 import { MacOsKeychainMasterKeyLifecycleV1, MacOsKeychainMasterKeyProviderV1 } from './macos-keychain-master-key.js'
 import { NodePinnedEd25519PlanVerifierV1 } from './plan-signature.js'
 import { NodeInstalledExecutorDiscoveryV1, type InstalledExecutorDiscoveryDependenciesV1 } from './installed-executor-discovery.js'
@@ -89,6 +89,7 @@ export class InactiveConfiguredLocalClientV1 {
   async beginEnrollment(now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.client.beginDeviceEnrollment(this.enrollment, now) }
   async pollEnrollment(now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.client.pollDeviceEnrollment(this.enrollment, now) }
   async syncOnce(now = new Date()): Promise<InactiveClientCycleReceiptV1> { return await this.client.syncOnce(this.sessions, now) }
+  async executeNoEffectOnce(executors: readonly NoEffectClientExecutorPortV1[], now = new Date()): Promise<NoEffectClientExecutionReceiptV1> { return await this.client.executeNoEffectOnce(this.sessions, executors, now) }
   async close(): Promise<void> { await this.client.close() }
 }
 

@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { executionEnvelopePayloadDigest } from '../src/capability-platform/validation.js'
 import { createEd25519DeviceEnrollment, NodeEd25519DeviceProofVerifierV1, type LocalDeviceSecretStoreV1 } from '../src/client-runtime/device-identity.js'
-import { runInactiveClientCycle } from '../src/client-runtime/inactive-client-cycle.js'
+import { runInactiveClientCycle, runNoEffectClientExecutionCycle } from '../src/client-runtime/inactive-client-cycle.js'
 import { openSqliteInactiveClientState } from '../src/client-runtime/sqlite-client-state.js'
 import type { SignedExecutionPlanV1 } from '../src/client-runtime/contracts.js'
 import { openSqliteInactiveDeviceSessionProvider } from '../src/control-plane/sqlite-device-session-provider.js'
@@ -68,9 +68,50 @@ test('authenticates, negotiates and durably acknowledges one lease without invok
 
     client = await openSqliteInactiveClientState(clientDatabase, clientMigration, planVerifier)
     const restored = await client.restoreRunJournal(new Date('2026-09-06T00:00:01.000Z'))
-    assert.deepEqual(restored.exportCheckpoints().map(item => [item.taskId, item.state, item.executorId]), [['task.one', 'leased', 'executor-a']])
+    assert.deepEqual(restored.exportCheckpoints().map(item => [item.taskId, item.state, item.executorId]), [['task.one', 'accepted', 'executor-a']])
     const second = await runInactiveClientCycle({ state: client, secrets, server, now: new Date('2026-09-06T00:00:01.000Z') })
     assert.equal(second.state, 'online-empty')
+    await client.close(); await server.close()
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('executes one selected no-effect executor and resumes the same executor after a durable pause', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-client-execution-'))
+  const serverDatabase = join(directory, 'server.sqlite3')
+  const clientDatabase = join(directory, 'client.sqlite3')
+  const identityMigration = new URL('../migrations/control-plane-sqlite/001_tenant_identity.sql', import.meta.url).pathname
+  const sessionMigration = new URL('../migrations/control-plane-sqlite/004_device_sessions.sql', import.meta.url).pathname
+  const clientMigration = new URL('../migrations/client-sqlite/001_client_state.sql', import.meta.url).pathname
+  const secrets = new MemorySecrets()
+  try {
+    const enrollment = await createEd25519DeviceEnrollment({ ...context, deviceId: 'device.owner', privateKeyRef: 'keychain:device.owner' }, secrets, at)
+    const repository = await openSqliteTenantControlRepository(serverDatabase, identityMigration)
+    const tenants = new TenantControlServiceV1(repository, { authorize: async () => true })
+    await tenants.createTenant(context, { name: 'Test Alpha' }, at)
+    await tenants.registerUser(context, { userId: context.userId, displayName: 'Owner' }, at)
+    await tenants.registerDevice(context, { deviceId: enrollment.identity.deviceId, publicKey: enrollment.identity.publicKey }, at)
+    await repository.close()
+    let sequence = 0
+    const server = await openSqliteInactiveDeviceSessionProvider(serverDatabase, [identityMigration, sessionMigration], { next: label => `${label}.${++sequence}` }, new NodeEd25519DeviceProofVerifierV1(), planVerifier)
+    const plan = signedPlan()
+    await server.enqueue({ tenantId: context.tenantId, userId: context.userId, taskId: 'task.one', deviceId: enrollment.identity.deviceId, plan, idempotencyKey: 'task.one', state: 'queued', createdAt: at.toISOString() }, at)
+
+    let client = await openSqliteInactiveClientState(clientDatabase, clientMigration, planVerifier)
+    client.enroll(enrollment.identity, enrollment.privateKeyRef)
+    client.saveExecutorReport({ schemaVersion: 1, deviceId: enrollment.identity.deviceId, executorId: 'executor-a', availability: 'ready', version: '1.0.0', protocolVersions: ['envelope.v1'], capabilities: ['tool.execute'], constraints: [], discoveredAt: at.toISOString(), expiresAt: later })
+    let attempts = 0; let fallbackCalls = 0
+    const executor = { executorId: 'executor-a', async execute(input: { readonly executorId: string; readonly normalizedContextDigest: string }) { attempts += 1; assert.equal(input.executorId, 'executor-a'); assert.match(input.normalizedContextDigest, /^sha256:[a-f0-9]{64}$/); if (attempts === 1) throw new Error('synthetic transient failure'); return { outcome: 'succeeded' as const, summaryCode: 'synthetic-ok', artifactDigests: [] } } }
+    const fallback = { executorId: 'dsh', async execute() { fallbackCalls += 1; return { outcome: 'succeeded' as const, summaryCode: 'unexpected', artifactDigests: [] } } }
+    await assert.rejects(runNoEffectClientExecutionCycle({ state: client, secrets, server, executors: [executor, fallback], now: at }), /synthetic transient failure/)
+    assert.equal(attempts, 1); assert.equal(fallbackCalls, 0)
+    assert.equal((await client.restoreRunJournal(new Date('2026-09-06T00:00:01.000Z'))).exportCheckpoints()[0]?.state, 'paused')
+    await client.close()
+
+    client = await openSqliteInactiveClientState(clientDatabase, clientMigration, planVerifier)
+    const receipt = await runNoEffectClientExecutionCycle({ state: client, secrets, server, executors: [executor, fallback], now: new Date('2026-09-06T00:00:01.000Z') })
+    assert.deepEqual({ state: receipt.state, executorId: receipt.executorId, invoked: receipt.executorInvoked, effects: receipt.effectsActive }, { state: 'result-synced', executorId: 'executor-a', invoked: true, effects: 0 })
+    assert.equal(attempts, 2); assert.equal(fallbackCalls, 0)
+    assert.equal((await client.restoreRunJournal(new Date('2026-09-06T00:00:02.000Z'))).exportCheckpoints()[0]?.state, 'synced')
     await client.close(); await server.close()
   } finally { await rm(directory, { recursive: true, force: true }) }
 })

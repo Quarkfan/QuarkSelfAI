@@ -1,4 +1,4 @@
-import type { ExecutionEnvelopeV1 } from '../capability-platform/execution-envelope.js'
+import type { ExecutionEnvelopeV1, ExecutorAdapterInputV1 } from '../capability-platform/execution-envelope.js'
 import type { CapabilityLifecycleSnapshotV1 } from '../capability-platform/manifest.js'
 
 /** Client-owned secret boundary. Implementations must copy bytes and never project them to cloud state. */
@@ -133,6 +133,16 @@ export interface InactiveCapabilityRemovalV1 {
 export interface ExecutorDiscoveryProbeV1 {
   readonly executorId: string
   inspect(deviceId: string, now: Date): Promise<ExecutorCapabilityReportV1>
+}
+
+/** One exact executor selected before invocation. Implementations must not route or fallback internally. */
+export interface NoEffectClientExecutorPortV1 {
+  readonly executorId: string
+  execute(input: ExecutorAdapterInputV1): Promise<{
+    readonly outcome: 'succeeded' | 'failed' | 'cancelled'
+    readonly summaryCode: string
+    readonly artifactDigests: readonly string[]
+  }>
 }
 
 export interface PlanSignatureVerifierV1 {

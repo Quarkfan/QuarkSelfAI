@@ -65,6 +65,11 @@ DSH 五包 closure 作为唯一基础 fallback。单项失败不会阻断其余�
 配置值在本地丢弃；报告持久化仍是五分钟失效的隐私投影。fixture 已证明 ready/auth-required/not-installed/package-drift 与 facade wiring；初始化
 不会自动探测，本批也没有执行 Agent、选择任务 executor、连接云端或启用 effect。
 
+客户端另有显式 no-effect execution cycle：只接受 signed no-effect lease，先 checkpoint leased、精确 ack 后再 checkpoint accepted，才将同一 `ExecutorAdapterInputV1` 交给精确选中的
+executor port，privacy-bounded result 先落本地再提交，server 接受后才标记 synced。合成失败跨 reopen 恢复为同 executor，未调用备用 port；
+completed-pending-sync 会先重传结果而不重复执行。当前 port 仅由测试注入，尚无真实 Claude Code/Codex/DSH execution adapter、daemon、自动 poll、
+电脑操作或 effect，因此仍不满足“通过统一契约真实运行 Agent”的最终完成标准。
+
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
 inactive client cycle 证明真实设备 proof、签名执行器协商、local checkpoint-before-ack、server lease ack 及重连空轮询。它仍没有运行 executor、

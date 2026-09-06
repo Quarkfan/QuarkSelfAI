@@ -30,6 +30,7 @@ test('checkpoints a no-effect local run and retains a result while disconnected'
   const accepted = await journal.acceptLease(lease(), 'codex', at)
   assert.equal(accepted.state, 'leased')
   assert.equal('leaseToken' in accepted, false)
+  journal.markLeaseAcknowledged(accepted.taskId, at)
   journal.begin(accepted.taskId, at)
   journal.pause(accepted.taskId, at)
   journal.begin(accepted.taskId, at)
@@ -47,6 +48,7 @@ test('fails closed on effectful plans, checkpoint tampering and unsafe result su
   effectful.plan.envelope.allowedEffects = ['message.send']
   await assert.rejects(() => journal.acceptLease(effectful as unknown as DeviceTaskLeaseV1, 'codex', at), /no-effect plans/)
   const accepted = await journal.acceptLease(lease(), 'codex', at)
+  journal.markLeaseAcknowledged(accepted.taskId, at)
   journal.begin(accepted.taskId, at)
   assert.throws(() => journal.completePendingSync(accepted.taskId, { outcome: 'failed', summaryCode: '/Users/demo/output', artifactDigests: [] }, at), /privacy bounded/)
   const exported = journal.exportCheckpoints()
@@ -56,8 +58,9 @@ test('fails closed on effectful plans, checkpoint tampering and unsafe result su
 test('restores an interrupted running task as paused instead of executing it twice', async () => {
   const journal = new InactiveLocalRunJournalV1(verifier)
   const accepted = await journal.acceptLease(lease(), 'codex', at)
+  journal.markLeaseAcknowledged(accepted.taskId, at)
   journal.begin(accepted.taskId, at)
   const restored = await InactiveLocalRunJournalV1.restore(journal.exportCheckpoints(), verifier, at)
   assert.equal(restored.exportCheckpoints()[0]?.state, 'paused')
-  assert.equal(restored.exportCheckpoints()[0]?.revision, 3)
+  assert.equal(restored.exportCheckpoints()[0]?.revision, 4)
 })

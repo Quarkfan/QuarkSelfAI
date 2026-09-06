@@ -182,6 +182,11 @@ DSH closure 检查收束为 configured client 的唯一显式 discovery provider
 五包 closure 且本地 inference 已配置；单个 probe 失败只让该 executor 失败关闭。报告不含原始输出、账号、路径或配置值，初始化仍为零探测，
 且本批不进行任务选择、Agent 执行、网络连接或 effect。
 
+[ADR 0138](adr/0138-durable-no-effect-client-execution.md) 在原 inactive sync 之外增加显式 no-effect execution cycle。签名计划协商后先持久化
+leased，server 精确确认后再持久化 accepted，之后才调用精确 id 对应的 executor port；结果先持久化再提交，server 接受后才标记 synced。失败只进入 paused 并在后续 cycle
+恢复同一 executor，不在 action 中途 fallback；待同步结果也会先于新 poll 发送且不重复执行。当前只有注入式合成 executor，不含真实进程 adapter、
+daemon、effect 或运行 composition。
+
 骨架、功能和迁移代码的可执行分类见 [骨架与扩展体系](architecture-skeleton.md)；机器真源为
 `config/module-catalog.json`，决策记录为 [ADR-0005](adr/0005-skeleton-and-feature-boundaries.md) 与
 [ADR-0009](adr/0009-exhaustive-source-ownership.md) 与 [ADR-0010](adr/0010-effect-provider-readiness.md)。本文件描述

@@ -1231,3 +1231,12 @@
   executor 标为 unavailable/not-installed/auth-required，不触发 fallback 执行或阻断其他 report。
 - fixture 验证 facade wiring、故障隔离和隐私丢弃；未运行真实工具、未选择任务 executor、未调用 Agent、未连接云端、未改变 owner/composition，
   effects 保持 0/23。回滚删除 provider/delegate/test/ADR 与 catalog dependency 即可，已保存 report 最多五分钟后过期。
+
+## 2026-09-06 durable no-effect client execution
+
+- 新增显式 no-effect execution cycle 与 id-bound executor port。signed plan negotiation 后先保存 leased，server 精确 ack 后再保存 accepted，之后只调用
+  精确选中的一个 executor；result 先保存为 completed-pending-sync，再提交 server 并标记 synced，ack 结果不明确时失败关闭等待 reconciliation。
+- 合成 executor 首次失败后 checkpoint 为 paused，跨 reopen 只恢复同一 executor，未调用 DSH fallback；成功同步后本地为 synced。待同步 result
+  会先于新 lease poll 重传且不重复执行，禁止 mid-action fallback。
+- 当前只有注入式 fixture，没有真实 Claude Code/Codex/DSH process adapter、自动 polling、daemon、workspace 读写、电脑操作或 external effect；现网
+  owner/composition 未变，effects 仍为 0/23。回滚删除 port/cycle delegates/test/ADR 与新增 catalog dependency，无 live 状态迁移。

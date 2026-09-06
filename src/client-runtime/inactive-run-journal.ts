@@ -3,7 +3,7 @@ import type { DeviceTaskLeaseV1, PlanSignatureVerifierV1, SignedExecutionPlanV1 
 import { verifySignedExecutionPlan } from './validation.js'
 import type { RedactedResultV1 } from '../control-plane/contracts.js'
 
-export type InactiveLocalRunState = 'leased' | 'running' | 'paused' | 'completed-pending-sync' | 'synced' | 'cancelled'
+export type InactiveLocalRunState = 'leased' | 'accepted' | 'running' | 'paused' | 'completed-pending-sync' | 'synced' | 'cancelled'
 
 export interface InactiveLocalRunCheckpointV1 {
   readonly schemaVersion: 1
@@ -52,8 +52,14 @@ export class InactiveLocalRunJournalV1 {
 
   begin(taskId: string, now: Date): InactiveLocalRunCheckpointV1 {
     const current = this.#run(taskId)
-    if (current.state !== 'leased' && current.state !== 'paused') throw new Error('local run cannot begin from its current state')
+    if (current.state !== 'accepted' && current.state !== 'paused') throw new Error('local run cannot begin from its current state')
     return this.#replace(current, { state: 'running', updatedAt: now.toISOString() })
+  }
+
+  markLeaseAcknowledged(taskId: string, now: Date): InactiveLocalRunCheckpointV1 {
+    const current = this.#run(taskId)
+    if (current.state !== 'leased') throw new Error('only a leased local task can be acknowledged')
+    return this.#replace(current, { state: 'accepted', updatedAt: now.toISOString() })
   }
 
   pause(taskId: string, now: Date): InactiveLocalRunCheckpointV1 {
@@ -92,7 +98,7 @@ export class InactiveLocalRunJournalV1 {
       if (value.schemaVersion !== 1 || value.externalWritesEnabled !== false || value.effectMode !== 'recording-sink' || value.checkpointDigest !== checkpointDigest(value)) throw new Error('local run checkpoint integrity failed')
       if (journal.#runs.has(value.taskId)) throw new Error('duplicate local run checkpoint')
       if (value.plan.envelope.allowedEffects.length || value.plan.envelope.approvalGrants.length || value.deviceId !== value.plan.envelope.deviceId) throw new Error('restored local run is outside the inactive boundary')
-      if (!['leased', 'running', 'paused', 'completed-pending-sync', 'synced', 'cancelled'].includes(value.state) || !Number.isSafeInteger(value.revision) || value.revision < 1 || Number.isNaN(Date.parse(value.updatedAt))) throw new Error('restored local run state is invalid')
+      if (!['leased', 'accepted', 'running', 'paused', 'completed-pending-sync', 'synced', 'cancelled'].includes(value.state) || !Number.isSafeInteger(value.revision) || value.revision < 1 || Number.isNaN(Date.parse(value.updatedAt))) throw new Error('restored local run state is invalid')
       const expectsResult = value.state === 'completed-pending-sync' || value.state === 'synced'
       if (expectsResult !== Boolean(value.result)) throw new Error('restored local run result state is inconsistent')
       if (value.result && (value.result.taskId !== value.taskId || value.result.deviceId !== value.deviceId || value.result.planId !== value.plan.planId || !value.result.summaryCode || unsafeText.test(value.result.summaryCode) || !value.result.artifactDigests.every(digest => /^sha256:[a-f0-9]{64}$/.test(digest)) || Number.isNaN(Date.parse(value.result.completedAt)))) throw new Error('restored local result is invalid')

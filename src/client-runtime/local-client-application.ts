@@ -1,8 +1,8 @@
 import { isAbsolute, resolve } from 'node:path'
 import type { DeviceEnrollmentClientPortV1, DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
-import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, ExecutorCapabilityReportV1, LocalDeviceSecretStoreV1, PlanSignatureVerifierV1, RemovableLocalDeviceSecretStoreV1 } from './contracts.js'
+import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, ExecutorCapabilityReportV1, LocalDeviceSecretStoreV1, NoEffectClientExecutorPortV1, PlanSignatureVerifierV1, RemovableLocalDeviceSecretStoreV1 } from './contracts.js'
 import { InactiveArtifactStoreV1, type InactiveArtifactRecoveryReportV1 } from './inactive-artifact-store.js'
-import { runInactiveClientCycle, type InactiveClientCycleReceiptV1 } from './inactive-client-cycle.js'
+import { runInactiveClientCycle, runNoEffectClientExecutionCycle, type InactiveClientCycleReceiptV1, type NoEffectClientExecutionReceiptV1 } from './inactive-client-cycle.js'
 import { LocalClientInstanceLeaseV1 } from './client-instance-lease.js'
 import { InactiveClientDeviceEnrollmentV1 } from './client-device-enrollment.js'
 import { assertDeviceEnrollmentSecret, createEd25519DeviceEnrollment, type DeviceEnrollmentMaterialV1 } from './device-identity.js'
@@ -89,6 +89,12 @@ export class InactiveLocalClientApplicationV1 {
   async syncOnce(server: DeviceSessionServerPortV1, secrets: LocalDeviceSecretStoreV1, now = new Date()): Promise<InactiveClientCycleReceiptV1> {
     this.#requireOpen(); this.#connection = 'connecting'
     try { const receipt = await runInactiveClientCycle({ state: this.state, secrets, server, now }); this.#connection = 'online'; return receipt }
+    catch (error) { this.#connection = 'degraded'; throw error }
+  }
+
+  async executeNoEffectOnce(server: DeviceSessionServerPortV1, secrets: LocalDeviceSecretStoreV1, executors: readonly NoEffectClientExecutorPortV1[], now = new Date()): Promise<NoEffectClientExecutionReceiptV1> {
+    this.#requireOpen(); this.#connection = 'connecting'
+    try { const receipt = await runNoEffectClientExecutionCycle({ state: this.state, secrets, server, executors, now }); this.#connection = 'online'; return receipt }
     catch (error) { this.#connection = 'degraded'; throw error }
   }
 
