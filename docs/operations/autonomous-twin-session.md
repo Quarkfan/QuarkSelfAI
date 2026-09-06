@@ -1496,3 +1496,6 @@
 - 本批未 provision host config/TLS、未创建 tenant DB、未注册 service/SSH 或启动进程。提交后将从 clean revision 构建真实 distribution 并执行临时安装演练。
 - 完整 `npm run check` 通过：主项目 492 项中 480 通过、12 项仅因 sandbox listener 限制跳过，compat 179/179。
   架构保持 136 modules、76 个 platform-core Offer、121 assets、23/23 effects implemented、0/23 active。
+- 提交 `dbb930efe915d7bee9a88312e573c2ca61b80d64` 后真实构建 artifact
+  `sha256:e8e8d768932db2d84ddce1e711973acccaafa176925ab4687d486c7d9511b038`，再执行 install→recover→unused uninstall；receipt 回读一致，
+  全程保持 installed-inactive、auto-start/service/SSH/effects false。临时 distribution 与 installation root 均已删除。
