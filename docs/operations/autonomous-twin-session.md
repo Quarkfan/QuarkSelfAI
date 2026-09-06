@@ -784,3 +784,12 @@
   私有映射外泄或提前发布均失败关闭。新增 compiler 后 module catalog 与迁移映射为 109/109。
 - 本批不发布 Manifest、不写 registry、不安装、不加载、不授权、不运行、不切 owner，不改变 composition 或任何 effect；用户未提交
   的 `package.json`、品牌 client 和 `.DS_Store` 继续隔离。
+
+## 2026-09-06 Capability Platform Phase 1B Manifest validator parity
+
+- 在进入真实 Manifest 批次前复核发现 runtime validator 比 TypeScript contract 与公开 JSON Schema 更宽松；未知 artifact/source/
+  isolation/interface/permission/test/recovery 类型、非语义化 interface version、未声明 lifecycle 或 health interface 等输入可能被放过。
+- validator 现失败关闭这些差异，并验证 signature key、SBOM digest、requirement/dependency、permission data class、test ID、health
+  interface 与 recovery 字段。生命周期 handler 必须引用 Manifest 明确 `provides` 的 interface，云端不能注入任意命令代替接口。
+- 合成 fixture 已补齐七个 lifecycle interface 和签名 key；Blueprint compiler、inactive install planner 与公共 contract 回归通过。
+  本批只收紧纯校验，不验证真实 bytes、不发布或安装 Manifest，也不改变现网 runtime。

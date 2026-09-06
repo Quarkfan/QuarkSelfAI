@@ -8,6 +8,13 @@ const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/
 const digestPattern = /^sha256:[a-f0-9]{64}$/
 const absolutePathPattern = /^(?:\/|[A-Za-z]:[\\/]|~(?:[\\/]|$))/
 const secretAssignmentPattern = /(?:token|secret|password|private[_-]?key)\s*[:=]/i
+const capabilityKinds = new Set(['skill', 'knowledge', 'policy', 'workflow', 'connector', 'package', 'sdk', 'cli', 'binary', 'project', 'browser-runtime', 'container', 'notebook', 'sandbox', 'application', 'game', 'simulation', 'integration-pack', 'agent', 'composite'])
+const sourceKinds = new Set(['git', 'registry', 'local-build', 'first-party'])
+const isolationKinds = new Set(['pure', 'process', 'container', 'browser-profile', 'vm', 'remote-service'])
+const interfaceKinds = new Set(['tool', 'port', 'event', 'resource', 'ui', 'runtime', 'experience'])
+const permissionKinds = new Set(['workspace', 'file', 'browser', 'desktop', 'network', 'secret-reference', 'process', 'container', 'gpu', 'port', 'data', 'external-effect'])
+const permissionOperations = new Set(['discover', 'read', 'write', 'execute', 'connect', 'listen', 'render', 'persist'])
+const approvalKinds = new Set(['none', 'install', 'session', 'action'])
 
 function record(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object`)
@@ -26,6 +33,11 @@ function array(value: unknown, label: string): unknown[] {
 
 function unique(values: readonly string[], label: string): void {
   if (new Set(values).size !== values.length) throw new Error(`${label} must be unique`)
+}
+
+function exactKeys(value: Record<string, unknown>, allowed: readonly string[], label: string): void {
+  const unknown = Object.keys(value).filter(key => !allowed.includes(key))
+  if (unknown.length) throw new Error(`${label} has unknown fields: ${unknown.join(',')}`)
 }
 
 function identifier(value: unknown, label: string): string {
@@ -50,6 +62,15 @@ function timestamp(value: unknown, label: string): string {
   const result = text(value, label, 100)
   if (Number.isNaN(Date.parse(result))) throw new Error(`${label} must be an ISO timestamp`)
   return result
+}
+
+function boolean(value: unknown, label: string): boolean {
+  if (typeof value !== 'boolean') throw new Error(`${label} must be a boolean`)
+  return value
+}
+
+function optionalText(value: unknown, label: string, max = 500): string | undefined {
+  return value === undefined ? undefined : text(value, label, max)
 }
 
 export function canonicalJson(value: unknown): string {
@@ -85,17 +106,25 @@ export function executionEnvelopePayloadDigest(value: ExecutionEnvelopeV1): stri
 
 function validatePermission(value: unknown, placement: readonly string[], label: string): void {
   const permission = record(value, label)
+  exactKeys(permission, ['id', 'kind', 'operations', 'scope', 'placement', 'approval', 'required', 'dataClasses', 'effect'], label)
   identifier(permission.id, `${label}.id`)
   const kind = text(permission.kind, `${label}.kind`)
+  if (!permissionKinds.has(kind)) throw new Error(`${label}.kind is invalid`)
   const operations = array(permission.operations, `${label}.operations`).map((item, index) => text(item, `${label}.operations[${index}]`))
   if (!operations.length) throw new Error(`${label}.operations cannot be empty`)
+  if (operations.some(operation => !permissionOperations.has(operation))) throw new Error(`${label}.operations is invalid`)
   unique(operations, `${label}.operations`)
   const scope = text(permission.scope, `${label}.scope`, 500)
   if (absolutePathPattern.test(scope)) throw new Error(`${label}.scope must use an opaque handle, not an absolute path`)
   if (secretAssignmentPattern.test(scope)) throw new Error(`${label}.scope cannot contain secret-shaped values`)
   if (!placement.includes(text(permission.placement, `${label}.placement`))) throw new Error(`${label}.placement is not supported by the capability`)
   const approval = text(permission.approval, `${label}.approval`)
+  if (!approvalKinds.has(approval)) throw new Error(`${label}.approval is invalid`)
+  boolean(permission.required, `${label}.required`)
+  const permissionDataClasses = array(permission.dataClasses, `${label}.dataClasses`).map((item, index) => text(item, `${label}.dataClasses[${index}]`, 100))
+  unique(permissionDataClasses, `${label}.dataClasses`)
   const effect = permission.effect === undefined ? undefined : record(permission.effect, `${label}.effect`)
+  if (effect) exactKeys(effect, ['kind', 'externalWrite', 'writeVerificationRequired'], `${label}.effect`)
   if (kind === 'external-effect') {
     if (!effect || effect.externalWrite !== true || effect.writeVerificationRequired !== true || approval !== 'action') {
       throw new Error(`${label} external effects require action approval and write verification`)
@@ -107,14 +136,16 @@ function validatePermission(value: unknown, placement: readonly string[], label:
 
 export function validateCapabilityManifest(value: unknown): CapabilityManifestV1 {
   const manifest = record(value, 'manifest')
+  exactKeys(manifest, ['schemaVersion', 'id', 'name', 'version', 'kind', 'description', 'source', 'runtime', 'requirements', 'lifecycle', 'interfaces', 'dependencies', 'permissions', 'dataClasses', 'tests', 'healthChecks', 'recovery'], 'manifest')
   if (manifest.schemaVersion !== 1) throw new Error('manifest.schemaVersion must be 1')
   identifier(manifest.id, 'manifest.id')
   text(manifest.name, 'manifest.name', 200)
   version(manifest.version, 'manifest.version')
-  text(manifest.kind, 'manifest.kind')
+  if (!capabilityKinds.has(text(manifest.kind, 'manifest.kind'))) throw new Error('manifest.kind is invalid')
   text(manifest.description, 'manifest.description', 2000)
   const source = record(manifest.source, 'manifest.source')
-  text(source.kind, 'manifest.source.kind')
+  exactKeys(source, ['kind', 'locator', 'revision', 'artifactDigest', 'license', 'supplier', 'signature', 'sbom'], 'manifest.source')
+  if (!sourceKinds.has(text(source.kind, 'manifest.source.kind'))) throw new Error('manifest.source.kind is invalid')
   const locator = text(source.locator, 'manifest.source.locator', 1000)
   if (absolutePathPattern.test(locator)) throw new Error('manifest.source.locator must be portable')
   text(source.revision, 'manifest.source.revision', 200)
@@ -122,56 +153,125 @@ export function validateCapabilityManifest(value: unknown): CapabilityManifestV1
   text(source.license, 'manifest.source.license', 100)
   text(source.supplier, 'manifest.source.supplier', 200)
   const signature = record(source.signature, 'manifest.source.signature')
-  if (!['verified', 'missing', 'invalid'].includes(text(signature.status, 'manifest.source.signature.status'))) throw new Error('manifest.source.signature.status is invalid')
+  exactKeys(signature, ['status', 'keyId'], 'manifest.source.signature')
+  const signatureStatus = text(signature.status, 'manifest.source.signature.status')
+  if (!['verified', 'missing', 'invalid'].includes(signatureStatus)) throw new Error('manifest.source.signature.status is invalid')
+  const signatureKeyId = optionalText(signature.keyId, 'manifest.source.signature.keyId', 300)
+  if (signatureStatus === 'verified' && !signatureKeyId) throw new Error('verified manifest source signature requires keyId')
+  const sbom = record(source.sbom, 'manifest.source.sbom')
+  exactKeys(sbom, ['format', 'digest'], 'manifest.source.sbom')
+  const sbomFormat = text(sbom.format, 'manifest.source.sbom.format')
+  if (!['spdx', 'cyclonedx', 'none'].includes(sbomFormat)) throw new Error('manifest.source.sbom.format is invalid')
+  const sbomDigest = sbom.digest === undefined ? undefined : digest(sbom.digest, 'manifest.source.sbom.digest')
+  if (sbomFormat !== 'none' && !sbomDigest) throw new Error('manifest source SBOM requires digest')
+  if (sbomFormat === 'none' && sbomDigest) throw new Error('manifest source SBOM digest requires a declared format')
   const runtime = record(manifest.runtime, 'manifest.runtime')
+  exactKeys(runtime, ['placements', 'isolation', 'supportedPlatforms', 'executorRequirements', 'stateNamespace', 'offlineCapable'], 'manifest.runtime')
   const placements = array(runtime.placements, 'manifest.runtime.placements').map((item, index) => text(item, `manifest.runtime.placements[${index}]`))
   if (!placements.length || placements.some(item => !['local', 'cloud', 'hybrid'].includes(item))) throw new Error('manifest.runtime.placements is invalid')
   unique(placements, 'manifest.runtime.placements')
+  if (!isolationKinds.has(text(runtime.isolation, 'manifest.runtime.isolation'))) throw new Error('manifest.runtime.isolation is invalid')
+  const supportedPlatforms = array(runtime.supportedPlatforms, 'manifest.runtime.supportedPlatforms').map((item, index) => text(item, `manifest.runtime.supportedPlatforms[${index}]`))
+  unique(supportedPlatforms, 'manifest.runtime.supportedPlatforms')
+  const executorRequirements = array(runtime.executorRequirements, 'manifest.runtime.executorRequirements').map((item, index) => text(item, `manifest.runtime.executorRequirements[${index}]`))
+  unique(executorRequirements, 'manifest.runtime.executorRequirements')
   identifier(runtime.stateNamespace, 'manifest.runtime.stateNamespace')
+  boolean(runtime.offlineCapable, 'manifest.runtime.offlineCapable')
   if (runtime.offlineCapable === true && !placements.includes('local') && !placements.includes('hybrid')) throw new Error('offline capability requires local or hybrid placement')
   const requirements = array(manifest.requirements, 'manifest.requirements')
   const requirementKeys = requirements.map((item, index) => {
     const requirement = record(item, `manifest.requirements[${index}]`)
+    exactKeys(requirement, ['kind', 'id', 'versionRange', 'placement', 'required'], `manifest.requirements[${index}]`)
     const kind = text(requirement.kind, `manifest.requirements[${index}].kind`)
     if (!['system', 'model', 'executor', 'package', 'network', 'device', 'capability'].includes(kind)) throw new Error('manifest requirement kind is invalid')
     const placement = text(requirement.placement, `manifest.requirements[${index}].placement`)
     if (!placements.includes(placement)) throw new Error('manifest requirement placement is not supported by the capability')
+    if (requirement.versionRange !== null) text(requirement.versionRange, `manifest.requirements[${index}].versionRange`, 100)
+    boolean(requirement.required, `manifest.requirements[${index}].required`)
     return `${kind}:${identifier(requirement.id, `manifest.requirements[${index}].id`)}:${placement}`
   })
   unique(requirementKeys, 'manifest.requirements')
   const lifecycle = record(manifest.lifecycle, 'manifest.lifecycle')
   const lifecycleActions = ['install', 'load', 'start', 'stop', 'upgrade', 'uninstall', 'recover']
   if (Object.keys(lifecycle).sort().join(',') !== [...lifecycleActions].sort().join(',')) throw new Error('manifest lifecycle must declare every supported action exactly once')
+  const lifecycleInterfaceIds: string[] = []
   for (const action of lifecycleActions) {
     const handler = record(lifecycle[action], `manifest.lifecycle.${action}`)
-    identifier(handler.handlerInterface, `manifest.lifecycle.${action}.handlerInterface`)
+    exactKeys(handler, ['handlerInterface', 'supported', 'approval'], `manifest.lifecycle.${action}`)
+    lifecycleInterfaceIds.push(identifier(handler.handlerInterface, `manifest.lifecycle.${action}.handlerInterface`))
     if (typeof handler.supported !== 'boolean' || !['none', 'install', 'session', 'action'].includes(text(handler.approval, `manifest.lifecycle.${action}.approval`))) throw new Error(`manifest.lifecycle.${action} is invalid`)
   }
+  const providedInterfaces = new Set<string>()
   const interfaces = array(manifest.interfaces, 'manifest.interfaces').map((item, index) => {
     const entry = record(item, `manifest.interfaces[${index}]`)
-    return `${text(entry.kind, `manifest.interfaces[${index}].kind`)}:${identifier(entry.id, `manifest.interfaces[${index}].id`)}:${text(entry.direction, `manifest.interfaces[${index}].direction`)}`
+    exactKeys(entry, ['kind', 'id', 'version', 'direction', 'inputSchema', 'outputSchema', 'compatibility'], `manifest.interfaces[${index}]`)
+    const kind = text(entry.kind, `manifest.interfaces[${index}].kind`)
+    if (!interfaceKinds.has(kind)) throw new Error('manifest interface kind is invalid')
+    const id = identifier(entry.id, `manifest.interfaces[${index}].id`)
+    version(entry.version, `manifest.interfaces[${index}].version`)
+    const direction = text(entry.direction, `manifest.interfaces[${index}].direction`)
+    if (!['provides', 'requires'].includes(direction)) throw new Error('manifest interface direction is invalid')
+    optionalText(entry.inputSchema, `manifest.interfaces[${index}].inputSchema`, 1000)
+    optionalText(entry.outputSchema, `manifest.interfaces[${index}].outputSchema`, 1000)
+    const compatibility = array(entry.compatibility, `manifest.interfaces[${index}].compatibility`).map((item, compatIndex) => text(item, `manifest.interfaces[${index}].compatibility[${compatIndex}]`, 100))
+    unique(compatibility, `manifest.interfaces[${index}].compatibility`)
+    if (direction === 'provides') providedInterfaces.add(id)
+    return `${kind}:${id}:${direction}`
   })
   unique(interfaces, 'manifest.interfaces')
-  const dependencies = array(manifest.dependencies, 'manifest.dependencies').map((item, index) => identifier(record(item, `manifest.dependencies[${index}]`).id, `manifest.dependencies[${index}].id`))
+  for (const handlerInterface of lifecycleInterfaceIds) {
+    if (!providedInterfaces.has(handlerInterface)) throw new Error(`manifest lifecycle handler interface ${handlerInterface} is not declared as provided`)
+  }
+  const dependencies = array(manifest.dependencies, 'manifest.dependencies').map((item, index) => {
+    const dependency = record(item, `manifest.dependencies[${index}]`)
+    exactKeys(dependency, ['id', 'versionRange', 'required', 'placement'], `manifest.dependencies[${index}]`)
+    const id = identifier(dependency.id, `manifest.dependencies[${index}].id`)
+    text(dependency.versionRange, `manifest.dependencies[${index}].versionRange`, 100)
+    boolean(dependency.required, `manifest.dependencies[${index}].required`)
+    if (dependency.placement !== undefined && !['local', 'cloud', 'hybrid'].includes(text(dependency.placement, `manifest.dependencies[${index}].placement`))) throw new Error('manifest dependency placement is invalid')
+    return id
+  })
   unique(dependencies, 'manifest.dependencies')
   if (dependencies.includes(manifest.id as string)) throw new Error('manifest cannot depend on itself')
   const permissions = array(manifest.permissions, 'manifest.permissions')
   permissions.forEach((item, index) => validatePermission(item, placements, `manifest.permissions[${index}]`))
   const permissionIds = permissions.map((item, index) => identifier(record(item, `manifest.permissions[${index}]`).id, `manifest.permissions[${index}].id`))
   unique(permissionIds, 'manifest.permissions')
+  const manifestDataClasses = array(manifest.dataClasses, 'manifest.dataClasses').map((item, index) => text(item, `manifest.dataClasses[${index}]`, 100))
+  unique(manifestDataClasses, 'manifest.dataClasses')
+  for (const [index, item] of permissions.entries()) {
+    const declared = array(record(item, `manifest.permissions[${index}]`).dataClasses, `manifest.permissions[${index}].dataClasses`)
+    if (declared.some(item => !manifestDataClasses.includes(String(item)))) throw new Error('manifest permission data class is not declared by the manifest')
+  }
   const tests = array(manifest.tests, 'manifest.tests')
+  const testIds = tests.map((item, index) => {
+    const declaration = record(item, `manifest.tests[${index}]`)
+    exactKeys(declaration, ['id', 'kind', 'required', 'effectMode'], `manifest.tests[${index}]`)
+    const kind = text(declaration.kind, `manifest.tests[${index}].kind`)
+    if (!['contract', 'fixture', 'redacted-replay', 'health', 'shadow'].includes(kind)) throw new Error('manifest test kind is invalid')
+    boolean(declaration.required, `manifest.tests[${index}].required`)
+    if (!['none', 'recording-sink'].includes(text(declaration.effectMode, `manifest.tests[${index}].effectMode`))) throw new Error('manifest tests cannot enable effects')
+    return identifier(declaration.id, `manifest.tests[${index}].id`)
+  })
+  unique(testIds, 'manifest.tests')
   if (!tests.some(item => record(item, 'manifest.tests item').kind === 'contract' && record(item, 'manifest.tests item').required === true)) throw new Error('manifest requires a contract test')
-  if (tests.some(item => !['none', 'recording-sink'].includes(text(record(item, 'manifest.tests item').effectMode, 'manifest.tests.effectMode')))) throw new Error('manifest tests cannot enable effects')
   const healthCheckIds = array(manifest.healthChecks, 'manifest.healthChecks').map((item, index) => {
     const check = record(item, `manifest.healthChecks[${index}]`)
+    exactKeys(check, ['id', 'interfaceId', 'placement', 'timeoutMs', 'required'], `manifest.healthChecks[${index}]`)
     const placement = text(check.placement, `manifest.healthChecks[${index}].placement`)
     if (!placements.includes(placement)) throw new Error('manifest health check placement is not supported by the capability')
     if (!Number.isSafeInteger(check.timeoutMs) || Number(check.timeoutMs) <= 0) throw new Error('manifest health check timeout must be a positive integer')
-    identifier(check.interfaceId, `manifest.healthChecks[${index}].interfaceId`)
+    const interfaceId = identifier(check.interfaceId, `manifest.healthChecks[${index}].interfaceId`)
+    if (!providedInterfaces.has(interfaceId)) throw new Error('manifest health check interface is not declared as provided')
+    boolean(check.required, `manifest.healthChecks[${index}].required`)
     return identifier(check.id, `manifest.healthChecks[${index}].id`)
   })
   unique(healthCheckIds, 'manifest.healthChecks')
   const recovery = record(manifest.recovery, 'manifest.recovery')
+  exactKeys(recovery, ['strategy', 'rollbackVersion', 'stateIncluded', 'restoreEffectsEnabled'], 'manifest.recovery')
+  if (!['stateless', 'reinstall', 'snapshot', 'encrypted-state'].includes(text(recovery.strategy, 'manifest.recovery.strategy'))) throw new Error('manifest recovery strategy is invalid')
+  if (recovery.rollbackVersion !== null) version(recovery.rollbackVersion, 'manifest.recovery.rollbackVersion')
+  boolean(recovery.stateIncluded, 'manifest.recovery.stateIncluded')
   if (recovery.restoreEffectsEnabled !== false) throw new Error('manifest recovery must restore with effects disabled')
   return value as CapabilityManifestV1
 }

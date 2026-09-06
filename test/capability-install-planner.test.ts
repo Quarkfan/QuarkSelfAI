@@ -5,11 +5,12 @@ import type { ArtifactVerificationReportV1 } from '../src/client-runtime/contrac
 
 const digest = `sha256:${'a'.repeat(64)}`
 const handlers = Object.fromEntries(['install', 'load', 'start', 'stop', 'upgrade', 'uninstall', 'recover'].map(action => [action, { handlerInterface: `lifecycle.${action}`, supported: true, approval: action === 'stop' ? 'none' : action === 'install' || action === 'upgrade' || action === 'uninstall' || action === 'recover' ? 'install' : 'session' }]))
+const lifecycleInterfaces = ['install', 'load', 'start', 'stop', 'upgrade', 'uninstall', 'recover'].map(action => ({ kind: 'runtime', id: `lifecycle.${action}`, version: '1.0.0', direction: 'provides', compatibility: ['1'] }))
 const manifest = {
   schemaVersion: 1, id: 'tool/example', name: 'Example Tool', version: '1.0.0', kind: 'cli', description: 'Fixture',
-  source: { kind: 'git', locator: 'https://example.invalid/tool.git', revision: 'r1', artifactDigest: digest, license: 'MIT', supplier: 'example', signature: { status: 'verified' }, sbom: { format: 'spdx', digest } },
+  source: { kind: 'git', locator: 'https://example.invalid/tool.git', revision: 'r1', artifactDigest: digest, license: 'MIT', supplier: 'example', signature: { status: 'verified', keyId: 'fixture-key' }, sbom: { format: 'spdx', digest } },
   runtime: { placements: ['local'], isolation: 'process', supportedPlatforms: ['darwin-arm64'], executorRequirements: [], stateNamespace: 'tool.example', offlineCapable: true },
-  requirements: [], lifecycle: handlers, interfaces: [], dependencies: [], permissions: [], dataClasses: [],
+  requirements: [], lifecycle: handlers, interfaces: lifecycleInterfaces, dependencies: [], permissions: [], dataClasses: [],
   tests: [{ id: 'contract.default', kind: 'contract', required: true, effectMode: 'none' }], healthChecks: [],
   recovery: { strategy: 'reinstall', rollbackVersion: null, stateIncluded: false, restoreEffectsEnabled: false },
 }

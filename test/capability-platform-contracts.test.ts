@@ -40,7 +40,12 @@ function manifest(overrides: Record<string, unknown> = {}): CapabilityManifestV1
       uninstall: { handlerInterface: 'lifecycle.uninstall', supported: true, approval: 'install' },
       recover: { handlerInterface: 'lifecycle.recover', supported: true, approval: 'install' },
     },
-    interfaces: [{ kind: 'tool', id: 'browser.navigate', version: '1', direction: 'provides', compatibility: ['1'] }],
+    interfaces: [
+      { kind: 'tool', id: 'browser.navigate', version: '1.0.0', direction: 'provides', compatibility: ['1'] },
+      ...['install', 'load', 'start', 'stop', 'upgrade', 'uninstall', 'recover'].map(action => ({
+        kind: 'runtime' as const, id: `lifecycle.${action}`, version: '1.0.0', direction: 'provides' as const, compatibility: ['1'],
+      })),
+    ],
     dependencies: [],
     permissions: [{
       id: 'browser.session', kind: 'browser', operations: ['execute'], scope: 'browser-profile:ephemeral',
@@ -110,6 +115,12 @@ test('manifest validation fails closed for host paths, secret-shaped scopes, eff
   assert.throws(() => validateCapabilityManifest(manifest({ recovery: { ...base.recovery, restoreEffectsEnabled: true } })), /effects disabled/)
   assert.throws(() => validateCapabilityManifest(manifest({ lifecycle: { ...base.lifecycle, recover: undefined } })), /manifest.lifecycle.recover/)
   assert.throws(() => validateCapabilityManifest(manifest({ requirements: [{ ...base.requirements[0], placement: 'cloud' }] })), /placement is not supported/)
+  assert.throws(() => validateCapabilityManifest(manifest({ kind: 'mystery' })), /manifest.kind is invalid/)
+  assert.throws(() => validateCapabilityManifest(manifest({ executable: 'rm' })), /unknown fields/)
+  assert.throws(() => validateCapabilityManifest(manifest({ source: { ...base.source, kind: 'download' } })), /source.kind is invalid/)
+  assert.throws(() => validateCapabilityManifest(manifest({ interfaces: base.interfaces.filter(item => item.id !== 'lifecycle.start') })), /not declared as provided/)
+  assert.throws(() => validateCapabilityManifest(manifest({ interfaces: base.interfaces.map(item => item.id === 'browser.navigate' ? { ...item, version: '1' } : item) })), /semantic version/)
+  assert.throws(() => validateCapabilityManifest(manifest({ healthChecks: [{ ...base.healthChecks[0], interfaceId: 'browser.missing' }] })), /not declared as provided/)
 })
 
 test('blueprint graph and executor continuity are deterministic and fail closed', () => {

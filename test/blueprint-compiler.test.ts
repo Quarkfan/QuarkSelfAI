@@ -8,11 +8,12 @@ const artifactDigest = `sha256:${'a'.repeat(64)}`
 const at = '2026-09-06T00:00:00.000Z'
 const expires = '2026-09-06T01:00:00.000Z'
 const lifecycle = Object.fromEntries(['install', 'load', 'start', 'stop', 'upgrade', 'uninstall', 'recover'].map(action => [action, { handlerInterface: `lifecycle.${action}`, supported: true, approval: action === 'stop' ? 'none' : action === 'install' || action === 'upgrade' || action === 'uninstall' || action === 'recover' ? 'install' : 'session' }]))
+const lifecycleInterfaces = ['install', 'load', 'start', 'stop', 'upgrade', 'uninstall', 'recover'].map(action => ({ kind: 'runtime', id: `lifecycle.${action}`, version: '1.0.0', direction: 'provides', compatibility: ['1'] }))
 const manifest = {
   schemaVersion: 1, id: 'tool/search', name: 'Search', version: '1.2.0', kind: 'cli', description: 'Fixture',
-  source: { kind: 'git', locator: 'https://example.invalid/search.git', revision: 'r1', artifactDigest, license: 'MIT', supplier: 'example', signature: { status: 'verified' }, sbom: { format: 'spdx', digest: artifactDigest } },
+  source: { kind: 'git', locator: 'https://example.invalid/search.git', revision: 'r1', artifactDigest, license: 'MIT', supplier: 'example', signature: { status: 'verified', keyId: 'fixture-key' }, sbom: { format: 'spdx', digest: artifactDigest } },
   runtime: { placements: ['local'], isolation: 'process', supportedPlatforms: ['darwin-arm64'], executorRequirements: [], stateNamespace: 'tool.search', offlineCapable: true },
-  requirements: [], lifecycle, interfaces: [{ kind: 'tool', id: 'search.query', version: '1.0.0', direction: 'provides', compatibility: ['1'] }], dependencies: [], permissions: [], dataClasses: ['public'],
+  requirements: [], lifecycle, interfaces: [{ kind: 'tool', id: 'search.query', version: '1.0.0', direction: 'provides', compatibility: ['1'] }, ...lifecycleInterfaces], dependencies: [], permissions: [], dataClasses: ['public'],
   tests: [{ id: 'contract.default', kind: 'contract', required: true, effectMode: 'none' }], healthChecks: [], recovery: { strategy: 'reinstall', rollbackVersion: null, stateIncluded: false, restoreEffectsEnabled: false },
 }
 
