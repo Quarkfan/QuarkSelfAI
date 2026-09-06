@@ -19,7 +19,7 @@
     {
       "disposition": "platform-core",
       "targetPlane": "local-client",
-      "moduleIds": ["dsh-runtime", "lifecycle-host", "application-host", "application-composition", "durable-wake-scheduler", "workspace-boundary", "executor-router", "kernel-supervisor", "neutral-default-providers", "dsh-profile-installer", "native-product-profile", "native-product-composition", "sqlite-storage", "durable-state-host", "capability-platform-governance", "local-client-negotiation"]
+      "moduleIds": ["dsh-runtime", "lifecycle-host", "application-host", "application-composition", "durable-wake-scheduler", "workspace-boundary", "executor-router", "kernel-supervisor", "neutral-default-providers", "dsh-profile-installer", "native-product-profile", "native-product-composition", "sqlite-storage", "durable-state-host", "capability-platform-governance", "local-client-negotiation", "capability-install-planner"]
     },
     {
       "disposition": "platform-core",

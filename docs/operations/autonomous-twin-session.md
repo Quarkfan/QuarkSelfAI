@@ -733,3 +733,13 @@
   owner 和 effects 关闭。
 - 本批新增 2 个模块，目录现为 103 项且迁移映射 103/103 exactly-once。没有设备 enrollment、网络连接、真实工具探测、
   installer、电脑控制、consumer/provider/scheduler/effect 变化、私有包激活、外部写或服务重启。
+
+## 2026-09-06 Capability Platform Phase 2B 安装前治理
+
+- 增加内容寻址 `ArtifactVerificationReportV1`，license、signature、SBOM、malware、maintenance、dependencies 六项必须全部
+  pass；任一 warn/fail 或 id/version/revision/digest 漂移均不能生成安装计划。
+- `planInactiveInstallation` 只生成引用 Manifest lifecycle interface 的声明式计划，目标固定 `installed-inactive`，并明确
+  load/run/external write 均为 false。状态使用 installation、loading、authorization、execution、effects 五个独立维度，安装后
+  固定 unloaded、unauthorized、stopped、effects disabled。
+- 当前只有纯 planner 和 fixture，没有下载、写盘、安装、handler 执行或进程启动。新增模块后 module catalog 与迁移映射均为
+  104/104；现网 owner 和私有 pack 状态未变。

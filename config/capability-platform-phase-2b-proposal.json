@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalId": "capability-platform-phase-2b-inactive-install-planning",
+  "status": "implemented-inactive",
+  "baseRevision": "59557b89ce5e7207076fa36ea1066de61fb1fc6e",
+  "architectureChange": "Add supply-chain verification evidence, five independent lifecycle dimensions and a pure planner whose only target is installed-inactive.",
+  "allowedActions": ["validate offline verification fixtures", "produce content-addressed declarative plans", "model installed-inactive lifecycle state", "run repository tests and audits"],
+  "explicitExclusions": ["download or install artifacts", "execute lifecycle handlers", "write outside tests", "load or run capabilities", "enable effects", "change runtime composition", "activate private packs", "restart services", "modify owner working-tree files"],
+  "rollback": {"method": "Revert the Phase 2B commit.", "stateMigrationRequired": false, "serviceRestartRequired": false, "dataRecoveryRequired": false},
+  "ownerAuthorization": {"basis": "Owner directed continuous implementation of the attached goal without waiting for further approval on 2026-09-06.", "runtimeActivationAuthorized": false}
+}

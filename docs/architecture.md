@@ -18,7 +18,7 @@ contract、规范化摘要和无 Cordis lifecycle 的 inactive registry，但没
 `config/capability-platform-migration.json` 和 `config/capability-platform-console-coverage.json` 固定。
 新增的 `capability-platform-contracts` 是第 100 个、静态且无 provider 的公共 contract module；校验与 inactive registry
 被隔离为第 101 个、默认 inactive 的治理 module。Phase 2A 再增加静态 `local-client-contracts` 和 inactive
-`local-client-negotiation`，当前共 103 个模块，均已纳入 exactly-once 映射。
+`local-client-negotiation`；Phase 2B 再增加 inactive `capability-install-planner`，当前共 104 个模块，均已纳入 exactly-once 映射。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

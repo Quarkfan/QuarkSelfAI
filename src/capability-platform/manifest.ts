@@ -121,3 +121,16 @@ export interface CapabilityInstallationStateV1 {
   readonly activeOwnerLease: null
   readonly externalWritesEnabled: false
 }
+
+export interface CapabilityLifecycleSnapshotV1 {
+  readonly capabilityId: string
+  readonly version: string
+  readonly artifactDigest: string
+  readonly deviceId: string
+  readonly installation: 'absent' | 'staged' | 'installed'
+  readonly loading: 'unloaded' | 'loaded'
+  readonly authorization: 'unauthorized' | 'authorized'
+  readonly execution: 'stopped' | 'running'
+  readonly effects: 'disabled' | 'recording' | 'enabled'
+  readonly updatedAt: string
+}

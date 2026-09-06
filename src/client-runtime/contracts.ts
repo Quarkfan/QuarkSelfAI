@@ -67,6 +67,37 @@ export interface ClientRuntimeSnapshotV1 {
   readonly externalWritesEnabled: false
 }
 
+export type ArtifactVerificationCheck = 'license' | 'signature' | 'sbom' | 'malware' | 'maintenance' | 'dependencies'
+
+export interface ArtifactVerificationReportV1 {
+  readonly schemaVersion: 1
+  readonly capabilityId: string
+  readonly version: string
+  readonly artifactDigest: string
+  readonly sourceRevision: string
+  readonly policyRevision: string
+  readonly checks: Readonly<Record<ArtifactVerificationCheck, 'pass' | 'warn' | 'fail'>>
+  readonly decision: 'verified' | 'rejected'
+  readonly evaluatedAt: string
+}
+
+export interface InactiveInstallationPlanV1 {
+  readonly schemaVersion: 1
+  readonly planId: string
+  readonly deviceId: string
+  readonly capabilityId: string
+  readonly version: string
+  readonly artifactDigest: string
+  readonly isolation: string
+  readonly lifecycleHandler: string
+  readonly requiredApproval: 'install'
+  readonly targetState: 'installed-inactive'
+  readonly loadAllowed: false
+  readonly runAllowed: false
+  readonly externalWritesEnabled: false
+  readonly createdAt: string
+}
+
 export interface ExecutorDiscoveryProbeV1 {
   readonly executorId: string
   inspect(deviceId: string, now: Date): Promise<ExecutorCapabilityReportV1>
