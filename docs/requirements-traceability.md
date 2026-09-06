@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry provider 与认证应用层，合计 121 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry provider 与认证应用层，合计 122 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -33,6 +33,10 @@ opaque reference 寻址；scope 漂移、secret reference 重用和私钥/公钥
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；
 inactive client cycle 证明真实设备 proof、签名执行器协商、local checkpoint-before-ack、server lease ack 及重连空轮询。它仍没有运行 executor、
 常驻 daemon、网络 connector 或 effect。
+
+已增加 outbound device HTTP adapter：非 loopback endpoint 强制 HTTPS，拒绝 URL credential/redirect，响应限制 256 KiB；设备重连不携带
+浏览器 session。真实宿主 loopback 以四次请求跑通 client cycle 并立即关闭 listener/临时数据库。尚无公网 TLS certificate、identity edge、
+rate limit、常驻连接或 client daemon，因此仍不满足可部署连接完成标准。
 
 设备协议已增加 direct TLS 主通道与 SSH subsystem 备用通道的静态 contract。SSH 只允许客户端主动出站到固定
 `quark-device-v1` subsystem，host key 与 credential 使用本地 opaque reference，禁止 shell、任意 command、port/agent forwarding，

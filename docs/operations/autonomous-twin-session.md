@@ -1077,3 +1077,12 @@
   派生。两端临时 SQLite 集成测试完成真实 proof、唯一 lease、executor negotiation、checkpoint-before-ack 与重连空轮询。
 - client cycle 固定 `executorInvoked=false`、`effectsActive=0`，不 begin run、不启动 listener/daemon、不改变 composition。回滚按 ADR 0120
   删除 cycle 并恢复未激活 V1 contract，无 live 数据或服务需要迁移。
+
+## 2026-09-06 outbound device HTTP transport
+
+- 新增实现统一 device-session port 的 outbound HTTP adapter；生产 endpoint 强制 HTTPS，明文只允许 `127.0.0.1` 显式随机端口测试，拒绝
+  URL credential、query/fragment、redirect 和浏览器 session/cookie。响应正文限制 256 KiB 并在进入 client runtime 前校验最小 shape。
+- 新增无需用户浏览器 session 的 `/v1/device-connect/challenge`，只接受公开 tenant/user/device scope；registered device 的 Ed25519 possession
+  仍是建立 session 的唯一凭据，未知设备只返回既有 bounded rejected code。
+- 沙箱按预期禁止 listener；在宿主精确运行测试后，真实 loopback 完成 challenge/proof/poll/checkpoint-before-ack 共 4 次请求并立即关闭
+  listener、server/client 临时 SQLite。没有公网 bind/TLS credential、常驻 client、executor/effect 或 composition 改动。

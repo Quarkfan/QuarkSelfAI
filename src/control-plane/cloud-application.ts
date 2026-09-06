@@ -52,6 +52,9 @@ export class InactiveCloudControlPlaneApplicationV1 {
     const context = await this.#context(sessionReference)
     return await this.#sessions().issueChallenge({ tenantId: context.tenantId, userId: context.userId, deviceId }, now)
   }
+  async issueDeviceReconnectChallenge(input: { readonly tenantId: string; readonly userId: string; readonly deviceId: string }, now?: Date): Promise<DeviceSessionChallengeV1> {
+    return await this.#sessions().issueChallenge(input, now)
+  }
   async openDeviceSession(proof: DeviceSessionProofV1, now?: Date): Promise<DeviceSessionV1> { return await this.#sessions().openSession(proof, now) }
   async pollDeviceSession(sessionId: string, now?: Date): Promise<DeviceTaskLeaseV1 | null> { return await this.#sessions().poll(sessionId, now) }
   async acknowledgeDeviceLease(sessionId: string, input: { readonly leaseToken: string; readonly taskId: string }, now?: Date): Promise<DeviceTaskLeaseAcknowledgementV1> { return await this.#sessions().acknowledge(sessionId, input, now) }
