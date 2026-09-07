@@ -1672,3 +1672,19 @@
   `sha256:b3adf1220d9228d1fa783cd7d0ea4821423bfe2929f4baa78ad070faae60e66c`。发行包内 admin 完成 install/configure/owner，
   bundled cloud entry 启动后由同一 installed admin `probe-health` 得到 `ready-effects-off`；SIGTERM 后 runtime 归零且 status 回到
   `owner-created-inactive`。service/SSH/effects 保持未激活，临时发行、证书、密码、数据库与 runner 已全部删除。
+
+## 2026-09-07 滴答新建任务回读一致性
+
+- 本轮在三轨中选择“运行可靠性与缺陷闭环”。最近一轮自动巡检处理的是投影语义误判，此后 2026-09-06 已连续建设能力平台与
+  server inactive 能力；当前宿主 LaunchAgent 仍为唯一实例，`runs=333`、最近退出码 0，宿主回环健康 `ok=true`、compat worker、
+  DSH kernel 与 5 条飞书消费者均 ready。新证据是运行日志出现一次滴答任务已返回 taskId、紧接着 CLI 写后核验得到
+  `resource_not_found/task not found`，现有单次回读把可能的最终一致性延迟错误归为整次失败。
+- `DidaTaskCreator.readTaskFromCli` 现在只对同一 projectId/taskId 的明确 404 not-found 做最多 4 次指数退避只读回读，默认间隔
+  250/500/1000 ms；认证、权限、超时和其他错误不重试，超过边界仍失败关闭。真实回读成功前任务仍不算有效，也没有第二次创建、
+  更新或删除动作，因此保持单写者、幂等和写后核验边界。
+- 回归新增“前两次 404、第三次可见”与“401 只调用一次”两条用例；本轮不调用真实滴答写接口、不处理现有任务、不新增依赖、
+  consumer、provider、数据库或 effect，也不改变 DSH/Cordis composition。回滚为恢复单次 `task get` 并删除两条回归用例，
+  不需要数据迁移或外部状态清理。
+- 完整 `npm run check` 通过：主项目 515 项中 502 通过、13 项仅因 sandbox listener 限制跳过，compat 181/181；Lark、DSH、
+  BlackLake 与 server compatibility 通过，recovery、work-domain isolation、assistant continuity、capability evolution strict audit
+  和根协作入口同步门禁通过。工作域路径仍为 101/101 且仅同步本轮治理证据摘要，没有增加未登记耦合。

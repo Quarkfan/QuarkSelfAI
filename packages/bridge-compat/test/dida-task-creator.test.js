@@ -224,6 +224,58 @@ exit 2
   assert.match(await readFile(logPath, "utf8"), /project_1:text_1/);
 });
 
+test("retries bounded task readback when a created task is not immediately visible", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-readback-"));
+  const fakeDida = path.join(dir, "dida");
+  const countPath = path.join(dir, "count");
+  await writeFile(fakeDida, `#!/bin/zsh
+count=0
+[[ -f "${countPath}" ]] && count=$(<"${countPath}")
+(( count += 1 ))
+print -r -- "$count" > "${countPath}"
+if (( count < 3 )); then
+  print -u2 -r -- 'DIDA API 错误 404: {"errorCode":"resource_not_found","errorMessage":"task not found: task_1"}'
+  exit 1
+fi
+print -r -- '{"id":"task_1","projectId":"project_1","kind":"TEXT","status":0,"content":"需要跟进"}'
+`, { mode: 0o755 });
+  const creator = new DidaTaskCreator({
+    didaCli: fakeDida, verifyCreatedTaskKind: true,
+    didaReadbackAttempts: 4, didaReadbackDelayMs: 0,
+  });
+
+  const result = await creator.reconcileCreatedTaskKind({
+    taskId: "task_1", projectId: "project_1", created: true, taskAction: "created",
+    notificationDecision: "silent", materialChangeSummary: "新事项", summary: "需要跟进",
+  });
+
+  assert.equal(result.taskId, "task_1");
+  assert.equal(await readFile(countPath, "utf8"), "3\n");
+});
+
+test("does not retry a non-not-found task readback failure", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-readback-error-"));
+  const fakeDida = path.join(dir, "dida");
+  const countPath = path.join(dir, "count");
+  await writeFile(fakeDida, `#!/bin/zsh
+count=0
+[[ -f "${countPath}" ]] && count=$(<"${countPath}")
+(( count += 1 ))
+print -r -- "$count" > "${countPath}"
+print -u2 -r -- 'DIDA API 错误 401: authentication required'
+exit 1
+`, { mode: 0o755 });
+  const creator = new DidaTaskCreator({
+    didaCli: fakeDida, verifyCreatedTaskKind: true,
+    didaReadbackAttempts: 4, didaReadbackDelayMs: 0,
+  });
+
+  await assert.rejects(() => creator.reconcileCreatedTaskKind({
+    taskId: "task_1", projectId: "project_1", created: true, taskAction: "created",
+  }), /authentication required/);
+  assert.equal(await readFile(countPath, "utf8"), "1\n");
+});
+
 test("cleans only completed tasks returned from the target automation project", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-cleanup-"));
   const fake = path.join(dir, "codex");

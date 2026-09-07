@@ -1,5 +1,6 @@
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { runCodexWithClaudeFallback } from "./cli-failover.js";
 import { run } from "./util.js";
 import { loadBlacklakeCapabilityContext } from "./blacklake-capability-context.js";
@@ -12,6 +13,7 @@ function truncate(value, max) {
 const URGENCY_BY_PRIORITY = { 5: "紧急", 3: "重要", 1: "跟进", 0: "关注" };
 const EXECUTION_FAILURE = /(oauth[^。\n]{0,80}(?:authorization required|login required|token expired|failed|denied)|授权未完成|未授权|无法执行(?:搜索|创建|更新|写入)|未调用[^。]*(?:create_task|update_task|search_task)|mcp[^。]*(?:失败|不可用|未连接|没有连接|连接不上|拒绝|denied|permission)|(?:bash|read|工具)[^。]*(?:权限[^。]*拒绝|permission denied)|额度(?:耗尽|不足)|quota|rate.?limit)/i;
 const CLOSED_NO_ACTION = /(无需(?:进一步)?行动|无需(?:继续)?(?:处理|跟进)|事项已收敛|已经收敛|最终确认维持现状|已有明确结论[^。]*(?:无需|不需要)|下一步\s*[:：]?\s*(?:无|知悉即可|仅需知悉|持续关注即可)|只是(?:信息|通知|资料|参考|状态)同步|仅供参考)/;
+const DIDA_READBACK_NOT_FOUND = /(?:resource_not_found|task not found)/i;
 
 export function normalizeTaskResult(task) {
   const narrative = [
@@ -308,13 +310,26 @@ ${formatContext(contextMessages, message.message_id, this.config.allowedOpenId)}
   }
 
   async readTaskFromCli(projectId, taskId) {
-    const result = await run(this.config.didaCli || "dida", ["task", "get", projectId, taskId, "--json"], {
-      timeoutMs: this.config.didaCliTimeoutMs || 30000,
-    });
-    if (result.code !== 0 || result.timedOut) {
-      throw new Error(`dida CLI 无法核验新建任务：${(result.stderr || result.stdout).trim().slice(-1000)}`);
+    const attempts = Number.isInteger(this.config.didaReadbackAttempts)
+      ? Math.max(1, Math.min(5, this.config.didaReadbackAttempts))
+      : 4;
+    const baseDelayMs = Number.isInteger(this.config.didaReadbackDelayMs)
+      ? Math.max(0, Math.min(2000, this.config.didaReadbackDelayMs))
+      : 250;
+    let result;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      result = await run(this.config.didaCli || "dida", ["task", "get", projectId, taskId, "--json"], {
+        timeoutMs: this.config.didaCliTimeoutMs || 30000,
+      });
+      if (result.code === 0 && !result.timedOut) return JSON.parse(result.stdout);
+      const detail = (result.stderr || result.stdout).trim();
+      const retryable = !result.timedOut && DIDA_READBACK_NOT_FOUND.test(detail);
+      if (!retryable || attempt === attempts) {
+        throw new Error(`dida CLI 无法核验新建任务：${detail.slice(-1000)}`);
+      }
+      await delay(baseDelayMs * (2 ** (attempt - 1)));
     }
-    return JSON.parse(result.stdout);
+    throw new Error("dida CLI 无法核验新建任务。");
   }
 
   async deleteTaskFromCli(projectId, taskId) {
