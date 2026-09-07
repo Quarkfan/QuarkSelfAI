@@ -1688,3 +1688,6 @@
 - 完整 `npm run check` 通过：主项目 515 项中 502 通过、13 项仅因 sandbox listener 限制跳过，compat 181/181；Lark、DSH、
   BlackLake 与 server compatibility 通过，recovery、work-domain isolation、assistant continuity、capability evolution strict audit
   和根协作入口同步门禁通过。工作域路径仍为 101/101 且仅同步本轮治理证据摘要，没有增加未登记耦合。
+- 实现提交 `9ad25f3de3b13dc9cb6e19e2ead7b7681b7cc364` 已推送 `origin/main`。确认控制队列为 0、无活动 Codex/Claude/小维
+  调研后重启同一个 `com.quarkfan.quark-self-ai` LaunchAgent；`runs` 从 333 增至 334，父进程 PID 为 54368，最近退出码 0，
+  宿主健康 `ok=true`，compat worker、DSH kernel 和 5 条飞书消费者均 ready。2 条原有退避待处理消息保留在持久状态中。
