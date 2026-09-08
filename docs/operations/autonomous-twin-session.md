@@ -1700,6 +1700,11 @@
 - 账本 schema 现要求每个 run/report 写入 `reliability`、`measurable-enhancement` 或 `strategic-opportunity`，并增加最多
   12 轮的脱敏 history。只读 observer 从最近五个有效记录派生各轨次数、覆盖轨数、`insufficient-data/balanced/skewed`
   状态和下一轨偏好；不足五轮不会宣称覆盖健康，偏好不覆盖持续关键故障。
-- 单测覆盖双轨 balanced、单轨 skewed、下一轨选择、缺失账本降级与 prompt 不泄露。本轮不新增依赖、consumer、provider、
-  scheduler、数据库或 effect，不改变 DSH/Cordis composition，也不需要重启守护进程。回滚为移除 track/history 与派生统计，
-  保留原有报告读取；没有外部状态或数据迁移。
+- 单测覆盖双轨 balanced、单轨 skewed、下一轨选择、缺失账本降级与 prompt 不泄露。完整 `npm run check` 通过：主项目
+  516 项中 503 通过、13 项仅因 sandbox listener 限制跳过，compat 181/181；Lark、DSH、BlackLake、server、recovery、
+  work-domain 101/101、assistant continuity、capability evolution installed strict audit 与根同步门禁通过。额外运行的
+  `compat:live-bridge` 仍暴露既有 compatibility takeover 基线漂移；本轮未修改该 provider，也未机械更新哈希放行。
+- 实现提交 `e0194c6dec5c4119c8cd66afd7f794f6cfe34618` 已推送 `origin/main`。本轮不新增依赖、consumer、provider、scheduler、
+  数据库或 effect，不改变 DSH/Cordis composition。确认控制队列、Codex/Claude/小维调研及对外跟进为 0 后重启同一个
+  LaunchAgent；`runs` 从 334 增至 335、父 PID 为 4058、最近退出码 0，宿主回读 `ok=true`，compat worker、DSH kernel
+  与 5 条飞书消费者 ready；1 条既有消息重试项按持久状态保留。回滚为移除 track/history 与派生统计，不涉及外部数据迁移。
