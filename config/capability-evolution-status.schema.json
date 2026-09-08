@@ -3,30 +3,32 @@
   "title": "QuarkSelfAI capability evolution console ledger",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "latestRun", "reports"],
+  "required": ["version", "latestRun", "history", "reports"],
   "properties": {
     "version": { "const": 1 },
     "latestRun": { "$ref": "#/$defs/run" },
+    "history": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/run" } },
     "reports": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/report" } }
   },
   "$defs": {
     "run": {
       "type": "object", "additionalProperties": false,
-      "required": ["title", "startedAt", "outcome", "summary"],
+      "required": ["title", "track", "startedAt", "outcome", "summary"],
       "properties": {
-        "title": { "type": "string", "maxLength": 120 }, "startedAt": { "type": "string", "format": "date-time" },
+        "title": { "type": "string", "maxLength": 120 }, "track": { "$ref": "#/$defs/track" }, "startedAt": { "type": "string", "format": "date-time" },
         "completedAt": { "type": "string", "format": "date-time" }, "outcome": { "enum": ["running", "no-change", "upgraded", "candidate", "failed"] },
         "summary": { "type": "string", "maxLength": 320 }, "taskId": { "type": "string", "maxLength": 100 }
       }
     },
     "report": {
       "type": "object", "additionalProperties": false,
-      "required": ["title", "summary", "recordedAt", "outcome"],
+      "required": ["title", "track", "summary", "recordedAt", "outcome"],
       "properties": {
-        "title": { "type": "string", "maxLength": 120 }, "summary": { "type": "string", "maxLength": 320 },
+        "title": { "type": "string", "maxLength": 120 }, "track": { "$ref": "#/$defs/track" }, "summary": { "type": "string", "maxLength": 320 },
         "recordedAt": { "type": "string", "format": "date-time" }, "outcome": { "enum": ["upgraded", "candidate", "failed"] },
         "commit": { "type": "string", "maxLength": 64 }, "taskId": { "type": "string", "maxLength": 100 }
       }
-    }
+    },
+    "track": { "enum": ["reliability", "measurable-enhancement", "strategic-opportunity"] }
   }
 }

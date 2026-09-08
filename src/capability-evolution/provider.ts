@@ -3,8 +3,10 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 export type CapabilityEvolutionOutcome = 'running' | 'no-change' | 'upgraded' | 'candidate' | 'failed'
+export type CapabilityEvolutionTrack = 'reliability' | 'measurable-enhancement' | 'strategic-opportunity'
 
 export interface CapabilityEvolutionReport {
+  readonly track?: CapabilityEvolutionTrack
   readonly title: string
   readonly summary: string
   readonly recordedAt: string
@@ -14,6 +16,7 @@ export interface CapabilityEvolutionReport {
 }
 
 export interface CapabilityEvolutionRun {
+  readonly track?: CapabilityEvolutionTrack
   readonly title: string
   readonly startedAt: string
   readonly completedAt?: string
@@ -34,8 +37,18 @@ export interface CapabilityEvolutionStatus {
   readonly scheduleLabel?: string
   readonly workspace?: string
   readonly latestRun?: CapabilityEvolutionRun
+  readonly trajectory: CapabilityEvolutionTrajectory
   readonly reports: readonly CapabilityEvolutionReport[]
   readonly error?: string
+}
+
+export interface CapabilityEvolutionTrajectory {
+  readonly windowSize: 5
+  readonly trackedRuns: number
+  readonly distinctTracks: number
+  readonly state: 'insufficient-data' | 'balanced' | 'skewed'
+  readonly counts: Readonly<Record<CapabilityEvolutionTrack, number>>
+  readonly nextTrackPreference?: CapabilityEvolutionTrack
 }
 
 export interface CapabilityEvolutionProvider { inspect(): Promise<CapabilityEvolutionStatus> }
@@ -92,6 +105,12 @@ function timestamp(value: unknown): string | undefined {
   return candidate
 }
 
+function track(value: unknown): CapabilityEvolutionTrack | undefined {
+  return ['reliability', 'measurable-enhancement', 'strategic-opportunity'].includes(String(value))
+    ? value as CapabilityEvolutionTrack
+    : undefined
+}
+
 function run(value: unknown): CapabilityEvolutionRun | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   const item = value as Record<string, unknown>
@@ -102,7 +121,8 @@ function run(value: unknown): CapabilityEvolutionRun | undefined {
   if (!title || !startedAt || !summary || !['running', 'no-change', 'upgraded', 'candidate', 'failed'].includes(String(outcome))) return undefined
   const completedAt = timestamp(item.completedAt)
   const taskId = short(item.taskId, 100)
-  return { title, startedAt, outcome: outcome as CapabilityEvolutionOutcome, summary, ...(completedAt ? { completedAt } : {}), ...(taskId ? { taskId } : {}) }
+  const runTrack = track(item.track)
+  return { title, startedAt, outcome: outcome as CapabilityEvolutionOutcome, summary, ...(runTrack ? { track: runTrack } : {}), ...(completedAt ? { completedAt } : {}), ...(taskId ? { taskId } : {}) }
 }
 
 function report(value: unknown): CapabilityEvolutionReport | undefined {
@@ -115,17 +135,31 @@ function report(value: unknown): CapabilityEvolutionReport | undefined {
   if (!title || !summary || !recordedAt || !['upgraded', 'candidate', 'failed'].includes(String(outcome))) return undefined
   const commit = short(item.commit, 64)
   const taskId = short(item.taskId, 100)
-  return { title, summary, recordedAt, outcome: outcome as CapabilityEvolutionReport['outcome'], ...(commit ? { commit } : {}), ...(taskId ? { taskId } : {}) }
+  const reportTrack = track(item.track)
+  return { title, summary, recordedAt, outcome: outcome as CapabilityEvolutionReport['outcome'], ...(reportTrack ? { track: reportTrack } : {}), ...(commit ? { commit } : {}), ...(taskId ? { taskId } : {}) }
 }
 
-async function readLedger(path: string): Promise<{ latestRun?: CapabilityEvolutionRun; reports: readonly CapabilityEvolutionReport[] }> {
+function trajectory(history: readonly CapabilityEvolutionRun[]): CapabilityEvolutionTrajectory {
+  const tracks: readonly CapabilityEvolutionTrack[] = ['reliability', 'measurable-enhancement', 'strategic-opportunity']
+  const window = history.filter(item => item.track !== undefined).toSorted((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt)).slice(0, 5)
+  const counts = Object.freeze(Object.fromEntries(tracks.map(item => [item, window.filter(run => run.track === item).length]))) as Readonly<Record<CapabilityEvolutionTrack, number>>
+  const distinctTracks = tracks.filter(item => counts[item] > 0).length
+  const state = window.length < 5 ? 'insufficient-data' : distinctTracks >= 2 ? 'balanced' : 'skewed'
+  const minimum = Math.min(...tracks.map(item => counts[item]))
+  const lastTrack = window[0]?.track
+  const nextTrackPreference = tracks.find(item => counts[item] === minimum && item !== lastTrack) ?? tracks.find(item => counts[item] === minimum)
+  return { windowSize: 5, trackedRuns: window.length, distinctTracks, state, counts, ...(nextTrackPreference ? { nextTrackPreference } : {}) }
+}
+
+async function readLedger(path: string): Promise<{ latestRun?: CapabilityEvolutionRun; trajectory: CapabilityEvolutionTrajectory; reports: readonly CapabilityEvolutionReport[] }> {
   try {
     const parsed = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
-    if (parsed.version !== 1) return { reports: [] }
+    if (parsed.version !== 1) return { trajectory: trajectory([]), reports: [] }
     const latestRun = run(parsed.latestRun)
+    const history = Array.isArray(parsed.history) ? parsed.history.map(run).filter(item => item !== undefined).slice(0, 12) : []
     const reports = Array.isArray(parsed.reports) ? parsed.reports.map(report).filter(item => item !== undefined).slice(0, 12) : []
-    return { ...(latestRun ? { latestRun } : {}), reports }
-  } catch { return { reports: [] } }
+    return { ...(latestRun ? { latestRun } : {}), trajectory: trajectory(history), reports }
+  } catch { return { trajectory: trajectory([]), reports: [] } }
 }
 
 export class FileCapabilityEvolutionProvider implements CapabilityEvolutionProvider {
@@ -142,14 +176,14 @@ export class FileCapabilityEvolutionProvider implements CapabilityEvolutionProvi
     const ledger = await readLedger(this.#statusPath)
     let text: string
     try { text = await readFile(this.#automationPath, 'utf8') } catch {
-      return { configured: false, state: 'missing', automationId: 'quarkselfai', name: 'QuarkSelfAI 能力进化巡检', reports: ledger.reports, ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
+      return { configured: false, state: 'missing', automationId: 'quarkselfai', name: 'QuarkSelfAI 能力进化巡检', trajectory: ledger.trajectory, reports: ledger.reports, ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
     }
     const id = tomlString(text, 'id')
     const name = tomlString(text, 'name')
     const status = tomlString(text, 'status')
     const mode = tomlString(text, 'kind')
     if (!id || !name || !status || !mode) {
-      return { configured: false, state: 'invalid', automationId: id ?? 'quarkselfai', name: name ?? '能力进化巡检', reports: ledger.reports, error: '自动化配置无法安全解析', ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
+      return { configured: false, state: 'invalid', automationId: id ?? 'quarkselfai', name: name ?? '能力进化巡检', trajectory: ledger.trajectory, reports: ledger.reports, error: '自动化配置无法安全解析', ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
     }
     const schedule = tomlString(text, 'rrule')
     const cadence = scheduleLabel(schedule)
@@ -168,6 +202,7 @@ export class FileCapabilityEvolutionProvider implements CapabilityEvolutionProvi
       ...(cadence ? { scheduleLabel: cadence } : {}),
       ...(workspace ? { workspace } : {}),
       ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}),
+      trajectory: ledger.trajectory,
       reports: ledger.reports,
     }
   }

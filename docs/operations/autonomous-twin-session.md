@@ -1691,3 +1691,15 @@
 - 实现提交 `9ad25f3de3b13dc9cb6e19e2ead7b7681b7cc364` 已推送 `origin/main`。确认控制队列为 0、无活动 Codex/Claude/小维
   调研后重启同一个 `com.quarkfan.quark-self-ai` LaunchAgent；`runs` 从 333 增至 334，父进程 PID 为 54368，最近退出码 0，
   宿主健康 `ok=true`，compat worker、DSH kernel 和 5 条飞书消费者均 ready。2 条原有退避待处理消息保留在持久状态中。
+
+## 2026-09-08 能力进化三轨账本可测化
+
+- 本轮选择“现有能力的可测增强”。最近四次自动巡检均是可靠性与缺陷闭环；现网 LaunchAgent 单实例、最近退出码 0，
+  `/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条飞书消费者 ready，没有关键故障抢占优先级。原账本只有标题、
+  结果和报告，三轨轮换只能靠人工读文字，无法识别连续偏科。
+- 账本 schema 现要求每个 run/report 写入 `reliability`、`measurable-enhancement` 或 `strategic-opportunity`，并增加最多
+  12 轮的脱敏 history。只读 observer 从最近五个有效记录派生各轨次数、覆盖轨数、`insufficient-data/balanced/skewed`
+  状态和下一轨偏好；不足五轮不会宣称覆盖健康，偏好不覆盖持续关键故障。
+- 单测覆盖双轨 balanced、单轨 skewed、下一轨选择、缺失账本降级与 prompt 不泄露。本轮不新增依赖、consumer、provider、
+  scheduler、数据库或 effect，不改变 DSH/Cordis composition，也不需要重启守护进程。回滚为移除 track/history 与派生统计，
+  保留原有报告读取；没有外部状态或数据迁移。
