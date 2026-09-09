@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec 与 registered-tenant inactive composition，合计 136 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec、registered-tenant inactive composition 与会前简报候选，合计 138 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -249,6 +249,7 @@ inactive 和 migration-only；该证据证明迁移目标无漏项，但 `manife
 | 自然语言增加降噪策略，编译、样本模拟、确认后启用和回滚 | natural-language-policy | 受限 DSL、覆盖率/紧急保护、稳定 proposal；现网 Card 2.0 批准；隔离 SQLite 激活与回滚演练 | complete |
 | 从长期协作中挖掘模式，每日自我回顾、自主决定是否调整并发送简报 | collaboration-learning, natural-language-policy | 每日一次脱敏质量简报；同日幂等；8 条/85% 安全弱信号自动 guidance 校准；20/8/75% 高影响策略门槛；@、特别关注、紧急、审批和调研保护；每周单一建议、精确 revision 批准测试 | complete：兼容现网与 DSH-native 使用同一安全边界，低风险提示可自行调整，高影响变化仍逐项批准 |
 | 助手可主动聊天，通过少量高价值问题了解本人并持续沉淀 | proactive-owner-dialogue, collaboration-learning | Claude 主判断、Codex 兜底；单问题、价值阈值、48 小时最短冷却、72 小时回答窗口、工作时段、未答不追问；Card 2.0 自然输入；本人回答进入可纠正的 owner-stated insight | implemented：现网兼容链路先运行；切换 DSH-native 时随 collaboration-learning 一并迁移，行为变化仍受原确认门禁 |
+| 会前主动汇集日历、责任、任务和资料，减少临时找上下文 | meeting-briefing-planner, capability-evolution | ADR 0170；闭合元数据输入、15 分钟至 24 小时责任门禁、opaque revision 幂等、来源数量上限、原始字段与 activation-shaped 输入失败关闭；`pre-meeting-briefing-pilot-01` revision 1 授权单 | candidate：纯规划器保持 runtime-inactive 且不读取真实来源、不写简报、不通知；静默只读影子试运行待 owner 对精确 revision 批准，owner 可见交付须后续另批 |
 | 每日记录本人真实工作，并可按任意时间范围生成总结 | work-journal, work-journal-agent-compiler | ADR 0089；北京时间次日闭账；飞书本人发言 + `@我` + 相关会话上下文三层完整分页；注意力/表情补充；日历/滴答/执行器/Jira/GitLab/本地 Git 多源合并；401/403/429 脱敏缺口分类；稳定日期幂等键；SQLite/PG 共用 signal store；总控只读区间查询；控制台最近 31 日视图 | implemented：从 2026-09-02 起逐日积累；当天、启用前历史和来源缺口在查询时有界只读补齐，不伪造完整覆盖；认证和权限缺口只报告、不自动修复凭证 |
 | 本人指定群作为低打扰知识关注源，并把可复用问题链沉淀到助手知识库 | conversation-attention compatibility profile, assistant knowledge | 显式 `purpose=knowledge`；复用唯一消费者与 30 分钟恢复扫描；单群来源不自动建单/即时通知/回复；完整翻页后以当前需求、仓库、分支和运行证据复核 | implemented：全栈开发学习交流群已接入；首次 217 条/5 页完整读取并沉淀 release、feature 重建、i18n 与非代码交付四类线索；长期 profile 待原生 attention policy 迁移 |
 | 可自主检索和组装开源能力，并持续看到真实成长和迭代 | capability-evolution | 每工作日独立 Codex 任务；三轨轮换与连续主题降权；每轮结构化 track 与最多 12 轮脱敏 history；observer 派生五轮覆盖、偏斜和下一轨偏好；有界战略探索/可逆实验/不激活原型；每轮保留内部进展或下一条成长跑道；左侧可见且标题唯一；禁止任务内再次查看自身自动化导致 prompt 重复渲染；控制台只读展示真实自动化、最近巡检和脱敏升级/候选账本；允许高影响技术变化或更多助理职责的精确 proposal | complete：高频探索不强迫制造功能或空报告，候选不能先执行，精确批准后不重复询问同一范围 |

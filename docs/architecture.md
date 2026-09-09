@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 136 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 138 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -383,6 +383,11 @@ Provider 的统一文件边界；已有路径先解析真实路径，新建路�
 candidate 分开。模型负责提出可解释候选，纯函数门禁负责隐私血缘、不同任务证据、目标执行器覆盖、触发质量、效果
 回归以及安全/审批零违规；结果最多到 `eligible-for-review`。它没有调度、存储、外部写入或 Cordis 挂载，不会与
 现有 Codex 巡检、知识库、DSH 会话或 Skill 安装链路形成第二真源，详见 [ADR 0087](adr/0087-evidence-compiled-skill-evolution.md)。
+
+进取型职责候选 `meeting-briefing-planner` 是另一个默认不激活的纯 policy seam。它只用事件时间、本人责任标记和来源
+可用状态/有界数量决定是否进入影子评估，输出不含事件标识或正文，并把读取、持久化、通知和外部 effect 全部固定关闭。
+真实只读影子试运行仍由独立授权单控制，owner 可见交付不包含在首轮候选中，详见
+[ADR 0170](adr/0170-inactive-pre-meeting-briefing-planner.md)。
 
 本地文件不是待同步到服务端的附件，而是本机 executor 在当前任务工作区内直接使用的能力。飞书消息只携带
 意图、审批和结果摘要；除非常东旭针对具体文件明确批准上传，否则不得把文件正文、目录清单或绝对路径投影

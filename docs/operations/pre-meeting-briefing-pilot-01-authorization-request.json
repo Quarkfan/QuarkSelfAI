@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "requestId": "pre-meeting-briefing-pilot-01",
+  "revision": 1,
+  "status": "awaiting-exact-owner-approval",
+  "baseRevision": "bc1a4051af2f017669a10172ba2b74248d83e4c8",
+  "purpose": "Evaluate whether a private, read-only pre-meeting brief reduces repeated context gathering without creating messages, tasks, calendar changes or external commitments.",
+  "evidence": {
+    "window": "2026-08-25/2026-09-09",
+    "boundedArtifactMatches": 58,
+    "interpretation": "The local processing ledger repeatedly contains meeting-preparation semantics; the count includes retries, monitors and negative examples and is not a unique-meeting count.",
+    "existingGap": "The product can identify work and create a retrospective journal, but has no pre-meeting context synthesis responsibility."
+  },
+  "dataSources": [
+    "the owner's upcoming accepted or organized Lark calendar events through the existing read-only calendar capability",
+    "bounded context already available to the single Feishu consumer for the exact meeting or linked matter",
+    "existing assistant-owned task projection metadata and immutable work-journal records",
+    "explicitly linked documents and assistant knowledge already within the current workspace/read permissions"
+  ],
+  "trigger": {
+    "window": "15 minutes to 24 hours before an event",
+    "responsibility": "owner is organizer or has an explicit direct responsibility",
+    "minimumCoverage": "calendar plus at least one bounded contextual source",
+    "deduplication": "one local shadow draft per opaque event revision digest"
+  },
+  "allowedActions": [
+    "add a runtime-inactive meeting-briefing workflow and read-only adapters that reuse existing calendar, context, task and journal boundaries",
+    "run a 10-working-day or 8-eligible-meeting shadow pilot, whichever comes first",
+    "write only a private local redacted draft, source coverage, reason codes and evaluation counters",
+    "use existing repository and lark-cli dependencies only; install no third-party code",
+    "commit and push the implementation only after deterministic gates and the full repository check pass"
+  ],
+  "explicitExclusions": [
+    "send a Feishu message or any other notification, even to the owner",
+    "create or update a calendar event, task, document or external record",
+    "contact an attendee, reply in a chat, call an external research assistant or make a commitment",
+    "read unrelated conversations, entire drives or unlinked files",
+    "store raw message, document or calendar bodies in the capability ledger",
+    "add a scheduler, event consumer, provider graph, database owner or external write effect",
+    "change DSH/Cordis composition, credentials, permissions, runtime dependencies or the active LaunchAgent"
+  ],
+  "evaluation": {
+    "success": [
+      "at least 80 percent of eligible meetings produce a draft with calendar plus one contextual source",
+      "zero unrelated-source reads, raw-content persistence, duplicate revisions, notifications or external writes",
+      "manual review rates at least 70 percent of sampled drafts as materially reducing context gathering"
+    ],
+    "failure": [
+      "any privacy, approval, source-scope, deduplication or external-effect violation",
+      "more than 30 percent low-value or misleading drafts",
+      "source availability is insufficient to evaluate eight meetings within 10 working days"
+    ]
+  },
+  "notificationPolicy": "Silent for the entire revision 1 shadow pilot. Any owner-visible delivery requires a new revision and separate approval.",
+  "perInstanceConfirmation": "Every attendee reply, calendar or task mutation, document write, external research call and external commitment remains individually confirmed and is not authorized by this pilot.",
+  "compatibility": {
+    "local": "reuse the current local-first read boundaries and SQLite-backed assistant state without a new writer",
+    "server": "keep local context unresolved on the server; only bounded counters and digests may be portable",
+    "singleOwner": "reuse the existing scheduler and single Feishu consumer; create no second consumer or writer"
+  },
+  "rollback": {
+    "method": "Disable the inactive pilot flag, remove the local shadow drafts and counters created by the exact pilot namespace, then revert the implementation commit.",
+    "externalCleanupRequired": false,
+    "serviceRestartRequired": false
+  },
+  "notDoingCost": "Meeting preparation remains a repeated manual context-gathering task and important decisions or open questions may be reconstructed late.",
+  "approvalPhrase": "批准 pre-meeting-briefing-pilot-01 revision 1，基于 bc1a4051af2f017669a10172ba2b74248d83e4c8，仅执行静默只读影子试运行。"
+}
