@@ -1708,3 +1708,26 @@
   数据库或 effect，不改变 DSH/Cordis composition。确认控制队列、Codex/Claude/小维调研及对外跟进为 0 后重启同一个
   LaunchAgent；`runs` 从 334 增至 335、父 PID 为 4058、最近退出码 0，宿主回读 `ok=true`，compat worker、DSH kernel
   与 5 条飞书消费者 ready；1 条既有消息重试项按持久状态保留。回滚为移除 track/history 与派生统计，不涉及外部数据迁移。
+
+## 2026-09-09 能力进化会前简报接管候选
+
+- 本轮选择 `strategic-opportunity`。最近五轮为 4 次 reliability + 1 次 measurable-enhancement，observer 建议下一轨为
+  strategic-opportunity；宿主 LaunchAgent 保持单实例 running、最近退出码 0，`/api/health` 为 `ok=true`，compat worker、DSH
+  kernel 与 5 条事件能力 ready，没有关键可靠性故障抢占。2026-08-25 至 2026-09-09 的本地脱敏处理产物中有 58 个文件命中
+  “会议准备/会前”语义；该数包含重试、监控和负样本，只证明重复主题，不当作独立会议数量。
+- 比较了继续手工准备、只做日历提醒、直接自动发送完整材料和“先做静默只读影子简报”四条路径。前两者不能闭合跨来源上下文，
+  直接发送在无精度证据时会扩大读取/通知风险，因此选择第四条作为高价值候选。`meeting-briefing-planner` 仅消费合成元数据与
+  有界来源计数，要求本人组织或有明确责任、会议在未来 15 分钟至 24 小时且至少存在日历 + 一个上下文来源；输出只保留 opaque
+  revision digest、计划时间和固定 effects-off 边界。
+- ADR 0170 与 `pre-meeting-briefing-pilot-01` revision 1 授权单固定了 10 个工作日或 8 个合格会议的静默影子范围。批准前不读取
+  真实日历/消息、不生成或持久化影子简报、不调度、不通知；revision 1 即使获批也不允许 owner 可见发送、日程/任务/文档写入、
+  联系参会人、外部调研或承诺。owner 可见交付必须以后续独立 revision 再决策。实现不新增第三方依赖、consumer、provider、
+  scheduler、database writer 或 effect，也不改变 DSH/Cordis 与现网 LaunchAgent。
+- 合成规划器测试 4/4，capability Offer/候选与平台设计相关测试 9/9；完整 `npm run check` 通过：主项目 520 项中 507 通过、
+  13 项仅因 sandbox listener 限制跳过，compat 181/181。架构为 138 modules、123 assets、23/23 effects implemented、0/23 active；
+  Lark、DSH、server 和 reference compatibility，recovery、assistant continuity、capability evolution installed strict 及根入口同步通过。
+- strict work-domain 初次检查发现昨日文档提交后留下的 evidence digest 基线陈旧；当前 101 个路径、路径 digest 与 `HEAD` 匹配，
+  无新路径、未分类或歧义，更新为当前已提交内容摘要后 strict 通过。`compat:live-bridge` 仍如实保留既有 provider 审计哈希漂移，
+  本轮未修改 compatibility provider 或其基线。候选实现提交为 `5a0cbc9`；回滚为撤销该提交并移除候选 ledger 记录，无外部状态清理。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。未决事项只有 owner 是否批准 `pre-meeting-briefing-pilot-01` revision 1 的静默只读影子试运行。
