@@ -493,6 +493,11 @@ Skill、调研决策与责任归属仍由模型和实时能力快照决定，安
 现网迁移 composition 只注入一个读取 compatibility 状态快照的窄 evidence provider；调度、不可变日记录、失败退避和
 查询契约仍归原生 `work-journal` 所有。迁移完成后替换 evidence provider，不移动账本真源，也不保留第二个定时器。
 
+compatibility handoff 工具只读取冻结快照和同目录配置。目标原生 workflow 若要求 project scope 与 durable owner
+authorization，审计必须从 compatibility 配置解析精确资源标识，并复用仓库已登记的同一授权 revision；缺失、错配或
+未来授权全部失败关闭。公开审计结果只包含状态计数、workflow digest 与资源标识短哈希，不输出原始 projectId 或正文。
+这使 handoff dry-run 与未来 apply 使用同一内容寻址输入，但不会执行任务写入、启动原生 workflow 或改变 effect owner。
+
 编译器把现有事项证据与飞书、日历、滴答、执行会话、Jira、GitLab、本地 Git 的只读核验合并为事项级记录。Jira/GitLab
 先由固定主机、无写接口的参考项目凭证适配器产生有界摘要，避免模型漏用已有登录态；Claude Code 首选，只有基础设施错误
 才进入 Codex 只读兜底；任一来源失败只降低自身覆盖状态。总控通过本地控制面的只读区间查询

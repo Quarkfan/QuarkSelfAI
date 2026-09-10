@@ -1731,3 +1731,23 @@
   本轮未修改 compatibility provider 或其基线。候选实现提交为 `5a0cbc9`；回滚为撤销该提交并移除候选 ledger 记录，无外部状态清理。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。未决事项只有 owner 是否批准 `pre-meeting-briefing-pilot-01` revision 1 的静默只读影子试运行。
+
+## 2026-09-10 能力进化跟进交接审计修复
+
+- 本轮选择 `reliability`。滚动五轮已覆盖 reliability、measurable-enhancement 与 strategic-opportunity，且上一轮是会前简报
+  战略候选；宿主 LaunchAgent 仍为单实例、最近退出码 0，`/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条
+  飞书事件能力 ready。日志中的飞书 DNS 抖动均由独立来源保留并恢复，没有再次终止宿主；会前简报候选仍待精确批准，未扩大执行。
+- 只读运行现有 handoff 门禁时，`audit:followup-handoff` 稳定报 `followup projectId is required`。根因是 2026-08-24 原生
+  followup workflow 增加精确 project scope 与 durable task-projection owner authorization 后，migration primitive 和单测已更新，
+  但 CLI 审计入口仍只传时间与重试参数；因此切换前无法从真实 compatibility 冻结快照形成可验证 handoff。
+- 审计入口现从同目录 compatibility 配置读取 `followupProjectId`，携带 `owner-policy:dida-followup-projection:v1` 的既有 revision 1
+  授权证据，并只输出 projectId 短哈希、计数与 workflow digest。缺少 projectId 继续失败关闭；没有执行 apply、任务写入、外联、
+  workflow 启动或 effect owner 切换。新增 CLI 级回归同时证明原始 projectId 不进入 stdout。
+- 定向 followup 回归 6/6；真实冻结快照回读为 1 个 review workflow、0 个 outreach、0 个 awaiting approval/reply、0 个 failure。
+  完整 `npm run check` 通过：主项目 521 项中 508 通过、13 项仅因 sandbox listener 限制跳过，compat 181/181；架构仍为
+  138 modules、123 assets、23/23 effects implemented、0/23 active。Lark、DSH、BlackLake、server compatibility，recovery、
+  work-domain 101/101、assistant continuity、capability evolution installed strict 与根入口同步门禁均通过。
+- 实现提交 `1e788f8`。变更只影响只读迁移审计脚本和测试，不进入运行中的 daemon composition，因此无需重启 LaunchAgent；
+  回滚为撤销该提交，compatibility 持久状态与现网消费者不需要迁移或清理。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。下一条成长跑道是把其余 handoff CLI 的配置到授权映射纳入统一、可测的只读门禁。
