@@ -17,11 +17,13 @@ test('followup handoff audit supplies the durable projection grant from compat c
     assert.equal(result.code, 0, result.stderr)
     const report = JSON.parse(result.stdout) as Record<string, unknown>
     assert.equal(report.mode, 'read-only')
+    assert.match(String(report.statePathHash), /^[a-f0-9]{16}$/)
     assert.equal(report.workflows, 1)
     assert.equal(report.reviewCheckpoint, 1)
     assert.match(String(report.projectIdHash), /^[a-f0-9]{16}$/)
     assert.match(String(report.digest), /^[a-f0-9]{64}$/)
     assert.equal(result.stdout.includes('synthetic-followup'), false)
+    assert.equal(result.stdout.includes(directory), false)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
