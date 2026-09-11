@@ -118,6 +118,9 @@
 - compatibility handoff 审计是切换前安全门禁。凡目标原生 workflow 需要资源 scope 或 durable owner authorization，审计入口
   必须从当前 compatibility 配置恢复同一目标，并携带仓库已登记的精确授权证据；缺少任一字段即失败关闭。公开回执只保留
   计数、内容摘要和资源标识哈希，不能输出 projectId、任务正文、联系人或授权外的新写入能力。
+- workflow handoff CLI 必须通过 `compat-handoff-audit-config` 统一恢复 compatibility 配置、资源 scope 与既有 owner grant；
+  禁止各入口复制授权常量或把绝对 state path 写入公开回执。state path、project 和 agent identity 只允许输出固定长度哈希，
+  且合成 CLI 回归必须覆盖全部 handoff 入口的失败关闭与脱敏边界。
 - 执行器兜底必须保持能力与会话语义：native 普通 durable action 使用 Claude Code → DSH native → Codex；当前本人私聊总控延续原 Codex 会话，只有 Codex 与 Claude Code 都发生基础设施故障时才使用隔离的 DSH headless 兜底。明确指定的 Codex session、结构化滴答写入和需要原 provider 会话连续性的任务不得静默切换到 DSH。DSH headless 使用独立 `DSH_HOME`，不得与内嵌 Web profile 并发写同一 session 存储。
 - 主动通知必须遵守 `docs/operations/autonomous-twin-session.md` 的降噪门禁：瞬时基础设施故障静默、恢复只对应已通知故障、普通消息与简报限于 08:00–20:00、超期汇总限于 09:00–19:00 且任务级 24 小时去重；本人手工小维会话不镜像到控制会话。
 - 已批准追问的回复轮询是独立、可恢复的读取来源；单次网络、DNS、超时或飞书读取失败必须保留待处理项并记录脱敏故障，不得以未捕获异常终止 compatibility host 或其他消费者。后续成功读取时清除该来源故障并继续原事项。

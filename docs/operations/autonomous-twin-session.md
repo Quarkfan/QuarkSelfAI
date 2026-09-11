@@ -1751,3 +1751,21 @@
   回滚为撤销该提交，compatibility 持久状态与现网消费者不需要迁移或清理。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一条成长跑道是把其余 handoff CLI 的配置到授权映射纳入统一、可测的只读门禁。
+
+## 2026-09-11 能力进化交接审计统一门禁
+
+- 本轮选择 `measurable-enhancement`。滚动五轮已覆盖三轨，上一轮为 reliability；宿主 LaunchAgent 仍为唯一实例，`runs=335`、
+  最近退出码 0，宿主 `/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。沙箱内 loopback/`ps` 受限后
+  已按既有规则用宿主只读证据复核，没有误判网络故障。已完成任务清理保留 2 次超时且未达通知阈值，未扩展本轮主题。
+- 新增 `compat-handoff-audit-config`，把 Dida maintenance、session lifecycle、Xiaowei research 与 followup 的 compatibility 配置解析、
+  精确 resource scope 和既有 owner grant revision 收敛为单一可测策略；缺少 project 或 agent identity 时失败关闭。6 个 workflow
+  handoff CLI 的公开回执统一把 absolute state path 替换为 16 位 SHA-256 短哈希，project/agent identity 继续只输出短哈希。
+- 合成测试逐一启动 6 个 CLI，证明 stdout 不含临时目录、project id、agent 名称/openId/chatId；配置映射测试覆盖 scope、revision、
+  数值兼容和缺身份失败关闭。真实冻结快照只读审计全部通过：collaboration 1467 observations、Dida maintenance 2 workflows、
+  session lifecycle 0、Xiaowei 7 completed、followup 1 review workflow、message intake queue 0；没有执行 apply、任务写入、外联、
+  workflow 启动、effect owner 切换或守护进程重启。
+- 完整 `npm run check` 通过：主项目 525 项中 512 通过、13 项仅因 sandbox listener 限制跳过，compat 181/181；架构仍为
+  138 modules、123 assets、23/23 effects implemented、0/23 active。实现提交为 `da53fe3`；回滚为撤销统一策略、CLI 脱敏和相应回归，
+  不需要迁移或清理外部状态。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。下一条成长跑道是只读复现并拆分滴答 completed-cleanup 的超时阶段，避免达到通知阈值后才定位。
