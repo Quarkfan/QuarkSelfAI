@@ -77,6 +77,10 @@ print '{"type":"result","session_id":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","str
 
   assert.equal(result.code, 0);
   assert.equal(result.provider, "claude");
+  assert.deepEqual(result.executionAttempts, [
+    { provider: "codex", role: "primary", outcome: "failed" },
+    { provider: "claude", role: "fallback", outcome: "success" },
+  ]);
   assert.deepEqual(JSON.parse(await readFile(outputPath, "utf8")), { ok: true });
 });
 
@@ -173,6 +177,9 @@ test("uses Claude as the primary Dida executor when configured", async () => {
   assert.equal(result.code, 0);
   assert.equal(result.provider, "claude");
   assert.equal(result.primaryProvider, "claude");
+  assert.deepEqual(result.executionAttempts, [
+    { provider: "claude", role: "primary", outcome: "success" },
+  ]);
 });
 
 test("falls back to Codex when the Claude Dida primary fails", async () => {
@@ -209,5 +216,9 @@ test("falls back to Codex when the Claude Dida primary fails", async () => {
   assert.equal(result.code, 0);
   assert.equal(result.provider, "codex");
   assert.equal(result.fallbackAttempted, true);
+  assert.deepEqual(result.executionAttempts, [
+    { provider: "claude", role: "primary", outcome: "failed" },
+    { provider: "codex", role: "fallback", outcome: "success" },
+  ]);
   assert.deepEqual(JSON.parse(await readFile(outputPath, "utf8")), { ok: true });
 });

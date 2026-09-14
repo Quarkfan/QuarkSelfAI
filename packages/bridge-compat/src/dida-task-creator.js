@@ -1,7 +1,7 @@
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { runCodexWithClaudeFallback } from "./cli-failover.js";
+import { formatExecutionAttempts, runCodexWithClaudeFallback } from "./cli-failover.js";
 import { run } from "./util.js";
 import { loadBlacklakeCapabilityContext } from "./blacklake-capability-context.js";
 
@@ -585,7 +585,10 @@ ${formatContext(contextMessages, message.message_id, this.config.allowedOpenId)}
       "--skip-git-repo-check", "--approve-for-me",
       "--output-schema", this.config.didaCleanupSchemaPath, "-o", outputPath, "-",
     ], { cwd: runDir, input: prompt, timeoutMs: this.config.didaExecutionTimeoutMs });
-    if (result.timedOut) throw new Error("滴答已完成任务清理超时。");
+    if (result.timedOut) {
+      const attempts = formatExecutionAttempts(result);
+      throw new Error(`滴答已完成任务清理超时${attempts ? `（执行阶段：${attempts}）` : ""}。`);
+    }
     if (result.code !== 0) throw new Error(`滴答已完成任务清理失败（exit ${result.code}）：${(result.stderr || result.stdout).trim().slice(-2000)}`);
     let output;
     try { output = JSON.parse(await readFile(outputPath, "utf8")); }

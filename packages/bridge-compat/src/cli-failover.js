@@ -49,6 +49,25 @@ function didaTools(args) {
   catch { return []; }
 }
 
+function executionAttempt(provider, role, result) {
+  return {
+    provider,
+    role,
+    outcome: result.timedOut ? "timeout" : result.code === 0 ? "success" : "failed",
+  };
+}
+
+function withExecutionAttempts(result, attempts) {
+  return { ...result, executionAttempts: attempts };
+}
+
+export function formatExecutionAttempts(result) {
+  const attempts = Array.isArray(result?.executionAttempts) ? result.executionAttempts : [];
+  return attempts
+    .map((attempt) => `${attempt.provider}-${attempt.role}=${attempt.outcome}`)
+    .join(" -> ");
+}
+
 async function didaCliToken(config) {
   const configPath = config.didaCliConfigPath
     || path.join(os.homedir(), ".config", "dida-cli", "config.json");
@@ -161,33 +180,50 @@ export async function runCodexWithClaudeFallback(config, codexArgs, options = {}
       };
     }
     if (claudeResult.code === 0 && !claudeResult.timedOut) {
-      return { ...claudeResult, fallbackAttempted: undefined, primaryProvider: "claude" };
+      return withExecutionAttempts(
+        { ...claudeResult, fallbackAttempted: undefined, primaryProvider: "claude" },
+        [executionAttempt("claude", "primary", claudeResult)],
+      );
     }
     const codexFallback = await executeCodex();
+    const attempts = [
+      executionAttempt("claude", "primary", claudeResult),
+      executionAttempt("codex", "fallback", codexFallback),
+    ];
     if (codexFallback.code === 0 && !codexFallback.timedOut) {
-      return { ...codexFallback, provider: "codex", fallbackAttempted: true, primaryProvider: "claude" };
+      return withExecutionAttempts(
+        { ...codexFallback, provider: "codex", fallbackAttempted: true, primaryProvider: "claude" },
+        attempts,
+      );
     }
-    return {
+    return withExecutionAttempts({
       ...codexFallback,
       provider: "codex",
       fallbackAttempted: true,
       primaryProvider: "claude",
       stderr: `Claude Code 主执行失败：${String(claudeResult.stderr || claudeResult.stdout || "").trim().slice(-1500)}\nCodex 兜底失败：${String(codexFallback.stderr || codexFallback.stdout || "").trim().slice(-1500)}`,
-    };
+    }, attempts);
   }
 
   let codexResult;
   codexResult = await executeCodex();
   if (codexResult.code === 0 || config.claudeFallbackEnabled === false || !isCodexInfrastructureFailure(codexResult)) {
-    return { ...codexResult, provider: "codex" };
+    return withExecutionAttempts(
+      { ...codexResult, provider: "codex" },
+      [executionAttempt("codex", "primary", codexResult)],
+    );
   }
   try {
     if (usesDida && !token) {
       throw new Error("dida CLI 尚未登录，Claude Code 无法复用滴答授权");
     }
-    return await runClaudeStructured(config, codexArgs, options, token);
+    const claudeFallback = await runClaudeStructured(config, codexArgs, options, token);
+    return withExecutionAttempts(claudeFallback, [
+      executionAttempt("codex", "primary", codexResult),
+      executionAttempt("claude", "fallback", claudeFallback),
+    ]);
   } catch (error) {
-    return {
+    const claudeFallback = {
       code: 1,
       signal: null,
       stdout: "",
@@ -196,6 +232,10 @@ export async function runCodexWithClaudeFallback(config, codexArgs, options = {}
       provider: "claude",
       fallbackAttempted: true,
     };
+    return withExecutionAttempts(claudeFallback, [
+      executionAttempt("codex", "primary", codexResult),
+      executionAttempt("claude", "fallback", claudeFallback),
+    ]);
   }
 }
 

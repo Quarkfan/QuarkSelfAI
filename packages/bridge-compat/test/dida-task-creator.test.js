@@ -297,3 +297,25 @@ print -r -- '{"projectId":"project_1","cutoff":"2026-07-21T00:00:00.000Z","inspe
   assert.equal(result.deleted[0].taskId, "old_1");
   assert.equal(result.projectId, "project_1");
 });
+
+test("reports each executor stage when completed cleanup times out", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-cleanup-timeout-"));
+  const hanging = path.join(dir, "hanging-executor");
+  const didaConfig = path.join(dir, "dida-config.json");
+  const schemaPath = path.join(dir, "schema.json");
+  await writeFile(hanging, "#!/usr/bin/env node\nsetTimeout(() => {}, 10_000);\n", { mode: 0o755 });
+  await writeFile(didaConfig, JSON.stringify({ access_token: "cleanup-timeout-token" }), { mode: 0o600 });
+  await writeFile(schemaPath, JSON.stringify({ type: "object" }));
+  const creator = new DidaTaskCreator({
+    codexCli: hanging, claudeCli: hanging, workspaceRoot: dir, varDir: path.join(dir, "var"),
+    didaProjectId: "project_1", didaCleanupSchemaPath: schemaPath,
+    didaCompletedRetentionDays: 30, didaCompletedCleanupMaxPerRun: 50,
+    didaExecutionTimeoutMs: 25, claudeExecutionTimeoutMs: 25,
+    didaPrimaryProvider: "claude", didaCliConfigPath: didaConfig,
+  });
+
+  await assert.rejects(
+    () => creator.cleanupCompletedTasks(new Date("2026-08-20T00:00:00Z")),
+    /执行阶段：claude-primary=timeout -> codex-fallback=timeout/,
+  );
+});
