@@ -1769,3 +1769,21 @@
   不需要迁移或清理外部状态。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一条成长跑道是只读复现并拆分滴答 completed-cleanup 的超时阶段，避免达到通知阈值后才定位。
+
+## 2026-09-14 能力进化完成任务清理超时诊断
+
+- 本轮选择 `reliability`。滚动五轮仍覆盖 reliability、measurable-enhancement 与 strategic-opportunity；会前简报 revision 1 仍待 owner
+  决策，未另提第二个战略候选。宿主 LaunchAgent 是唯一实例，`runs=335`、最近退出码 0，`/api/health` 为 `ok=true`，compat worker、
+  DSH kernel 与 5 条事件能力 ready。当天 completed-cleanup 已成功，last day 为 2026-09-14、健康故障为空，因此没有重跑或触发真实清理。
+- 历史日志至少保留多次“滴答已完成任务清理超时”，失败运行目录没有 `result.json`；此前 failover 结果只暴露最终 provider 的总超时，
+  无法区分 Claude 主执行与 Codex 兜底。执行层现为每次尝试附加只含 provider、primary/fallback role、success/failed/timeout 的
+  `executionAttempts`，completed-cleanup 超时错误将该阶段序列写入既有持久健康故障。轨迹不含提示词、凭证、任务正文、projectId 或路径。
+- 合成回归覆盖 Codex→Claude 成功、Claude 主执行成功、Claude→Codex 成功及两阶段均超时；定向回归 30/30。完整 `npm run check`
+  通过：主项目 525 项中 512 通过、13 项仅因 sandbox listener 限制跳过，compat 182/182；架构仍为 138 modules、123 assets、
+  23/23 effects implemented、0/23 active。实现提交 `0f43862` 已推送 `origin/main`。
+- 本轮不调用 dida365、不清理或修改真实任务，不新增依赖、consumer、provider、scheduler、database writer 或 effect，不改变
+  DSH/Cordis composition，也无需重启 LaunchAgent。回滚为撤销 `0f43862`；不涉及数据迁移或外部状态清理。下一次真实失败会在达到通知阈值前
+  先把 provider 阶段写入本地健康状态，后续再依据该证据决定是执行器超时预算、MCP 分页还是工具调用问题。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。下一条成长跑道优先回到 strategic-opportunity，但同一时间只保留既有会前简报候选；若仍未决，
+  评估不需第二候选的可逆职责增强或对 cleanup 新阶段证据做有界可靠性复核。
