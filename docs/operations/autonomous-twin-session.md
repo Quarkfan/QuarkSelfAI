@@ -1782,8 +1782,11 @@
   通过：主项目 525 项中 512 通过、13 项仅因 sandbox listener 限制跳过，compat 182/182；架构仍为 138 modules、123 assets、
   23/23 effects implemented、0/23 active。实现提交 `0f43862` 已推送 `origin/main`。
 - 本轮不调用 dida365、不清理或修改真实任务，不新增依赖、consumer、provider、scheduler、database writer 或 effect，不改变
-  DSH/Cordis composition，也无需重启 LaunchAgent。回滚为撤销 `0f43862`；不涉及数据迁移或外部状态清理。下一次真实失败会在达到通知阈值前
-  先把 provider 阶段写入本地健康状态，后续再依据该证据决定是执行器超时预算、MCP 分页还是工具调用问题。
+  DSH/Cordis composition。部署前只读审计确认 Dida maintenance 0 health failure、session lifecycle 0、小维 0 waiting、followup 0 outreach，
+  消息队列 0；1 个 mention pending 按持久状态保留。随后只重启同一个 LaunchAgent，`runs` 从 335 增至 336、父 PID 为 90119，
+  宿主回读 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。回滚为撤销 `0f43862` 后在同样空闲门禁下重启；不涉及数据迁移
+  或外部状态清理。下一次真实失败会在达到通知阈值前先把 provider 阶段写入本地健康状态，后续再依据该证据决定是执行器超时预算、
+  MCP 分页还是工具调用问题。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一条成长跑道优先回到 strategic-opportunity，但同一时间只保留既有会前简报候选；若仍未决，
   评估不需第二候选的可逆职责增强或对 cleanup 新阶段证据做有界可靠性复核。
