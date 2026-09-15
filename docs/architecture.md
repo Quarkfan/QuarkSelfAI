@@ -444,6 +444,10 @@ DSH profile 只保存环境变量表达式，`--dump-config` 不得出现密钥�
 脱敏来源故障并保留原 `mentionClarifications` 项，不得让定时触发的 Promise rejection 逸出并终止 compatibility host；
 下一次成功读取会清除故障标记并继续原调研或回传。该隔离不放宽外部群禁发、追问批准和消息关联门禁。
 
+工作日跟进清单评估复用 compatibility 执行器的脱敏阶段轨迹。健康状态只保留 provider、primary/fallback role 与
+success/failed/timeout 序列；前两次失败静默持久化，连续三次才通知本人，恢复通知只对应此前已经通知的故障。
+该诊断不记录任务正文、提示词、projectId、凭证或本机路径，也不扩大任务修改和外联批准范围。
+
 重点消息写入滴答后的结果校验区分“工具执行失败”和“业务内容”：只有明确的 OAuth 登录失败、MCP 不可用、权限拒绝、
 额度或限流语境才能进入基础设施重试，业务对象名称中单独出现 OAuth、权限或配额不会触发失败。BlackLake 事项的固定
 总路由 `blacklake-reference-router` 由安全壳确定性补齐，避免模型漏回常量造成已经完成的任务写入被回滚；业务域、专项

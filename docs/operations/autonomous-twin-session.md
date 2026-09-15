@@ -1790,3 +1790,24 @@
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一条成长跑道优先回到 strategic-opportunity，但同一时间只保留既有会前简报候选；若仍未决，
   评估不需第二候选的可逆职责增强或对 cleanup 新阶段证据做有界可靠性复核。
+
+## 2026-09-15 能力进化跟进巡检降噪诊断
+
+- 本轮选择 `reliability`。滚动五轮已覆盖三轨，既有会前简报 revision 1 仍待 owner 决策，因此没有形成第二个战略候选。
+  宿主 LaunchAgent 保持唯一实例、`runs=336`、`/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。
+  当前日志出现一次“自动化跟进清单检查超时”；只读 handoff 审计随后在不同时间点观察到 0 和 1 个 Dida maintenance 健康故障，
+  证明该失败会持久化但仍可能恢复，适合按持续失败而非单次事件通知。
+- 根因是 compatibility failover 已保留 provider、primary/fallback role 与 success/failed/timeout 的脱敏 `executionAttempts`，但工作日跟进
+  调用方仍把它折叠为总超时；同时 monitor 首次失败立即通知且恢复不配对，违反瞬时故障静默门禁。实现提交 `8b6e2f5` 让跟进超时
+  写入同一阶段序列，并将通知改为前两次静默持久化、连续三次才发送；只有通知实际成功后才标记 `notified`，恢复消息只针对该状态且
+  发送失败不反向污染跟进评估健康。记录不包含提示词、任务正文、projectId、凭证或路径。
+- 定向回归 31/31 及调整后的 monitor 7/7 通过；完整 `npm run check` 两次通过：主项目 525 中 512 通过、13 项仅因 sandbox listener
+  限制跳过，compat 184/184；架构为 138 modules、123 assets、23/23 effects implemented、0/23 active。Lark、DSH、BlackLake、server、
+  recovery、work-domain 104/104、assistant continuity、capability evolution installed strict 与根同步门禁均通过。
+- 本轮没有调用 dida365、读取或修改任务、发送飞书、创建消费者/写入链路、改变 DSH/Cordis composition 或新增依赖。部署前进程树持续
+  存在 compatibility worker 发起的真实 Claude 子任务；两分钟有界等待内没有安全空闲窗口，因此没有强行重启，也没有中断这些任务。
+  当前运行进程仍是旧构建，已推送的修复会在下一次满足空闲门禁的既有 LaunchAgent 重启时生效。回滚为撤销 `8b6e2f5` 并在同样空闲
+  门禁下重启，不涉及数据库迁移或外部状态清理。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。下一轨偏好仍为 strategic-opportunity；会前简报候选未决期间优先做不形成第二候选的可逆职责增强，
+  除非出现新的持续关键故障。
