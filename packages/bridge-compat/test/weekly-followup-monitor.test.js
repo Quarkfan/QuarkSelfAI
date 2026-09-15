@@ -56,6 +56,41 @@ test("workday monitor checks again on the next weekday", async () => {
   assert.equal(state.state.followupLastCheckedDay, "2026-08-18");
 });
 
+test("keeps transient followup failures quiet and reports only threshold plus recovery", async () => {
+  const messages = [];
+  const state = { state: {}, async save() {} };
+  let shouldFail = true;
+  const monitor = new WorkdayFollowupMonitor({
+    config: {
+      followupTimeZone: "Asia/Shanghai", followupScheduledHour: 10,
+      followupFailureNotifyThreshold: 3, notificationTimeZone: "Asia/Shanghai",
+    },
+    state,
+    lark: { async send(message, key) { messages.push({ message, key }); } },
+    taskCreator: { async evaluateWorkdayFollowups() {
+      if (shouldFail) throw new Error("自动化跟进清单检查超时（执行阶段：claude-primary=timeout -> codex-fallback=timeout）。");
+      return { totalActive: 0, updates: [], reminders: [], outreachRequests: [] };
+    } },
+    logger: { error() {} },
+  });
+  const now = new Date("2026-08-17T02:00:00Z");
+
+  await monitor.poll(now);
+  await monitor.poll(now);
+  assert.equal(messages.length, 0);
+  assert.equal(state.state.followupHealthFailure.count, 2);
+  await monitor.poll(now);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0].message, /连续 3 次检查失败/);
+  assert.match(state.state.followupHealthFailure.error, /claude-primary=timeout/);
+
+  shouldFail = false;
+  await monitor.poll(now);
+  assert.equal(messages.length, 2);
+  assert.match(messages[1].message, /检查已恢复/);
+  assert.equal(state.state.followupHealthFailure, null);
+});
+
 test("asks for approval before messaging a resolved follow-up contact", async () => {
   const cards = [];
   const outbound = [];

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { buildNotificationCard } from "./lark-card.js";
+import { formatUserTime } from "./util.js";
 
 const WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
@@ -73,19 +74,37 @@ export class WorkdayFollowupMonitor {
       await this.processOutreachSetup(now);
       this.state.state.followupLastCheckedDay = slot.dayKey;
       this.state.state.followupLastCheckedAt = now.toISOString();
+      const previousFailure = this.state.state.followupHealthFailure;
       this.state.state.followupHealthFailure = null;
       await this.state.save();
+      if (previousFailure?.notified) {
+        try {
+          await this.lark.send(
+            `自动化跟进清单检查已恢复。故障始于：${formatUserTime(previousFailure.at, this.config.notificationTimeZone)}（北京时间）`,
+            `workday-followup-recovered:${previousFailure.at}`,
+          );
+        } catch {}
+      }
     } catch (error) {
       this.logger.error("workday followup check failed", error);
       const slot = workdaySlot(now, this.config.followupTimeZone, this.config.followupScheduledHour);
-      const previous = this.state.state.followupHealthFailure;
-      this.state.state.followupHealthFailure = { dayKey: slot.dayKey, at: now.toISOString(), error: error.message };
-      await this.state.save();
-      if (previous?.dayKey !== slot.dayKey) {
+      const failure = this.state.state.followupHealthFailure || {
+        dayKey: slot.dayKey, at: now.toISOString(), count: 0, notified: false,
+      };
+      failure.count = Number(failure.count || 0) + 1;
+      failure.error = error.message;
+      this.state.state.followupHealthFailure = failure;
+      const threshold = Number(this.config.followupFailureNotifyThreshold ?? 3);
+      if (!failure.notified && failure.count >= threshold) {
+        await this.state.save();
         try {
-          await this.lark.send(`自动化跟进清单今天检查失败，后台会继续重试。\n\n${error.message}`,
-            `workday-followup-failed:${slot.dayKey}`);
+          await this.lark.send(`自动化跟进清单连续 ${failure.count} 次检查失败，后台会继续重试。\n\n${error.message}`,
+            `workday-followup-failed:${failure.at}`);
+          failure.notified = true;
+          await this.state.save();
         } catch {}
+      } else {
+        await this.state.save();
       }
     } finally {
       this.running = false;

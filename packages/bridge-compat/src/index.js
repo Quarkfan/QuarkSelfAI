@@ -121,6 +121,7 @@ async function loadConfig() {
     followupReplyPollIntervalMs: 1800000,
     followupTimeZone: "Asia/Shanghai",
     followupScheduledHour: 10,
+    followupFailureNotifyThreshold: 3,
     shadowCollaborationEnabled: true,
     shadowCollaborationDays: 7,
     shadowPollIntervalMs: 1800000,

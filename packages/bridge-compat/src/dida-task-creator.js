@@ -461,7 +461,10 @@ ${formatContext(contextMessages, message.message_id, this.config.allowedOpenId)}
       "--skip-git-repo-check", "--approve-for-me",
       "--output-schema", this.config.didaFollowupSchemaPath, "-o", outputPath, "-",
     ], { cwd: runDir, input: prompt, timeoutMs: this.config.didaExecutionTimeoutMs });
-    if (result.timedOut) throw new Error("自动化跟进清单检查超时。");
+    if (result.timedOut) {
+      const attempts = formatExecutionAttempts(result);
+      throw new Error(`自动化跟进清单检查超时${attempts ? `（执行阶段：${attempts}）` : ""}。`);
+    }
     if (result.code !== 0) throw new Error(`自动化跟进清单检查失败（exit ${result.code}）：${(result.stderr || result.stdout).trim().slice(-2000)}`);
     let output;
     try { output = JSON.parse(await readFile(outputPath, "utf8")); }
