@@ -1811,3 +1811,22 @@
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一轨偏好仍为 strategic-opportunity；会前简报候选未决期间优先做不形成第二候选的可逆职责增强，
   除非出现新的持续关键故障。
+
+## 2026-09-16 能力进化会前简报证据判定
+
+- 本轮选择 `strategic-opportunity`。最近五轮虽已覆盖三轨，但连续两轮为 reliability，observer 与最近自治记录均建议回到进取型职责；
+  宿主 LaunchAgent 仍为唯一实例、`runs=336`，只读 `/api/health` 返回 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready，
+  没有持续关键故障抢占。既有 `pre-meeting-briefing-pilot-01` revision 1 仍待 owner 决策，因此没有形成第二候选或扩大其授权范围。
+- 比较了继续只保留自然语言阈值、提前接入真实日历/消息、另建候选和为现有候选补纯计数判定四条路径。自然语言阈值无法稳定复核；
+  真实接入超出未批准边界；第二候选违反单一未决候选约束，因此选择第四条。`meeting-briefing-planner` 新增确定性退出门禁，只接受工作日、
+  合格会议、草稿、人工复核、有效/低价值分类与隐私、来源作用域、去重、外部 effect 违规计数。
+- 判定严格复用授权单的 8 个合格会议或 10 个工作日先到即止、草稿覆盖率至少 80%、人工复核有效率至少 70%、低价值或误导率不得
+  高于 30%；任一安全违规立即失败。闭合 schema 拒绝原始正文形状、未知字段、越界计数和分类重叠；输出仅为 `continue/pass/fail`、
+  原因、计数和比率，不读取来源、不持久化草稿、不调度、不通知、不激活 workflow/effect，也不新增依赖、consumer、provider 或 writer。
+- 专项测试 8/8；完整 `npm run check` 通过：主项目 529 中 516 通过、13 项仅因 sandbox listener 限制跳过，compat 184/184；架构仍为
+  138 modules、123 assets、23/23 effects implemented、0/23 active。Lark、DSH、BlackLake、server、recovery、work-domain 104/104、
+  assistant continuity、capability evolution installed strict 与根同步门禁均通过。实现提交 `6728c98`；模块保持 runtime-inactive，故无需重启宿主。
+- 回滚为撤销 `6728c98` 中的计数判定、测试和文档说明，不涉及数据迁移、外部状态或服务重启。未决事项仍只有 owner 是否批准
+  `pre-meeting-briefing-pilot-01` revision 1 的静默只读影子试运行；本轮不会重复催促或把判定器解释为批准。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。下一条成长跑道优先 `measurable-enhancement`，可对现有未激活候选的授权 revision 漂移与可复核性做只读验证；持续关键故障仍可抢占。
