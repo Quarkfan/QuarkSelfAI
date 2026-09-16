@@ -9,6 +9,9 @@
 - 新增 `meeting-briefing-planner` policy 模块，但保持 `runtime=inactive`。它只消费合成的事件时间、本人出席/责任标记和各来源的可用状态/有界数量；不读取日历、消息、任务或文档正文。
 - 规划器只为未来 15 分钟至 24 小时内、本人组织或承担明确责任、且至少存在日历与一个上下文来源的事项生成 `shadow-draft` 计划。输出只包含内容寻址幂等键、计划时间、来源状态/有界数量和固定安全边界，不回传 event id、标题或正文。
 - 输入采用闭合字段集合；原始消息、标题、路径或任意扩展字段会在规划前失败关闭。当前边界固定 `runtimeActive=false`、`sourceReadsExecuted=false`、`rawContentStored=false`、`externalEffectsEnabled=false`、`ownerNotificationAllowed=false`。
+- 同一未激活 policy seam 提供纯计数退出判定。它只接受工作日、合格会议、草稿、人工复核、有效/低价值分类和隐私、来源作用域、
+  去重、外部 effect 违规计数；8 个合格会议或 10 个工作日先到即止，任一安全违规或低价值/误导率超过 30% 立即失败，完成时还要求
+  草稿覆盖率至少 80% 且人工复核有效率至少 70%。未知字段、计数越界和分类重叠均失败关闭，输出不含会议、草稿或来源正文。
 - 真正的只读数据接入和本地影子简报试运行由 `pre-meeting-briefing-pilot-01` revision 1 单独请求批准。向 owner 私聊发送简报、更新日程/任务、联系参会人、调用小维或扩展权限均不在该 revision 内。
 
 ## 替代方案
@@ -19,4 +22,6 @@
 
 ## 验证与回滚
 
-合成测试覆盖符合条件的 shadow 计划、无责任/上下文不足时跳过、revision 幂等变化、原始字段和 activation-shaped 输入失败关闭。模块没有运行装配、scheduler、provider、consumer、数据库、外部写 effect 或第三方依赖。回滚只需移除模块、测试、目录登记和本 ADR，不需要迁移或清理外部状态。
+合成测试覆盖符合条件的 shadow 计划、无责任/上下文不足时跳过、revision 幂等变化、原始字段和 activation-shaped 输入失败关闭；
+退出判定测试覆盖成功、继续、证据不足、安全违规、低价值超限与非法计数。模块没有运行装配、scheduler、provider、consumer、数据库、
+外部写 effect 或第三方依赖。回滚只需移除模块、测试、目录登记和本 ADR，不需要迁移或清理外部状态。

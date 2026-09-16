@@ -34,9 +34,48 @@ export interface MeetingBriefingShadowPlan {
   }
 }
 
+export interface MeetingBriefingPilotEvidence {
+  readonly mode: 'inactive-shadow-evaluation'
+  readonly workingDaysElapsed: number
+  readonly eligibleMeetings: number
+  readonly draftsCreated: number
+  readonly reviewedDrafts: number
+  readonly materiallyUsefulDrafts: number
+  readonly lowValueOrMisleadingDrafts: number
+  readonly violations: {
+    readonly privacy: number
+    readonly sourceScope: number
+    readonly deduplication: number
+    readonly externalEffect: number
+  }
+}
+
+export interface MeetingBriefingPilotDecision {
+  readonly outcome: 'continue' | 'pass' | 'fail'
+  readonly reasons: readonly string[]
+  readonly counters: {
+    readonly workingDaysElapsed: number
+    readonly eligibleMeetings: number
+    readonly draftsCreated: number
+    readonly reviewedDrafts: number
+  }
+  readonly rates: {
+    readonly draftCoverage?: number
+    readonly materiallyUseful?: number
+    readonly lowValueOrMisleading?: number
+  }
+  readonly boundary: {
+    readonly rawContentAccepted: false
+    readonly sourceReadsExecuted: false
+    readonly externalEffectsEnabled: false
+  }
+}
+
 const sourceKinds = new Set<MeetingBriefingSourceKind>(['calendar', 'feishu', 'dida', 'work-journal', 'linked-document', 'assistant-knowledge'])
 const expectedInputKeys = ['attendance', 'directResponsibility', 'eventId', 'eventRevision', 'mode', 'now', 'sources', 'startsAt']
 const expectedSourceKeys = ['itemCount', 'kind', 'status']
+const expectedPilotEvidenceKeys = ['draftsCreated', 'eligibleMeetings', 'lowValueOrMisleadingDrafts', 'materiallyUsefulDrafts', 'mode', 'reviewedDrafts', 'violations', 'workingDaysElapsed']
+const expectedViolationKeys = ['deduplication', 'externalEffect', 'privacy', 'sourceScope']
 
 function exactKeys(value: object, expected: readonly string[], name: string): void {
   if (Object.keys(value).sort().join(',') !== [...expected].sort().join(',')) throw new Error(`${name} contains unsupported fields`)
@@ -65,6 +104,19 @@ function sourceSnapshot(value: unknown): MeetingBriefingSourceSnapshot {
 
 function boundary(): MeetingBriefingShadowPlan['boundary'] {
   return Object.freeze({ runtimeActive: false, sourceReadsExecuted: false, rawContentStored: false, externalEffectsEnabled: false, ownerNotificationAllowed: false })
+}
+
+function boundedCount(value: unknown, name: string, maximum: number): number {
+  if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > maximum) throw new Error(`${name} is invalid`)
+  return Number(value)
+}
+
+function evaluationBoundary(): MeetingBriefingPilotDecision['boundary'] {
+  return Object.freeze({ rawContentAccepted: false, sourceReadsExecuted: false, externalEffectsEnabled: false })
+}
+
+function rate(numerator: number, denominator: number): number | undefined {
+  return denominator === 0 ? undefined : numerator / denominator
 }
 
 /**
@@ -108,4 +160,55 @@ export function planInactiveMeetingBriefing(value: unknown): MeetingBriefingShad
     sourceSummary: sources,
     boundary: boundary(),
   })
+}
+
+/**
+ * Deterministic exit gate for the proposed shadow pilot.
+ *
+ * It accepts bounded counters only. It cannot read a meeting, review draft
+ * content, activate the pilot, or perform an external effect.
+ */
+export function evaluateInactiveMeetingBriefingPilot(value: unknown): MeetingBriefingPilotDecision {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('meeting briefing pilot evidence is invalid')
+  exactKeys(value, expectedPilotEvidenceKeys, 'meeting briefing pilot evidence')
+  const input = value as Record<string, unknown>
+  if (input.mode !== 'inactive-shadow-evaluation') throw new Error('meeting briefing pilot evaluation must remain inactive-shadow')
+  const workingDaysElapsed = boundedCount(input.workingDaysElapsed, 'working days elapsed', 10)
+  const eligibleMeetings = boundedCount(input.eligibleMeetings, 'eligible meetings', 100)
+  const draftsCreated = boundedCount(input.draftsCreated, 'drafts created', eligibleMeetings)
+  const reviewedDrafts = boundedCount(input.reviewedDrafts, 'reviewed drafts', draftsCreated)
+  const materiallyUsefulDrafts = boundedCount(input.materiallyUsefulDrafts, 'materially useful drafts', reviewedDrafts)
+  const lowValueOrMisleadingDrafts = boundedCount(input.lowValueOrMisleadingDrafts, 'low value or misleading drafts', reviewedDrafts)
+  if (materiallyUsefulDrafts + lowValueOrMisleadingDrafts > reviewedDrafts) throw new Error('review classifications overlap')
+  if (!input.violations || typeof input.violations !== 'object' || Array.isArray(input.violations)) throw new Error('meeting briefing pilot violations are invalid')
+  exactKeys(input.violations, expectedViolationKeys, 'meeting briefing pilot violations')
+  const violationInput = input.violations as Record<string, unknown>
+  const violations = expectedViolationKeys.reduce((total, key) => total + boundedCount(violationInput[key], `${key} violations`, 100), 0)
+
+  const draftCoverage = rate(draftsCreated, eligibleMeetings)
+  const materiallyUseful = rate(materiallyUsefulDrafts, reviewedDrafts)
+  const lowValueOrMisleading = rate(lowValueOrMisleadingDrafts, reviewedDrafts)
+  const counters = Object.freeze({ workingDaysElapsed, eligibleMeetings, draftsCreated, reviewedDrafts })
+  const rates = Object.freeze({
+    ...(draftCoverage === undefined ? {} : { draftCoverage }),
+    ...(materiallyUseful === undefined ? {} : { materiallyUseful }),
+    ...(lowValueOrMisleading === undefined ? {} : { lowValueOrMisleading }),
+  })
+  const decision = (outcome: MeetingBriefingPilotDecision['outcome'], reasons: readonly string[]): MeetingBriefingPilotDecision => Object.freeze({
+    outcome,
+    reasons: Object.freeze([...reasons]),
+    counters,
+    rates,
+    boundary: evaluationBoundary(),
+  })
+
+  if (violations > 0) return decision('fail', ['safety-boundary-violation'])
+  if (lowValueOrMisleading !== undefined && lowValueOrMisleading > 0.3) return decision('fail', ['low-value-or-misleading-rate-above-30-percent'])
+  const evaluationComplete = eligibleMeetings >= 8 || workingDaysElapsed >= 10
+  if (!evaluationComplete) return decision('continue', ['awaiting-8-eligible-meetings-or-10-working-days'])
+  if (workingDaysElapsed >= 10 && eligibleMeetings < 8) return decision('fail', ['insufficient-eligible-meetings-within-10-working-days'])
+  const reasons: string[] = []
+  if (draftCoverage === undefined || draftCoverage < 0.8) reasons.push('draft-coverage-below-80-percent')
+  if (materiallyUseful === undefined || materiallyUseful < 0.7) reasons.push('materially-useful-review-rate-below-70-percent')
+  return reasons.length === 0 ? decision('pass', ['shadow-pilot-thresholds-met']) : decision('fail', reasons)
 }
