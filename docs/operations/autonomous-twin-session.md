@@ -1830,3 +1830,24 @@
   `pre-meeting-briefing-pilot-01` revision 1 的静默只读影子试运行；本轮不会重复催促或把判定器解释为批准。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一条成长跑道优先 `measurable-enhancement`，可对现有未激活候选的授权 revision 漂移与可复核性做只读验证；持续关键故障仍可抢占。
+
+## 2026-09-17 能力进化会前简报授权完整性
+
+- 本轮选择 `measurable-enhancement`。最近五轮已覆盖三轨，上一轮为 `strategic-opportunity`；宿主只读健康为 `ok=true`，compat worker、
+  DSH kernel 与 5 条事件能力 ready，没有持续关键故障抢占。既有会前简报候选仍是唯一未决进取型候选，本轮没有读取真实日历、消息、
+  任务或文档，也没有调度、通知、外联、写业务数据或激活 effect。
+- 只读复核发现 revision 1 的批准短语绑定 `bc1a405...`，该提交早于候选规划器实现；候选随后又增加纯计数退出门禁。由于 revision 1
+  从未获 owner 批准，继续沿用会让未来批准无法精确证明覆盖当前边界，因此同一候选升级为 revision 2，而不是新建第二候选或扩大授权。
+- revision 2 绑定当前实现基线 `764c56c...` 和完整请求的 SHA-256 授权指纹，只允许扩展唯一 `meeting-briefing-planner` inactive 模块，
+  只复用现有飞书读取、工作账本、滴答投影和 durable wake scheduler 边界，并显式禁止新 consumer、scheduler、writer、effect、运行依赖和
+  DSH/Cordis composition 变化。批准短语必须逐字绑定同一指纹；请求范围、指纹、短语、模块 runtime 或 ownership 漂移均失败关闭。
+- 新增只读审计入口和 3 条回归：当前 revision 2 通过；未换指纹的范围漂移失败；即使重算指纹，模块改为 active 仍失败。定向 11/11，
+  完整 `npm run check` 通过：主项目 532 中 519 通过、13 项仅因 sandbox listener 限制跳过，compat 184/184；架构仍为 138 modules、
+  123 assets、23/23 effects implemented、0/23 active。Lark、DSH、BlackLake、server、recovery、work-domain 104/104、assistant continuity、
+  capability evolution installed strict、授权审计与根同步均通过。
+- 本轮不需要重启：新增内容仅为治理审计、测试和未批准候选元数据，不进入守护进程 composition。回滚为撤销 revision 2 请求、审计脚本、
+  测试和治理文档；不涉及数据库迁移、外部状态或服务清理。用户未提交的 `package.json` 品牌客户端配置、客户端文件和 `.DS_Store`
+  继续保留且不纳入本轮提交。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。未决事项仍只有 owner 是否批准 `pre-meeting-briefing-pilot-01` revision 2 的静默只读影子试运行；
+  本轮不发送确认卡、不重复催促。下一轨偏好 `reliability`，优先观察真实运行故障；若保持健康，再审计其他未决授权的内容寻址完整性。

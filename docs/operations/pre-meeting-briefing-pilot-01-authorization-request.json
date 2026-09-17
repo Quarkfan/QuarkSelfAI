@@ -1,9 +1,10 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "requestId": "pre-meeting-briefing-pilot-01",
-  "revision": 1,
+  "revision": 2,
   "status": "awaiting-exact-owner-approval",
-  "baseRevision": "bc1a4051af2f017669a10172ba2b74248d83e4c8",
+  "implementationBaselineRevision": "764c56c2c1580978c4e02ececfc196315defcaba",
+  "authorizationFingerprint": "4f9af4160659d57490b3f3d9bb2f5f66cdb8acb2d5121ee867577de36e409b01",
   "purpose": "Evaluate whether a private, read-only pre-meeting brief reduces repeated context gathering without creating messages, tasks, calendar changes or external commitments.",
   "evidence": {
     "window": "2026-08-25/2026-09-09",
@@ -30,6 +31,25 @@
     "use existing repository and lark-cli dependencies only; install no third-party code",
     "commit and push the implementation only after deterministic gates and the full repository check pass"
   ],
+  "implementationScope": {
+    "moduleIds": [
+      "meeting-briefing-planner"
+    ],
+    "reuseOnlyModuleIds": [
+      "feishu-channel",
+      "work-journal",
+      "dida-projection",
+      "durable-wake-scheduler"
+    ],
+    "forbiddenChanges": [
+      "new-consumer",
+      "new-scheduler",
+      "new-writer",
+      "new-effect",
+      "runtime-dependency-change",
+      "dsh-cordis-composition-change"
+    ]
+  },
   "explicitExclusions": [
     "send a Feishu message or any other notification, even to the owner",
     "create or update a calendar event, task, document or external record",
@@ -64,5 +84,5 @@
     "serviceRestartRequired": false
   },
   "notDoingCost": "Meeting preparation remains a repeated manual context-gathering task and important decisions or open questions may be reconstructed late.",
-  "approvalPhrase": "批准 pre-meeting-briefing-pilot-01 revision 1，基于 bc1a4051af2f017669a10172ba2b74248d83e4c8，仅执行静默只读影子试运行。"
+  "approvalPhrase": "批准 pre-meeting-briefing-pilot-01 revision 2，授权指纹 4f9af4160659d57490b3f3d9bb2f5f66cdb8acb2d5121ee867577de36e409b01，仅执行静默只读影子试运行。"
 }
