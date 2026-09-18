@@ -320,6 +320,27 @@ test("reports each executor stage when completed cleanup times out", async () =>
   );
 });
 
+test("reports each executor stage when overdue scanning times out", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-overdue-timeout-"));
+  const hanging = path.join(dir, "hanging-executor");
+  const didaConfig = path.join(dir, "dida-config.json");
+  const schemaPath = path.join(dir, "schema.json");
+  await writeFile(hanging, "#!/usr/bin/env node\nsetTimeout(() => {}, 10_000);\n", { mode: 0o755 });
+  await writeFile(didaConfig, JSON.stringify({ access_token: "overdue-timeout-token" }), { mode: 0o600 });
+  await writeFile(schemaPath, JSON.stringify({ type: "object" }));
+  const creator = new DidaTaskCreator({
+    codexCli: hanging, claudeCli: hanging, workspaceRoot: dir, varDir: path.join(dir, "var"),
+    didaProjectId: "project_1", didaOverdueSchemaPath: schemaPath,
+    didaExecutionTimeoutMs: 25, claudeExecutionTimeoutMs: 25,
+    didaPrimaryProvider: "claude", didaCliConfigPath: didaConfig,
+  });
+
+  await assert.rejects(
+    () => creator.listOverdue(),
+    /执行阶段：claude-primary=timeout -> codex-fallback=timeout/,
+  );
+});
+
 test("reports each executor stage when workday followup evaluation times out", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-followup-timeout-"));
   const hanging = path.join(dir, "hanging-executor");

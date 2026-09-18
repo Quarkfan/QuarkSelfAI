@@ -1851,3 +1851,23 @@
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是本轮由独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。未决事项仍只有 owner 是否批准 `pre-meeting-briefing-pilot-01` revision 2 的静默只读影子试运行；
   本轮不发送确认卡、不重复催促。下一轨偏好 `reliability`，优先观察真实运行故障；若保持健康，再审计其他未决授权的内容寻址完整性。
+
+## 2026-09-18 能力进化超期巡检诊断
+
+- 本轮选择 `reliability`。最近五轮覆盖三轨、上一轮为 `measurable-enhancement`；宿主 LaunchAgent 仍为唯一实例、`runs=336`，
+  只读 `/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。日志出现一次“滴答超期待办检查超时”，
+  随后只读 handoff 审计确认 Dida maintenance 健康故障为 0、消息队列和 mention pending 均为 0，因此判定为已恢复瞬时失败，不触发通知或真实重跑。
+- 超期扫描与已完成任务清理、工作日跟进使用同一 Claude/Codex failover，但超时仍只写总错误，无法判断主执行和兜底分别发生了什么。
+  `doListOverdue` 现复用既有脱敏 `executionAttempts`，只记录 provider、primary/fallback role 与 success/failed/timeout；不记录提示词、
+  任务正文、projectId、凭证或路径。既有 09:00–19:00 工作时段、任务级 24 小时去重、连续三次失败通知和已通知故障恢复规则不变。
+- 定向回归覆盖 Claude 主执行与 Codex 兜底均超时，连同 overdue monitor 共 29/29 通过。完整 `npm run check` 通过：主项目 532 中
+  519 通过、13 项仅因 sandbox listener 限制跳过，compat 全量通过；架构仍为 138 modules、123 assets、23/23 effects implemented、
+  0/23 active。Lark、DSH、BlackLake、server、recovery、work-domain 104/104、assistant continuity、capability evolution installed strict、
+  meeting-briefing authorization、宿主在线账号审计与根同步均通过。foundation 仍如实保留既有跨设备恢复、PostgreSQL、work integration
+  隔离和 single-writer 接管门禁，不是本轮新增回归。本次未调用 dida365、未读取或修改任务、未发送飞书、未新增依赖/consumer/provider/
+  scheduler/writer/effect，也未改变 DSH/Cordis composition。
+- 回滚为撤销本轮单行诊断接线、回归和治理记录；不涉及数据库迁移、外部状态清理或通知补偿。代码进入运行中的 compatibility composition，
+  只有在确认无活动子任务的安全窗口重启同一个 LaunchAgent 后生效；若没有安全窗口则保留到后续既有维护重启。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但既有会前简报 revision 2 未决期间不形成第二候选；
+  无关键故障时优先继续加固现有候选或选择可逆、无需新授权的职责增强。

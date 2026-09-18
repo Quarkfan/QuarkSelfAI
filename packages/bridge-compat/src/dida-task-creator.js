@@ -552,7 +552,10 @@ ${formatContext(contextMessages, message.message_id, this.config.allowedOpenId)}
       "--skip-git-repo-check", "--sandbox", "read-only",
       "--output-schema", this.config.didaOverdueSchemaPath, "-o", outputPath, "-",
     ], { cwd: runDir, input: prompt, timeoutMs: this.config.didaExecutionTimeoutMs });
-    if (result.timedOut) throw new Error("滴答超期待办检查超时。");
+    if (result.timedOut) {
+      const attempts = formatExecutionAttempts(result);
+      throw new Error(`滴答超期待办检查超时${attempts ? `（执行阶段：${attempts}）` : ""}。`);
+    }
     if (result.code !== 0) throw new Error(`滴答超期待办检查失败（exit ${result.code}）：${(result.stderr || result.stdout).trim().slice(-2000)}`);
     try { return JSON.parse(await readFile(outputPath, "utf8")); }
     catch (error) { throw new Error(`滴答超期待办结果无效：${error.message}`); }
