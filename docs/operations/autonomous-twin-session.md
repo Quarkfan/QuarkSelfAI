@@ -1867,7 +1867,9 @@
   隔离和 single-writer 接管门禁，不是本轮新增回归。本次未调用 dida365、未读取或修改任务、未发送飞书、未新增依赖/consumer/provider/
   scheduler/writer/effect，也未改变 DSH/Cordis composition。
 - 回滚为撤销本轮单行诊断接线、回归和治理记录；不涉及数据库迁移、外部状态清理或通知补偿。代码进入运行中的 compatibility composition，
-  只有在确认无活动子任务的安全窗口重启同一个 LaunchAgent 后生效；若没有安全窗口则保留到后续既有维护重启。
+  部署前只读审计确认 Dida maintenance、session lifecycle、小维、followup 与 message intake 均无活动失败或积压，进程树没有 compatibility
+  worker 发起的 Claude/Codex 子任务；随后只重启同一个 LaunchAgent，`runs` 从 336 增至 337，父进程 PID 为 6465、最近退出码 0，
+  宿主回读 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。修复已生效且没有形成第二消费者。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但既有会前简报 revision 2 未决期间不形成第二候选；
   无关键故障时优先继续加固现有候选或选择可逆、无需新授权的职责增强。
