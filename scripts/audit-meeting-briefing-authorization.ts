@@ -12,6 +12,7 @@ interface AuthorizationRequest extends Readonly<Record<string, unknown>> {
   readonly implementationBaselineRevision: string
   readonly authorizationFingerprint: string
   readonly approvalPhrase: string
+  readonly notificationPolicy: string
   readonly implementationScope: {
     readonly moduleIds: readonly string[]
     readonly reuseOnlyModuleIds: readonly string[]
@@ -41,7 +42,7 @@ export async function auditMeetingBriefingAuthorization(root = process.cwd(), ve
   exactKeys(request, expectedTopLevelKeys, 'authorization request')
   invariant(request.schemaVersion === 2, 'unsupported meeting briefing authorization schema')
   invariant(request.requestId === 'pre-meeting-briefing-pilot-01', 'unexpected authorization request id')
-  invariant(request.revision === 2, 'meeting briefing authorization must remain revision 2')
+  invariant(request.revision === 3, 'meeting briefing authorization must remain revision 3')
   invariant(request.status === 'awaiting-exact-owner-approval', 'authorization request must remain awaiting exact owner approval')
   invariant(sha1Pattern.test(request.implementationBaselineRevision), 'implementation baseline must be an exact Git revision')
   if (verifyRepository) {
@@ -52,8 +53,12 @@ export async function auditMeetingBriefingAuthorization(root = process.cwd(), ve
   const computedFingerprint = authorizationFingerprint(request)
   invariant(request.authorizationFingerprint === computedFingerprint, 'authorization request fingerprint drifted')
   invariant(
-    request.approvalPhrase === `批准 pre-meeting-briefing-pilot-01 revision 2，授权指纹 ${computedFingerprint}，仅执行静默只读影子试运行。`,
+    request.approvalPhrase === `批准 pre-meeting-briefing-pilot-01 revision 3，授权指纹 ${computedFingerprint}，仅执行静默只读影子试运行。`,
     'approval phrase does not bind the exact request fingerprint',
+  )
+  invariant(
+    request.notificationPolicy === 'Silent for the entire revision 3 shadow pilot. Any owner-visible delivery requires a new revision and separate approval.',
+    'notification policy does not bind the current request revision',
   )
 
   exactKeys(request.implementationScope, ['forbiddenChanges', 'moduleIds', 'reuseOnlyModuleIds'], 'implementation scope')

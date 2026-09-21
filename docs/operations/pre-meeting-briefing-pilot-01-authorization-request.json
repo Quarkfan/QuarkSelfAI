@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "requestId": "pre-meeting-briefing-pilot-01",
-  "revision": 2,
+  "revision": 3,
   "status": "awaiting-exact-owner-approval",
   "implementationBaselineRevision": "764c56c2c1580978c4e02ececfc196315defcaba",
-  "authorizationFingerprint": "4f9af4160659d57490b3f3d9bb2f5f66cdb8acb2d5121ee867577de36e409b01",
+  "authorizationFingerprint": "4a77b5cbd94cd3543ab5b0b88bd1ec16b0d1e191284b5b04e110f737a935bc1d",
   "purpose": "Evaluate whether a private, read-only pre-meeting brief reduces repeated context gathering without creating messages, tasks, calendar changes or external commitments.",
   "evidence": {
     "window": "2026-08-25/2026-09-09",
@@ -71,7 +71,7 @@
       "source availability is insufficient to evaluate eight meetings within 10 working days"
     ]
   },
-  "notificationPolicy": "Silent for the entire revision 1 shadow pilot. Any owner-visible delivery requires a new revision and separate approval.",
+  "notificationPolicy": "Silent for the entire revision 3 shadow pilot. Any owner-visible delivery requires a new revision and separate approval.",
   "perInstanceConfirmation": "Every attendee reply, calendar or task mutation, document write, external research call and external commitment remains individually confirmed and is not authorized by this pilot.",
   "compatibility": {
     "local": "reuse the current local-first read boundaries and SQLite-backed assistant state without a new writer",
@@ -84,5 +84,5 @@
     "serviceRestartRequired": false
   },
   "notDoingCost": "Meeting preparation remains a repeated manual context-gathering task and important decisions or open questions may be reconstructed late.",
-  "approvalPhrase": "批准 pre-meeting-briefing-pilot-01 revision 2，授权指纹 4f9af4160659d57490b3f3d9bb2f5f66cdb8acb2d5121ee867577de36e409b01，仅执行静默只读影子试运行。"
+  "approvalPhrase": "批准 pre-meeting-briefing-pilot-01 revision 3，授权指纹 4a77b5cbd94cd3543ab5b0b88bd1ec16b0d1e191284b5b04e110f737a935bc1d，仅执行静默只读影子试运行。"
 }

@@ -49,10 +49,10 @@
   接管更多助理职责，例如日程与会议准备、信息筛选、跨会话跟进、文档草拟、本地资料整理和周期复盘。提出不等于授权：
   确认卡必须绑定 exact revision、数据来源、触发条件、允许动作、逐次确认边界、通知策略、试运行阶段和回滚；批准后
   在精确范围内连续实施，不重复索要同一批准，只有事实、范围或风险发生实质变化时重新确认。同一时间只保留一个未决候选。
-  `pre-meeting-briefing-pilot-01` revision 2 当前只有默认不激活的元数据规划器和内容指纹授权单；明确批准前不得挂载真实日历/消息读取、
+  `pre-meeting-briefing-pilot-01` revision 3 当前只有默认不激活的元数据规划器和内容指纹授权单；明确批准前不得挂载真实日历/消息读取、
   生成或持久化影子简报、调度运行或发送 owner 通知，owner 可见交付仍须后续独立 revision。
-  revision 2 绑定实现基线与授权指纹，只允许扩展现有 `meeting-briefing-planner` 并只复用既有读取/调度边界；范围、指纹、批准短语、
-  模块 runtime 或 ownership 任一漂移都由 `audit:meeting-briefing-authorization` 失败关闭。
+  revision 3 绑定实现基线与授权指纹，只允许扩展现有 `meeting-briefing-planner` 并只复用既有读取/调度边界；范围、指纹、批准短语、
+  通知策略中的 revision、模块 runtime 或 ownership 任一漂移都由 `audit:meeting-briefing-authorization` 失败关闭。
   该候选的退出判定只接受有界计数：8 个合格会议或 10 个工作日先到即止，任一隐私、来源作用域、去重或外部 effect
   违规立即失败，草稿覆盖率至少 80%、人工复核有效率至少 70%、低价值或误导率不得高于 30%；判定器本身不得读取正文或激活候选。
 - 真实经验沉淀 Skill 遵循 ADR 0087：只保存脱敏 Experience，把可失效 Pattern 与运行 Skill 分开；候选先保持影子，

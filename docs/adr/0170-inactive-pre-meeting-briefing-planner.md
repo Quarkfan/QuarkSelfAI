@@ -12,8 +12,8 @@
 - 同一未激活 policy seam 提供纯计数退出判定。它只接受工作日、合格会议、草稿、人工复核、有效/低价值分类和隐私、来源作用域、
   去重、外部 effect 违规计数；8 个合格会议或 10 个工作日先到即止，任一安全违规或低价值/误导率超过 30% 立即失败，完成时还要求
   草稿覆盖率至少 80% 且人工复核有效率至少 70%。未知字段、计数越界和分类重叠均失败关闭，输出不含会议、草稿或来源正文。
-- 真正的只读数据接入和本地影子简报试运行由 `pre-meeting-briefing-pilot-01` revision 2 单独请求批准。revision 1 的批准短语引用了候选实现前的基线，且之后又增加退出判定，无法精确证明 owner 批准当前边界，因此在未获批准时被 revision 2 取代。
-- revision 2 以 SHA-256 指纹绑定除可变状态、指纹和批准短语外的完整请求，另固定当前实现基线、唯一 `meeting-briefing-planner` 模块、只复用的四个既有边界和六类禁止变更。`audit:meeting-briefing-authorization` 对请求字段、指纹、批准短语、模块 runtime/ownership 和排除项失败关闭，但不会记录批准或激活能力。向 owner 私聊发送简报、更新日程/任务、联系参会人、调用小维或扩展权限仍不在该 revision 内。
+- 真正的只读数据接入和本地影子简报试运行由 `pre-meeting-briefing-pilot-01` revision 3 单独请求批准。revision 1 的批准短语引用了候选实现前的基线；revision 2 虽增加内容指纹，却在通知策略中仍错误引用 revision 1。两者均未获批准，并由内部一致的 revision 3 取代。
+- revision 3 以 SHA-256 指纹绑定除可变状态、指纹和批准短语外的完整请求，另固定当前实现基线、唯一 `meeting-briefing-planner` 模块、只复用的四个既有边界和六类禁止变更。`audit:meeting-briefing-authorization` 对请求字段、指纹、批准短语、通知策略中的 revision、模块 runtime/ownership 和排除项失败关闭，但不会记录批准或激活能力。向 owner 私聊发送简报、更新日程/任务、联系参会人、调用小维或扩展权限仍不在该 revision 内。
 
 ## 替代方案
 
