@@ -1888,8 +1888,8 @@
   compat 185/185。架构仍为 138 modules、123 assets、23/23 effects implemented、0/23 active；Lark、DSH、BlackLake、server、recovery、
   assistant continuity、capability evolution installed strict、work-domain 104/104、授权审计与根同步通过。foundation 仅保留既有工作集成隔离、
   跨设备恢复、PostgreSQL 和 single-writer 演练门禁；账号本地审计除未请求 GitHub 在线读取外均 ready/configured。实现提交为 `cb80720`。
-- 全量检查后首次健康回读出现瞬时 loopback 连接拒绝；LaunchAgent 始终保持 `runs=337`、PID 6465、最近退出码 0，`lsof` 确认同一进程仍监听
-  3210，随后有界重试恢复 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。没有重启或形成第二消费者。
+- 全量检查后普通 `curl` 受当前代理路径影响返回 loopback 连接拒绝；LaunchAgent 始终保持 `runs=337`、PID 6465、最近退出码 0，`lsof` 确认
+  同一进程仍监听 3210，显式 `--noproxy '*'` 直连回读 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。没有重启或形成第二消费者。
 - 本轮不进入 daemon composition，不需要重启；回滚为撤销实现提交并恢复未获批准的 revision 2 元数据，不涉及迁移、真实影子草稿、
   外部状态或通知补偿。未决事项仍只有 owner 是否批准 revision 3 的静默只读影子试运行，本轮不发送确认卡、不重复催促。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
