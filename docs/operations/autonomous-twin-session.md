@@ -1873,3 +1873,24 @@
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但既有会前简报 revision 2 未决期间不形成第二候选；
   无关键故障时优先继续加固现有候选或选择可逆、无需新授权的职责增强。
+
+## 2026-09-21 能力进化候选授权一致性
+
+- 本轮选择 `measurable-enhancement`。最近五轮已覆盖三轨，上一轮为 `reliability`；当前 LaunchAgent 仍为唯一实例、`runs=337`、
+  最近退出码 0，当前配置的 `127.0.0.1:3210/api/health` 回读 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready，
+  没有持续关键故障抢占。既有会前简报候选仍是唯一未决进取型候选，本轮不新增候选、不读取真实日历或消息。
+- 审计发现 revision 2 虽有完整请求指纹和精确批准短语，`notificationPolicy` 却仍写成“revision 1 shadow pilot”。原审计只验证该字段
+  已进入指纹，不能识别它与顶层 revision 的语义矛盾；未来 owner 即使复制精确短语，也会批准一份内部版本指向不一致的请求。
+- 未获批准的 revision 2 由同一候选 revision 3 取代。revision 3 只修正通知策略的版本绑定并生成新 SHA-256 指纹，没有扩大数据源、
+  allowed actions、模块范围、权限、通知或 effect。审计新增通知策略必须精确引用当前 revision 的失败关闭门禁；回归证明即使攻击者重算
+  指纹并同步批准短语，旧 revision 语义仍会被拒绝。
+- 定向规划器与授权回归 12/12 通过；完整 `npm run check` 为主项目 533 项中 520 通过、13 项仅因 sandbox listener 限制跳过，
+  compat 185/185。架构仍为 138 modules、123 assets、23/23 effects implemented、0/23 active；Lark、DSH、BlackLake、server、recovery、
+  assistant continuity、capability evolution installed strict、work-domain 104/104、授权审计与根同步通过。foundation 仅保留既有工作集成隔离、
+  跨设备恢复、PostgreSQL 和 single-writer 演练门禁；账号本地审计除未请求 GitHub 在线读取外均 ready/configured。实现提交为 `cb80720`。
+- 全量检查后首次健康回读出现瞬时 loopback 连接拒绝；LaunchAgent 始终保持 `runs=337`、PID 6465、最近退出码 0，`lsof` 确认同一进程仍监听
+  3210，随后有界重试恢复 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。没有重启或形成第二消费者。
+- 本轮不进入 daemon composition，不需要重启；回滚为撤销实现提交并恢复未获批准的 revision 2 元数据，不涉及迁移、真实影子草稿、
+  外部状态或通知补偿。未决事项仍只有 owner 是否批准 revision 3 的静默只读影子试运行，本轮不发送确认卡、不重复催促。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。滚动五轮继续覆盖三轨，下一条成长跑道优先 `strategic-opportunity`，但未决候选期间不形成第二候选。
