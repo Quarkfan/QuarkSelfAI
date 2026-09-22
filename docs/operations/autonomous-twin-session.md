@@ -1894,3 +1894,21 @@
   外部状态或通知补偿。未决事项仍只有 owner 是否批准 revision 3 的静默只读影子试运行，本轮不发送确认卡、不重复催促。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。滚动五轮继续覆盖三轨，下一条成长跑道优先 `strategic-opportunity`，但未决候选期间不形成第二候选。
+
+## 2026-09-22 能力进化候选克制审计
+
+- 本轮选择 `strategic-opportunity`，结果为 `no-change`。最近五轮已覆盖三轨，上一轮为 `measurable-enhancement`；既有
+  `pre-meeting-briefing-pilot-01` revision 3 仍是唯一未决进取型候选，因此不形成第二候选，也不以巡检频率为理由继续堆叠规划器、适配器或授权字段。
+- 比较了四条机会：直接接入真实日历/消息、增加 owner 可见简报、继续扩展授权审计、保持候选冻结。前两项需要尚未取得的精确批准并会扩大读取或通知边界；
+  第三项在 revision 3 的指纹、批准短语、通知版本、唯一 inactive 模块和六类禁止变更均已通过审计后没有新的失败证据。选择保持冻结，等待 owner 决策或新的真实故障。
+- 只读证据确认规划器仍只接受闭合元数据与计数，`sourceReadsExecuted=false`、`rawContentStored=false`、`externalEffectsEnabled=false`、
+  `ownerNotificationAllowed=false`；授权审计返回 `approvalRecorded=false`，未读取真实日历、消息或文档，未写影子草稿，未调度、通知、安装依赖或改变 DSH/Cordis composition。
+- 运行健康：LaunchAgent 保持唯一实例、`runs=337`、PID 6465、最近退出码 0；沙箱内 loopback 连接被隔离，宿主权限下精确回读
+  `127.0.0.1:3210/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。没有持续关键故障抢占本轮主题。
+- 验证：meeting-briefing authorization、capability-evolution installed strict、assistant continuity strict 与根协作入口同步校验通过；完整
+  `npm run check` 为主项目 533 项中 520 通过、13 项仅因 sandbox listener 限制跳过，compat 185/185；架构保持 138 modules、123 assets、
+  23/23 effects implemented、0/23 active。回滚仅需移除本条 `no-change` 账本记录和对应脱敏状态项，不涉及代码、数据库、外部状态、守护进程或补偿动作。
+- 未决风险维持不变：revision 3 未获 owner 精确批准前，不能挂载真实来源、生成或持久化影子简报、调度运行或发送通知；下一条成长跑道优先
+  `reliability`，只在出现真实故障证据时抢占，或在 owner 对当前唯一候选作出决定后重新评估战略机会。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。
