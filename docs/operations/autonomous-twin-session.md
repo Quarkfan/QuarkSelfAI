@@ -1915,9 +1915,10 @@
 
 ## 2026-09-23 能力进化追问故障脱敏
 
-- 本轮选择 `reliability`。最近五轮已覆盖三轨、上一轮为 `strategic-opportunity`；LaunchAgent 单实例保持 running、`runs=337`、最近退出码 0，宿主 `/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。Dida maintenance 与 session lifecycle 当前健康故障均为 0，消息队列和 mention pending 均为 0，因此没有把已恢复的网络波动误判成持续运行故障。
+- 本轮选择 `reliability`。最近五轮已覆盖三轨、上一轮为 `strategic-opportunity`；初始 LaunchAgent 单实例保持 running、`runs=337`、最近退出码 0，宿主 `/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。Dida maintenance 与 session lifecycle 当前健康故障均为 0；初始消息队列和 mention pending 为 0，因此没有把已恢复的网络波动误判成持续运行故障。随后正常补偿扫描持久化 24 条待 settle/retry 的 mention pending，但没有对应 Claude/Codex/小维执行子进程，重启后队列仍完整保留。
 - 当天真实追问回复轮询先后遇到 transport 与 TLS 错误并自行恢复，但 stderr 把上游 CLI 错误对象完整写出，包含请求 URL、chat ID、内网源地址和证书域名，违反既有“只记录脱敏来源故障”的边界。根因是持久状态已通过 `userFacingError` 脱敏，logger 却仍接收原始 `Error`。
 - `mention-monitor` 现在只从上游错误中提取长度与字符集受限的 `category/subtype`，未知错误收敛为 `unknown`；用户可见/持久错误文案同步改为“脱敏故障类型已保留”。回归使用带 URL、会话标识、IP 与域名的合成 TLS 错误，证明日志只得到 `{category: network, subtype: tls}`，四类敏感片段均未出现。该变更不改变重试、待处理项、通知阈值、消费者、权限、网络或 DSH/Cordis composition。
 - 完整门禁还发现 `main` 上的 work-domain evidence baseline 已落后于 2026-09-21 的治理记录；在独立 clean HEAD 复算也得到同一漂移，证明不是本轮代码或用户未提交文件造成。路径仍为 104、路径 digest 与五类计数均不变、未分类和歧义均为 0，因此只把 evidence digest 更新为当前已复核文本基线并再次严格审计，不改变工作域分类或迁移状态。
-- 回滚为撤销本轮日志脱敏函数、单测和治理说明；不涉及数据库迁移、外部状态或补偿动作。代码进入 compatibility composition，需在确认无活动子任务后重启同一 LaunchAgent 才生效；不得形成第二消费者。
+- 验证：定向 mention-monitor 36/36；完整 `npm run check` 为主项目 533 项中 520 通过、13 项仅因 sandbox listener 限制跳过，compat 185/185；架构为 138 modules、123 assets、23/23 effects implemented、0/23 active。Lark、DSH、参考项目、server、recovery、work-domain、assistant continuity、meeting authorization、capability evolution installed strict 与根同步均通过。foundation strict 仍只报告既有 work-integration、跨设备恢复、PostgreSQL 和 single-writer 演练门禁，未出现本轮新增 blocker。
+- 回滚为撤销本轮日志脱敏函数、单测和治理说明；不涉及数据库迁移、外部状态或补偿动作。实现与治理提交 `bd821e7` 已推送 `origin/main`。确认没有 compatibility worker 发起的 Claude/Codex/小维执行子进程后，只重启同一 LaunchAgent；`runs` 从 337 增至 338、父 PID 92821、最近退出码 0，最终健康 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready，没有形成第二消费者。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；`failureReason=none`、`failureStage=none`。下一轨偏好 `measurable-enhancement`；唯一未决会前简报 revision 3 继续保持 inactive，不形成第二候选。
