@@ -677,7 +677,9 @@ test("keeps the assistant running when clarification reply polling has a transie
     config: {}, state,
     lark: { async getChatMessagesSince() {
       attempts += 1;
-      if (attempts === 1) throw new Error("temporary network failure");
+      if (attempts === 1) throw new Error(`飞书追问回复读取失败: {
+        "error":{"type":"network","subtype":"tls","message":"request https://open.feishu.cn/?container_id=oc_secret from 172.16.41.126 failed for secret.example.com"}
+      }`);
       return [];
     } },
     taskCreator: {}, logger: { error(...args) { errors.push(args); }, info(...args) { recovered.push(args); } },
@@ -688,6 +690,8 @@ test("keeps the assistant running when clarification reply polling has a transie
   assert.equal(state.state.mentionClarificationPollFailure.count, 1);
   assert.match(state.state.mentionClarificationPollFailure.error, /后台执行失败/);
   assert.equal(errors[0][0], "clarification reply poll failed");
+  assert.deepEqual(errors[0][1], { category: "network", subtype: "tls" });
+  assert.doesNotMatch(JSON.stringify(errors[0]), /oc_secret|172\.16\.41\.126|secret\.example\.com|open\.feishu\.cn/);
   await monitor.processLocalQueues();
   assert.equal(state.state.mentionClarificationPollFailure, null);
   assert.equal(recovered[0][0], "clarification reply poll recovered");

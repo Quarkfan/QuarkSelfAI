@@ -19,7 +19,18 @@ function userFacingError(error) {
     return "飞书或滴答连接缺少所需权限，详细信息已保留在本地日志。";
   }
   const exitCode = text.match(/exit\s+(\d+)/i)?.[1];
-  return `后台执行失败${exitCode ? `（exit ${exitCode}）` : ""}，详细信息已保留在本地日志。`;
+  return `后台执行失败${exitCode ? `（exit ${exitCode}）` : ""}，脱敏故障类型已保留在本地日志。`;
+}
+
+function sourceFailureAudit(error) {
+  const text = String(error?.message || error || "");
+  const field = (name) => text.match(new RegExp(`"${name}"\\s*:\\s*"([a-z0-9_-]{1,32})"`, "i"))?.[1]?.toLowerCase();
+  const category = field("type") || (/timed? out|超时/i.test(text) ? "timeout" : "unknown");
+  const subtype = field("subtype");
+  return {
+    category,
+    ...(subtype ? { subtype } : {}),
+  };
 }
 
 export function isLarkRateLimitError(error) {
@@ -1194,7 +1205,7 @@ export class MentionMonitor {
       failure.error = userFacingError(error);
       this.state.state.mentionClarificationPollFailure = failure;
       await this.state.save();
-      this.logger.error("clarification reply poll failed", error);
+      this.logger.error("clarification reply poll failed", sourceFailureAudit(error));
     }
   }
 

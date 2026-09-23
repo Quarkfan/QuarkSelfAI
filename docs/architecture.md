@@ -446,7 +446,7 @@ DSH profile 只保存环境变量表达式，`--dump-config` 不得出现密钥�
 
 经本人批准发出的追问，其回复轮询是重点消息处理中的独立可恢复读取来源。飞书网络、DNS、超时或读取错误只记录
 脱敏来源故障并保留原 `mentionClarifications` 项，不得让定时触发的 Promise rejection 逸出并终止 compatibility host；
-下一次成功读取会清除故障标记并继续原调研或回传。该隔离不放宽外部群禁发、追问批准和消息关联门禁。
+运行日志把上游错误收敛为受限 `category/subtype`，不保留请求 URL、chat/user/message ID、源地址或证书域名。下一次成功读取会清除故障标记并继续原调研或回传。该隔离不放宽外部群禁发、追问批准和消息关联门禁。
 
 工作日跟进清单评估复用 compatibility 执行器的脱敏阶段轨迹。健康状态只保留 provider、primary/fallback role 与
 success/failed/timeout 序列；前两次失败静默持久化，连续三次才通知本人，恢复通知只对应此前已经通知的故障。

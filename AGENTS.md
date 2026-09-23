@@ -134,7 +134,7 @@
   既有工作时段、24 小时去重、三次失败通知和已通知故障恢复门禁保持不变。
 - 执行器兜底必须保持能力与会话语义：native 普通 durable action 使用 Claude Code → DSH native → Codex；当前本人私聊总控延续原 Codex 会话，只有 Codex 与 Claude Code 都发生基础设施故障时才使用隔离的 DSH headless 兜底。明确指定的 Codex session、结构化滴答写入和需要原 provider 会话连续性的任务不得静默切换到 DSH。DSH headless 使用独立 `DSH_HOME`，不得与内嵌 Web profile 并发写同一 session 存储。
 - 主动通知必须遵守 `docs/operations/autonomous-twin-session.md` 的降噪门禁：瞬时基础设施故障静默、恢复只对应已通知故障、普通消息与简报限于 08:00–20:00、超期汇总限于 09:00–19:00 且任务级 24 小时去重；本人手工小维会话不镜像到控制会话。
-- 已批准追问的回复轮询是独立、可恢复的读取来源；单次网络、DNS、超时或飞书读取失败必须保留待处理项并记录脱敏故障，不得以未捕获异常终止 compatibility host 或其他消费者。后续成功读取时清除该来源故障并继续原事项。
+- 已批准追问的回复轮询是独立、可恢复的读取来源；单次网络、DNS、超时或飞书读取失败必须保留待处理项并记录脱敏故障，不得以未捕获异常终止 compatibility host 或其他消费者。运行日志只保留受限故障类别与子类，不得写入请求 URL、chat/user/message ID、源地址或证书域名；后续成功读取时清除该来源故障并继续原事项。
 - 本地网络恢复遵循 `docs/adr/0045-local-network-recovery.md`：仅连续连接类失败可触发诊断，Google 不是唯一健康依据；自动停 Clash、切 Wi-Fi 或修改 IP/DNS 必须通过独立、受限、已批准的特权 helper，未完成安装、回滚和通知演练前不得挂载运行。
 - 黑湖短消息追问前必须先读取回复对象、同一私聊最近 7 天的有界历史，并优先检索 `${BLACKLAKE_WORKSPACE_ROOT}/docs/knowledge/assistant` 下的助手自有知识；三个 BlackLake 参考项目只读使用，不得写入助手自身案例。命中知识只用于恢复业务对象和可能路径，不能替代当前版本、租户、字段和状态核验，也不能授权任何配置写入。
 - 当本人询问项目、客户、工厂或租户的 CS 时，读取根共享 `blacklake-tenant-cs-lookup` Skill，经 Archery 只读查询 Lakers `organization_principal`；结果只能说明申请租户环境时登记的内部负责人，多候选不静默选人，空值不猜测，不能把它宣称为当前 CS 的确定事实。
