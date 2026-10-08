@@ -1952,5 +1952,5 @@
 - 将来源故障审计提取到既有 compatibility `util`，追问与小维共同复用；小维 stderr 只保留长度和字符集受限的 `category/subtype`，持久健康状态、owner 故障通知以及请求/任务同步重试字段只保留脱敏摘要。合成回归同时向日志、状态和通知注入 URL、用户标识、内网地址与上游提示并证明均不可见；批准、重试、恢复、单消费者、通知阈值和 DSH/Cordis composition 均未改变。
 - 定向回归 40/40；完整 `npm run check` 为主项目 535 项中 522 通过、13 项仅因 sandbox listener 限制跳过，compat 186/186。Lark、DSH、BlackLake、server、recovery、work-domain 104/104、assistant continuity、capability evolution installed strict、meeting authorization 与根同步门禁均通过。实现提交为 `7e403bf`。
 - 只读 handoff 审计显示 Dida maintenance 2 个 workflow/0 health failure，session lifecycle 0，followup 2 个 workflow/0 failure，message queue 0；小维 8 个 workflow 均已完成，但当前健康故障计数为 5。日志将其归类为 `authentication/token_missing`，属于需要 owner 重新完成飞书 user identity 授权的未决外部条件；本轮未刷新凭证、扩大 scope 或执行登录。
-- 回滚为撤销 `7e403bf` 及本条治理记录，并在安全空闲窗口重启同一 LaunchAgent；无数据库迁移、业务数据补偿或外部消息撤回。代码进入 compatibility composition，完成最终门禁和空闲核验后才重启现有守护进程，不创建第二消费者。
+- 回滚为撤销 `7e403bf` 及本条治理记录，并在安全空闲窗口重启同一 LaunchAgent；无数据库迁移、业务数据补偿或外部消息撤回。最终门禁通过后等待两个在途 Claude 子任务自然结束，才重启现有守护进程；`runs` 从 339 增至 340、父 PID 为 55921，宿主级 `/api/health` 回读 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready，没有创建第二消费者。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；`failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但唯一候选未决期间不形成第二候选；持续认证缺口属于 owner action，不由巡检自动刷新凭证。
