@@ -15,13 +15,14 @@ test('reads the Codex automation and a privacy-bounded evolution ledger without 
     ...Array.from({ length: 4 }, (_, index) => ({ title: `能力进化｜2026-09-0${index + 1}｜可靠性`, track: 'reliability', startedAt: `2026-09-0${index + 1}T06:30:00.000Z`, outcome: 'upgraded', summary: '修复一个运行故障。' })),
   ], reports: [{ title: '新增日志检索 Skill', track: 'measurable-enhancement', summary: '减少重复排障检索。', recordedAt: '2026-09-02T06:42:00.000Z', outcome: 'upgraded', commit: 'abc123' }] }))
   try {
-    const result = await new FileCapabilityEvolutionProvider({ automationPath, statusPath }).inspect()
+    const result = await new FileCapabilityEvolutionProvider({ automationPath, statusPath, now: () => new Date('2026-09-02T07:00:00.000Z') }).inspect()
     assert.equal(result.state, 'active')
     assert.equal(result.mode, 'cron')
     assert.equal(result.scheduleLabel, '每个工作日 14:30')
     assert.equal(result.workspace, 'local-project')
     assert.equal(result.latestRun?.taskId, 'thread-1')
     assert.equal(result.latestRun?.track, 'measurable-enhancement')
+    assert.deepEqual(result.evidenceContinuity, { state: 'current', missedScheduledRuns: 0, expectedRunAt: '2026-09-02T06:30:00.000Z', latestEvidenceAt: '2026-09-02T06:42:00.000Z' })
     assert.deepEqual(result.trajectory, { windowSize: 5, trackedRuns: 5, distinctTracks: 2, state: 'balanced', counts: { reliability: 4, 'measurable-enhancement': 1, 'strategic-opportunity': 0 }, nextTrackPreference: 'strategic-opportunity' })
     assert.equal(result.reports[0]?.track, 'measurable-enhancement')
     assert.equal(result.reports[0]?.commit, 'abc123')
@@ -35,8 +36,34 @@ test('degrades to a visible missing state when the local Codex automation is una
     const result = await new FileCapabilityEvolutionProvider({ automationPath: join(directory, 'missing.toml'), statusPath: join(directory, 'missing.json') }).inspect()
     assert.equal(result.configured, false)
     assert.equal(result.state, 'missing')
+    assert.deepEqual(result.evidenceContinuity, { state: 'unavailable', missedScheduledRuns: 0, reason: 'automation-missing' })
     assert.equal(result.trajectory.state, 'insufficient-data')
     assert.deepEqual(result.reports, [])
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('makes an active definition with stale run evidence visible and counts missed scheduled runs', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-evolution-stale-'))
+  const automationPath = join(directory, 'automation.toml')
+  const statusPath = join(directory, 'status.json')
+  await writeFile(automationPath, 'version = 1\nid = "quarkselfai"\nkind = "cron"\nname = "巡检"\nstatus = "ACTIVE"\nrrule = "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=14;BYMINUTE=30"\n')
+  await writeFile(statusPath, JSON.stringify({ version: 1, latestRun: { title: '旧巡检', track: 'reliability', startedAt: '2026-09-23T06:30:00.000Z', completedAt: '2026-09-23T06:45:00.000Z', outcome: 'upgraded', summary: '旧证据' }, history: [], reports: [] }))
+  try {
+    const result = await new FileCapabilityEvolutionProvider({ automationPath, statusPath, now: () => new Date('2026-09-28T07:00:00.000Z') }).inspect()
+    assert.deepEqual(result.evidenceContinuity, { state: 'stale', missedScheduledRuns: 3, expectedRunAt: '2026-09-28T06:30:00.000Z', latestEvidenceAt: '2026-09-23T06:45:00.000Z' })
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('shows a current scheduled run as running instead of stale', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-evolution-running-'))
+  const automationPath = join(directory, 'automation.toml')
+  const statusPath = join(directory, 'status.json')
+  await writeFile(automationPath, 'version = 1\nid = "quarkselfai"\nkind = "cron"\nname = "巡检"\nstatus = "ACTIVE"\nrrule = "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=14;BYMINUTE=30"\n')
+  await writeFile(statusPath, JSON.stringify({ version: 1, latestRun: { title: '当前巡检', track: 'measurable-enhancement', startedAt: '2026-09-28T06:31:00.000Z', outcome: 'running', summary: '执行中' }, history: [], reports: [] }))
+  try {
+    const result = await new FileCapabilityEvolutionProvider({ automationPath, statusPath, now: () => new Date('2026-09-28T07:00:00.000Z') }).inspect()
+    assert.equal(result.evidenceContinuity.state, 'running')
+    assert.equal(result.evidenceContinuity.missedScheduledRuns, 0)
   } finally { await rm(directory, { recursive: true, force: true }) }
 })
 

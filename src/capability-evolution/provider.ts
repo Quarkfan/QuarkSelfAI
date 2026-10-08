@@ -37,9 +37,18 @@ export interface CapabilityEvolutionStatus {
   readonly scheduleLabel?: string
   readonly workspace?: string
   readonly latestRun?: CapabilityEvolutionRun
+  readonly evidenceContinuity: CapabilityEvolutionEvidenceContinuity
   readonly trajectory: CapabilityEvolutionTrajectory
   readonly reports: readonly CapabilityEvolutionReport[]
   readonly error?: string
+}
+
+export interface CapabilityEvolutionEvidenceContinuity {
+  readonly state: 'current' | 'running' | 'stale' | 'unavailable'
+  readonly missedScheduledRuns: number
+  readonly expectedRunAt?: string
+  readonly latestEvidenceAt?: string
+  readonly reason?: 'automation-missing' | 'automation-paused' | 'invalid-automation' | 'unsupported-schedule'
 }
 
 export interface CapabilityEvolutionTrajectory {
@@ -56,6 +65,7 @@ export interface CapabilityEvolutionProvider { inspect(): Promise<CapabilityEvol
 export interface FileCapabilityEvolutionProviderOptions {
   readonly automationPath?: string
   readonly statusPath?: string
+  readonly now?: () => Date
 }
 
 const dayLabels: Readonly<Record<string, string>> = {
@@ -90,6 +100,48 @@ function scheduleLabel(rrule: string | undefined): string | undefined {
   const hour = String(Number(fields.BYHOUR ?? 0)).padStart(2, '0')
   const minute = String(Number(fields.BYMINUTE ?? 0)).padStart(2, '0')
   return `每${day ?? '周'} ${hour}:${minute}`
+}
+
+const weekdayIndexes: Readonly<Record<string, number>> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 }
+
+function scheduleDefinition(rrule: string | undefined): { days: ReadonlySet<number>; hour: number; minute: number } | undefined {
+  if (!rrule) return undefined
+  const fields = Object.fromEntries(rrule.split(';').map(item => item.split('=', 2)))
+  const days = String(fields.BYDAY ?? '').split(',').map(item => weekdayIndexes[item]).filter(item => item !== undefined)
+  const hour = Number(fields.BYHOUR)
+  const minute = Number(fields.BYMINUTE)
+  if (fields.FREQ !== 'WEEKLY' || days.length === 0 || !Number.isInteger(hour) || hour < 0 || hour > 23 || !Number.isInteger(minute) || minute < 0 || minute > 59) return undefined
+  return { days: new Set(days), hour, minute }
+}
+
+function scheduledRuns(rrule: string | undefined, after: Date | undefined, through: Date): Date[] | undefined {
+  const definition = scheduleDefinition(rrule)
+  if (!definition) return undefined
+  const cursor = new Date(through.getFullYear(), through.getMonth(), through.getDate() - 366, definition.hour, definition.minute)
+  const runs: Date[] = []
+  for (let offset = 0; offset <= 366; offset += 1) {
+    const candidate = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + offset, definition.hour, definition.minute)
+    if (candidate.getTime() > through.getTime()) break
+    if (definition.days.has(candidate.getDay()) && (!after || candidate.getTime() > after.getTime())) runs.push(candidate)
+  }
+  return runs
+}
+
+function evidenceContinuity(status: string, rrule: string | undefined, latestRun: CapabilityEvolutionRun | undefined, now: Date): CapabilityEvolutionEvidenceContinuity {
+  if (status !== 'ACTIVE') return { state: 'unavailable', missedScheduledRuns: 0, reason: 'automation-paused' }
+  const evidenceAtValue = latestRun?.completedAt ?? latestRun?.startedAt
+  const evidenceAt = evidenceAtValue ? new Date(evidenceAtValue) : undefined
+  const allExpected = scheduledRuns(rrule, undefined, now)
+  if (!allExpected) return { state: 'unavailable', missedScheduledRuns: 0, reason: 'unsupported-schedule' }
+  const expected = allExpected.at(-1)
+  const common = {
+    missedScheduledRuns: scheduledRuns(rrule, evidenceAt, now)?.length ?? 0,
+    ...(expected ? { expectedRunAt: expected.toISOString() } : {}),
+    ...(evidenceAtValue ? { latestEvidenceAt: evidenceAtValue } : {}),
+  }
+  if (latestRun?.outcome === 'running' && expected && Date.parse(latestRun.startedAt) >= expected.getTime()) return { state: 'running', ...common }
+  if (!expected || (evidenceAt && evidenceAt.getTime() >= expected.getTime())) return { state: 'current', ...common, missedScheduledRuns: 0 }
+  return { state: 'stale', ...common }
 }
 
 function short(value: unknown, limit = 320): string | undefined {
@@ -165,25 +217,27 @@ async function readLedger(path: string): Promise<{ latestRun?: CapabilityEvoluti
 export class FileCapabilityEvolutionProvider implements CapabilityEvolutionProvider {
   readonly #automationPath: string
   readonly #statusPath: string
+  readonly #now: () => Date
 
   constructor(options: FileCapabilityEvolutionProviderOptions = {}) {
     const codexHome = process.env.CODEX_HOME?.trim() || join(homedir(), '.codex')
     this.#automationPath = options.automationPath ?? join(codexHome, 'automations', 'quarkselfai', 'automation.toml')
     this.#statusPath = options.statusPath ?? resolve(process.cwd(), 'var', 'capability-evolution', 'status.json')
+    this.#now = options.now ?? (() => new Date())
   }
 
   async inspect(): Promise<CapabilityEvolutionStatus> {
     const ledger = await readLedger(this.#statusPath)
     let text: string
     try { text = await readFile(this.#automationPath, 'utf8') } catch {
-      return { configured: false, state: 'missing', automationId: 'quarkselfai', name: 'QuarkSelfAI 能力进化巡检', trajectory: ledger.trajectory, reports: ledger.reports, ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
+      return { configured: false, state: 'missing', automationId: 'quarkselfai', name: 'QuarkSelfAI 能力进化巡检', evidenceContinuity: { state: 'unavailable', missedScheduledRuns: 0, reason: 'automation-missing' }, trajectory: ledger.trajectory, reports: ledger.reports, ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
     }
     const id = tomlString(text, 'id')
     const name = tomlString(text, 'name')
     const status = tomlString(text, 'status')
     const mode = tomlString(text, 'kind')
     if (!id || !name || !status || !mode) {
-      return { configured: false, state: 'invalid', automationId: id ?? 'quarkselfai', name: name ?? '能力进化巡检', trajectory: ledger.trajectory, reports: ledger.reports, error: '自动化配置无法安全解析', ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
+      return { configured: false, state: 'invalid', automationId: id ?? 'quarkselfai', name: name ?? '能力进化巡检', evidenceContinuity: { state: 'unavailable', missedScheduledRuns: 0, reason: 'invalid-automation' }, trajectory: ledger.trajectory, reports: ledger.reports, error: '自动化配置无法安全解析', ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}) }
     }
     const schedule = tomlString(text, 'rrule')
     const cadence = scheduleLabel(schedule)
@@ -202,6 +256,7 @@ export class FileCapabilityEvolutionProvider implements CapabilityEvolutionProvi
       ...(cadence ? { scheduleLabel: cadence } : {}),
       ...(workspace ? { workspace } : {}),
       ...(ledger.latestRun ? { latestRun: ledger.latestRun } : {}),
+      evidenceContinuity: evidenceContinuity(status, schedule, ledger.latestRun, this.#now()),
       trajectory: ledger.trajectory,
       reports: ledger.reports,
     }

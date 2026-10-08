@@ -377,7 +377,10 @@ Provider 的统一文件边界；已有路径先解析真实路径，新建路�
 
 控制台的能力进化页面由独立 surface observer 只读读取本机 Codex 自动化的非敏感字段，以及
 `var/capability-evolution/status.json` 中符合固定 schema 的脱敏账本。它不复制定时调度，不读取 prompt，
-也不提供安装或激活第三方代码的写入口；自动化文件或账本缺失时只局部降级该页面，不影响飞书消费者和健康状态。
+也不提供安装或激活第三方代码的写入口。observer 以自动化本地 RRULE 和当前时间计算最近应执行时点，再与账本最后
+`completedAt/startedAt` 比较：当前任务可显示 `running`，已覆盖最近时点显示 `current`，ACTIVE 但存在未落账时点显示
+`stale` 和缺口数。该状态度量的是仓库可恢复证据连续性，不推断调度器一定失败；自动化文件、账本或不支持的 schedule
+只局部降级为 `unavailable`，不影响飞书消费者和主健康状态。
 
 能力进化内部新增无副作用的 `skill-evolution-compiler` policy 模块，把脱敏 Experience、可失效的 Pattern 与影子 Skill
 candidate 分开。模型负责提出可解释候选，纯函数门禁负责隐私血缘、不同任务证据、目标执行器覆盖、触发质量、效果
@@ -531,7 +534,8 @@ matter 仍照常创建或更新。策略评估不可用时 fail-open，保留原
 
 能力进化 observer 将每轮结构化为 `reliability`、`measurable-enhancement` 或 `strategic-opportunity`，并从脱敏
 history 只读派生最近五轮的覆盖状态与下一轨偏好。这个统计不调度任务、不触发消息，也不覆盖关键故障优先级；缺少
-五个有效轨道记录时明确返回 `insufficient-data`，避免用不完整历史宣称轮换健康。
+五个有效轨道记录时明确返回 `insufficient-data`，避免用不完整历史宣称轮换健康。计划证据连续性与轨道平衡独立计算，
+因此配置 ACTIVE 或五轮 balanced 都不能掩盖最近计划时点未写入账本的事实。
 
 ## 状态原则
 

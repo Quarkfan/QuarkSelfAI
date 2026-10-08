@@ -73,6 +73,8 @@ function actionRows(actions, limit) {
 
 function renderEvolution(evolution) {
   const labels = { active:'运行中', paused:'已暂停', missing:'未配置', invalid:'配置异常', running:'执行中', 'no-change':'无实质变化', upgraded:'能力已升级', candidate:'待决候选', failed:'执行失败' }
+  const continuity = evolution.evidenceContinuity
+  const continuityLabels = { current:'当前计划已落账', running:'本轮正在落账', stale:'巡检证据已过期', unavailable:'暂不可判断' }
   $('#evolution-state').innerHTML = status(evolution.state, labels[evolution.state] ?? evolution.state)
   $('#evolution-orbit-state').textContent = evolution.state === 'active' ? '自主巡检已启用' : labels[evolution.state] ?? evolution.state
   $('#evolution-orbit-cadence').textContent = evolution.scheduleLabel ?? '尚未排期'
@@ -81,6 +83,7 @@ function renderEvolution(evolution) {
     ['模型', [evolution.model, evolution.reasoningEffort].filter(Boolean).join(' / ') || '—'],
     ['自动化标识', evolution.automationId],
     ['项目', evolution.workspace ?? '本机默认项目'],
+    ['证据连续性', continuity ? `${continuityLabels[continuity.state] ?? continuity.state}${continuity.missedScheduledRuns ? ` · ${continuity.missedScheduledRuns} 个计划时点未落账` : ''}` : '—'],
   ].map(([key,value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')
   const run = evolution.latestRun
   $('#evolution-latest').innerHTML = run ? `<div class="evolution-run-kicker">${status(run.outcome,labels[run.outcome]??run.outcome)}<time>${esc(fmt(run.completedAt??run.startedAt))}</time></div><h3>${esc(run.title)}</h3><p>${esc(run.summary)}</p><footer>${run.taskId?`TASK ${esc(run.taskId)}`:'独立任务标识将在首次巡检后记录'}</footer>` : `<div class="empty-card"><span>↗</span><h3>等待首次独立巡检</h3><p>自动化配置已经接入；首次运行后会在这里留下脱敏审计。</p></div>`
