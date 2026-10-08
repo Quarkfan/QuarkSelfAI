@@ -1922,3 +1922,25 @@
 - 验证：定向 mention-monitor 36/36；完整 `npm run check` 为主项目 533 项中 520 通过、13 项仅因 sandbox listener 限制跳过，compat 185/185；架构为 138 modules、123 assets、23/23 effects implemented、0/23 active。Lark、DSH、参考项目、server、recovery、work-domain、assistant continuity、meeting authorization、capability evolution installed strict 与根同步均通过。foundation strict 仍只报告既有 work-integration、跨设备恢复、PostgreSQL 和 single-writer 演练门禁，未出现本轮新增 blocker。
 - 回滚为撤销本轮日志脱敏函数、单测和治理说明；不涉及数据库迁移、外部状态或补偿动作。实现与治理提交 `bd821e7` 已推送 `origin/main`。确认没有 compatibility worker 发起的 Claude/Codex/小维执行子进程后，只重启同一 LaunchAgent；`runs` 从 337 增至 338、父 PID 92821、最近退出码 0，最终健康 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready，没有形成第二消费者。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；`failureReason=none`、`failureStage=none`。下一轨偏好 `measurable-enhancement`；唯一未决会前简报 revision 3 继续保持 inactive，不形成第二候选。
+
+## 2026-10-08 能力进化巡检连续性可见化
+
+- 本轮选择 `measurable-enhancement`。安装定义仍为 ACTIVE 且严格 portability 审计通过，但恢复账本最后证据停在
+  2026-09-23；截至本轮开始前最近应执行时点为 2026-10-07 14:30，共有 10 个后续工作日计划时点未落账。该证据只能证明
+  账本连续性缺口，不能据此断言 Codex 调度器均未运行；任务元数据所示 2026-09-28 最近运行也未进入仓库账本，正说明定义状态、
+  调度状态与可恢复证据不能再混为一谈。
+- `capability-evolution-observer` 现在按 installed local RRULE、当前本地时间和最后 `completedAt/startedAt` 纯只读派生
+  `current/running/stale/unavailable`、最近应执行时点和未落账计划数；当前任务覆盖最近应执行时点时恢复为 `current`。控制台在既有
+  定义卡中显示该状态，缺失配置、暂停或不支持的 schedule 只局部降级。它不补跑、不通知、不创建第二调度器，也不改变 Codex、
+  DSH/Cordis、消费者、权限、依赖或写入链路。
+- 回归新增 current、running、ACTIVE+stale 和 automation missing 四类确定性样本。完整 `npm run check` 通过：主项目 535 项中
+  522 通过、13 项仅因 sandbox listener 限制跳过；compat 185/185。架构保持 138 modules、123 assets、23/23 effects implemented、
+  0/23 active；capability-evolution installed strict、assistant continuity strict、work-domain strict、AGENTS/CLAUDE 镜像和根协作入口同步均通过。
+- 实现与治理提交 `ca9186f`。安全核验时只有既有父进程、DSH kernel 与 compat worker，没有 Claude/Codex/小维执行子任务；重启同一个
+  LaunchAgent 后 `runs=339`、父 PID 50343、最近退出码 0，健康 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。
+  本轮没有读取消息正文、调用外部候选、发送飞书、创建任务、改变 effect owner 或形成第二消费者。
+- 回滚为撤销 `ca9186f` 并在安全空闲窗口重启同一个 LaunchAgent；账本新字段是只读派生值，无数据库迁移或外部补偿。
+  `pre-meeting-briefing-pilot-01` revision 3 继续保持唯一未决进取型候选和 inactive，本轮不重复催促。下一轨偏好
+  `strategic-opportunity`，但候选未决期间不形成第二候选；持续关键故障仍可抢占。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
+  `failureReason=none`、`failureStage=none`。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未纳入提交。
