@@ -39,6 +39,22 @@ export function isExplicitCardActionConfigurationFailure(detail) {
     && /(not enabled|not configured|not subscribed|enable|configure|subscribe|missing[_ -]?scope|permission)/i.test(text);
 }
 
+export function sourceFailureAudit(error) {
+  const text = String(error?.message || error || "");
+  const field = (name) => text.match(new RegExp(`"${name}"\\s*:\\s*"([a-z0-9_-]{1,32})"`, "i"))?.[1]?.toLowerCase();
+  const category = field("type") || (/timed? out|超时/i.test(text) ? "timeout" : "unknown");
+  const subtype = field("subtype");
+  return {
+    category,
+    ...(subtype ? { subtype } : {}),
+  };
+}
+
+export function sourceFailureSummary(error) {
+  const { category, subtype } = sourceFailureAudit(error);
+  return `来源读取失败（${category}${subtype ? `/${subtype}` : ""}），详细上下文已脱敏，后台将自动重试。`;
+}
+
 export function splitMessage(text, maxChars) {
   if (text.length <= maxChars) return [text];
   const chunks = [];

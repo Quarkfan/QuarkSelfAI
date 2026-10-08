@@ -5,6 +5,7 @@ import { XiaoweiResearchChannel } from "../src/xiaowei-research-channel.js";
 function harness() {
   const sentToAgent = [];
   const sentToUser = [];
+  const errors = [];
   const state = {
     state: { xiaoweiResearchRequests: [], xiaoweiProcessedMessageIds: [], xiaoweiLastPollAt: null },
     async save() {},
@@ -23,9 +24,9 @@ function harness() {
       xiaoweiAgent: { name: "智造湖小维", openId: "ou_xiaowei", chatId: "oc_xiaowei" },
       xiaoweiInitialLookbackMinutes: 180,
     },
-    state, lark,
+    state, lark, logger: { error(...args) { errors.push(args); } },
   });
-  return { channel, state, lark, sentToAgent, sentToUser };
+  return { channel, state, lark, sentToAgent, sentToUser, errors };
 }
 
 test("sends a read-only BlackLake research request once and waits persistently", async () => {
@@ -74,4 +75,26 @@ test("does not mirror replies from the owner's manual Xiaowei conversation", asy
   assert.equal(h.sentToUser.length, 0);
   assert.equal(h.state.state.xiaoweiResearchRequests[0].status, "completed");
   assert.ok(h.state.state.xiaoweiProcessedMessageIds.includes("om_manual_answer"));
+});
+
+test("redacts source failure details from Xiaowei logs, state, and owner alerts", async () => {
+  const h = harness();
+  h.channel.config.xiaoweiFailureNotifyAfterMs = 0;
+  h.lark.getChatMessagesSince = async () => {
+    throw new Error(`飞书追问回复读取失败: {
+      "error":{"type":"authentication","subtype":"token_missing","message":"need authorization for ou_secret at https://open.feishu.cn from 172.16.41.126"}
+    }`);
+  };
+  const startedAt = new Date("2026-10-08T04:00:00Z");
+  await h.channel.poll(startedAt);
+  await h.channel.poll(new Date(startedAt.getTime() + 1));
+  await h.channel.poll(new Date(startedAt.getTime() + 2));
+
+  assert.deepEqual(h.errors[0], ["xiaowei research poll failed", {
+    category: "authentication", subtype: "token_missing",
+  }]);
+  assert.match(h.state.state.xiaoweiHealthFailure.error, /authentication\/token_missing/);
+  assert.equal(h.sentToUser.length, 1);
+  const publicEvidence = JSON.stringify({ errors: h.errors, failure: h.state.state.xiaoweiHealthFailure, sent: h.sentToUser });
+  assert.doesNotMatch(publicEvidence, /ou_secret|172\.16\.41\.126|open\.feishu\.cn|need authorization/);
 });

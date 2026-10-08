@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { formatUserTime } from "./util.js";
+import { formatUserTime, sourceFailureAudit, sourceFailureSummary } from "./util.js";
 
 function requestId(taskId, sourceMessageId) {
   return createHash("sha256").update(`${taskId || "manual"}:${sourceMessageId || Date.now()}`)
@@ -86,12 +86,13 @@ export class XiaoweiResearchChannel {
           `xiaowei-recovered:${failure.at}`);
       }
     } catch (error) {
-      this.logger.error("xiaowei research poll failed", error);
+      const failureSummary = sourceFailureSummary(error);
+      this.logger.error("xiaowei research poll failed", sourceFailureAudit(error));
       const failure = this.state.state.xiaoweiHealthFailure || {
         at: now.toISOString(), count: 0, notifiedAt: null,
       };
       failure.count += 1;
-      failure.error = error.message;
+      failure.error = failureSummary;
       this.state.state.xiaoweiHealthFailure = failure;
       await this.state.save();
       const notifyAfterMs = Number(this.config.xiaoweiFailureNotifyAfterMs ?? 60 * 60_000);
@@ -100,7 +101,7 @@ export class XiaoweiResearchChannel {
         failure.notifiedAt = now.toISOString();
         await this.state.save();
         try {
-          await this.lark.send(`智造湖小维调研通道连续 ${failure.count} 次检查失败，后台会继续重试。\n\n${error.message}`,
+          await this.lark.send(`智造湖小维调研通道连续 ${failure.count} 次检查失败，后台会继续重试。\n\n${failureSummary}`,
             `xiaowei-failed:${failure.at}`);
         } catch {}
       }
@@ -140,7 +141,7 @@ ${item.prompt}
       await this.state.save();
     } catch (error) {
       item.attempts = Number(item.attempts || 0) + 1;
-      item.lastError = error.message;
+      item.lastError = sourceFailureSummary(error);
       item.nextAttemptAt = new Date(Date.now() + Math.min(3600_000, 2 ** item.attempts * 60_000)).toISOString();
       await this.state.save();
       throw error;
@@ -215,7 +216,7 @@ ${item.prompt}
       } catch (error) {
         request.status = "task_update_failed";
         request.taskUpdateAttempts = Number(request.taskUpdateAttempts || 0) + 1;
-        request.lastError = error.message;
+        request.lastError = sourceFailureSummary(error);
         request.nextTaskUpdateAt = new Date(now.getTime()
           + Math.min(6 * 3600_000, 2 ** request.taskUpdateAttempts * 60_000)).toISOString();
       }
