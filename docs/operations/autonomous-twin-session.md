@@ -1944,3 +1944,13 @@
   `strategic-opportunity`，但候选未决期间不形成第二候选；持续关键故障仍可抢占。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；
   `failureReason=none`、`failureStage=none`。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未纳入提交。
+
+## 2026-10-08 能力进化小维轮询故障脱敏
+
+- 本轮选择 `reliability`。滚动五轮原本建议回到 `strategic-opportunity`，但唯一会前简报候选 revision 3 仍待 owner 决策，且宿主日志出现更高优先级的真实隐私故障，因此不形成第二候选。LaunchAgent 保持单实例、`runs=339`、最近退出码 0；沙箱内直连健康端口被拒绝后，宿主 `lsof` 证明同一父进程仍监听 3210、唯一 DSH 子进程监听 3211，未把工具网络隔离误判为服务退出。
+- First Bad Hop 是小维回复轮询仍把完整上游认证错误传给 stderr，并把原始 `error.message` 写入持久健康状态和可能的 owner 故障通知；真实样本包含用户标识、上游 URL 与操作提示。追问轮询已经有受限 `category/subtype` 门禁，但小维旁路没有复用，导致同类来源的隐私边界不一致。
+- 将来源故障审计提取到既有 compatibility `util`，追问与小维共同复用；小维 stderr 只保留长度和字符集受限的 `category/subtype`，持久健康状态、owner 故障通知以及请求/任务同步重试字段只保留脱敏摘要。合成回归同时向日志、状态和通知注入 URL、用户标识、内网地址与上游提示并证明均不可见；批准、重试、恢复、单消费者、通知阈值和 DSH/Cordis composition 均未改变。
+- 定向回归 40/40；完整 `npm run check` 为主项目 535 项中 522 通过、13 项仅因 sandbox listener 限制跳过，compat 186/186。Lark、DSH、BlackLake、server、recovery、work-domain 104/104、assistant continuity、capability evolution installed strict、meeting authorization 与根同步门禁均通过。实现提交为 `7e403bf`。
+- 只读 handoff 审计显示 Dida maintenance 2 个 workflow/0 health failure，session lifecycle 0，followup 2 个 workflow/0 failure，message queue 0；小维 8 个 workflow 均已完成，但当前健康故障计数为 5。日志将其归类为 `authentication/token_missing`，属于需要 owner 重新完成飞书 user identity 授权的未决外部条件；本轮未刷新凭证、扩大 scope 或执行登录。
+- 回滚为撤销 `7e403bf` 及本条治理记录，并在安全空闲窗口重启同一 LaunchAgent；无数据库迁移、业务数据补偿或外部消息撤回。代码进入 compatibility composition，完成最终门禁和空闲核验后才重启现有守护进程，不创建第二消费者。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；`failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但唯一候选未决期间不形成第二候选；持续认证缺口属于 owner action，不由巡检自动刷新凭证。
