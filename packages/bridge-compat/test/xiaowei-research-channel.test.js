@@ -56,7 +56,7 @@ test("correlates a slow reply, notifies the user, and keeps it out of normal int
   );
   h.lark.getChatMessagesSince = async () => [{
     message_id: "om_answer", chat_id: "oc_xiaowei", reply_to: "om_request",
-    content: "已确认 First Bad Hop", sender: { id: "ou_xiaowei", name: "智造湖小维" },
+    content: "调研结论：已确认 First Bad Hop", sender: { id: "ou_xiaowei", name: "智造湖小维" },
     create_time: "2026-08-16 16:00",
   }];
   await h.channel.poll(new Date("2026-08-16T08:01:00Z"));
@@ -66,13 +66,44 @@ test("correlates a slow reply, notifies the user, and keeps it out of normal int
   assert.match(h.sentToUser[0], /First Bad Hop/);
 });
 
+test("keeps progress replies pending and notifies only after the final result", async () => {
+  const h = harness();
+  const request = await h.channel.request(
+    { taskId: "task_1", title: "排查问题", researchPrompt: "查日志" },
+    { message_id: "om_source", chat_name: "内部群", sender: { name: "同事" } },
+    { approvalId: "research:task_1", approvedAt: "2026-08-16T08:00:00Z" },
+  );
+  h.lark.getChatMessagesSince = async () => [{
+    message_id: "om_progress", chat_id: "oc_xiaowei", reply_to: "om_request",
+    content: "已收到，正在处理中。", sender: { id: "ou_xiaowei", name: "智造湖小维" },
+    create_time: "2026-08-16 16:00", msg_type: "text",
+  }];
+  await h.channel.poll(new Date("2026-08-16T08:01:00Z"));
+  assert.equal(request.status, "progress_received");
+  assert.equal(request.replyMessageId, undefined);
+  assert.equal(h.sentToUser.length, 0);
+
+  h.lark.getChatMessagesSince = async () => [{
+    message_id: "om_final", chat_id: "oc_xiaowei", reply_to: "om_request",
+    content: `经核验形成最终结论。${"已验证证据。".repeat(20)}`,
+    sender: { id: "ou_xiaowei", name: "智造湖小维" },
+    create_time: "2026-08-16 16:10", msg_type: "post",
+  }];
+  await h.channel.poll(new Date("2026-08-16T08:11:00Z"));
+  assert.equal(request.status, "reply_received");
+  assert.equal(request.replyMessageId, "om_final");
+  assert.equal(h.sentToUser.length, 1);
+  assert.doesNotMatch(h.sentToUser[0], /正在处理中/);
+  assert.match(h.sentToUser[0], /最终结论/);
+});
+
 test("does not mirror replies from the owner's manual Xiaowei conversation", async () => {
   const h = harness();
   h.lark.getChatMessagesSince = async () => [{
     message_id: "om_manual", chat_id: "oc_xiaowei", content: "现在创建",
     sender: { id: "ou_me", name: "常东旭" }, create_time: "2026-08-28 09:00",
   }, {
-    message_id: "om_manual_answer", chat_id: "oc_xiaowei", reply_to: "om_manual", content: "已经创建完成",
+    message_id: "om_manual_answer", chat_id: "oc_xiaowei", reply_to: "om_manual", content: "调研结果：已经创建完成",
     sender: { id: "ou_xiaowei", name: "智造湖小维" }, create_time: "2026-08-28 09:05",
   }];
   await h.channel.poll(new Date("2026-08-28T01:06:00Z"));

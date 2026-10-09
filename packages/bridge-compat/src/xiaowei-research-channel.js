@@ -11,6 +11,19 @@ function compact(value, max = 12000) {
   return text.length <= max ? text : `${text.slice(0, max)}…`;
 }
 
+const PROGRESS_REPLY = /(?:已(?:收到|接收|接到)|正在|处理中|进行中|分析中|查询中|调研中|排查中|请稍候|请稍等|稍后|后续(?:会|将)|预计.{0,12}完成)/u;
+const FINAL_REPLY = /(?:最终(?:结论|结果)|调研(?:结论|结果)|排查(?:结论|结果)|分析结果|结论(?:如下|是|：|:)|已完成|完成调研|未发现)/u;
+
+export function classifyXiaoweiReply(message) {
+  const content = compact(message?.content);
+  const explicitFinal = FINAL_REPLY.test(content) && !/预计.{0,12}完成/u.test(content);
+  if (explicitFinal) return "final";
+  if (PROGRESS_REPLY.test(content)) return "progress";
+  const messageType = message?.msg_type || message?.message_type;
+  if (messageType === "post" && [...content].length >= 80) return "final";
+  return "progress";
+}
+
 export class XiaoweiResearchChannel {
   constructor({ config, state, lark, taskCreator = null, logger = console }) {
     this.config = config;
@@ -172,14 +185,26 @@ ${item.prompt}
     for (const message of messages) {
       if (message.sender?.id !== this.agent.openId || processed.has(message.message_id)) continue;
       let request = this.state.state.xiaoweiResearchRequests.find((item) => (
-        item.status === "waiting_reply" && item.sentMessageId && message.reply_to === item.sentMessageId
+        ["waiting_reply", "progress_received"].includes(item.status)
+        && item.sentMessageId && message.reply_to === item.sentMessageId
       ));
       if (!request) {
-        const waiting = this.state.state.xiaoweiResearchRequests.filter((item) => item.status === "waiting_reply");
+        const waiting = this.state.state.xiaoweiResearchRequests.filter((item) => (
+          ["waiting_reply", "progress_received"].includes(item.status)
+        ));
         if (waiting.length === 1) request = waiting[0];
       }
       const content = compact(message.content);
       if (request) {
+        if (classifyXiaoweiReply(message) === "progress") {
+          request.status = "progress_received";
+          request.lastProgressAt = message.create_time || now.toISOString();
+          request.progressMessageIds = [...new Set([...(request.progressMessageIds || []), message.message_id])].slice(-20);
+          this.state.state.xiaoweiProcessedMessageIds.push(message.message_id);
+          processed.add(message.message_id);
+          await this.state.save();
+          continue;
+        }
         request.status = request.taskId ? "reply_received" : "completed";
         request.replyMessageId = message.message_id;
         request.replyReceivedAt = message.create_time || now.toISOString();

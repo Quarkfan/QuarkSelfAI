@@ -22,8 +22,13 @@ test('Xiaowei workflow requires prior approval and synchronizes a slow reply seq
     effectKind: LARK_EFFECTS.sendAsUser, messageId: 'om_request',
   }))
   assert.equal(waiting.state.phase, 'waiting-reply')
+  const progressed = definition().reduce(waiting.state, event('progress', 'xiaowei.reply', '2026-08-24T01:00:00Z', {
+    messageId: 'om_progress', stage: 'progress', content: '已收到，正在处理中',
+  }))
+  assert.equal(progressed.state.phase, 'waiting-reply')
+  assert.equal(progressed.effects, undefined)
   const syncing = definition().reduce(waiting.state, event('reply', 'xiaowei.reply', '2026-08-24T02:00:00Z', {
-    messageId: 'om_reply', content: '已定位首个后端抛错点', url: 'https://example.test/reply',
+    messageId: 'om_reply', stage: 'final', content: '已定位首个后端抛错点', url: 'https://example.test/reply',
   }))
   assert.deepEqual(syncing.effects?.map(effect => effect.kind), [ASSISTANT_EFFECTS.notifyOwner])
   const notified = definition().reduce(syncing.state, event('notified', 'effect.delivered', '2026-08-24T02:00:01Z', {

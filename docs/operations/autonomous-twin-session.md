@@ -1963,3 +1963,11 @@
 - 定向回归 5/5；完整 `npm run check` 为主项目 535 项中 522 通过、13 项仅因 sandbox listener 限制跳过，compat 187/187。架构为 138 modules、123 assets、23/23 effects implemented、0/23 active；Lark、DSH、BlackLake、server、recovery、assistant continuity、capability evolution installed strict、meeting authorization 与根同步门禁均通过。治理文字使 work-domain evidence digest 漂移，但路径仍为 104、分类计数和 path digest 均未变化，更新已复核 evidence baseline 后 strict 审计通过。实现提交为 `b2792b4`。
 - 回滚为撤销 `b2792b4` 及本条治理记录，并在安全空闲窗口重启同一个 LaunchAgent；不涉及数据库迁移、业务数据补偿、外部消息撤回或第二消费者。宿主只读核验没有 compatibility 发起的 Claude/Codex/小维执行子任务后，重启同一 LaunchAgent；`runs` 从 340 增至 341、父 PID 为 37544、最近退出码 0，最终健康 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未纳入本轮变更。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；`failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但候选未决期间不形成第二候选；持续关键故障仍可抢占。
+
+## 2026-10-09 小维中间进度误判终态修复
+
+- 用户报告助手委托的小维调研在中间进度后被判定结束，后续真实结论未通知。只读取证确认：18:43 的首条短回复具有接收与处理中信号，compat 状态立即进入结果同步并发送通知；18:54 的长富文本结论仍回复同一请求，却因请求已离开等待态而作为未匹配更新去重。状态与日志取证仅保留时间、长度、阶段信号和标识摘要，未写入业务正文或内部标识。
+- First Bad Hop 是 compatibility 与 inactive native workflow 都把第一条关联回复无条件当作终态。修复后明确区分 `progress` 与 `final`：接收确认、排队、处理中及未知短回复失败关闭为进度，只保存有界进度游标并继续等待；明确终态语义或有足够正文的富文本结果才触发一次 owner 通知和任务写回。原请求关联、批准、幂等、单消费者与外部写 effect owner 均未改变。
+- 回归覆盖“进度先到、结论后到”，证明中间态不通知、不写入结果，最终结论仍关联原请求且只通知一次；native contract 同步要求调用方显式声明 `progress|final`，compat handoff 将 `progress_received` 继续迁移为 waiting。今天受影响的助手自有状态在部署前以严格消息关联恢复，删除误判结果字段与对应去重标记后由同一轮询器补偿，不修改手工数据或其他请求。
+- 回滚为撤销本轮代码、协作契约和治理记录，并在安全空闲窗口重启同一 LaunchAgent；若已完成补偿，只保留最终结论的既有通知与任务记录，不撤回外部消息，不恢复错误的中间态结果。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`；未调用小维、未创建第二消费者、未改变 DSH/Cordis composition、凭证、权限或业务数据边界。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本轮提交。

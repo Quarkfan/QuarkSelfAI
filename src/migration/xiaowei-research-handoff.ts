@@ -44,7 +44,7 @@ export function prepareXiaoweiResearchHandoff(legacyRoot: unknown, config: Xiaow
     if (seen.has(requestId)) throw new Error(`Xiaowei request ${index} duplicates id`)
     seen.add(requestId)
     const status = String(item.status)
-    if (!['new', 'waiting_reply', 'reply_received', 'task_update_failed', 'completed', 'cancelled'].includes(status)) throw new Error(`Xiaowei request ${index} has unsupported status`)
+    if (!['new', 'waiting_reply', 'progress_received', 'reply_received', 'task_update_failed', 'completed', 'cancelled'].includes(status)) throw new Error(`Xiaowei request ${index} has unsupported status`)
     const createdAt = timestamp(item.createdAt, `Xiaowei request ${index} createdAt`) ?? frozenAt
     const sentMessageId = typeof item.sentMessageId === 'string' && item.sentMessageId ? item.sentMessageId : undefined
     const sentAt = timestamp(item.sentAt, `Xiaowei request ${index} sentAt`)
@@ -64,7 +64,7 @@ export function prepareXiaoweiResearchHandoff(legacyRoot: unknown, config: Xiaow
     let phase: XiaoweiResearchState['phase']; let workflowStatus: CreateWorkflowInput['status']; let wakeAt: string | undefined
     let ownerNotified = false; let taskUpdated = !base.taskId
     if (status === 'new') { phase = 'ready'; workflowStatus = 'waiting'; wakeAt = timestamp(item.nextAttemptAt, `Xiaowei request ${index} nextAttemptAt`) ?? frozenAt }
-    else if (status === 'waiting_reply') { phase = 'waiting-reply'; workflowStatus = 'waiting'; waitingReply += 1 }
+    else if (status === 'waiting_reply' || status === 'progress_received') { phase = 'waiting-reply'; workflowStatus = 'waiting'; waitingReply += 1 }
     else if (status === 'reply_received' || status === 'task_update_failed') {
       if (!replyContent || !replyMessageId || !replyReceivedAt) throw new Error(`Xiaowei request ${index} has no reply correlation`)
       phase = 'syncing'; workflowStatus = 'waiting'; ownerNotified = true; taskUpdated = false; syncing += 1

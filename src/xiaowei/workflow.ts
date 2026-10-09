@@ -32,6 +32,8 @@ export interface XiaoweiResearchState extends Record<string, unknown> {
   readonly replyContent?: string
   readonly replyReceivedAt?: string
   readonly replyUrl?: string
+  readonly lastProgressMessageId?: string
+  readonly lastProgressAt?: string
   readonly ownerNotified: boolean
   readonly taskUpdated: boolean
   readonly completedAt?: string
@@ -140,6 +142,11 @@ export function xiaoweiResearchWorkflow(config: XiaoweiResearchConfig): Workflow
       }
       if (event.type === 'xiaowei.reply' && state.phase === 'waiting-reply') {
         if (event.payload.replyTo !== undefined && event.payload.replyTo !== state.sentMessageId) throw new Error('Xiaowei reply does not match the request message')
+        if (event.payload.stage === 'progress') {
+          return { status: 'waiting', state: { ...withoutFailure(state),
+            lastProgressMessageId: text(event.payload.messageId, 'progress messageId', 300), lastProgressAt: event.occurredAt }, wakeAt: null }
+        }
+        if (event.payload.stage !== 'final') throw new Error('Xiaowei reply stage must be progress or final')
         const next = { ...withoutFailure(state), phase: 'syncing', sequence: state.sequence + 1,
           replyMessageId: text(event.payload.messageId, 'reply messageId', 300),
           replyContent: text(event.payload.content, 'reply content', 12_000), replyReceivedAt: event.occurredAt,

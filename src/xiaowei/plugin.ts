@@ -24,7 +24,7 @@ export class XiaoweiResearchService extends Service {
     if (this.config.enabled !== true) throw new Error('native Xiaowei research is not enabled')
     return await this.workflows.dispatch(`xiaowei-research:${requestId}`, {
       id: `xiaowei-reply:${reply.messageId}`, type: 'xiaowei.reply', occurredAt: reply.receivedAt,
-      payload: { messageId: reply.messageId, content: reply.content, ...(reply.url ? { url: reply.url } : {}) },
+      payload: { messageId: reply.messageId, stage: reply.stage, content: reply.content, ...(reply.url ? { url: reply.url } : {}) },
     })
   }
 }

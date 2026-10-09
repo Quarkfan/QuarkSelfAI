@@ -25,6 +25,7 @@ export interface XiaoweiResearchInput extends Readonly<Record<string, unknown>> 
 
 export interface XiaoweiReplyInput {
   readonly messageId: string
+  readonly stage: 'progress' | 'final'
   readonly content: string
   readonly receivedAt: string
   readonly url?: string
