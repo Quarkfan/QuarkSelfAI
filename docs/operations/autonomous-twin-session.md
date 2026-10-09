@@ -1971,3 +1971,4 @@
 - 回归覆盖“进度先到、结论后到”，证明中间态不通知、不写入结果，最终结论仍关联原请求且只通知一次；native contract 同步要求调用方显式声明 `progress|final`，compat handoff 将 `progress_received` 继续迁移为 waiting。今天受影响的助手自有状态在部署前以严格消息关联恢复，删除误判结果字段与对应去重标记后由同一轮询器补偿，不修改手工数据或其他请求。
 - 回滚为撤销本轮代码、协作契约和治理记录，并在安全空闲窗口重启同一 LaunchAgent；若已完成补偿，只保留最终结论的既有通知与任务记录，不撤回外部消息，不恢复错误的中间态结果。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`；未调用小维、未创建第二消费者、未改变 DSH/Cordis composition、凭证、权限或业务数据边界。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本轮提交。
+- 实现提交 `8956b43` 已推送 `origin/main`。完整 `npm run check` 通过：主项目 535 项中 522 通过、13 项仅因 sandbox listener 限制跳过，compat 188/188；架构为 138 modules、123 assets、23/23 effects implemented、0/23 active，strict work-domain、assistant continuity、capability evolution installed 与根同步门禁通过。等待既有 Claude 投影子任务自然结束后，备份兼容状态并只恢复今天这一条精确关联，随后重启同一 LaunchAgent；最终结论已重新关联并成功发送一次 owner 通知，单实例健康 `ok=true`、compat worker/DSH kernel/5 条事件能力 ready。滴答写回首次补偿仍失败并按原退避保留，最终结论没有再次丢失，后续由既有同请求重试继续处理。
