@@ -6,6 +6,7 @@ function harness() {
   const sentToAgent = [];
   const sentToUser = [];
   const errors = [];
+  const infos = [];
   const state = {
     state: { xiaoweiResearchRequests: [], xiaoweiProcessedMessageIds: [], xiaoweiLastPollAt: null },
     async save() {},
@@ -24,9 +25,12 @@ function harness() {
       xiaoweiAgent: { name: "智造湖小维", openId: "ou_xiaowei", chatId: "oc_xiaowei" },
       xiaoweiInitialLookbackMinutes: 180,
     },
-    state, lark, logger: { error(...args) { errors.push(args); } },
+    state, lark, logger: {
+      error(...args) { errors.push(args); },
+      info(...args) { infos.push(args); },
+    },
   });
-  return { channel, state, lark, sentToAgent, sentToUser, errors };
+  return { channel, state, lark, sentToAgent, sentToUser, errors, infos };
 }
 
 test("sends a read-only BlackLake research request once and waits persistently", async () => {
@@ -75,6 +79,20 @@ test("does not mirror replies from the owner's manual Xiaowei conversation", asy
   assert.equal(h.sentToUser.length, 0);
   assert.equal(h.state.state.xiaoweiResearchRequests[0].status, "completed");
   assert.ok(h.state.state.xiaoweiProcessedMessageIds.includes("om_manual_answer"));
+});
+
+test("does not persist the message ID of an unmatched Xiaowei update in logs", async () => {
+  const h = harness();
+  h.lark.getChatMessagesSince = async () => [{
+    message_id: "om_unmatched_secret", chat_id: "oc_xiaowei", content: "后台状态更新",
+    sender: { id: "ou_xiaowei", name: "智造湖小维" }, create_time: "2026-10-09 14:00",
+  }];
+
+  await h.channel.poll(new Date("2026-10-09T06:01:00Z"));
+
+  assert.deepEqual(h.infos, [["ignored unmatched Xiaowei update already visible in the owner's direct chat"]]);
+  assert.doesNotMatch(JSON.stringify(h.infos), /om_unmatched_secret/);
+  assert.ok(h.state.state.xiaoweiProcessedMessageIds.includes("om_unmatched_secret"));
 });
 
 test("redacts source failure details from Xiaowei logs, state, and owner alerts", async () => {

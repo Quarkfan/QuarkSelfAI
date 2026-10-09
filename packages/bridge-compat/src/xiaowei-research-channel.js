@@ -193,9 +193,7 @@ ${item.prompt}
           );
         }
       } else {
-        this.logger.info?.("ignored unmatched Xiaowei update already visible in the owner's direct chat", {
-          messageId: message.message_id,
-        });
+        this.logger.info?.("ignored unmatched Xiaowei update already visible in the owner's direct chat");
       }
       this.state.state.xiaoweiProcessedMessageIds.push(message.message_id);
       processed.add(message.message_id);
