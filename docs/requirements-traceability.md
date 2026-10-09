@@ -256,7 +256,7 @@ inactive 和 migration-only；该证据证明迁移目标无漏项，但 `manife
 | 从真实协作经验沉淀可验证、可回滚的 Skill | skill-evolution-compiler | ADR 0087；脱敏 Experience、可失效 Pattern、影子候选、任务指纹去重、Codex/Claude/DSH 分别评测、触发质量与零安全/审批违规门禁 | foundation complete：无副作用编译门禁和回归已建；真实模式提炼、持久化与 Skill 发布仍按价值另行演进 |
 | BlackLake 问题先按参考项目和 skills 路由，再决定 start/confirm/skip | blacklake-routing | 三源动态哈希、skill/operation-chain 门禁；合成用例 route→ledger→approval→claim | complete |
 | 自然语言询问项目或租户的 CS 时，从 Lakers 内部负责人字段给出参考 | root shared skill `blacklake-tenant-cs-lookup`, blacklake-routing | Archery 审计只读；按 orgId/工厂号/租户/客户/服务项目有界匹配；精确项优先；多候选不静默选人；空值不猜测；结果标注为申请环境时登记而非当前归属 | complete：Codex/Claude 共享 Skill 已接入，DSH 按根 AGENTS 读取；线上 schema 与有值/空值样本均已验证 |
-| 智造湖小维作为慢速排查工具，调用前必须本人批准，结果回灌且不重复建任务 | xiaowei-channel | 授权/持久等待测试；现网 3 个请求完成且均关联回复；回复轮询故障在日志、持久状态和 owner 通知中只保留受限 category/subtype，回归拒绝 URL、用户标识、源地址和上游提示 | complete |
+| 智造湖小维作为慢速排查工具，调用前必须本人批准，结果回灌且不重复建任务 | xiaowei-channel | 授权/持久等待测试；现网 3 个请求完成且均关联回复；回复轮询故障在日志、持久状态和 owner 通知中只保留受限 category/subtype，成功路径忽略未匹配更新时日志不记录 message ID；回归拒绝 URL、用户标识、源地址、上游提示和未匹配消息标识 | complete |
 | 周期总结“小维监控群”中有趣、有思考或独特的问题 | xiaowei-insight-digest | 内部群属性只读核验；问题链聚合去重、周五单次发送、空摘要静默、Claude→Codex→本地规则降级测试；控制台独立监控 | implemented：首次真实周报将在下一个周五 17:30 生成并留存聚合计数，不创建滴答任务、不在原群发言 |
 | Claude Code 优先、Codex 兜底、同一 action 只能一个执行者 | executor-routing | 官方 providers、基础设施错误分类、串行 dispose、action lease；Claude start/ENOENT 后串行 handoff；真实 Codex task 固定回执 | complete；第三方 Claude 成本通道仍是可选未配置项 |
 | Claude Code 与 Codex 共享 skills、Agent 约定、参考项目，不产生信息差 | blacklake-routing, executor-routing | 根 AGENTS/CLAUDE 同步约束、三源 router、DSH profile provider 配置 | implemented；持续运行同步校验 |

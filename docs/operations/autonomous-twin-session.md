@@ -1954,3 +1954,12 @@
 - 只读 handoff 审计显示 Dida maintenance 2 个 workflow/0 health failure，session lifecycle 0，followup 2 个 workflow/0 failure，message queue 0；小维 8 个 workflow 均已完成，但当前健康故障计数为 5。日志将其归类为 `authentication/token_missing`，属于需要 owner 重新完成飞书 user identity 授权的未决外部条件；本轮未刷新凭证、扩大 scope 或执行登录。
 - 回滚为撤销 `7e403bf` 及本条治理记录，并在安全空闲窗口重启同一 LaunchAgent；无数据库迁移、业务数据补偿或外部消息撤回。最终门禁通过后等待两个在途 Claude 子任务自然结束，才重启现有守护进程；`runs` 从 339 增至 340、父 PID 为 55921，宿主级 `/api/health` 回读 `ok=true`，compat worker、DSH kernel 与 5 条事件能力 ready，没有创建第二消费者。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；`failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但唯一候选未决期间不形成第二候选；持续认证缺口属于 owner action，不由巡检自动刷新凭证。
+
+## 2026-10-09 能力进化小维成功路径脱敏
+
+- 本轮选择 `reliability`。滚动五轮已覆盖三轨且原偏好为 `strategic-opportunity`，但唯一会前简报候选 revision 3 仍待 owner 决策，现网 stdout 又给出更高优先级的真实隐私证据，因此不形成第二候选。
+- First Bad Hop 是小维回复轮询在“未匹配、已在本人私聊可见”的成功分支仍把完整 `messageId` 交给 logger；昨天的修复只覆盖失败日志、持久健康状态和 owner 通知，未覆盖该旁路。2026-10-09 的真实 stdout 仍持续出现该标识，证明问题已进入现网日志。
+- 成功分支现在只记录事件类型，不再附带 message ID；幂等所需标识仍只保存在既有受控状态中，不改变关联、去重、批准、通知、消费者、effect 或 DSH/Cordis 边界。合成回归使用唯一未匹配标识证明日志不可见、幂等状态仍完成处理。
+- 定向回归 5/5；完整 `npm run check` 为主项目 535 项中 522 通过、13 项仅因 sandbox listener 限制跳过，compat 187/187。架构为 138 modules、123 assets、23/23 effects implemented、0/23 active；Lark、DSH、BlackLake、server、recovery、assistant continuity、capability evolution installed strict、meeting authorization 与根同步门禁均通过。治理文字使 work-domain evidence digest 漂移，但路径仍为 104、分类计数和 path digest 均未变化，更新已复核 evidence baseline 后 strict 审计通过。实现提交为 `b2792b4`。
+- 回滚为撤销 `b2792b4` 及本条治理记录，并在安全空闲窗口重启同一个 LaunchAgent；不涉及数据库迁移、业务数据补偿、外部消息撤回或第二消费者。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未纳入本轮变更。
+- 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`，原因是独立 Codex 能力进化任务直接执行；`failureReason=none`、`failureStage=none`。下一轨偏好 `strategic-opportunity`，但候选未决期间不形成第二候选；持续关键故障仍可抢占。
