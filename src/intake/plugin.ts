@@ -5,7 +5,7 @@ import type { DurableEventRegistryPort } from '../events/contracts.js'
 import type { DurableWorkflowPort } from '../workflow/contracts.js'
 import { FOCUS_DISCOVERY_WORKFLOW_ID, FOCUS_DISCOVERY_WORKFLOW_KIND, focusDiscoveryWorkflow } from './discovery-workflow.js'
 import { INTAKE_WORKFLOW_KIND, messageIntakeWorkflow } from './workflow.js'
-import { FOCUS_DISCOVERY_EVENT_KEY, type FocusDiscoverySources, type IntakePluginConfig, type IntakeRoute } from './types.js'
+import { FOCUS_DISCOVERY_EVENT_KEY, LEGACY_REACTION_REPLAY_EVENT_KEY, type FocusDiscoverySources, type IntakePluginConfig, type IntakeRoute } from './types.js'
 
 declare module '@deepseek-ai/cordis' { interface Context { quarkIntake: IntakeService } }
 
@@ -26,6 +26,7 @@ export class IntakeService extends Service {
       name: 'message-intake', eventKeys: [
         'im.message.receive_v1', 'card.action.trigger', 'im.chat.member.user.added_v1',
         'im.message.reaction.created_v1', 'im.message.reaction.deleted_v1', FOCUS_DISCOVERY_EVENT_KEY,
+        LEGACY_REACTION_REPLAY_EVENT_KEY,
       ], handle: event => this.handle(event),
     })
     ctx.effect(() => () => { disposeConsumer(); disposeDiscoveryDefinition(); disposeDefinition() }, 'quark message intake')
@@ -66,7 +67,7 @@ export class IntakeService extends Service {
       return
     }
     if (event.kind === 'message.received') { await this.handleMessage(event); return }
-    if (this.isDelegatedMembership(event) || this.isOwnerReaction(event)) await this.start(event, 'focus')
+    if (this.isDelegatedMembership(event) || this.isOwnerReaction(event) || event.eventKey === LEGACY_REACTION_REPLAY_EVENT_KEY) await this.start(event, 'focus')
   }
   async handleMessage(event: NormalizedChannelEvent): Promise<void> {
     if (event.kind !== 'message.received') return

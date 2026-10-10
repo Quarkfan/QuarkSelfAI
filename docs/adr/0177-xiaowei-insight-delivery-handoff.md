@@ -16,6 +16,6 @@ Application writes one `xiaowei-insight-digest/delivery-window` feature checkpoi
 
 ## Consequences
 
-The migration now has a safe, idempotent boundary for this scheduler, but this does not prove the scheduled native workflow itself, a real cutover or all seven workflow replays. In particular, message-intake migration still lacks an importer for non-empty pending queues. `existing-workflows-equivalent-replay` therefore remains incomplete.
+The migration now has a safe, idempotent boundary for this scheduler. Together with the message-intake event and dormant digest-workflow importer, all seven units have synthetic no-effect replay coverage. This still does not prove a real frozen-checkpoint cutover, activate the scheduled native workflow or permit setting the deployment replay receipt.
 
 Rollback removes the handoff implementation, audit command and ADR. A checkpoint written during a later explicitly authorized cutover is durable migration state and must not be silently deleted during code rollback.

@@ -22,9 +22,9 @@
     "scripts/audit-work-domain-isolation.ts"
   ],
   "baseline": {
-    "pathCount": 106,
-    "pathDigest": "0d0185d41ca23ad632d1772145740195d2f239cd209f9444d38a61d4f39e783b",
-    "evidenceDigest": "83cdcea77b638f7805ed36858e63ada1ef4c337f65089b036edea3653bc0847c"
+    "pathCount": 110,
+    "pathDigest": "22ce211828e8a85169a1ad6e425b8d28fcbf888fec50e19ee1b0d95070028c4d",
+    "evidenceDigest": "c312efac368fb72c6c21ae81b3aeb46679e8d02d52ab38e70cd54f1445e76486"
   },
   "classificationRules": [
     {

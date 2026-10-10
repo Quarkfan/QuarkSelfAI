@@ -9,6 +9,8 @@ export const INTAKE_EFFECTS = {
 
 /** Adapter-owned event key. Only the bounded Feishu discovery provider emits it. */
 export const FOCUS_DISCOVERY_EVENT_KEY = 'quark.focus.discovered.v1'
+/** Migration-only durable event; live adapters cannot emit this provider key. */
+export const LEGACY_REACTION_REPLAY_EVENT_KEY = 'quark.migration.feishu-reaction.v1'
 
 export type IntakeRoute = 'owner-command' | 'focus' | 'interaction'
 export type IntakeOutcome = 'ignored' | 'task' | 'notify'

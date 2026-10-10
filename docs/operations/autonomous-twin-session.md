@@ -2039,3 +2039,5 @@
 - 新增 ADR 0177 与 privacy-bounded、content-addressed 的小维洞察 handoff。它只迁移完整的 `lastSentDay + lastWindowEndAt`，派生稳定 delivery fingerprint；reports、候选消息、prompt、模型输出、故障文本、chat 标识与凭证均不进入原生 checkpoint。缺半边界失败关闭，相同内容重放幂等，已有不同 checkpoint 拒绝覆盖。
 - 新增只读审计入口，只输出资源路径 hash、计数、checkpoint presence 与 digest；未读取真实业务消息、未调用执行器、未发周报、未启用原生 scheduler、未改变 consumer/provider/writer 或 runtime composition。
 - 回滚为撤销 handoff、审计入口、ADR、catalog ownership 与测试。未来经明确 cutover 写入的 checkpoint 属于持久迁移状态，不随代码回滚静默删除。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本批。
+- 后续同批补齐 message-intake 的非空导入：pending focus message 进入 durable event；pending reaction 进入只能由迁移工具产生的专用 event key；pending digest 进入 dormant `message-intake.v1` workflow，并保留稳定 notification idempotency key。apply 顺序为 events/workflows 后 freeze checkpoint，相同 replay 为 no-op、不同 checkpoint 拒绝覆盖。
+- 至此 7/7 cutover unit 具备合成、无 effect、幂等 replay 证据，但没有读取或导入真实 handoff、没有暂停 compatibility consumer，也没有启用 native consumer/effect。因此 deployment replay receipt 保持 false，终局 requirement 仍是 incomplete；真实 cutover 必须在既有 maintenance window 与通知时段内单独完成。
