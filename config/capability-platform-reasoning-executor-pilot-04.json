@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "requestId": "capability-platform-reasoning-executor-pilot-04",
+  "status": "completed-two-of-three-current-host",
+  "executedAgainstRevision": "e66311be21c8048a947c9ace5c9738e29e55142d",
+  "executedAt": "2026-10-10T03:13:31Z",
+  "inputClass": "fixed-public-synthetic",
+  "contract": {"protocol":"envelope.v1","promptInArgv":false,"toolsEnabled":false,"workspaceGranted":false,"contextGranted":false,"externalWritesEnabled":false,"effectsActive":0,"fallbackAttempted":false},
+  "actions": [
+    {"executorId":"claude-code","outerSandboxOutcome":"timed-out","hostOutcome":"succeeded","artifactDigest":"sha256:e1839a0d99c236134cd93da633c699f95456eac19119531e44ec6e54a4ca300a"},
+    {"executorId":"codex","outerSandboxOutcome":"host-initialization-denied","hostOutcome":"succeeded","artifactDigest":"sha256:d4335db81a9e0d59750ab76bcca673f7f4ce508f760f516c500754aa5d1952c2"},
+    {"executorId":"dsh","outerSandboxOutcome":"not-attempted","hostOutcome":"authentication-required","artifactDigest":null}
+  ],
+  "rawOutputRetained": false,
+  "artifactContentProjected": false,
+  "temporaryStateRemoved": true,
+  "currentOwnerPreserved": true,
+  "runtimeCompositionChanged": false,
+  "serviceRestarted": false,
+  "conclusion": "Claude Code and Codex completed the same signed no-effect contract on the current host. DSH remains blocked because its inference credential environment is not configured in this execution context, so three-executor verification is not complete."
+}

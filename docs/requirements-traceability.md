@@ -78,6 +78,7 @@ approval 和 effect 的 provider-neutral 计划，并把模型正文仅保存在
 DSH 使用锁定产品 headless CLI、stdin host、allowlisted environment 和禁用全部模型工具/遥测的 overlay 成功返回，正文未投影且临时状态已删除。
 这证明 DSH 边界可执行；三 adapter 已可由 configured client 的显式方法进入 durable cycle，但仍未挂入自动 client daemon。Claude/Codex 的真实
 pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallback 已完成。
+Pilot 04 在 revision `e66311b` 重新核验当前宿主：Claude Code 与 Codex 均完成同一签名 `envelope.v1`，外层工具沙箱内的超时/初始化拒绝不再被误判为 executor contract failure；DSH 因当前执行上下文缺少推理凭证配置而在 readiness 阶段停止。三个执行器统一契约仍未完成，deployment 的 `executorContractVerified` 保持 false。
 
 客户端现有独立 no-effect worker，可在显式 start 后由单 owner 串行驱动 executor discovery 与 signed reasoning cycle；失败只记录稳定码并按
 有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。installed-client process 已把安装恢复、pinned verifier、Keychain-backed client

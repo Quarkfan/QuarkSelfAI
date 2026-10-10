@@ -2002,3 +2002,8 @@
 - 新增固定 `com.quarkfan.quark-client` 的 launchctl adapter 与 intent/receipt activation transaction。只有 launchd manager 确认单一 running PID，且 health installation/PID/effects-off 一致时才提交；失败、崩溃 reconcile 和停用均按 unregister、health removal、digest-verified definition removal 逆序执行，漂移或不完整回滚保留证据。
 - bundled installer 新增 activate/reconcile/activation-status/deactivate 命令；三个写命令要求 `QUARK_CLIENT_ADMIN_ENABLE=1`。本批没有设置该 gate、没有执行命令、没有注册或启动真实服务、没有设备 enrollment 或外部写，当前 deployment 仍为 client `not-installed`。
 - 验证：完整主测试 547 项中 534 通过、13 项因沙箱监听限制跳过，兼容层 190/190；架构校验 `modules=142`、`ready=141`、`effectsActive=0/23`；严格工作域隔离、助手连续性与根入口同步均通过。完成度审计仍保持原 9 个 blocker，本实现不改变 deployment 或终局声明。
+
+## 2026-10-10 — Reasoning executor pilot 04
+
+- 对 revision `e66311be21c8048a947c9ace5c9738e29e55142d` 分别运行同一签名、公开、无工具/workspace/context/effect、禁止 fallback 的 reasoning pilot。Claude Code 在外层工具沙箱超时，但宿主层成功，artifact digest `sha256:e1839a0d99c236134cd93da633c699f95456eac19119531e44ec6e54a4ca300a`；Codex 的外层失败被定位为 in-process app-server 初始化受沙箱拒绝，宿主层成功，digest `sha256:d4335db81a9e0d59750ab76bcca673f7f4ce508f760f516c500754aa5d1952c2`。
+- DSH 当前 repository-locked runtime 可发现，但本执行上下文没有推理凭证配置，因此 readiness 返回 `authentication-required`，未读取或输出凭证、未启动模型调用。三执行器 gate 仍未完成，不能设置 `executorContractVerified=true`。完整脱敏证据见 `config/capability-platform-reasoning-executor-pilot-04.json` 与 `docs/evidence/capability-platform-reasoning-executor-pilot-04-2026-10-10.md`。
