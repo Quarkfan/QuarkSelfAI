@@ -2111,3 +2111,10 @@
 - 持久 SQLite + HTTP 集成测试覆盖 owner 的 save/publish/dispatch、member 无法读取或调度 owner draft、队列记录 tenant/user/device 精确归属且 external writes 为 false。测试同时暴露并修复 blueprint ID 可包含一个命名空间分段、release lookup 却错误拒绝 `/` 的契约不一致。
 - module catalog 与迁移矩阵登记 `server-side-plan-signing` 和 `registered-agent-test-orchestration`。本批不激活服务、不安装客户端、不切换现有 QuarkSelfAI 消费者/provider/writer，不执行 capability 或外部写。回滚为停用 effects-off server（若后续已激活）、恢复前一 sealed release/config；不得删除 tenant state。
 - 用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 保持未修改、未暂存。
+
+## 2026-10-10 — Local cloud bootstrap credential and launchd correction
+
+- 新增固定 service/account 的 macOS Keychain owner credential adapter。随机 32-byte credential 通过 native Security framework 的 stdin 写入与回读，禁止进入 argv、environment、stdout、receipt 或仓库文件；bootstrap 只在 owner password hash 建立期间读取并随后清零。
+- 首次真实尝试证明 macOS `security add-generic-password -w` 并不会按预期从 stdin 读取，曾留下一个精确可识别的空 Keychain item；该 item 已删除，并由 Security framework 实现替代。随后 metadata-only 回读只报告 `completed` 和 43-byte 长度，不输出内容。
+- 真实安装已以 `b0791481257f35615d40f63b2a6ca38c9379c99d` sealed server distribution 建立、配置并创建 `personal/owner`，仍保持 effects-off。LaunchAgent 激活演练暴露 `bootstrap` 已自动启动 KeepAlive 服务后再次 `kickstart -k` 会因等待/重启语义超时；事务完整回滚到 `service-prepared-inactive`，没有残留 service registration。
+- server/client launchctl adapter 均改为先 inspect；已 running 时不重启，未 running 时才使用非破坏性 `kickstart`。完整门禁通过。后续必须用修复后的管理 revision 激活并完成 pinned TLS health、客户端 enrollment 与双租户隔离回读。

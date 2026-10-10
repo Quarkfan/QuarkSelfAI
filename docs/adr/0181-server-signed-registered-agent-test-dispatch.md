@@ -14,6 +14,8 @@ Add a registered-tenant orchestration workflow that accepts only an authenticate
 
 The signer private key is copied into the installed server's private configuration namespace. Configuration validates that it is Ed25519 and exactly matches the public key already pinned by clients. The configuration receipt binds the secret file digest without exposing key bytes; recovery rejects drift, and unused rollback removes only an unchanged configuration with no durable state. The server entry reads the private key only after its path, ownership and permissions pass the existing installed-root checks.
 
+The first-owner credential is generated as 32 random bytes encoded as base64url and retained under one fixed macOS Keychain service/account. A native Security-framework helper receives it through stdin; no credential enters argv, environment, stdout, receipts or repository files. Bootstrap reloads the value only long enough to hash the owner password into the tenant database and zeroes its buffer afterwards.
+
 The HTTP operation is `POST /v1/agent-drafts/dispatch-test`. Tenant, user, effects, workspace grants, context and executor command lines are not accepted from the request body. The server derives tenant and user from the opaque login session, keeps workspace/context empty in this first registered path, and produces a 15-minute effects-off plan. Owner and member roles may dispatch their own test releases; auditors may not. No scheduler, recurring trigger, capability activation, external write or current QuarkSelfAI consumer switch is introduced.
 
 ## Consequences
