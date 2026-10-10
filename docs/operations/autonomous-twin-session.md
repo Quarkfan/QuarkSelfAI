@@ -1973,6 +1973,7 @@
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`；未调用小维、未创建第二消费者、未改变 DSH/Cordis composition、凭证、权限或业务数据边界。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本轮提交。
 - 实现提交 `8956b43` 已推送 `origin/main`。完整 `npm run check` 通过：主项目 535 项中 522 通过、13 项仅因 sandbox listener 限制跳过，compat 188/188；架构为 138 modules、123 assets、23/23 effects implemented、0/23 active，strict work-domain、assistant continuity、capability evolution installed 与根同步门禁通过。等待既有 Claude 投影子任务自然结束后，备份兼容状态并只恢复今天这一条精确关联，随后重启同一 LaunchAgent；最终结论已重新关联并成功发送一次 owner 通知，单实例健康 `ok=true`、compat worker/DSH kernel/5 条事件能力 ready。滴答写回首次补偿仍失败并按原退避保留，最终结论没有再次丢失，后续由既有同请求重试继续处理。
 - 2026-10-10 复核发现“长篇富文本自动视为终态”和宽泛的“已完成”词仍可能制造假终态，因此进一步收紧为 fail-closed：进度措辞优先，只有明确的最终/调研/排查/分析结论或整体完成措辞才结束等待；长度、消息类型和未知措辞均不能构成终态。新增长篇中间报告及“已完成采集、仍在分析”两条反例回归，避免同类漏报再次出现。
+- 加固提交 `6a977be` 已推送 `origin/main`。完整 `npm run check` 通过：主项目 541 项中 528 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190；strict work-domain、assistant continuity 与根同步门禁通过。只读飞书核验确认最终结果卡在控制私聊中只存在一条且未撤回；确认命令队列和调研子会话均为空后重启同一 LaunchAgent，重启后单实例健康 `ok=true`，compat worker、DSH kernel 与 5 条事件能力全部 ready。
 
 ## 2026-10-10 — Capability platform cloud service activation transaction
 
