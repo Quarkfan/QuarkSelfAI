@@ -2102,3 +2102,4 @@
 - 新增 host-owned 本地 adapter，云端声明无法选择 executable、参数、environment 或 profile path。当前实现只接受 network/workspace 全拒绝、ephemeral profile、downloads/desktop/external writes 关闭的安全子集；allowlist 或 workspace 访问未经本地策略解析就失败关闭。
 - 定向测试只用当前 Node 执行仓库内惰性 fixture，真实验证子进程存活、唯一 session、有界停止与 mode-0700 临时 profile 清理；扩权声明不创建 profile 或进程。未安装/执行第三方浏览器，未挂入 client/product composition，不授予网络或工作区权限。
 - 该批先独立提交 adapter 源与模块分类；公开 form artifact 将在后续 revision 绑定 adapter、重签名并通过 inactive lifecycle 后才移除 `local-adapter-missing`。
+- 后续证据批已将 browser artifact 绑定到 adapter revision `3a423cfa93e893566d80072d90477aeaa03c3887`，重算全部四种公开 form 的内容摘要、SBOM 与一次性 Ed25519 签名，私钥未落盘。Git object 回读、签名验证和四种 inactive lifecycle 演练通过；连同私有 integration pack，工具、程序包、无头浏览器、私有集成和交互应用五种形态门禁现为 verified。所有 artifact 仍 unpublished、unloaded、unauthorized、stopped、effects disabled。

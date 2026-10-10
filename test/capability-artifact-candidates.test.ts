@@ -18,8 +18,8 @@ async function fixtures() {
 test('groups every artifact offer exactly once without claiming publication or activation', async () => {
   const { offers, specs } = await fixtures()
   const result = compileCapabilityArtifactCandidates(offers, specs)
-  assert.equal(result.eligibleOfferCount, 57)
-  assert.equal(result.coveredOfferCount, 57)
+  assert.equal(result.eligibleOfferCount, 58)
+  assert.equal(result.coveredOfferCount, 58)
   assert.deepEqual(result.uncoveredModuleIds, [])
   assert.equal(result.candidates.length, 26)
   assert.ok(['cli', 'package', 'browser-runtime', 'integration-pack', 'application'].every(kind => result.candidates.some(item => item.kind === kind)))

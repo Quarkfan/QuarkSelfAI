@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "status": "validated-unpublished-inactive",
-  "sourceRevision": "c941444db6aa440519b2708bf9a125b275fef750",
+  "sourceRevision": "3a423cfa93e893566d80072d90477aeaa03c3887",
   "signature": {
     "algorithm": "ed25519",
-    "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf",
-    "publicKeySpkiBase64": "MCowBQYDK2VwAyEAd6+yJ3wjx7MezksY8cHpLtIwhtAmkIPJpovqVAi3ebg=",
+    "keyId": "sha256:85652bf6feb909f80fb7e4d1afc1b2f396a34c539e25ca6e655b3adc1a7f9cfe",
+    "publicKeySpkiBase64": "MCowBQYDK2VwAyEA97dEMJpxSWL2eVSY+0LDvDKkGCkgxx3ur/ekuzCzKPQ=",
     "privateKeyPersisted": false
   },
   "artifacts": [
@@ -34,13 +34,13 @@
           "digest": "sha256:8a37bf5c35191253b5ab9ece395ea48562cdcbc497e1344cb0dde94e93678793"
         }
       ],
-      "artifactBundleDigest": "sha256:4eb9891e8bb2573bcfc75bb6288e29e43099a9329ab4239764bd3df7d65256a6",
+      "artifactBundleDigest": "sha256:82cb258b623150965d8f341eaeb37a3a20f5c22f099928d79abf0a9374f4fd09",
       "sbom": {
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
         "name": "network-recovery-0.1.0",
-        "documentNamespace": "https://quarkself.ai/spdx/network-recovery/0.1.0/4eb9891e8bb2573b",
+        "documentNamespace": "https://quarkself.ai/spdx/network-recovery/0.1.0/82cb258b62315096",
         "creationInfo": {
           "created": "2026-10-10T00:00:00Z",
           "creators": [
@@ -57,7 +57,7 @@
             "checksums": [
               {
                 "algorithm": "SHA256",
-                "checksumValue": "4eb9891e8bb2573bcfc75bb6288e29e43099a9329ab4239764bd3df7d65256a6"
+                "checksumValue": "82cb258b623150965d8f341eaeb37a3a20f5c22f099928d79abf0a9374f4fd09"
               }
             ],
             "licenseConcluded": "LicenseRef-Proprietary",
@@ -90,17 +90,17 @@
         "source": {
           "kind": "git",
           "locator": "github.com/Quarkfan/QuarkSelfAI",
-          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
-          "artifactDigest": "sha256:4eb9891e8bb2573bcfc75bb6288e29e43099a9329ab4239764bd3df7d65256a6",
+          "revision": "3a423cfa93e893566d80072d90477aeaa03c3887",
+          "artifactDigest": "sha256:82cb258b623150965d8f341eaeb37a3a20f5c22f099928d79abf0a9374f4fd09",
           "license": "LicenseRef-Proprietary",
           "supplier": "QuarkSelfAI",
           "signature": {
             "status": "verified",
-            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+            "keyId": "sha256:85652bf6feb909f80fb7e4d1afc1b2f396a34c539e25ca6e655b3adc1a7f9cfe"
           },
           "sbom": {
             "format": "spdx",
-            "digest": "sha256:463187d1231687dddc6054e32250ff8490fa13e9fb7d66541364688672891d3d"
+            "digest": "sha256:9841cdf45fbc6bfec10ed80e0434e29e8419d4416f059dbabc2a0f4f3fdca284"
           }
         },
         "runtime": {
@@ -288,7 +288,7 @@
           "restoreEffectsEnabled": false
         }
       },
-      "signatureBase64": "3iQb3cwiBI1ayUL116rShQkD85XHopzgU4TOwh+sLVCN5EzGlk+nQCPGXKW+5xTY1C83Eh67G8JCRE0F+qb1Cw==",
+      "signatureBase64": "httlrhIOVAgNzBWuZczJYgebzyXjt6GYIRsFh2x84E3fikEAcpJG7wDjqlIbnCDL6xh56PvribPkxc5T0un8Bw==",
       "lifecycleRehearsal": {
         "status": "verified-inactive",
         "install": true,
@@ -343,13 +343,13 @@
           "digest": "sha256:043e3fe48fac5d6874559016c88b65181af71ffb6391ca68b0b841af89e83c70"
         }
       ],
-      "artifactBundleDigest": "sha256:8c468658b25dc1146b3ee364fb47edd50de8068a6d566099e56e1cac84793790",
+      "artifactBundleDigest": "sha256:0c3824fbc581d3ba22a65942668bc60ea66f8bebf4529c36bbb8c490e6e4c944",
       "sbom": {
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
         "name": "postgres-storage-0.1.0",
-        "documentNamespace": "https://quarkself.ai/spdx/postgres-storage/0.1.0/8c468658b25dc114",
+        "documentNamespace": "https://quarkself.ai/spdx/postgres-storage/0.1.0/0c3824fbc581d3ba",
         "creationInfo": {
           "created": "2026-10-10T00:00:00Z",
           "creators": [
@@ -366,7 +366,7 @@
             "checksums": [
               {
                 "algorithm": "SHA256",
-                "checksumValue": "8c468658b25dc1146b3ee364fb47edd50de8068a6d566099e56e1cac84793790"
+                "checksumValue": "0c3824fbc581d3ba22a65942668bc60ea66f8bebf4529c36bbb8c490e6e4c944"
               }
             ],
             "licenseConcluded": "LicenseRef-Proprietary",
@@ -399,17 +399,17 @@
         "source": {
           "kind": "git",
           "locator": "github.com/Quarkfan/QuarkSelfAI",
-          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
-          "artifactDigest": "sha256:8c468658b25dc1146b3ee364fb47edd50de8068a6d566099e56e1cac84793790",
+          "revision": "3a423cfa93e893566d80072d90477aeaa03c3887",
+          "artifactDigest": "sha256:0c3824fbc581d3ba22a65942668bc60ea66f8bebf4529c36bbb8c490e6e4c944",
           "license": "LicenseRef-Proprietary",
           "supplier": "QuarkSelfAI",
           "signature": {
             "status": "verified",
-            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+            "keyId": "sha256:85652bf6feb909f80fb7e4d1afc1b2f396a34c539e25ca6e655b3adc1a7f9cfe"
           },
           "sbom": {
             "format": "spdx",
-            "digest": "sha256:1349f0ac0d1e135dfe7fb5f6f0d8add4d042de0e55435fe8bcaa17fb2bf23f86"
+            "digest": "sha256:ca6f28d6b012d99ecc94f44c1d88ee14aa3133d34986083eb02e6d6aabd1e8f4"
           }
         },
         "runtime": {
@@ -613,7 +613,7 @@
           "restoreEffectsEnabled": false
         }
       },
-      "signatureBase64": "hovIPlv+BquNA7e6LtW2yPTItmCYy3lMJgI5k5z1q5v3yXpvAMZ3CMeDDp2Fr4FRXL9Mv/WfO+oOSwbqwpg+AA==",
+      "signatureBase64": "f7D1VKV+OImpXYJMINz3MpPZ/H05f8pT+3ATdiWMcGP5FklPaDSm+Yx2F8uDNSM0YKpXxO/0FBZR4Wo22wsZCA==",
       "lifecycleRehearsal": {
         "status": "verified-inactive",
         "install": true,
@@ -634,15 +634,19 @@
         {
           "path": "src/capability-platform/headless-browser-runtime.ts",
           "digest": "sha256:b48956df02b46e91e1ac4c33b36231ed56c292bee8abb6d15a6e2cc28700d495"
+        },
+        {
+          "path": "src/capability-platform/local-headless-browser-adapter.ts",
+          "digest": "sha256:bd1515f33e32c7534bc27b18d69c3500f633c8f758d5a75d4ff8163cd1e27047"
         }
       ],
-      "artifactBundleDigest": "sha256:12a6b5b8750e8bc38064c0ec020a68f6388d3bf7e172cab9904bc180c9eb8056",
+      "artifactBundleDigest": "sha256:4042aa9855f5ff88e99080230106b90c0c86b94539131b192895923ca89692e6",
       "sbom": {
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
         "name": "headless-browser-runtime-0.1.0",
-        "documentNamespace": "https://quarkself.ai/spdx/headless-browser-runtime/0.1.0/12a6b5b8750e8bc3",
+        "documentNamespace": "https://quarkself.ai/spdx/headless-browser-runtime/0.1.0/4042aa9855f5ff88",
         "creationInfo": {
           "created": "2026-10-10T00:00:00Z",
           "creators": [
@@ -659,7 +663,7 @@
             "checksums": [
               {
                 "algorithm": "SHA256",
-                "checksumValue": "12a6b5b8750e8bc38064c0ec020a68f6388d3bf7e172cab9904bc180c9eb8056"
+                "checksumValue": "4042aa9855f5ff88e99080230106b90c0c86b94539131b192895923ca89692e6"
               }
             ],
             "licenseConcluded": "LicenseRef-Proprietary",
@@ -692,17 +696,17 @@
         "source": {
           "kind": "git",
           "locator": "github.com/Quarkfan/QuarkSelfAI",
-          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
-          "artifactDigest": "sha256:12a6b5b8750e8bc38064c0ec020a68f6388d3bf7e172cab9904bc180c9eb8056",
+          "revision": "3a423cfa93e893566d80072d90477aeaa03c3887",
+          "artifactDigest": "sha256:4042aa9855f5ff88e99080230106b90c0c86b94539131b192895923ca89692e6",
           "license": "LicenseRef-Proprietary",
           "supplier": "QuarkSelfAI",
           "signature": {
             "status": "verified",
-            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+            "keyId": "sha256:85652bf6feb909f80fb7e4d1afc1b2f396a34c539e25ca6e655b3adc1a7f9cfe"
           },
           "sbom": {
             "format": "spdx",
-            "digest": "sha256:8699410a0f652727ba37d6b45eb3bd0f9b6d8ee5912de24618d6fbfe7efd15f5"
+            "digest": "sha256:1ec03db5078246952b49f694c17f8d8e6e776f186b70568a38b75b9e3c504146"
           }
         },
         "runtime": {
@@ -919,7 +923,7 @@
           "restoreEffectsEnabled": false
         }
       },
-      "signatureBase64": "mh2tENjBG8Mo4+6HAH7aIOFbFyIftrpjfqKPoqP3aD+mR8siWpOy9rJlLzssoy1Taut+qh9ZPo71lnS1BlX/Ag==",
+      "signatureBase64": "ppQHt0EeY0qsM2PQZ4jGiQgfJBwLDlZ4p2+Bi3/sGXmGzN0Xke0+3VDahjdJ+P8WVhv8ZYEJGwC0a27W2O+MCA==",
       "lifecycleRehearsal": {
         "status": "verified-inactive",
         "install": true,
@@ -994,13 +998,13 @@
           "digest": "sha256:0301fda94e4e926c71942b1b356ad1bda41a14900b5322d4c0ab4cdd27ebc529"
         }
       ],
-      "artifactBundleDigest": "sha256:cae0604fb9394b65c54c0b2ea69647cf11eda04d263ddfda21e9c4056385552c",
+      "artifactBundleDigest": "sha256:659aefee1877168b2bebad0b3febd65e58d51ed8d8556048c62e778c03b56701",
       "sbom": {
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
         "name": "control-console-0.1.0",
-        "documentNamespace": "https://quarkself.ai/spdx/control-console/0.1.0/cae0604fb9394b65",
+        "documentNamespace": "https://quarkself.ai/spdx/control-console/0.1.0/659aefee1877168b",
         "creationInfo": {
           "created": "2026-10-10T00:00:00Z",
           "creators": [
@@ -1017,7 +1021,7 @@
             "checksums": [
               {
                 "algorithm": "SHA256",
-                "checksumValue": "cae0604fb9394b65c54c0b2ea69647cf11eda04d263ddfda21e9c4056385552c"
+                "checksumValue": "659aefee1877168b2bebad0b3febd65e58d51ed8d8556048c62e778c03b56701"
               }
             ],
             "licenseConcluded": "LicenseRef-Proprietary",
@@ -1050,17 +1054,17 @@
         "source": {
           "kind": "git",
           "locator": "github.com/Quarkfan/QuarkSelfAI",
-          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
-          "artifactDigest": "sha256:cae0604fb9394b65c54c0b2ea69647cf11eda04d263ddfda21e9c4056385552c",
+          "revision": "3a423cfa93e893566d80072d90477aeaa03c3887",
+          "artifactDigest": "sha256:659aefee1877168b2bebad0b3febd65e58d51ed8d8556048c62e778c03b56701",
           "license": "LicenseRef-Proprietary",
           "supplier": "QuarkSelfAI",
           "signature": {
             "status": "verified",
-            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+            "keyId": "sha256:85652bf6feb909f80fb7e4d1afc1b2f396a34c539e25ca6e655b3adc1a7f9cfe"
           },
           "sbom": {
             "format": "spdx",
-            "digest": "sha256:34635833d0abda2e60b0468bb01f43089f06f4d9492af63bd172285509ab9119"
+            "digest": "sha256:294f53d1be9d7a67c3ef7e6c8f156c2d161b4f3798282f527859dc4d78bba0f5"
           }
         },
         "runtime": {
@@ -1263,7 +1267,7 @@
           "restoreEffectsEnabled": false
         }
       },
-      "signatureBase64": "HiQqzfWnQFq/a8Us7TaAh7QuB7blZDjY2z7E2ZBhB1Sa+hdiB7Fne71vlKmni+OzmgsPHMZ6z8peN9k54BevBw==",
+      "signatureBase64": "w5+fuvqWhrjUG/g0Rf0txsAkYvhScoABeWPc3FP++DGy3hRMhSwj8cAQKS9Edubwe9B8RLEyivWhKDprRybFBQ==",
       "lifecycleRehearsal": {
         "status": "verified-inactive",
         "install": true,
