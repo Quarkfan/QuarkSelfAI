@@ -2132,3 +2132,9 @@
 - server bootstrap 的真实失败证据证明 `/usr/bin/security add-generic-password ... -w` 不会按原假设从 stdin 接收值；客户端 master-key writer 使用同一错误路径，因此在真实安装前修正，不能用注入单测的成功冒充宿主行为。
 - client master-key read/write 现统一使用固定 Security.framework Swift bridge。service/account 之外没有调用方可控参数；生成的 43-byte base64url key 只经 stdin 写入，读取有 128-byte 上限，临时 buffer 用后清零，错误不返回 Keychain 内容。回归测试明确禁止重新引入 `/usr/bin/security` 或 `add-generic-password`。
 - 本批只修复本地 secret adapter，尚未创建真实 client master key、安装客户端、注册设备、启动 client service 或执行 DSH。回滚不得删除未来已存在的 Keychain item；它属于本地持久状态，只能由显式状态退役流程处理。
+
+## 2026-10-10 — Client private-CA service trust boundary
+
+- 真实本地控制面使用带 `127.0.0.1` SAN 的私有 CA 证书；客户端 transport 正确强制 HTTPS，但此前 service definition 无法提供该 trust anchor，导致真实 enrollment/worker 必然在 TLS 握手失败。新增显式 `tlsCaCertificatePath` 到 service preparation contract。
+- prepare/recover 均验证 trust anchor 是 canonical、owner-only、单链接、非 symlink 的有界 PEM certificate，且不含 private-key/credential-shaped 内容。launchd/systemd 仅设置 `NODE_EXTRA_CA_CERTS`，不关闭证书或 hostname 校验；公开 CA 的服务器仍可使用系统信任链。
+- 本批尚未注册或启动 client service。若准备后 CA 文件漂移、丢失或权限放宽，恢复与激活前检查失败关闭；回滚先用 digest-verified unregistered-service removal，保留 client state 与证书源。

@@ -22,6 +22,7 @@ export interface InstalledClientServicePreparationReceiptV1 {
   readonly stdoutPath: string
   readonly stderrPath: string
   readonly executablePath: string
+  readonly tlsCaCertificatePath: string
   readonly preparedAt: string
   readonly state: 'service-prepared-inactive'
   readonly registered: false
@@ -34,13 +35,14 @@ export interface InstalledClientServicePreparationReceiptV1 {
 /** Persists one sealed user-service definition inside an installed client without registering or starting it. */
 export async function prepareInstalledClientUserServiceV1(input: InstalledClientServicePreparationInputV1, now = new Date()): Promise<InstalledClientServicePreparationReceiptV1> {
   const values = exactInput(input)
+  await validateTlsCaCertificate(values.tlsCaCertificatePath)
   if (Number.isNaN(now.getTime())) throw new Error('client service preparation timestamp is invalid')
   const installation = await recoverInactiveClientInstallation(values.installRoot)
   const serviceRoot = join(values.installRoot, 'service')
   await privateDirectory(serviceRoot)
   if ((await readdir(serviceRoot)).length) throw new Error('client service preparation already exists')
   const template = await readPrivate(templatePath(values.installRoot, values.platform), 64 * 1024)
-  const options: ClientServiceRenderOptionsV1 = { installRoot: values.installRoot, nodeExecutable: values.nodeExecutable, workspacePath: values.workspacePath, stdoutPath: values.stdoutPath, stderrPath: values.stderrPath, executablePath: values.executablePath }
+  const options: ClientServiceRenderOptionsV1 = { installRoot: values.installRoot, nodeExecutable: values.nodeExecutable, workspacePath: values.workspacePath, stdoutPath: values.stdoutPath, stderrPath: values.stderrPath, executablePath: values.executablePath, tlsCaCertificatePath: values.tlsCaCertificatePath }
   const prepared = render(values.platform, template.toString('utf8'), options)
   const definitionFile = values.platform === 'launchd-user' ? 'com.quarkfan.quark-client.plist' as const : 'quark-client.service' as const
   const definitionPath = join(serviceRoot, definitionFile)
@@ -58,6 +60,7 @@ export async function prepareInstalledClientUserServiceV1(input: InstalledClient
     stdoutPath: values.stdoutPath,
     stderrPath: values.stderrPath,
     executablePath: values.executablePath,
+    tlsCaCertificatePath: values.tlsCaCertificatePath,
     preparedAt: now.toISOString(),
     state: 'service-prepared-inactive' as const,
     registered: false as const,
@@ -83,11 +86,12 @@ export async function recoverPreparedClientUserServiceV1(installRoot: string): P
   const serviceRoot = join(root, 'service')
   await privateDirectory(serviceRoot)
   const receipt = exactReceipt(JSON.parse((await readPrivate(join(serviceRoot, 'preparation-receipt.json'), 64 * 1024)).toString('utf8')))
+  await validateTlsCaCertificate(receipt.tlsCaCertificatePath)
   if (receipt.installationId !== installation.receipt.installationId || receipt.configDigest !== installation.receipt.configDigest || receipt.distributionDigest !== installation.receipt.distributionDigest) throw new Error('client service preparation lineage drifted')
   const entries = (await readdir(serviceRoot)).sort()
   const base = [receipt.definitionFile, 'preparation-receipt.json'].sort(); const extras = entries.filter(name => !base.includes(name))
   if (base.some(name => !entries.includes(name)) || extras.length > 1 || (extras.length === 1 && !['activation-intent.json','activation-receipt.json','deactivation-intent.json'].includes(extras[0]!))) throw new Error('client service preparation layout is invalid')
-  const options: ClientServiceRenderOptionsV1 = { installRoot: root, nodeExecutable: receipt.nodeExecutable, workspacePath: receipt.workspacePath, stdoutPath: receipt.stdoutPath, stderrPath: receipt.stderrPath, executablePath: receipt.executablePath }
+  const options: ClientServiceRenderOptionsV1 = { installRoot: root, nodeExecutable: receipt.nodeExecutable, workspacePath: receipt.workspacePath, stdoutPath: receipt.stdoutPath, stderrPath: receipt.stderrPath, executablePath: receipt.executablePath, tlsCaCertificatePath: receipt.tlsCaCertificatePath }
   const template = await readPrivate(templatePath(root, receipt.platform), 64 * 1024)
   const definition = await readPrivate(join(serviceRoot, receipt.definitionFile), 64 * 1024)
   const rendered = render(receipt.platform, template.toString('utf8'), options)
@@ -112,21 +116,21 @@ function render(platform: InstalledClientServicePreparationInputV1['platform'], 
 function exactInput(value: unknown): InstalledClientServicePreparationInputV1 {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client service preparation input is invalid')
   const item = value as Record<string, unknown>
-  const keys = ['installRoot', 'platform', 'nodeExecutable', 'workspacePath', 'stdoutPath', 'stderrPath', 'executablePath']
+  const keys = ['installRoot', 'platform', 'nodeExecutable', 'workspacePath', 'stdoutPath', 'stderrPath', 'executablePath', 'tlsCaCertificatePath']
   if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || (item.platform !== 'launchd-user' && item.platform !== 'systemd-user')) throw new Error('client service preparation input is invalid')
-  const options = { installRoot: item.installRoot, nodeExecutable: item.nodeExecutable, workspacePath: item.workspacePath, stdoutPath: item.stdoutPath, stderrPath: item.stderrPath, executablePath: item.executablePath }
-  prepareInactiveClientLaunchd('__NODE_EXECUTABLE__ __CLIENT_ENTRY__ __PROGRAM_ROOT__ __INSTALL_ROOT__ __WORKSPACE_PATH__ __EXEC_PATH__ __STDOUT_PATH__ __STDERR_PATH__', options as ClientServiceRenderOptionsV1)
+  const options = { installRoot: item.installRoot, nodeExecutable: item.nodeExecutable, workspacePath: item.workspacePath, stdoutPath: item.stdoutPath, stderrPath: item.stderrPath, executablePath: item.executablePath, tlsCaCertificatePath: item.tlsCaCertificatePath }
+  prepareInactiveClientLaunchd('__NODE_EXECUTABLE__ __CLIENT_ENTRY__ __PROGRAM_ROOT__ __INSTALL_ROOT__ __WORKSPACE_PATH__ __EXEC_PATH__ __TLS_CA_CERTIFICATE__ __STDOUT_PATH__ __STDERR_PATH__', options as ClientServiceRenderOptionsV1)
   return item as unknown as InstalledClientServicePreparationInputV1
 }
 
 function exactReceipt(value: unknown): InstalledClientServicePreparationReceiptV1 {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client service preparation receipt is invalid')
   const item = value as Record<string, unknown>
-  const keys = ['schemaVersion', 'installationId', 'configDigest', 'distributionDigest', 'platform', 'definitionFile', 'definitionDigest', 'nodeExecutable', 'workspacePath', 'stdoutPath', 'stderrPath', 'executablePath', 'preparedAt', 'state', 'registered', 'started', 'autoStart', 'singleClientOwner', 'externalWritesEnabled']
+  const keys = ['schemaVersion', 'installationId', 'configDigest', 'distributionDigest', 'platform', 'definitionFile', 'definitionDigest', 'nodeExecutable', 'workspacePath', 'stdoutPath', 'stderrPath', 'executablePath', 'tlsCaCertificatePath', 'preparedAt', 'state', 'registered', 'started', 'autoStart', 'singleClientOwner', 'externalWritesEnabled']
   const platformFile = item.platform === 'launchd-user' && item.definitionFile === 'com.quarkfan.quark-client.plist' || item.platform === 'systemd-user' && item.definitionFile === 'quark-client.service'
   if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.schemaVersion !== 1 || typeof item.installationId !== 'string' || !/^installation\.[a-f0-9]{32}$/.test(item.installationId) || typeof item.configDigest !== 'string' || !digestPattern.test(item.configDigest) || typeof item.distributionDigest !== 'string' || !digestPattern.test(item.distributionDigest) || !platformFile || typeof item.definitionDigest !== 'string' || !digestPattern.test(item.definitionDigest) || typeof item.preparedAt !== 'string' || Number.isNaN(Date.parse(item.preparedAt)) || item.state !== 'service-prepared-inactive' || item.registered !== false || item.started !== false || item.autoStart !== false || item.singleClientOwner !== true || item.externalWritesEnabled !== false) throw new Error('client service preparation receipt is invalid')
-  const options = { installRoot: '/private/validation', nodeExecutable: item.nodeExecutable, workspacePath: item.workspacePath, stdoutPath: item.stdoutPath, stderrPath: item.stderrPath, executablePath: item.executablePath }
-  prepareInactiveClientLaunchd('__NODE_EXECUTABLE__ __CLIENT_ENTRY__ __PROGRAM_ROOT__ __INSTALL_ROOT__ __WORKSPACE_PATH__ __EXEC_PATH__ __STDOUT_PATH__ __STDERR_PATH__', options as ClientServiceRenderOptionsV1)
+  const options = { installRoot: '/private/validation', nodeExecutable: item.nodeExecutable, workspacePath: item.workspacePath, stdoutPath: item.stdoutPath, stderrPath: item.stderrPath, executablePath: item.executablePath, tlsCaCertificatePath: item.tlsCaCertificatePath }
+  prepareInactiveClientLaunchd('__NODE_EXECUTABLE__ __CLIENT_ENTRY__ __PROGRAM_ROOT__ __INSTALL_ROOT__ __WORKSPACE_PATH__ __EXEC_PATH__ __TLS_CA_CERTIFICATE__ __STDOUT_PATH__ __STDERR_PATH__', options as ClientServiceRenderOptionsV1)
   return Object.freeze(item as unknown as InstalledClientServicePreparationReceiptV1)
 }
 
@@ -135,3 +139,4 @@ async function exactExistingRoot(value: string): Promise<string> { if (!isAbsolu
 async function privateDirectory(path: string): Promise<void> { const state = await lstat(path); const uid = process.getuid?.(); if (!state.isDirectory() || state.isSymbolicLink() || (state.mode & 0o077) !== 0 || await realpath(path) !== path || (uid !== undefined && state.uid !== uid)) throw new Error('client service directory is unsafe') }
 async function readPrivate(path: string, max: number): Promise<Buffer> { const state = await lstat(path); const uid = process.getuid?.(); if (!state.isFile() || state.isSymbolicLink() || state.nlink !== 1 || (state.mode & 0o077) !== 0 || state.size < 1 || state.size > max || await realpath(path) !== path || (uid !== undefined && state.uid !== uid)) throw new Error('client service file is unsafe'); return await readFile(path) }
 async function writePrivate(path: string, bytes: Uint8Array): Promise<void> { const handle = await open(path, 'wx', 0o600); try { await handle.writeFile(bytes); await handle.sync() } finally { await handle.close() } }
+async function validateTlsCaCertificate(path: string): Promise<void> { const value = (await readPrivate(path, 64 * 1024)).toString('utf8'); if (!/^-----BEGIN CERTIFICATE-----\n[\s\S]+\n-----END CERTIFICATE-----\n?$/.test(value) || /PRIVATE KEY|PASSWORD|TOKEN/i.test(value)) throw new Error('client service TLS CA certificate is invalid') }

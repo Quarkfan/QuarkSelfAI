@@ -10,7 +10,7 @@ The client distribution could be sealed and installed, while launchd and systemd
 
 ## Decision
 
-The sealed client distribution now contains both service templates under `program/deploy`. Installation creates a private, initially empty `service` namespace. The bundled installer may render exactly one launchd-user or systemd-user definition from the installed template and persist it with a receipt that binds installation, configuration and distribution digests plus the explicit workspace, executable and log paths.
+The sealed client distribution now contains both service templates under `program/deploy`. Installation creates a private, initially empty `service` namespace. The bundled installer may render exactly one launchd-user or systemd-user definition from the installed template and persist it with a receipt that binds installation, configuration and distribution digests plus the explicit workspace, executable, log and TLS CA certificate paths. The CA file must be a canonical, owner-only regular PEM certificate with no private-key material. The generated service passes it only as `NODE_EXTRA_CA_CERTS`; certificate and hostname verification remain enabled. This permits private-CA local servers and remains compatible with public-CA server deployment.
 
 Preparation is fail-closed and remains `service-prepared-inactive`: registered, started, auto-start and external writes are all false. Recovery revalidates the complete installation, re-renders the definition from sealed inputs and compares both bytes and digest. An unused installation cannot be removed while service preparation exists; the caller must first remove the verified unregistered definition. Drifted files are preserved as evidence rather than deleted.
 

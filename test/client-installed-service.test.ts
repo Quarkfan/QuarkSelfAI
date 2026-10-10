@@ -10,13 +10,13 @@ import { createClientDistributionFixture } from './client-distribution-fixture.j
 
 const publicKey = `ed25519-spki:${(generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }) as Buffer).toString('base64url')}`
 function installInput(installRoot: string, distributionSourcePath: string) { return { installRoot, distributionSourcePath, clientVersion: '0.1.0', controlPlaneEndpoint: 'https://control.example.com/', tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner', keychainAccount: 'device.owner', planVerification: { keyId: 'control.primary', publicKey } } }
-function serviceInput(installRoot: string) { return { installRoot, platform: 'launchd-user' as const, nodeExecutable: '/opt/node/bin/node', workspacePath: '/Users/test/Workspace', stdoutPath: join(installRoot, 'runtime/client.stdout.log'), stderrPath: join(installRoot, 'runtime/client.stderr.log'), executablePath: '/opt/node/bin:/usr/bin:/bin' } }
+function serviceInput(installRoot: string, tlsCaCertificatePath: string) { return { installRoot, platform: 'launchd-user' as const, nodeExecutable: '/opt/node/bin/node', workspacePath: '/Users/test/Workspace', stdoutPath: join(installRoot, 'runtime/client.stdout.log'), stderrPath: join(installRoot, 'runtime/client.stderr.log'), executablePath: '/opt/node/bin:/usr/bin:/bin', tlsCaCertificatePath } }
 
 test('persists and recovers one sealed inactive client service without registering it', async () => {
   const parent = await realpath(await mkdtemp(join(tmpdir(), 'quark-client-service-'))); const root = join(parent, 'client')
   try {
-    const distribution = await createClientDistributionFixture(parent); const installed = await installInactiveClient(installInput(root, distribution))
-    const prepared = await prepareInstalledClientUserServiceV1(serviceInput(root), new Date('2026-10-10T00:00:00.000Z'))
+    await writeFile(join(parent, 'control-plane-ca.pem'), '-----BEGIN CERTIFICATE-----\nfixture\n-----END CERTIFICATE-----\n', { mode: 0o600 }); const distribution = await createClientDistributionFixture(parent); const installed = await installInactiveClient(installInput(root, distribution))
+    const prepared = await prepareInstalledClientUserServiceV1(serviceInput(root, join(parent, 'control-plane-ca.pem')), new Date('2026-10-10T00:00:00.000Z'))
     assert.equal(prepared.installationId, installed.receipt.installationId); assert.equal(prepared.state, 'service-prepared-inactive')
     assert.equal(prepared.registered, false); assert.equal(prepared.started, false); assert.equal(prepared.externalWritesEnabled, false)
     assert.deepEqual(await recoverPreparedClientUserServiceV1(root), prepared)
@@ -31,8 +31,8 @@ test('persists and recovers one sealed inactive client service without registeri
 test('rejects preparation and installed definition drift without deleting evidence', async () => {
   const parent = await realpath(await mkdtemp(join(tmpdir(), 'quark-client-service-'))); const root = join(parent, 'client')
   try {
-    const distribution = await createClientDistributionFixture(parent); await installInactiveClient(installInput(root, distribution)); await prepareInstalledClientUserServiceV1(serviceInput(root))
-    await assert.rejects(prepareInstalledClientUserServiceV1(serviceInput(root)), /already exists/)
+    await writeFile(join(parent, 'control-plane-ca.pem'), '-----BEGIN CERTIFICATE-----\nfixture\n-----END CERTIFICATE-----\n', { mode: 0o600 }); const distribution = await createClientDistributionFixture(parent); await installInactiveClient(installInput(root, distribution)); await prepareInstalledClientUserServiceV1(serviceInput(root, join(parent, 'control-plane-ca.pem')))
+    await assert.rejects(prepareInstalledClientUserServiceV1(serviceInput(root, join(parent, 'control-plane-ca.pem'))), /already exists/)
     const definitionPath = join(root, 'service/com.quarkfan.quark-client.plist'); const original = await readFile(definitionPath, 'utf8'); await writeFile(definitionPath, `${original}\n<!-- drift -->\n`, { mode: 0o600 })
     await assert.rejects(recoverPreparedClientUserServiceV1(root), /digest drifted/)
     await assert.rejects(removeUnregisteredClientUserServiceV1(root), /digest drifted/)

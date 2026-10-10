@@ -12,6 +12,7 @@
     <key>QUARK_CLIENT_INSTALL_ROOT</key><string>__INSTALL_ROOT__</string>
     <key>QUARK_CLIENT_WORKSPACE</key><string>__WORKSPACE_PATH__</string>
     <key>QUARK_CLIENT_ENABLE_NO_EFFECT_WORKER</key><string>1</string>
+    <key>NODE_EXTRA_CA_CERTS</key><string>__TLS_CA_CERTIFICATE__</string>
   </dict>
   <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
   <key>ThrottleInterval</key><integer>30</integer>

@@ -3,13 +3,14 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { prepareInactiveClientLaunchd, prepareInactiveClientSystemd } from '../src/client-runtime/client-service.js'
 
-const options = { installRoot: '/Users/test/QuarkClient', nodeExecutable: '/opt/node/bin/node', workspacePath: '/Users/test/Workspace', stdoutPath: '/Users/test/Library/Logs/quark-client.out', stderrPath: '/Users/test/Library/Logs/quark-client.err', executablePath: '/opt/node/bin:/usr/bin:/bin' }
+const options = { installRoot: '/Users/test/QuarkClient', nodeExecutable: '/opt/node/bin/node', workspacePath: '/Users/test/Workspace', stdoutPath: '/Users/test/Library/Logs/quark-client.out', stderrPath: '/Users/test/Library/Logs/quark-client.err', executablePath: '/opt/node/bin:/usr/bin:/bin', tlsCaCertificatePath: '/Users/test/QuarkClient/config/control-plane-ca.pem' }
 
 test('prepares but does not register or start a path-bound launchd client', async () => {
   const template = await readFile(new URL('../deploy/launchd/com.quarkfan.quark-client.plist.template', import.meta.url), 'utf8')
   const result = prepareInactiveClientLaunchd(template, options)
   assert.equal(result.state, 'prepared-inactive'); assert.equal(result.registered, false); assert.equal(result.started, false); assert.equal(result.externalWritesEnabled, false)
   assert.match(result.definition, /QuarkClient\/program\/dist\/client-runtime\/client-entry\.js/); assert.match(result.definition, /QUARK_CLIENT_ENABLE_NO_EFFECT_WORKER/)
+  assert.match(result.definition, /NODE_EXTRA_CA_CERTS/)
   assert.doesNotMatch(result.definition, /RunAtLoad|API_KEY|TOKEN|PASSWORD|PRIVATE_KEY/)
   assert.deepEqual(result.rollback, { stopBeforeRemove: true, removeDefinitionOnly: true, preserveInstallationState: true })
 })

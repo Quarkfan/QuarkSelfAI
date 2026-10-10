@@ -8,6 +8,7 @@ export interface ClientServiceRenderOptionsV1 {
   readonly stdoutPath: string
   readonly stderrPath: string
   readonly executablePath: string
+  readonly tlsCaCertificatePath: string
 }
 
 export interface PreparedClientServiceV1 {
@@ -28,7 +29,7 @@ export function prepareInactiveClientLaunchd(template: string, options: ClientSe
   return prepared('launchd', replace(template, {
     __NODE_EXECUTABLE__: xml(values.nodeExecutable), __CLIENT_ENTRY__: xml(join(values.installRoot, 'program/dist/client-runtime/client-entry.js')),
     __PROGRAM_ROOT__: xml(join(values.installRoot, 'program')), __INSTALL_ROOT__: xml(values.installRoot), __WORKSPACE_PATH__: xml(values.workspacePath),
-    __EXEC_PATH__: xml(values.executablePath), __STDOUT_PATH__: xml(values.stdoutPath), __STDERR_PATH__: xml(values.stderrPath),
+    __EXEC_PATH__: xml(values.executablePath), __TLS_CA_CERTIFICATE__: xml(values.tlsCaCertificatePath), __STDOUT_PATH__: xml(values.stdoutPath), __STDERR_PATH__: xml(values.stderrPath),
   }))
 }
 
@@ -39,7 +40,7 @@ export function prepareInactiveClientSystemd(template: string, options: ClientSe
   return prepared('systemd', replace(template, {
     __NODE_EXECUTABLE__: values.nodeExecutable, __CLIENT_ENTRY__: join(values.installRoot, 'program/dist/client-runtime/client-entry.js'),
     __PROGRAM_ROOT__: join(values.installRoot, 'program'), __INSTALL_ROOT__: values.installRoot, __WORKSPACE_PATH__: values.workspacePath,
-    __EXEC_PATH__: values.executablePath, __STDOUT_PATH__: values.stdoutPath, __STDERR_PATH__: values.stderrPath,
+    __EXEC_PATH__: values.executablePath, __TLS_CA_CERTIFICATE__: values.tlsCaCertificatePath, __STDOUT_PATH__: values.stdoutPath, __STDERR_PATH__: values.stderrPath,
   }))
 }
 
