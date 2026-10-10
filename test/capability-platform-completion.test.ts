@@ -23,6 +23,7 @@ test('separates canonical form evidence from activation and fails closed on life
   assert.equal(report.verified, false)
   assert.ok(report.blockers.includes('headless-browser:local-adapter-missing'))
   assert.ok(report.blockers.includes('private-integration:host-contract-compatibility-missing'))
-  assert.equal(privateReceipt.validationState, 'validated-inactive')
+  assert.equal(privateReceipt.validationState, 'verified-inactive-lifecycle')
+  assert.equal(privateReceipt.inactiveLifecycleRehearsalVerified, true)
   assert.ok(candidates.every((candidate: { activationAllowed: boolean }) => candidate.activationAllowed === false))
 })

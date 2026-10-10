@@ -2067,3 +2067,10 @@
 - 工具、程序包和交互应用的形态状态提升为 `verified-inactive-lifecycle`。无头浏览器已有同等制品生命周期证据，但仍保留 `local-adapter-missing`，不会用通用 artifact install 演练冒充真实浏览器运行；私有 integration pack 仍保留 host-contract compatibility 与自身 lifecycle rehearsal 两个 blocker，因此五形态总 requirement 继续 incomplete。
 - 本批不改变当前 control-console owner、DSH/Cordis composition、消费者/provider/scheduler/writer、凭证、服务或外部写；不重启现网。回滚为撤销 ADR 0180、公开证据/validator/测试及 catalog/completion ledger 更新，无持久运行状态或外部数据补偿。
 - 用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 保持未修改、未暂存；执行通道为 Codex，未发生 executor fallback。
+
+## 2026-10-10 — Private integration inactive lifecycle rehearsal
+
+- 私有仓库 revision `79870810da3adf5f843d22fb96a2b4d44b126f91` 为冻结的 20 文件 artifact 增加可重复的 inactive lifecycle 演练。审计重新计算 source inventory、artifact/SBOM/public-key digest 并验证 Ed25519 signature，然后只在权限收紧的临时目录创建内容寻址 blob 与安装回执。
+- 演练真实完成 install、recover 校验和 uninstall；不执行任何 `pack/**` 内容，状态始终为 unloaded、unauthorized、stopped、effects disabled，consumer/provider/scheduler/external writer 均为 0，临时状态最终清除。私有审计同时确认秘密模式与符号链接计数为 0。
+- 主线只保存私有 revision、公开制品摘要和 lifecycle receipt 摘要，不读取或构建私有仓库。私有形态从 `validated-manifest-inactive` 提升为 `verified-inactive-lifecycle`，只移除 `inactive-lifecycle-rehearsal-missing`；`host-contract-compatibility-missing` 继续阻断五形态完成，不据此安装、加载或激活私有包。
+- 当前 runtime composition、消费者、provider、scheduler、writer、服务与凭证均未改变。回滚为撤销私有 revision 与本批主线摘要/门禁更新；没有持久运行状态或外部数据需要补偿。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未修改、未暂存。
