@@ -42,13 +42,13 @@ Codex 周期任务的 host/project id 同样属于设备绑定。仓库只保存
 非激活内容目标。候选结论仍为私有复制 21、主线泛化 64、脱敏回放 9、历史退休 5；首批精确批准覆盖 21 项处置，其中
 实际落盘 20 项、排除 1 项、允许激活数为 0。审计确认未启用消费者或外部写入，且账本可从固定主线 revision 完整重建。
 它现在是跨终端可取回的工作集成内容真源；签名 artifact 已在隔离临时目录完成不执行内容的 install/recover/uninstall
-无 effect 演练，但来源仍留在主线且 host contract 尚未完成，所以不称为已经隔离或已经激活。
+无 effect 演练，但来源仍留在主线且私有 host-contract conformance 尚未完成，所以不称为已经隔离或已经激活。
 首批内容迁移本身仍由 revision `971685b22476e6b1e263b20f441b5ea72519dcf2` 固定；manifest/signature 证据由
 `b8895059f6dbd717744dc78ab9a706bbe9bf89de` 固定，当前 revision 在不改变该冻结 artifact 的前提下增加 lifecycle 演练。
 
 阶段 2 host contract 设计已固化在 ADR 0091、`docs/project/work-integration-host-contract.md` 和
-`config/work-integration-host-contract-proposal.json`。owner 已全面授权继续实施，但 contract、registry 与 adapter 仍必须默认
-不激活且逐门禁验证。恢复顺序明确为先在无 pack、无
+`config/work-integration-host-contract-proposal.json`。owner 已全面授权继续实施；公共 v1 contract 与没有 activation API 的空
+registry 已进入 base profile，私有 adapter 仍待 conformance。恢复顺序明确为先在无 pack、无
 公司工作区和无公司网络条件下完成核心 restore-safe，再按精确私有 revision/digest 重建并安装 inactive pack；安装不会恢复
 消费者、provider ownership、external write 或 takeover confirmation；授权不构成跳过这些运行安全门禁。
 

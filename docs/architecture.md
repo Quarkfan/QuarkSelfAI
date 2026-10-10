@@ -355,7 +355,9 @@ BlackLake 专属能力使用独立的 `@quarkfan/quark-self-ai/blacklake` 插件
 三源真源读取当前入口、索引和 skill frontmatter，返回内容哈希并验证建议 skill 真实存在；QuarkSelfAI
 不复制三源业务规则。多步链路候选必须同时包含 `virtual-employee-operation-chain`。
 
-阶段 2 的目标边界由 [ADR 0091](adr/0091-generic-work-integration-host-contract.md) 定义，目前仍是未激活设计。
+阶段 2 的目标边界由 [ADR 0091](adr/0091-generic-work-integration-host-contract.md) 定义。公共 v1 contract 与 Cordis 空 registry
+已经实现并进入 base profile；registry 不提供 activation API，默认 pack binding、consumer、provider、scheduler 和 writer 均为 0。
+私有 adapter conformance、artifact binding 与所有运行接管仍未完成。
 目标形态中，核心只依赖通用 work-integration contract 和唯一 Cordis registry；私有 pack 反向依赖该 contract，并通过
 设备本地、精确 revision/digest、默认关闭的 operator overlay 注册。pack 不拥有消费者、durable scheduler、审批真源、
 executor router 或 workspace allowlist。Codex、Claude Code 与 DSH 共用一个规范化执行上下文；本地路径只由核心

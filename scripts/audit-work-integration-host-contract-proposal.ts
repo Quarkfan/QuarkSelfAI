@@ -22,7 +22,7 @@ export async function auditWorkIntegrationHostContractProposal(root = process.cw
   const proposal = JSON.parse(await readFile(path, 'utf8')) as Proposal
   invariant(proposal.schemaVersion === 1, 'unsupported host contract proposal schema')
   invariant(proposal.proposalId === 'phase-2-generic-host-contract-inactive', 'unexpected proposal id')
-  invariant(proposal.status === 'awaiting-owner-approval', 'proposal must remain awaiting owner approval')
+  invariant(proposal.status === 'implementation-approved-in-progress', 'proposal must record the approved inactive implementation')
   invariant(Object.values(proposal.baseRevisions).every(value => shaPattern.test(value)), 'base revisions must be exact Git revisions')
   invariant(proposal.architecture.coreMayDependOnPrivatePack === false, 'core must not depend on the private pack')
   invariant(proposal.architecture.coreMayDependOnCompanyWorkspace === false, 'core must not depend on a company workspace')
@@ -32,7 +32,8 @@ export async function auditWorkIntegrationHostContractProposal(root = process.cw
   invariant(proposal.architecture.packOwnsApprovalTruth === false, 'pack must not own approval truth')
   invariant(proposal.architecture.packOwnsExecutorRouting === false, 'pack must not own executor routing')
   invariant(proposal.architecture.baseProfileMayNamePrivatePack === false, 'base profile must not name the private pack')
-  invariant(Object.values(proposal.activation).every(value => value === false), 'all activation and cutover approvals must remain false')
+  invariant(proposal.activation.contractImplementationApproved === true, 'contract implementation approval must be recorded')
+  invariant(Object.entries(proposal.activation).filter(([key]) => key !== 'contractImplementationApproved').every(([, value]) => value === false), 'runtime activation and cutover approvals must remain false')
   invariant(proposal.rollback.runtimeOrExternalStateRollbackRequired === false, 'inactive phase must not require runtime rollback')
   invariant(proposal.rollback.sourceDeletionAllowed === false, 'source deletion must remain excluded')
   for (const [name, values] of Object.entries(proposal.implementationScope)) uniqueNonEmpty(values, `implementationScope.${name}`)

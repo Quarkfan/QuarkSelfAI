@@ -6,8 +6,9 @@ Phase 2 should not introduce separate message, task, calendar, knowledge, data, 
 over QuarkSelfAI's existing durable event/workflow/effect, approval, executor, and workspace primitives. The private pack remains a passive
 implementation package. DSH/Cordis remains the lifecycle host and QuarkSelfAI remains the sole authority for activation and exclusive ownership.
 
-Current status is `design-complete-awaiting-owner`; no contract implementation, private-pack install, provider binding, consumer, external write,
-source deletion, or service restart is authorized by this document.
+Current status is `implementation-approved-in-progress`. The generic v1 contract and empty registry may be implemented and mounted, but the registry
+has no activation API and the base profile contains zero pack bindings. Private-pack live installation, provider binding, consumer, external write,
+source deletion, and service restart remain excluded by this phase.
 
 ## Dependency direction
 
@@ -112,6 +113,7 @@ For 2A–2C, remove the device-local overlay/artifact and revert the exact imple
 external system requires rollback. For shadow, delete only shadow outputs with strict lineage. For cutover, stop the new owner before restoring the
 old owner at the recorded checkpoint; never run both. Source deletion is deferred until rollback evidence and retention gates pass.
 
-The next authorization request is machine-pinned in `config/work-integration-host-contract-proposal.json`. Approval of that proposal permits only
-2A–2C implementation and offline/inactive validation. It does not approve shadow execution, live installation, provider/consumer cutover, external
-writes, source deletion, service restart, credentials, or production changes.
+The approved inactive implementation scope is machine-pinned in `config/work-integration-host-contract-proposal.json`. It permits only 2A–2C
+implementation and offline/inactive validation. It does not make shadow execution, live installation, provider/consumer cutover, external writes,
+source deletion, service restart, credentials, or production changes safe; those operations remain unavailable until their deterministic runtime
+gates can prove single ownership and recovery.

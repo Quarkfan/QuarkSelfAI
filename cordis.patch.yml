@@ -309,5 +309,8 @@
         autoTuneConfidence: 0.85
     - id: quark-dynamic-plugin-policy
       name: '@quarkfan/quark-self-ai/dynamic-plugin-policy'
+    - id: quark-work-integration-registry
+      name: '@quarkfan/quark-self-ai/platform'
+      # Generic registry only: it has no activation API and starts with zero pack bindings.
     - id: dsh-tool-cordis
       name: '@deepseek-ai/dsh-tool-cordis'

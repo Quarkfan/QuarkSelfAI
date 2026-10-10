@@ -392,6 +392,9 @@ for (const filename of files) {
       'src/capability-platform/facilities',
       'src/client-runtime/contracts',
       'src/control-plane/contracts',
+      'src/work-integration/contracts',
+      'src/work-integration/registry',
+      'src/work-integration/plugin',
     ])) {
       violations.push(`${from} exports non-contract implementation ${to}`)
     }

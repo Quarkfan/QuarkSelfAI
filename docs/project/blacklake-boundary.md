@@ -49,9 +49,12 @@ BlackLake 能力应迁移为独立、私有、可卸载的 work integration pack
 阶段 2 的精确设计见 `docs/project/work-integration-host-contract.md` 与 ADR 0091。这里的“消息、任务、日历、知识、只读数据与
 审批 ports”不表示新建六套基础设施：消息消费、durable workflow/effect、审批、executor 和 workspace policy 仍由核心
 唯一拥有；pack 只通过通用 contract 注册被动实现。设备 overlay、安装与激活必须分离，基础 profile 不得命名私有 pack。
-当前机器提案仍是 `awaiting-owner-approval`，所有激活位为 false。
+当前机器清单是 `implementation-approved-in-progress`：只批准公共 contract、空 registry、私有 conformance 与 inactive artifact
+验证。contract implementation 位为 true，pack install、shadow、consumer/provider、external write、source deletion 和 restart
+仍为 false。
 
-该迁移会改变当前 DSH/Cordis composition 和运行依赖，必须作为独立架构变更取得精确批准，不能在数据整理阶段暗中完成。
+公共空 registry 已作为独立架构变更进入 DSH/Cordis base profile；它没有 pack binding 和 activation API。后续私有适配、影子、
+切换与清理必须继续逐门禁证明，不能把 registry mount 解释为运行接管。
 
 ## DevOps 设计参考
 

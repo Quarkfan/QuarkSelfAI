@@ -1,6 +1,6 @@
 # ADR 0091: Generic work integration host contract
 
-- Status: proposed, inactive, awaiting owner approval
+- Status: accepted, implementation in progress, runtime inactive
 - Date: 2026-09-06
 - Decision owner: 常东旭
 - Scope: QuarkSelfAI core, DSH/Cordis composition boundary, and separately versioned private work integration packs
@@ -83,9 +83,9 @@ This keeps local CLI and desktop workflows first-class while allowing a server d
 
 ## Consequences
 
-Phase 2 requires a new public contract surface and a generic inactive Cordis registry, so it changes the DSH/Cordis boundary and cannot be
-implemented without exact owner approval. The first approved implementation batch remains non-activating; shadow validation, single-provider
-cutover, and source deletion each remain later approvals.
+Phase 2 introduces a public contract surface and a generic Cordis registry under the owner's comprehensive implementation authorization. The
+registry itself is mounted with zero pack bindings and intentionally exposes no activation API. Shadow validation, single-provider cutover and
+source deletion remain unavailable until their deterministic safety and recovery gates pass.
 
 The machine-readable proposal and acceptance gates are in `config/work-integration-host-contract-proposal.json`; the operational design is in
 `docs/project/work-integration-host-contract.md`.

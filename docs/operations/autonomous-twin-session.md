@@ -2074,3 +2074,10 @@
 - 演练真实完成 install、recover 校验和 uninstall；不执行任何 `pack/**` 内容，状态始终为 unloaded、unauthorized、stopped、effects disabled，consumer/provider/scheduler/external writer 均为 0，临时状态最终清除。私有审计同时确认秘密模式与符号链接计数为 0。
 - 主线只保存私有 revision、公开制品摘要和 lifecycle receipt 摘要，不读取或构建私有仓库。私有形态从 `validated-manifest-inactive` 提升为 `verified-inactive-lifecycle`，只移除 `inactive-lifecycle-rehearsal-missing`；`host-contract-compatibility-missing` 继续阻断五形态完成，不据此安装、加载或激活私有包。
 - 当前 runtime composition、消费者、provider、scheduler、writer、服务与凭证均未改变。回滚为撤销私有 revision 与本批主线摘要/门禁更新；没有持久运行状态或外部数据需要补偿。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未修改、未暂存。
+
+## 2026-10-10 — Generic work-integration contract and empty registry
+
+- owner 的全面授权已记录为 `implementation-approved-in-progress`；只有 contract implementation 位为 true，pack install、shadow、consumer/provider、external write、source deletion 和 service restart 位仍为 false。
+- 新增封闭的 `WorkPackManifestV1`、`WorkPackRegistrationV1`、`WorkExecutionContextV1` 与窄 `WorkHostPortsV1`。运行时 validator 拒绝未知字段、未固定 revision/digest、restore effects、路径/秘密形态 context 与 mid-action executor switch；同一规范化 context 覆盖 Claude Code、Codex 与 DSH。
+- 新增通用 Cordis registry 并挂入 base profile。registry 只提供 `registerInactive`，没有 activate/start API；重复 pack 或 exclusive ownership 在注册前失败关闭。空 registry 审计证明 pack binding、consumer、active provider、scheduler、external writer 全部为 0，且不包含业务标识、主机路径或凭证。
+- 主线仍不读取私有仓库，私有 adapter conformance 尚未完成；因此 `host-contract-compatibility-missing` 不移除，也不宣称五形态完成。registry 复用既有 `./platform` 导出，未修改或暂存用户有改动的 `package.json`。回滚为撤销公共 contract、registry、profile mount、catalog/migration 映射和本记录；没有 pack 或外部状态需要补偿。

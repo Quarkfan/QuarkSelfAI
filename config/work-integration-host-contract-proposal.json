@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "proposalId": "phase-2-generic-host-contract-inactive",
-  "status": "awaiting-owner-approval",
+  "status": "implementation-approved-in-progress",
   "createdOn": "2026-09-06",
   "baseRevisions": {
-    "core": "05b32ac6d9ca252a3578b322ee7419376360a51f",
-    "privatePack": "3b9623bb31dca2e3991e6fec17fcb6d8411c7b85"
+    "core": "18aa7b9c4d9e9c84d0d2d81c8c75fd872f447cb5",
+    "privatePack": "79870810da3adf5f843d22fb96a2b4d44b126f91"
   },
   "architecture": {
     "dependencyDirection": [
@@ -35,7 +35,6 @@
       "test/work-integration-registry.test.ts"
     ],
     "coreModify": [
-      "package.json",
       "cordis.patch.yml",
       "config/module-catalog.json",
       "docs/architecture.md",
@@ -121,7 +120,7 @@
     "sourceDeletionAllowed": false
   },
   "activation": {
-    "contractImplementationApproved": false,
+    "contractImplementationApproved": true,
     "packInstallApproved": false,
     "shadowApproved": false,
     "consumerCutoverApproved": false,
