@@ -67,7 +67,7 @@ export async function activateInstalledServerUserServiceV1(input: InstalledServe
     await manager.installDefinition(join(serviceRoot, prepared.definitionFile), values.definitionTargetPath, prepared.definitionDigest)
     await manager.register(values.definitionTargetPath); await manager.start()
     const status = await manager.inspect(); if (!status.registered || !status.running) throw new Error('server service manager did not confirm one running service')
-    const health = await probe(values.installRoot, now); if (health.installationId !== prepared.installationId || health.configurationDigest !== prepared.configurationDigest || health.externalEffectsEnabled !== false) throw new Error('server service activation health lineage drifted')
+    const health = await waitForHealth(probe, values.installRoot, now); if (health.installationId !== prepared.installationId || health.configurationDigest !== prepared.configurationDigest || health.externalEffectsEnabled !== false) throw new Error('server service activation health lineage drifted')
     const receipt = committed(intent, now); await replacePrivate(intentPath, receiptPath, Buffer.from(`${JSON.stringify(receipt)}\n`)); return receipt
   } catch (error) {
     const rollback: unknown[] = []; let stopped = false
@@ -120,3 +120,5 @@ async function readPrivate(path: string, max: number): Promise<Buffer> { const s
 async function writePrivate(path: string, bytes: Uint8Array): Promise<void> { const handle = await open(path, 'wx', 0o600); try { await handle.writeFile(bytes); await handle.sync() } finally { await handle.close() } }
 async function replacePrivate(source: string, target: string, bytes: Uint8Array): Promise<void> { const temporary = `${target}.tmp`; await absent(target, 'server service activation receipt already exists'); await absent(temporary, 'server service activation receipt temporary file exists'); await writePrivate(temporary, bytes); try { await rename(temporary, target); await unlink(source) } catch (error) { try { await unlink(temporary) } catch {}; throw error } }
 function record(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value) }
+async function waitForHealth(probe: HealthProbe, installRoot: string, now: Date): Promise<InstalledCloudServerHealthReceiptV1> { let last: unknown; for (let attempt = 0; attempt < 50; attempt += 1) { try { return await probe(installRoot, now) } catch (error) { last = error; if (!transientConnection(error)) throw error; await new Promise(resolveDelay => setTimeout(resolveDelay, 100)) } }; throw last }
+function transientConnection(error: unknown): boolean { const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''; return ['ECONNREFUSED','ECONNRESET','ETIMEDOUT','EPIPE'].includes(code) }

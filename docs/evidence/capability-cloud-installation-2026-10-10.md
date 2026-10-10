@@ -2,17 +2,17 @@
 
 ## Scope
 
-This batch used exact source revision `aecafd2708e83d2f908797e019e8800df355ef76` to build server version `0.2.0`. The sealed distribution contains 14 files and has digest `sha256:fed86beabf5af1d77125433902dd774458c951509f89b8725a50c3ef639c67d6`.
+The superseding installation used exact source revision `b0791481257f35615d40f63b2a6ca38c9379c99d` to build server version `0.2.0`. The sealed distribution contains 14 files and has digest `sha256:c0f60ccfd30a004b40a5640ce3a70329214302ee41334e309928a703d646632b`.
 
-The distribution was byte-verified into a new private local installation and configured for a loopback-only TLS endpoint. The resulting installation identity is `server-installation.50dccd8eda81e61e4233c8393c1f27f9`. The status command revalidated the sealed distribution, configuration lineage, TLS key/certificate pair, pinned Ed25519 public verification key, private permissions, empty runtime namespace and empty tenant-state namespace.
+The distribution was byte-verified into a new private local installation and configured for a loopback-only TLS endpoint. The resulting installation identity is `server-installation.16297eb33340cc5b052ffed14b33d011`. The previous unused configured installation was removed only through its verified unused rollback path. The status command revalidated the sealed distribution, configuration lineage, TLS key/certificate pair, pinned Ed25519 public verification key and private permissions.
 
 ## Current state
 
-- `configured-inactive`
-- no tenant or owner account was created;
-- no service definition was prepared or copied to a service-manager directory;
-- no service was registered or started;
-- no TLS or SSH listener was opened;
+- `service-active-effects-off`
+- exactly one first tenant and owner account were created;
+- one fixed launchd user-service definition was prepared and installed;
+- launchd readback confirms one registered, running service;
+- the loopback TLS listener is active and the certificate-pinned health probe returns `ready-effects-off`;
 - no SSH gateway was applied;
 - no client was installed or enrolled;
 - external effects remain disabled;
@@ -22,8 +22,8 @@ The first configuration attempt correctly failed closed because the generated TL
 
 ## Credential boundary
 
-The host approval layer rejected writing the random first-owner credential and plan-signing private key to macOS Keychain without a new explicit approval for those exact credential mutations. No workaround was used. The transient plan-signing private key was deleted after rejection; it was never printed, committed, placed in an argument, or used to create tenant state. The configured installation therefore cannot proceed to owner bootstrap or service activation until a new signing key is generated, stored in the approved local secret store, and the unused configuration is safely reprovisioned with its public key.
+The random first-owner credential is stored under the fixed native macOS Keychain service/account and is passed only through stdin while its hash is created. A first experiment proved that the `security` CLI does not consume `-w` from stdin as required; the resulting empty exact item was deleted. The replacement uses the native Security framework, and metadata-only readback confirmed presence and bounded length without printing the value. The plan-signing private key is an owner-only server configuration file; only its public key and digest are exposed in receipts. Neither secret entered argv, environment, logs, Git or this evidence.
 
 ## Recovery and rollback
 
-Because the state namespace remains empty, the installation can still use the verified unused-configuration and unused-installation rollback paths. Once a first owner is created, tenant state becomes forward-repair-only and must never be deleted by program rollback. Service activation, when permitted, must use ADR 0171 and commit only after launchd plus pinned TLS health readback.
+Tenant state now exists and is forward-repair-only: code rollback must never delete it. Service deactivation remains reversible through the activation transaction, which unregisters launchd and removes only the digest-matched service definition while preserving owner state and configuration. The first activation attempts exposed two recovery defects: KeepAlive bootstrap was followed by a destructive restart, and SQLite WAL/SHM files were rejected during owner recovery. Each failed transaction rolled back registration. The corrected path inspects before kickstart, accepts only validated bounded runtime/SQLite sidecars, waits for launchd process readiness and retries only transient health connection errors. Final activation committed only after launchd and pinned TLS health lineage matched.

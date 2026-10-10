@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "environmentId": "owner-local-control-plane",
-  "status": "configured-inactive",
-  "sourceRevision": "aecafd2708e83d2f908797e019e8800df355ef76",
+  "status": "server-active-effects-off",
+  "sourceRevision": "b0791481257f35615d40f63b2a6ca38c9379c99d",
   "server": {
     "version": "0.2.0",
-    "distributionDigest": "sha256:fed86beabf5af1d77125433902dd774458c951509f89b8725a50c3ef639c67d6",
-    "installationId": "server-installation.50dccd8eda81e61e4233c8393c1f27f9",
-    "installationState": "configured-inactive",
-    "firstOwnerCreated": false,
-    "servicePrepared": false,
-    "serviceRegistered": false,
-    "listenerActive": false,
+    "distributionDigest": "sha256:c0f60ccfd30a004b40a5640ce3a70329214302ee41334e309928a703d646632b",
+    "installationId": "server-installation.16297eb33340cc5b052ffed14b33d011",
+    "installationState": "service-active-effects-off",
+    "firstOwnerCreated": true,
+    "servicePrepared": true,
+    "serviceRegistered": true,
+    "listenerActive": true,
     "sshGatewayApplied": false,
     "externalEffectsEnabled": false
   },
@@ -21,10 +21,7 @@
     "serviceRegistered": false,
     "externalWritesEnabled": false
   },
-  "blockedBy": [
-    "explicit-owner-approval-for-keychain-owner-credential-write",
-    "explicit-owner-approval-for-keychain-plan-signing-key-write"
-  ],
+  "blockedBy": [],
   "privacy": {
     "containsCredentialValues": false,
     "containsAbsolutePaths": false,

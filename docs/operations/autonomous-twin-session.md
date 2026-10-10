@@ -2118,3 +2118,11 @@
 - 首次真实尝试证明 macOS `security add-generic-password -w` 并不会按预期从 stdin 读取，曾留下一个精确可识别的空 Keychain item；该 item 已删除，并由 Security framework 实现替代。随后 metadata-only 回读只报告 `completed` 和 43-byte 长度，不输出内容。
 - 真实安装已以 `b0791481257f35615d40f63b2a6ca38c9379c99d` sealed server distribution 建立、配置并创建 `personal/owner`，仍保持 effects-off。LaunchAgent 激活演练暴露 `bootstrap` 已自动启动 KeepAlive 服务后再次 `kickstart -k` 会因等待/重启语义超时；事务完整回滚到 `service-prepared-inactive`，没有残留 service registration。
 - server/client launchctl adapter 均改为先 inspect；已 running 时不重启，未 running 时才使用非破坏性 `kickstart`。完整门禁通过。后续必须用修复后的管理 revision 激活并完成 pinned TLS health、客户端 enrollment 与双租户隔离回读。
+
+## 2026-10-10 — Effects-off cloud server activation
+
+- 以 sealed server revision `b0791481257f35615d40f63b2a6ca38c9379c99d` 完成真实本机安装、配置和 `personal/owner` 首账户 bootstrap；owner credential 只存在于固定 macOS Keychain item，plan-signing private key 只存在于权限收紧的 server config，均未输出或进入 argv、environment、日志与 Git。
+- 激活演练进一步暴露两个恢复缺口：SQLite WAL/SHM 与运行期 sidecar 会让 owner recovery 错拒，launchd 进程出现到 TLS listener ready 之间存在竞态。恢复规则现仅接受固定名称、类型、owner、mode 与 canonical path 的 sidecar；service manager 和健康探针分别有 5 秒有界等待，健康只重试连接拒绝/重置/超时/断管，证书与语义错误立即失败关闭。
+- 最终 activation receipt、launchctl readback 与固定证书健康探针一致：单一 `com.quarkfan.quark-server` user service 正在运行，状态为 `service-active-effects-off` / `ready-effects-off`。SSH gateway、客户端、设备 enrollment、能力执行和 external writes 均未启用；现有 QuarkSelfAI 飞书/滴答消费者、provider、scheduler 与 writer 未改变或重启。
+- 完整 `npm run check` 通过：架构 151 modules、23/23 effects implemented、0/23 active；主测试 579 项中 566 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。用户未提交的 `package.json`、品牌客户端文件与 `.DS_Store` 未修改、未暂存。
+- 回滚使用 service deactivation transaction，只注销 launchd 并删除 digest 匹配的 service definition，保留 tenant/owner/configuration；不得再使用 unused uninstall 路径删除已有 tenant state。
