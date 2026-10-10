@@ -75,7 +75,7 @@ export async function recoverInactiveClientInstallation(installRoot: string): Pr
     if (item.configDigest !== digest(configBytes)) throw new Error('client installation config digest drifted')
     const distribution = await verifyClientDistribution(root)
     if (distribution.artifactDigest !== item.distributionDigest || distribution.sourceRevision !== item.sourceRevision || distribution.clientVersion !== item.clientVersion) throw new Error('client installation distribution drifted')
-    const migrationPath = join(root, 'runtime', basename((await onlyMigration(join(root, 'runtime')))))
+    const migrationPath = join(root, 'runtime', basename((await installedMigration(join(root, 'runtime')))))
     migrationBytes = await readBounded(migrationPath, 1024 * 1024)
     if (item.migrationDigest !== digest(migrationBytes)) throw new Error('client installation migration digest drifted')
     const plan = await compileInactiveClientBootstrap(config, migrationPath)
@@ -90,6 +90,7 @@ export async function uninstallUnusedInactiveClient(installRoot: string): Promis
   const root = resolve(installRoot); const stateRoot = dirname(recovered.plan.client.paths.databasePath)
   if ((await readdir(stateRoot)).length !== 0) throw new Error('client installation contains durable state')
   if ((await readdir(join(root, 'service'))).length !== 0) throw new Error('client installation contains service preparation')
+  if ((await readdir(join(root, 'runtime'))).some(name => name === 'client-process-health.json')) throw new Error('client installation contains process health')
   const quarantine = `${root}.uninstalling`
   try { await lstat(quarantine); throw new Error('client uninstall quarantine already exists') } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
   await rename(root, quarantine)
@@ -97,7 +98,7 @@ export async function uninstallUnusedInactiveClient(installRoot: string): Promis
   if ((await readdir(quarantinedState)).length !== 0) { await rename(quarantine, root); throw new Error('client installation acquired durable state during uninstall') }
   const runtimeRoot = join(quarantine, 'runtime')
   await removeVerifiedDistribution(quarantine)
-  await unlink(join(quarantine, 'client.json')); await unlink(join(quarantine, 'install-receipt.json')); await unlink(await onlyMigration(runtimeRoot)); await rmdir(runtimeRoot); await rmdir(join(quarantine, 'service'))
+  await unlink(join(quarantine, 'client.json')); await unlink(join(quarantine, 'install-receipt.json')); await unlink(await installedMigration(runtimeRoot)); await rmdir(runtimeRoot); await rmdir(join(quarantine, 'service'))
   // Never recursively delete state: any unexpected write makes an atomic directory removal fail.
   await rmdir(quarantinedState); await rmdir(quarantine)
   return recovered.receipt
@@ -120,7 +121,7 @@ async function validateExistingRoot(value: string): Promise<string> {
 
 async function writeDurable(path: string, bytes: Uint8Array): Promise<void> { const handle = await open(path, 'wx', 0o600); try { await handle.writeFile(bytes); await handle.sync() } finally { await handle.close() } }
 async function readBounded(path: string, limit = 64 * 1024): Promise<Buffer> { const state = await lstat(path); if (!state.isFile() || state.isSymbolicLink() || (state.mode & 0o077) !== 0 || state.size <= 0 || state.size > limit) throw new Error('client installation file is invalid'); return await readFile(path) }
-async function onlyMigration(root: string): Promise<string> { const state = await lstat(root); if (!state.isDirectory() || state.isSymbolicLink() || (state.mode & 0o077) !== 0 || await realpath(root) !== root) throw new Error('client installation runtime is invalid'); const entries = await readdir(root); if (entries.length !== 1) throw new Error('client installation runtime is invalid'); return join(root, entries[0]!) }
+async function installedMigration(root: string): Promise<string> { const state = await lstat(root); if (!state.isDirectory() || state.isSymbolicLink() || (state.mode & 0o077) !== 0 || await realpath(root) !== root) throw new Error('client installation runtime is invalid'); const entries = (await readdir(root)).sort(); const migrations = entries.filter(name => name.endsWith('.sql')); const extras = entries.filter(name => !name.endsWith('.sql')); if (migrations.length !== 1 || extras.some(name => name !== 'client-process-health.json') || extras.length > 1) throw new Error('client installation runtime is invalid'); return join(root, migrations[0]!) }
 function digest(value: Uint8Array): string { return `sha256:${createHash('sha256').update(value).digest('hex')}` }
 function exactReceipt(value: unknown): InactiveClientInstallationReceiptV1 {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client installation receipt is invalid')

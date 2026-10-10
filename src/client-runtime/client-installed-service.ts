@@ -85,7 +85,8 @@ export async function recoverPreparedClientUserServiceV1(installRoot: string): P
   const receipt = exactReceipt(JSON.parse((await readPrivate(join(serviceRoot, 'preparation-receipt.json'), 64 * 1024)).toString('utf8')))
   if (receipt.installationId !== installation.receipt.installationId || receipt.configDigest !== installation.receipt.configDigest || receipt.distributionDigest !== installation.receipt.distributionDigest) throw new Error('client service preparation lineage drifted')
   const entries = (await readdir(serviceRoot)).sort()
-  if (entries.join(',') !== [receipt.definitionFile, 'preparation-receipt.json'].sort().join(',')) throw new Error('client service preparation layout is invalid')
+  const base = [receipt.definitionFile, 'preparation-receipt.json'].sort(); const extras = entries.filter(name => !base.includes(name))
+  if (base.some(name => !entries.includes(name)) || extras.length > 1 || (extras.length === 1 && !['activation-intent.json','activation-receipt.json','deactivation-intent.json'].includes(extras[0]!))) throw new Error('client service preparation layout is invalid')
   const options: ClientServiceRenderOptionsV1 = { installRoot: root, nodeExecutable: receipt.nodeExecutable, workspacePath: receipt.workspacePath, stdoutPath: receipt.stdoutPath, stderrPath: receipt.stderrPath, executablePath: receipt.executablePath }
   const template = await readPrivate(templatePath(root, receipt.platform), 64 * 1024)
   const definition = await readPrivate(join(serviceRoot, receipt.definitionFile), 64 * 1024)
@@ -98,6 +99,7 @@ export async function recoverPreparedClientUserServiceV1(installRoot: string): P
 export async function removeUnregisteredClientUserServiceV1(installRoot: string): Promise<InstalledClientServicePreparationReceiptV1> {
   const receipt = await recoverPreparedClientUserServiceV1(installRoot)
   const serviceRoot = join(installRoot, 'service')
+  if ((await readdir(serviceRoot)).some(name => ['activation-intent.json','activation-receipt.json','deactivation-intent.json'].includes(name))) throw new Error('client service preparation has activation state')
   await unlink(join(serviceRoot, receipt.definitionFile))
   await unlink(join(serviceRoot, 'preparation-receipt.json'))
   return receipt

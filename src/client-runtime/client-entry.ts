@@ -2,6 +2,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { recoverInactiveClientInstallation } from './client-installation.js'
 import { InstalledNoEffectClientProcessV1 } from './installed-client-process.js'
+import { publishInstalledClientProcessHealthV1, removeInstalledClientProcessHealthV1 } from './client-process-health.js'
 import type { NoEffectClientWorkerConfigV1 } from './no-effect-client-worker.js'
 
 interface ClientEntryCommandV1 { readonly mode: 'status' | 'run'; readonly installRoot: string; readonly worker?: NoEffectClientWorkerConfigV1 }
@@ -28,15 +29,22 @@ export async function runClientEntry(argv = process.argv.slice(2), environment: 
   }
   const owner = await InstalledNoEffectClientProcessV1.open(command.installRoot, command.worker!)
   let stopping = false
-  await new Promise<void>((resolveRun, rejectRun) => {
+  try {
+    owner.start()
+    await publishInstalledClientProcessHealthV1(command.installRoot, owner.snapshot())
+    await new Promise<void>((resolveRun, rejectRun) => {
     const stop = (): void => {
       if (stopping) return
       stopping = true
       void owner.close().then(resolveRun, rejectRun)
     }
     process.once('SIGTERM', stop); process.once('SIGINT', stop)
-    try { owner.start() } catch (error) { process.off('SIGTERM', stop); process.off('SIGINT', stop); void owner.close().then(() => rejectRun(error), rejectRun) }
-  })
+    })
+  } finally {
+    try { await owner.close() } finally {
+      try { await removeInstalledClientProcessHealthV1(command.installRoot, process.pid) } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+    }
+  }
 }
 
 function exactInteger(value: string): number {

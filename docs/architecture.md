@@ -156,7 +156,9 @@ server 已真实安装并进入 `configured-inactive`，但主机授权层拒绝
 客户端发行包现同时封存 launchd/systemd 模板；安装会创建独立 `service` namespace，bundled installer 只能在其中生成并恢复校验一个
 `service-prepared-inactive` 定义。回执绑定 installation/config/distribution digest 与显式 workspace、executable、log 路径，卸载前必须先移除
 未注册准备；任何 byte、lineage 或额外文件漂移都会失败关闭并保留证据。该边界见 [ADR 0172](adr/0172-installed-unregistered-client-service-preparation.md)。
-Linux systemd 激活、客户端服务激活、SSH gateway apply 和既有 owner cutover 仍是独立门禁。脱敏当前状态由
+客户端 launchd 激活现由独立 intent/receipt 事务实现：固定 label 的 manager PID 必须与进程启动后发布的 lineage health PID 一致才提交，失败与
+停用都按 unregister、health removal、verified definition removal 逆序回滚；mutating CLI 另受显式 admin gate 保护。实现保持未调用，见
+[ADR 0173](adr/0173-fail-closed-client-service-activation.md)。Linux systemd 激活、真实客户端服务激活、SSH gateway apply 和既有 owner cutover 仍是独立门禁。脱敏当前状态由
 `config/capability-platform-deployment.json` 固定。
 
 平台终局不再由 Phase 0 的“模块映射 100% / 控制台设计覆盖 100%”间接推断。`config/capability-platform-completion.json` 与

@@ -1995,3 +1995,10 @@
 - 本批没有注册或启动客户端，没有生成设备凭证、连接云端、修改现网 composition 或创建第二 owner。后续激活事务仍必须独立证明 device enrollment、唯一进程 owner 和可验证 readiness，不能只把进程存在当作 ready。
 - 验证：客户端发行/安装/服务定向测试 11/11；完整主测试 543 项中 530 通过、13 项因沙箱监听限制跳过，兼容层 190/190；架构校验 `modules=140`、`ready=139`、`effectsActive=0/23`；严格工作域隔离、助手连续性与根入口同步均通过。平台终局审计仍为 `in-progress`，保留多用户隔离、设备注册、统一执行契约、控制台编排、五类 artifact、工作流等价回放、主线独立性、激活审批和完整生命周期验证共 9 个 blocker。
 - revision `fff1460` 推送后，以精确完整 revision 构建 sealed client distribution：30,368 文件、428 个包、artifact digest `sha256:d9e34a3ea5507e13d07474ad5c26d20d0539f24ab646f6d51b67655de2354af6`。bundled installer 在隔离临时目录真实完成 install、恢复、prepare-service、service-status、verified removal 与 unused uninstall，最终安装根不存在；全程未注册/启动服务、未创建凭证、未连接控制面、未执行 capability 或外部写。证据见 `docs/evidence/capability-platform-client-service-rehearsal-2026-10-10.md`。
+
+## 2026-10-10 — Fail-closed client service activation transaction
+
+- 在 ADR 0172 的持久准备边界上增加 ADR 0173：客户端进程只在 no-effect worker 启动后写入私有、无路径/凭证/输出的 PID-bound health receipt；正常退出只移除同 PID receipt。安装恢复只允许该固定 runtime 文件，卸载在 health 存在时失败关闭。
+- 新增固定 `com.quarkfan.quark-client` 的 launchctl adapter 与 intent/receipt activation transaction。只有 launchd manager 确认单一 running PID，且 health installation/PID/effects-off 一致时才提交；失败、崩溃 reconcile 和停用均按 unregister、health removal、digest-verified definition removal 逆序执行，漂移或不完整回滚保留证据。
+- bundled installer 新增 activate/reconcile/activation-status/deactivate 命令；三个写命令要求 `QUARK_CLIENT_ADMIN_ENABLE=1`。本批没有设置该 gate、没有执行命令、没有注册或启动真实服务、没有设备 enrollment 或外部写，当前 deployment 仍为 client `not-installed`。
+- 验证：完整主测试 547 项中 534 通过、13 项因沙箱监听限制跳过，兼容层 190/190；架构校验 `modules=142`、`ready=141`、`effectsActive=0/23`；严格工作域隔离、助手连续性与根入口同步均通过。完成度审计仍保持原 9 个 blocker，本实现不改变 deployment 或终局声明。
