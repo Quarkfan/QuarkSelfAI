@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec、registered-tenant inactive composition、launchd 服务激活 adapter 与会前简报候选，合计 139 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec、registered-tenant inactive composition、服务准备/激活 adapter 与会前简报候选，合计 140 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -82,7 +82,7 @@ pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallbac
 客户端现有独立 no-effect worker，可在显式 start 后由单 owner 串行驱动 executor discovery 与 signed reasoning cycle；失败只记录稳定码并按
 有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。installed-client process 已把安装恢复、pinned verifier、Keychain-backed client
 与 worker 收束为同一 close boundary，并提供 `status|run` Node 入口；run 必须显式设置本地 enable gate，status 的真实子进程测试不会创建状态或
-泄露路径。发行包已自带 installer/client 入口并能脱离 checkout 运行 `status`；服务定义仍只生成未注册，且没有真实云连接，因此不能称客户端 daemon 已激活。
+泄露路径。发行包已自带 installer/client 入口、受哈希保护的 launchd/systemd 模板并能脱离 checkout 运行 `status`；installer 可把定义与 lineage receipt 持久化到安装内的 `service-prepared-inactive` namespace，并能恢复校验或安全移除。服务仍未注册/启动，且没有真实云连接，因此不能称客户端 daemon 已激活。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；

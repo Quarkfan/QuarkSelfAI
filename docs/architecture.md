@@ -153,6 +153,9 @@ definition、注册并启动固定 launchd user service，只有 service-manager
 lineage 同时回读成功才提交 active receipt。普通失败按 stop/unregister/remove 反序回滚；崩溃遗留 intent 可由同一事务 reconcile，停用保留 tenant database、
 配置、TLS material 与 prepared rollback release。当前实现只覆盖 macOS launchd，且始终 `externalEffectsEnabled=false`。revision `aecafd2` 的 sealed
 server 已真实安装并进入 `configured-inactive`，但主机授权层拒绝了本轮 Keychain 凭证写入，因此尚未创建首 owner、准备/注册本机平台服务或打开 listener；
+客户端发行包现同时封存 launchd/systemd 模板；安装会创建独立 `service` namespace，bundled installer 只能在其中生成并恢复校验一个
+`service-prepared-inactive` 定义。回执绑定 installation/config/distribution digest 与显式 workspace、executable、log 路径，卸载前必须先移除
+未注册准备；任何 byte、lineage 或额外文件漂移都会失败关闭并保留证据。该边界见 [ADR 0172](adr/0172-installed-unregistered-client-service-preparation.md)。
 Linux systemd 激活、客户端服务激活、SSH gateway apply 和既有 owner cutover 仍是独立门禁。脱敏当前状态由
 `config/capability-platform-deployment.json` 固定。
 

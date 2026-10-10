@@ -17,6 +17,7 @@ test('installs, recovers and uninstalls one unused inactive client with private 
     const distribution = await createClientDistributionFixture(parent); const installed = await installInactiveClient(input(root, distribution), new Date('2026-09-06T00:00:00.000Z'))
     assert.equal(installed.receipt.state, 'installed-inactive'); assert.equal(installed.plan.autoConnect, false)
     assert.equal((await lstat(root)).mode & 0o077, 0); assert.equal((await lstat(join(root, 'client.json'))).mode & 0o077, 0); assert.equal((await lstat(installed.plan.client.paths.migrationPath)).mode & 0o077, 0)
+    assert.equal((await lstat(join(root, 'service'))).mode & 0o077, 0)
     const metadata = await readFile(join(root, 'client.json'), 'utf8'); assert.doesNotMatch(metadata, /master.?key|pollToken|privateKey\W*:/i)
     const recovered = await recoverInactiveClientInstallation(root); assert.deepEqual(recovered.receipt, installed.receipt)
     assert.equal((await uninstallUnusedInactiveClient(root)).installationId, installed.receipt.installationId)

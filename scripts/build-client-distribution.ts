@@ -19,6 +19,8 @@ try {
   await runEsbuild(sourceRoot, 'src/client-runtime/client-installer-entry.ts', join(root, 'program/dist/client-runtime/client-installer-entry.js'))
   for (const [source, destination] of [
     ['dist/client-runtime/dsh-stdin-host.js', 'program/dist/client-runtime/dsh-stdin-host.js'],
+    ['deploy/launchd/com.quarkfan.quark-client.plist.template', 'program/deploy/launchd/com.quarkfan.quark-client.plist.template'],
+    ['deploy/systemd/quark-client.service.template', 'program/deploy/systemd/quark-client.service.template'],
     ['config/dsh-baseline.json', 'program/config/dsh-baseline.json'],
     ['config/dsh-inference-provider.patch.yml', 'program/config/dsh-inference-provider.patch.yml'],
     ['config/dsh-reasoning-only.patch.yml', 'program/config/dsh-reasoning-only.patch.yml'],

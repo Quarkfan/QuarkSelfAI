@@ -37,7 +37,7 @@ export async function sealClientDistribution(root: string, clientVersion: string
 export async function verifyClientDistribution(root: string): Promise<ClientDistributionManifestV1> {
   const canonical = await privateCanonicalDirectory(root)
   const top = (await readdir(canonical)).sort().join(',')
-  if (!['client-distribution.json,program', 'client-distribution.json,program,runtime,state', 'client-distribution.json,client.json,install-receipt.json,program,runtime,state'].includes(top)) throw new Error('client distribution layout is invalid')
+  if (!['client-distribution.json,program', 'client-distribution.json,program,runtime,service,state', 'client-distribution.json,client.json,install-receipt.json,program,runtime,service,state'].includes(top)) throw new Error('client distribution layout is invalid')
   const manifestBytes = await boundedPrivateFile(resolve(canonical, 'client-distribution.json'), 16 * 1024 * 1024)
   let parsed: unknown
   try { parsed = JSON.parse(manifestBytes.toString('utf8')) } catch { throw new Error('client distribution manifest is invalid') }
@@ -69,7 +69,7 @@ async function inventory(root: string): Promise<readonly ClientDistributionFileV
 
 function requireFiles(files: readonly ClientDistributionFileV1[]): void {
   const paths = new Set(files.map(file => file.path))
-  for (const required of ['program/dist/client-runtime/client-entry.js', 'program/dist/client-runtime/client-installer-entry.js', 'program/dist/client-runtime/dsh-stdin-host.js', 'program/package.json', 'program/config/dsh-baseline.json', 'program/config/dsh-inference-provider.patch.yml', 'program/config/dsh-reasoning-only.patch.yml', 'program/migrations/client-sqlite/001_client_state.sql', 'program/sbom.spdx.json']) if (!paths.has(required) || files.find(file => file.path === required)!.size === 0) throw new Error(`client distribution is incomplete: ${required}`)
+  for (const required of ['program/dist/client-runtime/client-entry.js', 'program/dist/client-runtime/client-installer-entry.js', 'program/dist/client-runtime/dsh-stdin-host.js', 'program/deploy/launchd/com.quarkfan.quark-client.plist.template', 'program/deploy/systemd/quark-client.service.template', 'program/package.json', 'program/config/dsh-baseline.json', 'program/config/dsh-inference-provider.patch.yml', 'program/config/dsh-reasoning-only.patch.yml', 'program/migrations/client-sqlite/001_client_state.sql', 'program/sbom.spdx.json']) if (!paths.has(required) || files.find(file => file.path === required)!.size === 0) throw new Error(`client distribution is incomplete: ${required}`)
 }
 
 function exactManifest(value: unknown): ClientDistributionManifestV1 {

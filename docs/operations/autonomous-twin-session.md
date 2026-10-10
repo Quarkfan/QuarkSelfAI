@@ -1986,3 +1986,11 @@
 - 实现提交 `aecafd2` 已推送 `origin/main`。随后以该精确 revision 构建 14 文件、digest `sha256:fed86beabf5af1d77125433902dd774458c951509f89b8725a50c3ef639c67d6` 的 sealed server distribution，并真实完成独立本地 installation 与 loopback TLS `configured-inactive`。第一次配置因生成的 TLS 文件为 `0644` 被安全门禁拒绝，修正为 `0600` 后成功，证明失败未留下半配置。
 - 主机审批层拒绝把随机 owner credential 与 plan-signing private key 写入 Keychain，理由是需要对这两个具体凭证变更重新明确批准；未绕过。没有创建 tenant/owner、service definition、listener 或 SSH gateway。临时 plan private key 已删除且未打印、未进入 argv/commit；当前安装保持无 state、无 runtime、可走 unused rollback。脱敏机器状态与恢复边界记录在 `config/capability-platform-deployment.json` 和安装证据中。
 - 新增平台终局完成度账本与失败关闭审计，直接覆盖目标的 12 项完成标准并交叉读取 deployment、module/migration、artifact candidate、product composition 和 continuity。当前只验证模块 139/139 唯一处置、现作用域单 owner 与本批用户改动保护，其余 9 项保持明确 blocker；测试证明不能再用 50/50 控制台设计覆盖或 inactive scaffolds 误报完成。完整 `npm run check` 再次通过，架构 assets 增至 125，现网未重启。
+
+## 2026-10-10 — Installed client service preparation
+
+- 继续推进 Phase 2 可安装客户端。此前发行与安装虽已 content-addressed，但服务模板仍只存在于 checkout，安装后无法形成可恢复的 daemon 准备状态；直接复制任意主机定义会绕过发行 lineage。
+- 新增 ADR 0172 和独立 `client-service-preparation` module。sealed distribution 现在携带 launchd/systemd 模板，安装创建私有空 `service` namespace；bundled installer 新增 exact `prepare-service`、`service-status` 与 `remove-unregistered-service`，只在安装内部写入未注册定义和绑定 installation/config/distribution digest 的 receipt。
+- 恢复会先验证完整安装，再从 sealed template 重渲染并逐字节/摘要核对。服务准备存在时 unused uninstall 失败关闭；只有定义和回执均未漂移时才允许移除，漂移证据不会被清理。registered、started、auto-start、capability loading 与 external writes 始终为 false。
+- 本批没有注册或启动客户端，没有生成设备凭证、连接云端、修改现网 composition 或创建第二 owner。后续激活事务仍必须独立证明 device enrollment、唯一进程 owner 和可验证 readiness，不能只把进程存在当作 ready。
+- 验证：客户端发行/安装/服务定向测试 11/11；完整主测试 543 项中 530 通过、13 项因沙箱监听限制跳过，兼容层 190/190；架构校验 `modules=140`、`ready=139`、`effectsActive=0/23`；严格工作域隔离、助手连续性与根入口同步均通过。平台终局审计仍为 `in-progress`，保留多用户隔离、设备注册、统一执行契约、控制台编排、五类 artifact、工作流等价回放、主线独立性、激活审批和完整生命周期验证共 9 个 blocker。

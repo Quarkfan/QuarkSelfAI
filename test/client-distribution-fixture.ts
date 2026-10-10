@@ -4,11 +4,13 @@ import { sealClientDistribution } from '../src/client-runtime/client-distributio
 
 export async function createClientDistributionFixture(parent: string, entrypoint = 'process.exitCode = 0\n'): Promise<string> {
   const root = join(parent, 'distribution')
-  for (const directory of ['program/dist/client-runtime', 'program/config', 'program/migrations/client-sqlite']) await mkdir(join(root, directory), { recursive: true, mode: 0o700 })
+  for (const directory of ['program/dist/client-runtime', 'program/deploy/launchd', 'program/deploy/systemd', 'program/config', 'program/migrations/client-sqlite']) await mkdir(join(root, directory), { recursive: true, mode: 0o700 })
   const files: Record<string, string> = {
     'program/dist/client-runtime/client-entry.js': entrypoint,
     'program/dist/client-runtime/client-installer-entry.js': 'process.exitCode = 0\n',
     'program/dist/client-runtime/dsh-stdin-host.js': 'process.exitCode = 1\n',
+    'program/deploy/launchd/com.quarkfan.quark-client.plist.template': await readFile(new URL('../deploy/launchd/com.quarkfan.quark-client.plist.template', import.meta.url), 'utf8'),
+    'program/deploy/systemd/quark-client.service.template': await readFile(new URL('../deploy/systemd/quark-client.service.template', import.meta.url), 'utf8'),
     'program/package.json': '{"type":"module"}\n',
     'program/config/dsh-baseline.json': '{"version":"fixture"}\n',
     'program/config/dsh-inference-provider.patch.yml': 'plugins: {}\n',

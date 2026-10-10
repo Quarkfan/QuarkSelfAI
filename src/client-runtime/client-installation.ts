@@ -41,8 +41,8 @@ export async function installInactiveClient(input: InactiveClientInstallationInp
   let created = false; let migrationBytes: Buffer | undefined; let configBytes: Buffer | undefined
   try {
     await mkdir(root, { mode: 0o700 }); created = true
-    const stateRoot = join(root, 'state'); const runtimeRoot = join(root, 'runtime'); const programRoot = join(root, 'program')
-    await mkdir(stateRoot, { mode: 0o700 }); await mkdir(runtimeRoot, { mode: 0o700 }); await copyDistribution(input.distributionSourcePath, root, distribution)
+    const stateRoot = join(root, 'state'); const runtimeRoot = join(root, 'runtime'); const serviceRoot = join(root, 'service'); const programRoot = join(root, 'program')
+    await mkdir(stateRoot, { mode: 0o700 }); await mkdir(runtimeRoot, { mode: 0o700 }); await mkdir(serviceRoot, { mode: 0o700 }); await copyDistribution(input.distributionSourcePath, root, distribution)
     const migrationPath = join(runtimeRoot, basename(migrationSourcePath))
     await copyFile(migrationSourcePath, migrationPath); await chmod(migrationPath, 0o600)
     migrationBytes = await readFile(migrationPath)
@@ -63,7 +63,7 @@ export async function installInactiveClient(input: InactiveClientInstallationInp
 /** Revalidates local installation evidence without reading client databases or secrets. */
 export async function recoverInactiveClientInstallation(installRoot: string): Promise<InactiveClientInstallationV1> {
   const root = await validateExistingRoot(installRoot)
-  if ((await readdir(root)).sort().join(',') !== 'client-distribution.json,client.json,install-receipt.json,program,runtime,state') throw new Error('client installation layout is invalid')
+  if ((await readdir(root)).sort().join(',') !== 'client-distribution.json,client.json,install-receipt.json,program,runtime,service,state') throw new Error('client installation layout is invalid')
   let configBytes: Buffer | undefined; let receiptBytes: Buffer | undefined; let migrationBytes: Buffer | undefined
   try {
     configBytes = await readBounded(join(root, 'client.json')); receiptBytes = await readBounded(join(root, 'install-receipt.json'))
@@ -89,6 +89,7 @@ export async function uninstallUnusedInactiveClient(installRoot: string): Promis
   const recovered = await recoverInactiveClientInstallation(installRoot)
   const root = resolve(installRoot); const stateRoot = dirname(recovered.plan.client.paths.databasePath)
   if ((await readdir(stateRoot)).length !== 0) throw new Error('client installation contains durable state')
+  if ((await readdir(join(root, 'service'))).length !== 0) throw new Error('client installation contains service preparation')
   const quarantine = `${root}.uninstalling`
   try { await lstat(quarantine); throw new Error('client uninstall quarantine already exists') } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
   await rename(root, quarantine)
@@ -96,7 +97,7 @@ export async function uninstallUnusedInactiveClient(installRoot: string): Promis
   if ((await readdir(quarantinedState)).length !== 0) { await rename(quarantine, root); throw new Error('client installation acquired durable state during uninstall') }
   const runtimeRoot = join(quarantine, 'runtime')
   await removeVerifiedDistribution(quarantine)
-  await unlink(join(quarantine, 'client.json')); await unlink(join(quarantine, 'install-receipt.json')); await unlink(await onlyMigration(runtimeRoot)); await rmdir(runtimeRoot)
+  await unlink(join(quarantine, 'client.json')); await unlink(join(quarantine, 'install-receipt.json')); await unlink(await onlyMigration(runtimeRoot)); await rmdir(runtimeRoot); await rmdir(join(quarantine, 'service'))
   // Never recursively delete state: any unexpected write makes an atomic directory removal fail.
   await rmdir(quarantinedState); await rmdir(quarantine)
   return recovered.receipt
