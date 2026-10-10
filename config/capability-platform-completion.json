@@ -26,7 +26,7 @@
       { "id": "tool", "candidateId": "network-recovery", "manifestKind": "cli", "state": "contract-ready-inactive", "evidence": ["src/network-recovery/plugin.ts"], "blockers": ["validated-manifest-missing", "inactive-lifecycle-rehearsal-missing"] },
       { "id": "package", "candidateId": "postgres-storage", "manifestKind": "package", "state": "contract-ready-inactive", "evidence": ["src/storage/postgres.ts"], "blockers": ["validated-manifest-missing", "inactive-lifecycle-rehearsal-missing"] },
       { "id": "headless-browser", "candidateId": "headless-browser-runtime", "manifestKind": "browser-runtime", "state": "contract-ready-inactive", "evidence": ["src/capability-platform/headless-browser-runtime.ts", "docs/adr/0179-no-effect-headless-browser-capability-contract.md"], "blockers": ["validated-manifest-missing", "local-adapter-missing", "inactive-lifecycle-rehearsal-missing"] },
-      { "id": "private-integration", "candidateId": "private-work-integration", "manifestKind": "integration-pack", "state": "candidate-inactive", "evidence": ["config/capability-artifact-candidates.json"], "blockers": ["private-manifest-receipt-missing", "inactive-lifecycle-rehearsal-missing"] },
+      { "id": "private-integration", "candidateId": "private-work-integration", "manifestKind": "integration-pack", "state": "validated-manifest-inactive", "evidence": ["config/capability-artifact-candidates.json", "config/private-capability-receipt.json"], "blockers": ["host-contract-compatibility-missing", "inactive-lifecycle-rehearsal-missing"] },
       { "id": "interactive-application", "candidateId": "control-console", "manifestKind": "application", "state": "contract-ready-inactive", "evidence": ["src/web/server.ts"], "blockers": ["validated-manifest-missing", "inactive-lifecycle-rehearsal-missing"] }
     ]
   },
@@ -36,7 +36,7 @@
     { "id": "installable-client-and-device-enrollment", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json"] },
     { "id": "claude-codex-dsh-single-execution-contract", "state": "incomplete", "evidence": ["config/capability-platform-reasoning-executor-pilot-03.json"] },
     { "id": "console-agent-compose-test-version", "state": "incomplete", "evidence": ["config/capability-platform-console-coverage.json"] },
-    { "id": "five-capability-forms", "state": "incomplete", "evidence": ["config/capability-artifact-candidates.json"] },
+    { "id": "five-capability-forms", "state": "incomplete", "evidence": ["config/capability-artifact-candidates.json", "config/private-capability-receipt.json"] },
     { "id": "existing-workflows-equivalent-replay", "state": "incomplete", "evidence": ["config/capability-platform-completion.json", "config/native-migration-plan.json", "docs/evidence/capability-platform-workflow-replay-2026-10-10.md"] },
     { "id": "single-consumer-provider-scheduler-writer", "state": "verified-current-scope", "evidence": ["config/module-catalog.json", "config/capability-platform-deployment.json"] },
     { "id": "mainline-independent-from-private-work", "state": "incomplete", "evidence": ["config/product-composition.json", "config/assistant-continuity.json"] },

@@ -17,9 +17,11 @@ test('reports the real platform completion blockers instead of treating inactive
 test('separates canonical form evidence from activation and fails closed on lifecycle gaps', async () => {
   const ledger = JSON.parse(await readFile(new URL('../config/capability-platform-completion.json', import.meta.url), 'utf8'))
   const candidates = JSON.parse(await readFile(new URL('../config/capability-artifact-candidates.json', import.meta.url), 'utf8')).candidates
-  const report = auditCapabilityFormReadiness(ledger.capabilityForms, candidates)
+  const privateReceipt = JSON.parse(await readFile(new URL('../config/private-capability-receipt.json', import.meta.url), 'utf8'))
+  const report = auditCapabilityFormReadiness(ledger.capabilityForms, candidates, privateReceipt)
   assert.equal(report.verified, false)
   assert.ok(report.blockers.includes('headless-browser:local-adapter-missing'))
-  assert.ok(report.blockers.includes('private-integration:private-manifest-receipt-missing'))
+  assert.ok(report.blockers.includes('private-integration:host-contract-compatibility-missing'))
+  assert.equal(privateReceipt.validationState, 'validated-inactive')
   assert.ok(candidates.every((candidate: { activationAllowed: boolean }) => candidate.activationAllowed === false))
 })
