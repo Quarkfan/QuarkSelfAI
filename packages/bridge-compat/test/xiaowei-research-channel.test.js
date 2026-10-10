@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { XiaoweiResearchChannel } from "../src/xiaowei-research-channel.js";
+import { classifyXiaoweiReply, XiaoweiResearchChannel } from "../src/xiaowei-research-channel.js";
 
 function harness() {
   const sentToAgent = [];
@@ -95,6 +95,20 @@ test("keeps progress replies pending and notifies only after the final result", 
   assert.equal(h.sentToUser.length, 1);
   assert.doesNotMatch(h.sentToUser[0], /正在处理中/);
   assert.match(h.sentToUser[0], /最终结论/);
+});
+
+test("fails closed when a long rich message has no explicit terminal evidence", () => {
+  assert.equal(classifyXiaoweiReply({
+    msg_type: "post",
+    content: "已经整理了第一批证据，后续会继续核对。".repeat(12),
+  }), "progress");
+});
+
+test("keeps a partial-completion update pending when progress language conflicts", () => {
+  assert.equal(classifyXiaoweiReply({
+    msg_type: "text",
+    content: "已完成日志采集，正在分析中，最终结论稍后给出。",
+  }), "progress");
 });
 
 test("does not mirror replies from the owner's manual Xiaowei conversation", async () => {
