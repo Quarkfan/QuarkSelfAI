@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "environmentId": "owner-local-control-plane",
   "status": "server-active-effects-off",
-  "sourceRevision": "317f8fe64edecbf2c709bd4c9b5da5bfb8ff73f8",
+  "sourceRevision": "a5e053d4b6b1cc453c0fde7391c83b3ed2265958",
   "server": {
-    "version": "0.3.1",
-    "distributionDigest": "sha256:13bc52d63f184cac95dfd54f9dad1ec7b42f6551e382d442d68731358d204a83",
+    "version": "0.3.2",
+    "distributionDigest": "sha256:e8c4260da487a71c9c03b3830f3a16af364d4fdeb38a974918d975ee160cb9ab",
     "installationId": "server-installation.16297eb33340cc5b052ffed14b33d011",
     "installationState": "service-active-effects-off",
     "firstOwnerCreated": true,
