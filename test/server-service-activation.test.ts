@@ -7,10 +7,11 @@ import { promisify } from 'node:util'
 import test, { type TestContext } from 'node:test'
 import { provisionInactiveServerConfiguration } from '../src/control-plane/server-configuration.js'
 import { sealServerDistribution } from '../src/control-plane/server-distribution.js'
-import { installInactiveServer } from '../src/control-plane/server-installation.js'
+import { installInactiveServer, recoverInactiveServerInstallation } from '../src/control-plane/server-installation.js'
 import { bootstrapInstalledFirstOwner } from '../src/control-plane/server-owner-bootstrap.js'
 import { prepareInstalledServerUserService } from '../src/control-plane/server-service.js'
 import { activateInstalledServerUserServiceV1, deactivateInstalledServerUserServiceV1, reconcileInstalledServerUserServiceActivationV1, recoverInstalledServerUserServiceActivationV1, type ServerUserServiceManagerV1 } from '../src/control-plane/server-service-activation.js'
+import { rollbackInactiveInstalledServerProgramV1, upgradeInactiveInstalledServerProgramV1 } from '../src/control-plane/server-program-upgrade.js'
 
 const run = promisify(execFile); const migrations = ['001_tenant_identity.sql','002_agent_studio.sql','003_capability_registry.sql','004_device_sessions.sql','005_device_enrollment.sql','006_cloud_identity.sql','007_identity_administration.sql']; const sourceMigrations = new URL('../migrations/control-plane-sqlite/', import.meta.url).pathname
 
@@ -54,6 +55,17 @@ test('resumes deactivation after a definition removal failure without requiring 
   try { await activateInstalledServerUserServiceV1(input, manager, new Date(), health(fixture)); manager.failRemove = true; await assert.rejects(deactivateInstalledServerUserServiceV1(fixture.install, manager), /synthetic remove failure/); assert.deepEqual(await manager.inspect(), { registered: false, running: false }); manager.failRemove = false; await deactivateInstalledServerUserServiceV1(fixture.install, manager); assert.equal(manager.installed, false) } finally { await rm(fixture.parent, { recursive: true, force: true }) }
 })
 
+test('upgrades and rolls back inactive program bytes without changing installation identity or tenant state', async t => {
+  const fixture = await setup(t); if (!fixture) return; const next = join(fixture.parent, 'next-distribution')
+  try {
+    await distributionFixture(next, '0.2.0', 'b'.repeat(40), 'next'); const beforeState = await readFile(join(fixture.install, 'state/control.sqlite3'))
+    const upgraded = await upgradeInactiveInstalledServerProgramV1(fixture.install, next, new Date('2026-10-10T01:00:00Z')); assert.equal(upgraded.installationId, fixture.installationId); assert.equal(upgraded.toVersion, '0.2.0')
+    const current = await recoverInactiveServerInstallation(fixture.install); assert.equal(current.schemaVersion, 2); assert.equal(current.sourceRevision, 'b'.repeat(40)); assert.deepEqual(await readFile(join(fixture.install, 'state/control.sqlite3')), beforeState)
+    const rolledBack = await rollbackInactiveInstalledServerProgramV1(fixture.install, new Date('2026-10-10T02:00:00Z')); assert.equal(rolledBack.toVersion, '0.1.0')
+    const restored = await recoverInactiveServerInstallation(fixture.install); assert.equal(restored.installationId, fixture.installationId); assert.equal(restored.sourceRevision, 'a'.repeat(40)); assert.deepEqual(await readFile(join(fixture.install, 'state/control.sqlite3')), beforeState)
+  } finally { await rm(fixture.parent, { recursive: true, force: true }) }
+})
+
 function health(fixture: { installationId: string; configurationDigest: string }) { return async () => ({ schemaVersion: 1 as const, state: 'ready-effects-off' as const, protocol: 'TLSv1.3' as const, providerOwnership: 'single-shared-host' as const, externalEffectsEnabled: false as const, installationId: fixture.installationId, configurationDigest: fixture.configurationDigest, checkedAt: '2026-10-10T00:00:00Z' }) }
 
 async function setup(t: TestContext): Promise<{ parent: string; install: string; installationId: string; configurationDigest: string } | undefined> {
@@ -66,4 +78,4 @@ async function setup(t: TestContext): Promise<{ parent: string; install: string;
   } catch (error) { await rm(parent, { recursive: true, force: true }); throw error }
 }
 
-async function distributionFixture(root: string): Promise<void> { await mkdir(root, { mode: 0o700 }); const ordinary = ['dist/control-plane/cloud-server-entry.js','dist/control-plane/server-admin-entry.js','dist/client-runtime/ssh-subsystem-entry.js','package.json','sbom.spdx.json']; for (const path of ordinary) { const target = join(root, 'program', path); await mkdir(dirname(target), { recursive: true, mode: 0o700 }); await writeFile(target, `fixture:${path}\n`, { mode: 0o600 }) }; for (const path of ['deploy/launchd/com.quarkfan.quark-server.plist.template','deploy/systemd/quark-server.service.template']) { const target = join(root, 'program', path); await mkdir(dirname(target), { recursive: true, mode: 0o700 }); await writeFile(target, await readFile(new URL(`../${path}`, import.meta.url)), { mode: 0o600 }) }; for (const name of migrations) { const target = join(root, 'program/migrations/control-plane-sqlite', name); await mkdir(dirname(target), { recursive: true, mode: 0o700 }); await writeFile(target, await readFile(join(sourceMigrations, name)), { mode: 0o600 }) }; await sealServerDistribution(await realpath(root), '0.1.0', 'a'.repeat(40)) }
+async function distributionFixture(root: string, version = '0.1.0', revision = 'a'.repeat(40), marker = 'fixture'): Promise<void> { await mkdir(root, { mode: 0o700 }); const ordinary = ['dist/control-plane/cloud-server-entry.js','dist/control-plane/server-admin-entry.js','dist/client-runtime/ssh-subsystem-entry.js','package.json','sbom.spdx.json']; for (const path of ordinary) { const target = join(root, 'program', path); await mkdir(dirname(target), { recursive: true, mode: 0o700 }); await writeFile(target, `${marker}:${path}\n`, { mode: 0o600 }) }; for (const path of ['deploy/launchd/com.quarkfan.quark-server.plist.template','deploy/systemd/quark-server.service.template']) { const target = join(root, 'program', path); await mkdir(dirname(target), { recursive: true, mode: 0o700 }); await writeFile(target, await readFile(new URL(`../${path}`, import.meta.url)), { mode: 0o600 }) }; for (const name of migrations) { const target = join(root, 'program/migrations/control-plane-sqlite', name); await mkdir(dirname(target), { recursive: true, mode: 0o700 }); await writeFile(target, await readFile(join(sourceMigrations, name)), { mode: 0o600 }) }; await sealServerDistribution(await realpath(root), version, revision) }
