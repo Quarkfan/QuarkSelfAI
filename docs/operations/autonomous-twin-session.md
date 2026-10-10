@@ -2058,3 +2058,12 @@
 - 回滚为移除 browser contract、module/candidate/migration 映射、ADR 与本记录；没有持久状态、第三方代码或运行 owner 需要迁移。下一批必须建立逐形态的 content-addressed Manifest 与生命周期证据，并修正完成审计为“形态证据”和“激活状态”相互独立的门禁。
 - 随后修正完成度机器门禁：新增五形态逐项 readiness 账本，使用 Manifest 的 `cli/package/browser-runtime/integration-pack/application` 规范 kind，明确 `activationRequiredForCoverage=false`，但只有 validated Manifest 与 inactive lifecycle rehearsal 都完成时才可将形态标记为 verified。当前工具、程序包、浏览器与应用缺 Manifest/rehearsal，私有集成另缺私有 manifest receipt，因此该 requirement 仍保持 blocker；候选是否激活不再被错误地当作形态覆盖条件。
 - 私有仓库 revision `b8895059f6dbd717744dc78ab9a706bbe9bf89de` 随后形成首个 `integration-pack` Capability Manifest：绑定冻结的 20 个 pack 文件、SPDX SBOM 与可离线验证的 Ed25519 artifact signature，私钥未落盘，私有审计和主线正式 Manifest validator 均通过。主线只保存不含私有模块名、路径或业务内容的 digest receipt，且明确 `coreDependsOnPrivateRepository=false`、`activationAllowed=false`；私有形态 blocker 已从“无 manifest”收敛为 host contract compatibility 与 inactive lifecycle rehearsal，未安装或激活 pack。
+
+## 2026-10-10 — Signed public capability forms and inactive lifecycle rehearsal
+
+- 以主线冻结 revision `c941444db6aa440519b2708bf9a125b275fef750` 为源，为 `cli` 工具、`package`、`browser-runtime` 和 `application` 四种公开形态生成 content-addressed source inventory、完整 Capability Manifest、SPDX 2.3 SBOM 与 Ed25519 artifact signature；签名私钥仅在生成进程内存在且未持久化。证据不包含本机绝对路径、凭证、业务消息、客户数据或私有 pack 内容。
+- 新增 fail-closed validator，重新计算 canonical bundle/SBOM/key digest，验证签名、Manifest、精确形态与 inactive/publication gates；回归还逐文件从 pinned Git revision 读取并核对摘要，避免“自洽但不对应源码”的伪证据。
+- 四种形态均使用临时 SQLite、合成设备身份与既有内容寻址 artifact store 真实完成 install、recovery verification 与 uninstall。回读证明 4 个制品始终 unloaded、unauthorized、stopped、effects disabled，且云投影为 0 active、0 consumer、0 provider、0 scheduler、external writes false；没有调用任何 capability handler、浏览器、网络恢复、Postgres 或控制台 runtime。
+- 工具、程序包和交互应用的形态状态提升为 `verified-inactive-lifecycle`。无头浏览器已有同等制品生命周期证据，但仍保留 `local-adapter-missing`，不会用通用 artifact install 演练冒充真实浏览器运行；私有 integration pack 仍保留 host-contract compatibility 与自身 lifecycle rehearsal 两个 blocker，因此五形态总 requirement 继续 incomplete。
+- 本批不改变当前 control-console owner、DSH/Cordis composition、消费者/provider/scheduler/writer、凭证、服务或外部写；不重启现网。回滚为撤销 ADR 0180、公开证据/validator/测试及 catalog/completion ledger 更新，无持久运行状态或外部数据补偿。
+- 用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 保持未修改、未暂存；执行通道为 Codex，未发生 executor fallback。

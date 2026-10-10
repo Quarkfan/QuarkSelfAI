@@ -1,0 +1,1283 @@
+{
+  "schemaVersion": 1,
+  "status": "validated-unpublished-inactive",
+  "sourceRevision": "c941444db6aa440519b2708bf9a125b275fef750",
+  "signature": {
+    "algorithm": "ed25519",
+    "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf",
+    "publicKeySpkiBase64": "MCowBQYDK2VwAyEAd6+yJ3wjx7MezksY8cHpLtIwhtAmkIPJpovqVAi3ebg=",
+    "privateKeyPersisted": false
+  },
+  "artifacts": [
+    {
+      "form": "tool",
+      "moduleId": "network-recovery-adapter",
+      "files": [
+        {
+          "path": "deploy/network/magicnet-safe.sh",
+          "digest": "sha256:99c0501a257c434a639621a08b6b4b8e527e0e8858cffe0de480c787dec4f3b3"
+        },
+        {
+          "path": "src/network-recovery/adapter.ts",
+          "digest": "sha256:ff67c528d27701a9b4bb74ff548c7c78117be4ba72f845baf16889e458346099"
+        },
+        {
+          "path": "src/network-recovery/plugin.ts",
+          "digest": "sha256:4daabc882368b13b7964cbfcc21f3cbe775b276a409562057fca677bd3deeed0"
+        },
+        {
+          "path": "src/network-recovery/policy.ts",
+          "digest": "sha256:4a3636492a1b479314cc0035428d8f5e2b6d94333c3578bd8076ca687bdd6050"
+        },
+        {
+          "path": "src/network-recovery/types.ts",
+          "digest": "sha256:8a37bf5c35191253b5ab9ece395ea48562cdcbc497e1344cb0dde94e93678793"
+        }
+      ],
+      "artifactBundleDigest": "sha256:4eb9891e8bb2573bcfc75bb6288e29e43099a9329ab4239764bd3df7d65256a6",
+      "sbom": {
+        "spdxVersion": "SPDX-2.3",
+        "dataLicense": "CC0-1.0",
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "name": "network-recovery-0.1.0",
+        "documentNamespace": "https://quarkself.ai/spdx/network-recovery/0.1.0/4eb9891e8bb2573b",
+        "creationInfo": {
+          "created": "2026-10-10T00:00:00Z",
+          "creators": [
+            "Organization: QuarkSelfAI"
+          ]
+        },
+        "packages": [
+          {
+            "name": "network-recovery",
+            "SPDXID": "SPDXRef-Package",
+            "versionInfo": "0.1.0",
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": false,
+            "checksums": [
+              {
+                "algorithm": "SHA256",
+                "checksumValue": "4eb9891e8bb2573bcfc75bb6288e29e43099a9329ab4239764bd3df7d65256a6"
+              }
+            ],
+            "licenseConcluded": "LicenseRef-Proprietary",
+            "licenseDeclared": "LicenseRef-Proprietary",
+            "copyrightText": "NOASSERTION",
+            "supplier": "Organization: QuarkSelfAI"
+          }
+        ],
+        "relationships": [
+          {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relationshipType": "DESCRIBES",
+            "relatedSpdxElement": "SPDXRef-Package"
+          }
+        ],
+        "hasExtractedLicensingInfos": [
+          {
+            "licenseId": "LicenseRef-Proprietary",
+            "extractedText": "First-party QuarkSelfAI capability. Redistribution is not granted by this manifest."
+          }
+        ]
+      },
+      "manifest": {
+        "schemaVersion": 1,
+        "id": "network-recovery",
+        "name": "Network Recovery Tool",
+        "version": "0.1.0",
+        "kind": "cli",
+        "description": "First-party tool capability represented by the common Capability Artifact contract.",
+        "source": {
+          "kind": "git",
+          "locator": "github.com/Quarkfan/QuarkSelfAI",
+          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
+          "artifactDigest": "sha256:4eb9891e8bb2573bcfc75bb6288e29e43099a9329ab4239764bd3df7d65256a6",
+          "license": "LicenseRef-Proprietary",
+          "supplier": "QuarkSelfAI",
+          "signature": {
+            "status": "verified",
+            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+          },
+          "sbom": {
+            "format": "spdx",
+            "digest": "sha256:463187d1231687dddc6054e32250ff8490fa13e9fb7d66541364688672891d3d"
+          }
+        },
+        "runtime": {
+          "placements": [
+            "local"
+          ],
+          "isolation": "process",
+          "supportedPlatforms": [
+            "darwin-arm64",
+            "linux-x64",
+            "linux-arm64"
+          ],
+          "executorRequirements": [],
+          "stateNamespace": "network-recovery",
+          "offlineCapable": false
+        },
+        "requirements": [],
+        "lifecycle": {
+          "install": {
+            "handlerInterface": "lifecycle.install",
+            "supported": true,
+            "approval": "install"
+          },
+          "load": {
+            "handlerInterface": "lifecycle.load",
+            "supported": true,
+            "approval": "session"
+          },
+          "start": {
+            "handlerInterface": "lifecycle.start",
+            "supported": true,
+            "approval": "session"
+          },
+          "stop": {
+            "handlerInterface": "lifecycle.stop",
+            "supported": true,
+            "approval": "none"
+          },
+          "upgrade": {
+            "handlerInterface": "lifecycle.upgrade",
+            "supported": true,
+            "approval": "install"
+          },
+          "uninstall": {
+            "handlerInterface": "lifecycle.uninstall",
+            "supported": true,
+            "approval": "install"
+          },
+          "recover": {
+            "handlerInterface": "lifecycle.recover",
+            "supported": true,
+            "approval": "install"
+          }
+        },
+        "interfaces": [
+          {
+            "kind": "runtime",
+            "id": "lifecycle.install",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.load",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.start",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.stop",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.upgrade",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.uninstall",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.recover",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "tool",
+            "id": "network-recovery.run",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "network-recovery.health",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          }
+        ],
+        "dependencies": [],
+        "permissions": [
+          {
+            "id": "network-recovery-network",
+            "kind": "network",
+            "operations": [
+              "connect"
+            ],
+            "scope": "network:diagnostic-endpoints",
+            "placement": "local",
+            "approval": "session",
+            "required": true,
+            "dataClasses": [
+              "capability-configuration"
+            ]
+          }
+        ],
+        "dataClasses": [
+          "capability-configuration"
+        ],
+        "tests": [
+          {
+            "id": "network-recovery.contract",
+            "kind": "contract",
+            "required": true,
+            "effectMode": "none"
+          },
+          {
+            "id": "network-recovery.lifecycle",
+            "kind": "fixture",
+            "required": true,
+            "effectMode": "none"
+          }
+        ],
+        "healthChecks": [
+          {
+            "id": "network-recovery.health",
+            "interfaceId": "network-recovery.health",
+            "placement": "local",
+            "timeoutMs": 5000,
+            "required": true
+          }
+        ],
+        "recovery": {
+          "strategy": "reinstall",
+          "rollbackVersion": null,
+          "stateIncluded": false,
+          "restoreEffectsEnabled": false
+        }
+      },
+      "signatureBase64": "3iQb3cwiBI1ayUL116rShQkD85XHopzgU4TOwh+sLVCN5EzGlk+nQCPGXKW+5xTY1C83Eh67G8JCRE0F+qb1Cw==",
+      "lifecycleRehearsal": {
+        "status": "verified-inactive",
+        "install": true,
+        "recover": true,
+        "uninstall": true,
+        "loading": "unloaded",
+        "authorization": "unauthorized",
+        "execution": "stopped",
+        "effects": "disabled"
+      },
+      "publicationAllowed": false,
+      "activationAllowed": false
+    },
+    {
+      "form": "package",
+      "moduleId": "postgres-storage",
+      "files": [
+        {
+          "path": "migrations/001_initial.sql",
+          "digest": "sha256:133612fa5e9670ce1e38c5f749cf95b6cc3ef51fe618d34b1b5177a09a058c77"
+        },
+        {
+          "path": "migrations/002_policy.sql",
+          "digest": "sha256:879d1fe1971ce053bc75cfb95635ffa66551d7372fa277b0263e861413c5bfe6"
+        },
+        {
+          "path": "migrations/003_action_execution.sql",
+          "digest": "sha256:2e776470d1ea7259d3d84776fa53fa22f11a0e138deaf338b700e243226d56a7"
+        },
+        {
+          "path": "migrations/004_feature_signals.sql",
+          "digest": "sha256:dbf9fd2936c196e2e8eca6842d212cf3324cb46b98dd5f311d56299b5a401a95"
+        },
+        {
+          "path": "migrations/005_workflow_runtime.sql",
+          "digest": "sha256:9b1a50c376be889222887004f036ed25d63ec5a212e4843df41fa5d3de8ce900"
+        },
+        {
+          "path": "migrations/006_event_delivery.sql",
+          "digest": "sha256:587e96ce9bc26406570a46c907c440f9bae7bb2198346926d0cce2e774a19fe0"
+        },
+        {
+          "path": "migrations/007_open_adapter_ids.sql",
+          "digest": "sha256:680890ce792c97197d166f49f04c84989ac00f1cb90da18567b20ca3a3d4d0e6"
+        },
+        {
+          "path": "migrations/008_event_kind.sql",
+          "digest": "sha256:1144824609260aaf8770244404b8886f652e4b6a85a82d63b83baff40efa8d7d"
+        },
+        {
+          "path": "src/storage/postgres.ts",
+          "digest": "sha256:043e3fe48fac5d6874559016c88b65181af71ffb6391ca68b0b841af89e83c70"
+        }
+      ],
+      "artifactBundleDigest": "sha256:8c468658b25dc1146b3ee364fb47edd50de8068a6d566099e56e1cac84793790",
+      "sbom": {
+        "spdxVersion": "SPDX-2.3",
+        "dataLicense": "CC0-1.0",
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "name": "postgres-storage-0.1.0",
+        "documentNamespace": "https://quarkself.ai/spdx/postgres-storage/0.1.0/8c468658b25dc114",
+        "creationInfo": {
+          "created": "2026-10-10T00:00:00Z",
+          "creators": [
+            "Organization: QuarkSelfAI"
+          ]
+        },
+        "packages": [
+          {
+            "name": "postgres-storage",
+            "SPDXID": "SPDXRef-Package",
+            "versionInfo": "0.1.0",
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": false,
+            "checksums": [
+              {
+                "algorithm": "SHA256",
+                "checksumValue": "8c468658b25dc1146b3ee364fb47edd50de8068a6d566099e56e1cac84793790"
+              }
+            ],
+            "licenseConcluded": "LicenseRef-Proprietary",
+            "licenseDeclared": "LicenseRef-Proprietary",
+            "copyrightText": "NOASSERTION",
+            "supplier": "Organization: QuarkSelfAI"
+          }
+        ],
+        "relationships": [
+          {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relationshipType": "DESCRIBES",
+            "relatedSpdxElement": "SPDXRef-Package"
+          }
+        ],
+        "hasExtractedLicensingInfos": [
+          {
+            "licenseId": "LicenseRef-Proprietary",
+            "extractedText": "First-party QuarkSelfAI capability. Redistribution is not granted by this manifest."
+          }
+        ]
+      },
+      "manifest": {
+        "schemaVersion": 1,
+        "id": "postgres-storage",
+        "name": "Postgres Storage",
+        "version": "0.1.0",
+        "kind": "package",
+        "description": "First-party package capability represented by the common Capability Artifact contract.",
+        "source": {
+          "kind": "git",
+          "locator": "github.com/Quarkfan/QuarkSelfAI",
+          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
+          "artifactDigest": "sha256:8c468658b25dc1146b3ee364fb47edd50de8068a6d566099e56e1cac84793790",
+          "license": "LicenseRef-Proprietary",
+          "supplier": "QuarkSelfAI",
+          "signature": {
+            "status": "verified",
+            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+          },
+          "sbom": {
+            "format": "spdx",
+            "digest": "sha256:1349f0ac0d1e135dfe7fb5f6f0d8add4d042de0e55435fe8bcaa17fb2bf23f86"
+          }
+        },
+        "runtime": {
+          "placements": [
+            "cloud"
+          ],
+          "isolation": "process",
+          "supportedPlatforms": [
+            "linux-x64",
+            "linux-arm64"
+          ],
+          "executorRequirements": [],
+          "stateNamespace": "postgres-storage",
+          "offlineCapable": false
+        },
+        "requirements": [],
+        "lifecycle": {
+          "install": {
+            "handlerInterface": "lifecycle.install",
+            "supported": true,
+            "approval": "install"
+          },
+          "load": {
+            "handlerInterface": "lifecycle.load",
+            "supported": true,
+            "approval": "session"
+          },
+          "start": {
+            "handlerInterface": "lifecycle.start",
+            "supported": true,
+            "approval": "session"
+          },
+          "stop": {
+            "handlerInterface": "lifecycle.stop",
+            "supported": true,
+            "approval": "none"
+          },
+          "upgrade": {
+            "handlerInterface": "lifecycle.upgrade",
+            "supported": true,
+            "approval": "install"
+          },
+          "uninstall": {
+            "handlerInterface": "lifecycle.uninstall",
+            "supported": true,
+            "approval": "install"
+          },
+          "recover": {
+            "handlerInterface": "lifecycle.recover",
+            "supported": true,
+            "approval": "install"
+          }
+        },
+        "interfaces": [
+          {
+            "kind": "runtime",
+            "id": "lifecycle.install",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.load",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.start",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.stop",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.upgrade",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.uninstall",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.recover",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "port",
+            "id": "storage.postgres",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "postgres-storage.health",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          }
+        ],
+        "dependencies": [],
+        "permissions": [
+          {
+            "id": "postgres-network",
+            "kind": "network",
+            "operations": [
+              "connect"
+            ],
+            "scope": "network:postgres-endpoint",
+            "placement": "cloud",
+            "approval": "install",
+            "required": true,
+            "dataClasses": [
+              "capability-configuration"
+            ]
+          },
+          {
+            "id": "postgres-data",
+            "kind": "data",
+            "operations": [
+              "read",
+              "write",
+              "persist"
+            ],
+            "scope": "data:tenant-storage",
+            "placement": "cloud",
+            "approval": "install",
+            "required": true,
+            "dataClasses": [
+              "platform-metadata"
+            ]
+          }
+        ],
+        "dataClasses": [
+          "capability-configuration",
+          "platform-metadata"
+        ],
+        "tests": [
+          {
+            "id": "postgres-storage.contract",
+            "kind": "contract",
+            "required": true,
+            "effectMode": "none"
+          },
+          {
+            "id": "postgres-storage.lifecycle",
+            "kind": "fixture",
+            "required": true,
+            "effectMode": "none"
+          }
+        ],
+        "healthChecks": [
+          {
+            "id": "postgres-storage.health",
+            "interfaceId": "postgres-storage.health",
+            "placement": "cloud",
+            "timeoutMs": 5000,
+            "required": true
+          }
+        ],
+        "recovery": {
+          "strategy": "snapshot",
+          "rollbackVersion": null,
+          "stateIncluded": true,
+          "restoreEffectsEnabled": false
+        }
+      },
+      "signatureBase64": "hovIPlv+BquNA7e6LtW2yPTItmCYy3lMJgI5k5z1q5v3yXpvAMZ3CMeDDp2Fr4FRXL9Mv/WfO+oOSwbqwpg+AA==",
+      "lifecycleRehearsal": {
+        "status": "verified-inactive",
+        "install": true,
+        "recover": true,
+        "uninstall": true,
+        "loading": "unloaded",
+        "authorization": "unauthorized",
+        "execution": "stopped",
+        "effects": "disabled"
+      },
+      "publicationAllowed": false,
+      "activationAllowed": false
+    },
+    {
+      "form": "headless-browser",
+      "moduleId": "headless-browser-runtime",
+      "files": [
+        {
+          "path": "src/capability-platform/headless-browser-runtime.ts",
+          "digest": "sha256:b48956df02b46e91e1ac4c33b36231ed56c292bee8abb6d15a6e2cc28700d495"
+        }
+      ],
+      "artifactBundleDigest": "sha256:12a6b5b8750e8bc38064c0ec020a68f6388d3bf7e172cab9904bc180c9eb8056",
+      "sbom": {
+        "spdxVersion": "SPDX-2.3",
+        "dataLicense": "CC0-1.0",
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "name": "headless-browser-runtime-0.1.0",
+        "documentNamespace": "https://quarkself.ai/spdx/headless-browser-runtime/0.1.0/12a6b5b8750e8bc3",
+        "creationInfo": {
+          "created": "2026-10-10T00:00:00Z",
+          "creators": [
+            "Organization: QuarkSelfAI"
+          ]
+        },
+        "packages": [
+          {
+            "name": "headless-browser-runtime",
+            "SPDXID": "SPDXRef-Package",
+            "versionInfo": "0.1.0",
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": false,
+            "checksums": [
+              {
+                "algorithm": "SHA256",
+                "checksumValue": "12a6b5b8750e8bc38064c0ec020a68f6388d3bf7e172cab9904bc180c9eb8056"
+              }
+            ],
+            "licenseConcluded": "LicenseRef-Proprietary",
+            "licenseDeclared": "LicenseRef-Proprietary",
+            "copyrightText": "NOASSERTION",
+            "supplier": "Organization: QuarkSelfAI"
+          }
+        ],
+        "relationships": [
+          {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relationshipType": "DESCRIBES",
+            "relatedSpdxElement": "SPDXRef-Package"
+          }
+        ],
+        "hasExtractedLicensingInfos": [
+          {
+            "licenseId": "LicenseRef-Proprietary",
+            "extractedText": "First-party QuarkSelfAI capability. Redistribution is not granted by this manifest."
+          }
+        ]
+      },
+      "manifest": {
+        "schemaVersion": 1,
+        "id": "headless-browser-runtime",
+        "name": "Headless Browser Runtime",
+        "version": "0.1.0",
+        "kind": "browser-runtime",
+        "description": "First-party headless-browser capability represented by the common Capability Artifact contract.",
+        "source": {
+          "kind": "git",
+          "locator": "github.com/Quarkfan/QuarkSelfAI",
+          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
+          "artifactDigest": "sha256:12a6b5b8750e8bc38064c0ec020a68f6388d3bf7e172cab9904bc180c9eb8056",
+          "license": "LicenseRef-Proprietary",
+          "supplier": "QuarkSelfAI",
+          "signature": {
+            "status": "verified",
+            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+          },
+          "sbom": {
+            "format": "spdx",
+            "digest": "sha256:8699410a0f652727ba37d6b45eb3bd0f9b6d8ee5912de24618d6fbfe7efd15f5"
+          }
+        },
+        "runtime": {
+          "placements": [
+            "local"
+          ],
+          "isolation": "browser-profile",
+          "supportedPlatforms": [
+            "darwin-arm64",
+            "linux-x64",
+            "linux-arm64"
+          ],
+          "executorRequirements": [],
+          "stateNamespace": "headless-browser-runtime",
+          "offlineCapable": false
+        },
+        "requirements": [],
+        "lifecycle": {
+          "install": {
+            "handlerInterface": "lifecycle.install",
+            "supported": true,
+            "approval": "install"
+          },
+          "load": {
+            "handlerInterface": "lifecycle.load",
+            "supported": true,
+            "approval": "session"
+          },
+          "start": {
+            "handlerInterface": "lifecycle.start",
+            "supported": true,
+            "approval": "session"
+          },
+          "stop": {
+            "handlerInterface": "lifecycle.stop",
+            "supported": true,
+            "approval": "none"
+          },
+          "upgrade": {
+            "handlerInterface": "lifecycle.upgrade",
+            "supported": true,
+            "approval": "install"
+          },
+          "uninstall": {
+            "handlerInterface": "lifecycle.uninstall",
+            "supported": true,
+            "approval": "install"
+          },
+          "recover": {
+            "handlerInterface": "lifecycle.recover",
+            "supported": true,
+            "approval": "install"
+          }
+        },
+        "interfaces": [
+          {
+            "kind": "runtime",
+            "id": "lifecycle.install",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.load",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.start",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.stop",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.upgrade",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.uninstall",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.recover",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "browser.headless",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "headless-browser-runtime.health",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          }
+        ],
+        "dependencies": [],
+        "permissions": [
+          {
+            "id": "browser-network",
+            "kind": "network",
+            "operations": [
+              "connect"
+            ],
+            "scope": "network:blueprint-allowlist",
+            "placement": "local",
+            "approval": "session",
+            "required": true,
+            "dataClasses": [
+              "capability-configuration"
+            ]
+          },
+          {
+            "id": "browser-workspace",
+            "kind": "workspace",
+            "operations": [
+              "read",
+              "write"
+            ],
+            "scope": "workspace:approved-handle",
+            "placement": "local",
+            "approval": "action",
+            "required": true,
+            "dataClasses": [
+              "capability-configuration"
+            ]
+          },
+          {
+            "id": "browser-control",
+            "kind": "browser",
+            "operations": [
+              "execute"
+            ],
+            "scope": "browser:ephemeral-profile",
+            "placement": "local",
+            "approval": "session",
+            "required": true,
+            "dataClasses": [
+              "capability-configuration"
+            ]
+          }
+        ],
+        "dataClasses": [
+          "capability-configuration"
+        ],
+        "tests": [
+          {
+            "id": "headless-browser-runtime.contract",
+            "kind": "contract",
+            "required": true,
+            "effectMode": "none"
+          },
+          {
+            "id": "headless-browser-runtime.lifecycle",
+            "kind": "fixture",
+            "required": true,
+            "effectMode": "none"
+          }
+        ],
+        "healthChecks": [
+          {
+            "id": "headless-browser-runtime.health",
+            "interfaceId": "headless-browser-runtime.health",
+            "placement": "local",
+            "timeoutMs": 5000,
+            "required": true
+          }
+        ],
+        "recovery": {
+          "strategy": "reinstall",
+          "rollbackVersion": null,
+          "stateIncluded": false,
+          "restoreEffectsEnabled": false
+        }
+      },
+      "signatureBase64": "mh2tENjBG8Mo4+6HAH7aIOFbFyIftrpjfqKPoqP3aD+mR8siWpOy9rJlLzssoy1Taut+qh9ZPo71lnS1BlX/Ag==",
+      "lifecycleRehearsal": {
+        "status": "verified-inactive",
+        "install": true,
+        "recover": true,
+        "uninstall": true,
+        "loading": "unloaded",
+        "authorization": "unauthorized",
+        "execution": "stopped",
+        "effects": "disabled"
+      },
+      "publicationAllowed": false,
+      "activationAllowed": false
+    },
+    {
+      "form": "interactive-application",
+      "moduleId": "control-console",
+      "files": [
+        {
+          "path": "src/web/component.ts",
+          "digest": "sha256:ed1da921c536ea5a119fe9e9e57612f818d1165fa36fc0af9d0eb4ea49d85910"
+        },
+        {
+          "path": "src/web/config.ts",
+          "digest": "sha256:0b37081a9ae3f906de1c505b2022240a2758c9c340b7c1586856d0527d594821"
+        },
+        {
+          "path": "src/web/server.ts",
+          "digest": "sha256:813e56ffb6d83a83e4595997b93c87f688cb8b35e20bc8c3d17f51e8e8ca5611"
+        },
+        {
+          "path": "web/app.js",
+          "digest": "sha256:931c95e6fecf03c77c9e6c976bbe781525c7613be90c96dfc513bb2de7523854"
+        },
+        {
+          "path": "web/console-redesign.css",
+          "digest": "sha256:4de245be71515e9ef5234f6e3e615e45622cfd9ccf5077ecd1d9d5e99f32d4c0"
+        },
+        {
+          "path": "web/conversation.css",
+          "digest": "sha256:75cf34590d91b3f30bea2b51403e2b6f333a7d16537df652c2400c5c6535bfd8"
+        },
+        {
+          "path": "web/design-tokens.css",
+          "digest": "sha256:66da08ee5ef62cf0dc41a5ef88d9dd3a5a45d5471936add137efb676f499ace4"
+        },
+        {
+          "path": "web/evolution.css",
+          "digest": "sha256:2855015b1195bcdb2c4cbb020fcf147de7c4be818ca5c281fa57091fcfaf7e3f"
+        },
+        {
+          "path": "web/favicon.svg",
+          "digest": "sha256:ff2d1421e31382c6d528dfa1acc43b91130c4273d744b1de72c34184002be5be"
+        },
+        {
+          "path": "web/index.html",
+          "digest": "sha256:d391dc573093cc5d2247069a10f49a53531744825b3f7dd074c2ab572d8440ee"
+        },
+        {
+          "path": "web/interface-baseline.css",
+          "digest": "sha256:42a2fe05bcae61acb3b9e7995c8e0c665c5ae339062f0d66b2dd7deb11cd9e96"
+        },
+        {
+          "path": "web/journal.css",
+          "digest": "sha256:5289964d999f6fa90b935a0e6c4a1e09d9f69ab188e3325893f9e8caa50a0f43"
+        },
+        {
+          "path": "web/monitor.css",
+          "digest": "sha256:306ae4eaabc648580b7e22a4eb1ca3b260cf9b6810743604260815ef1edf0d03"
+        },
+        {
+          "path": "web/styles.css",
+          "digest": "sha256:0301fda94e4e926c71942b1b356ad1bda41a14900b5322d4c0ab4cdd27ebc529"
+        }
+      ],
+      "artifactBundleDigest": "sha256:cae0604fb9394b65c54c0b2ea69647cf11eda04d263ddfda21e9c4056385552c",
+      "sbom": {
+        "spdxVersion": "SPDX-2.3",
+        "dataLicense": "CC0-1.0",
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "name": "control-console-0.1.0",
+        "documentNamespace": "https://quarkself.ai/spdx/control-console/0.1.0/cae0604fb9394b65",
+        "creationInfo": {
+          "created": "2026-10-10T00:00:00Z",
+          "creators": [
+            "Organization: QuarkSelfAI"
+          ]
+        },
+        "packages": [
+          {
+            "name": "control-console",
+            "SPDXID": "SPDXRef-Package",
+            "versionInfo": "0.1.0",
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": false,
+            "checksums": [
+              {
+                "algorithm": "SHA256",
+                "checksumValue": "cae0604fb9394b65c54c0b2ea69647cf11eda04d263ddfda21e9c4056385552c"
+              }
+            ],
+            "licenseConcluded": "LicenseRef-Proprietary",
+            "licenseDeclared": "LicenseRef-Proprietary",
+            "copyrightText": "NOASSERTION",
+            "supplier": "Organization: QuarkSelfAI"
+          }
+        ],
+        "relationships": [
+          {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relationshipType": "DESCRIBES",
+            "relatedSpdxElement": "SPDXRef-Package"
+          }
+        ],
+        "hasExtractedLicensingInfos": [
+          {
+            "licenseId": "LicenseRef-Proprietary",
+            "extractedText": "First-party QuarkSelfAI capability. Redistribution is not granted by this manifest."
+          }
+        ]
+      },
+      "manifest": {
+        "schemaVersion": 1,
+        "id": "control-console",
+        "name": "Control Console",
+        "version": "0.1.0",
+        "kind": "application",
+        "description": "First-party interactive-application capability represented by the common Capability Artifact contract.",
+        "source": {
+          "kind": "git",
+          "locator": "github.com/Quarkfan/QuarkSelfAI",
+          "revision": "c941444db6aa440519b2708bf9a125b275fef750",
+          "artifactDigest": "sha256:cae0604fb9394b65c54c0b2ea69647cf11eda04d263ddfda21e9c4056385552c",
+          "license": "LicenseRef-Proprietary",
+          "supplier": "QuarkSelfAI",
+          "signature": {
+            "status": "verified",
+            "keyId": "sha256:60f5906619b3d0902657d4c2144f26297175a6a92b49fb2d99888329edfc13bf"
+          },
+          "sbom": {
+            "format": "spdx",
+            "digest": "sha256:34635833d0abda2e60b0468bb01f43089f06f4d9492af63bd172285509ab9119"
+          }
+        },
+        "runtime": {
+          "placements": [
+            "local"
+          ],
+          "isolation": "process",
+          "supportedPlatforms": [
+            "darwin-arm64",
+            "linux-x64",
+            "linux-arm64"
+          ],
+          "executorRequirements": [],
+          "stateNamespace": "control-console",
+          "offlineCapable": true
+        },
+        "requirements": [],
+        "lifecycle": {
+          "install": {
+            "handlerInterface": "lifecycle.install",
+            "supported": true,
+            "approval": "install"
+          },
+          "load": {
+            "handlerInterface": "lifecycle.load",
+            "supported": true,
+            "approval": "session"
+          },
+          "start": {
+            "handlerInterface": "lifecycle.start",
+            "supported": true,
+            "approval": "session"
+          },
+          "stop": {
+            "handlerInterface": "lifecycle.stop",
+            "supported": true,
+            "approval": "none"
+          },
+          "upgrade": {
+            "handlerInterface": "lifecycle.upgrade",
+            "supported": true,
+            "approval": "install"
+          },
+          "uninstall": {
+            "handlerInterface": "lifecycle.uninstall",
+            "supported": true,
+            "approval": "install"
+          },
+          "recover": {
+            "handlerInterface": "lifecycle.recover",
+            "supported": true,
+            "approval": "install"
+          }
+        },
+        "interfaces": [
+          {
+            "kind": "runtime",
+            "id": "lifecycle.install",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.load",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.start",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.stop",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.upgrade",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.uninstall",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "lifecycle.recover",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "ui",
+            "id": "console.application",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          },
+          {
+            "kind": "runtime",
+            "id": "control-console.health",
+            "version": "1.0.0",
+            "direction": "provides",
+            "compatibility": [
+              "1"
+            ]
+          }
+        ],
+        "dependencies": [],
+        "permissions": [
+          {
+            "id": "console-port",
+            "kind": "port",
+            "operations": [
+              "listen"
+            ],
+            "scope": "port:loopback-console",
+            "placement": "local",
+            "approval": "install",
+            "required": true,
+            "dataClasses": [
+              "capability-configuration"
+            ]
+          },
+          {
+            "id": "console-data",
+            "kind": "data",
+            "operations": [
+              "read"
+            ],
+            "scope": "data:bounded-platform-state",
+            "placement": "local",
+            "approval": "session",
+            "required": true,
+            "dataClasses": [
+              "platform-metadata"
+            ]
+          }
+        ],
+        "dataClasses": [
+          "capability-configuration",
+          "platform-metadata"
+        ],
+        "tests": [
+          {
+            "id": "control-console.contract",
+            "kind": "contract",
+            "required": true,
+            "effectMode": "none"
+          },
+          {
+            "id": "control-console.lifecycle",
+            "kind": "fixture",
+            "required": true,
+            "effectMode": "none"
+          }
+        ],
+        "healthChecks": [
+          {
+            "id": "control-console.health",
+            "interfaceId": "control-console.health",
+            "placement": "local",
+            "timeoutMs": 5000,
+            "required": true
+          }
+        ],
+        "recovery": {
+          "strategy": "reinstall",
+          "rollbackVersion": null,
+          "stateIncluded": false,
+          "restoreEffectsEnabled": false
+        }
+      },
+      "signatureBase64": "HiQqzfWnQFq/a8Us7TaAh7QuB7blZDjY2z7E2ZBhB1Sa+hdiB7Fne71vlKmni+OzmgsPHMZ6z8peN9k54BevBw==",
+      "lifecycleRehearsal": {
+        "status": "verified-inactive",
+        "install": true,
+        "recover": true,
+        "uninstall": true,
+        "loading": "unloaded",
+        "authorization": "unauthorized",
+        "execution": "stopped",
+        "effects": "disabled"
+      },
+      "publicationAllowed": false,
+      "activationAllowed": false
+    }
+  ],
+  "activationAllowed": false,
+  "externalWritesEnabled": false
+}

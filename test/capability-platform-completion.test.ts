@@ -18,7 +18,8 @@ test('separates canonical form evidence from activation and fails closed on life
   const ledger = JSON.parse(await readFile(new URL('../config/capability-platform-completion.json', import.meta.url), 'utf8'))
   const candidates = JSON.parse(await readFile(new URL('../config/capability-artifact-candidates.json', import.meta.url), 'utf8')).candidates
   const privateReceipt = JSON.parse(await readFile(new URL('../config/private-capability-receipt.json', import.meta.url), 'utf8'))
-  const report = auditCapabilityFormReadiness(ledger.capabilityForms, candidates, privateReceipt)
+  const publicForms = JSON.parse(await readFile(new URL('../config/public-capability-form-artifacts.json', import.meta.url), 'utf8'))
+  const report = auditCapabilityFormReadiness(ledger.capabilityForms, candidates, privateReceipt, publicForms)
   assert.equal(report.verified, false)
   assert.ok(report.blockers.includes('headless-browser:local-adapter-missing'))
   assert.ok(report.blockers.includes('private-integration:host-contract-compatibility-missing'))
