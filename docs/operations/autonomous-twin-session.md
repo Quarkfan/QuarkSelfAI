@@ -2088,3 +2088,11 @@
 - 私有审计通过主线正式 validator 和空 registry 验证 adapter；Claude Code、Codex、DSH 除 `actual executor` 外使用相同规范化 context。验证后 registry 只有 1 个 inactive 描述，consumer/active provider/scheduler/external writer 为 0，activation API 不存在。
 - 扫描同时证明旧迁移资产仍有 12 处对宿主内部模块的相对导入。因此主线 receipt 只记录 `adapterContractVerified=true`，保留 `hostContractCompatibilityVerified=false` 与 `host-contract-compatibility-missing`，不把 adapter 外壳冒充整个 pack 已完成。
 - 本批未安装或加载 pack，未调用 host ports，未执行 `pack/**`，未改变 runtime composition、服务、消费者/provider/writer 或外部状态。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未修改、未暂存。
+
+## 2026-10-10 — Signed portable private runtime closure
+
+- 私有 revision `25489bdfe2d6ebdac0a35a6b751da0dc641b079f` 新增只依赖本地相对模块的 `runtime/**` 闭包，将工作证据 context、研究 workflow 和 recording-only action 抽象为公共 contribution；进度不终止、明确结论才完成的脱敏测试通过。
+- 私有 revision `7f671dfa7583b69dec11db4817b0620bece9817a` 将该 5 文件闭包固定为 `0.2.0` artifact，重新生成 SPDX SBOM 和 Ed25519 签名，并在隔离临时目录重放 install/recover/uninstall。私钥未落盘，artifact 未执行。
+- 主线 revision `547e77b779f523833f65c9d63d2cc1f4c2ce5d3b` 的正式 validator 与 inactive registry 验证通过；runtime host import 为 0，registry 仍是 1 个 inactive 描述、0 consumer/provider/scheduler/writer、无 activation API。
+- 原 20 个 `pack/**` 文件保留为不可执行迁移档案，12 处宿主导入不进入签名运行闭包。机器 coverage 将全部 21 项分组：2 组 contract 已重建、0 组等价 replay 完成。因此 host compatibility 已证明，但现有工作流等价迁移仍未完成。
+- 本批不安装、加载或激活私有包，不切换 provider/消费者、不产生外部写、不删除主线来源且不重启服务。回滚只需撤销私有的两个 revision 和主线 receipt/文档更新，无运行状态补偿。

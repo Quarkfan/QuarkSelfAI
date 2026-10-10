@@ -57,10 +57,10 @@ Git 历史和运行日志扫描未检出私钥文本，但该扫描不构成对�
 
 本机已在固定 `github` 目录建立 `QuarkSelfAI-Work` 独立仓库骨架，首个本地 revision 为
 `0259366ab6f233a227bce41d1233cb5b5be0a9f3`；当前 revision 为
-`5541df2a9977ab2e1fbb1013055c61891a648fb9`。它保存覆盖全部 99 项来源资产的内容寻址迁移账本、已批准首批的 20 个
+`7f671dfa7583b69dec11db4817b0620bece9817a`。它保存覆盖全部 99 项来源资产的内容寻址迁移账本、已批准首批的 20 个
 非激活内容目标，以及签名 artifact 的隔离 install/recover/uninstall 无 effect 演练。当前未配置任何运行依赖，也未激活
 provider/consumer/effect；私有远端已经解除首批内容的跨终端取回与 inactive lifecycle 证据门禁，但尚未完成 host contract、
-主线移除和运行接管。公共 v1 adapter 已离线通过，但 12 处迁移资产宿主内部导入仍阻断整体 compatibility。首批内容 revision
+主线移除和运行接管。公共 v1 adapter 和签名 runtime 闭包已离线通过，运行导入为 0；旧档案的 12 处导入仍对应未完成的行为 replay，不参与加载。首批内容 revision
 仍为 `971685b22476e6b1e263b20f441b5ea72519dcf2`。
 
 首批迁移 digest `6c2a8904b82c109a5c2d8f999ee2ddad315415605b21c0000041db327b95bff5` 已精确批准并完成：14 项原样复制、
