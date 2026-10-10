@@ -7,6 +7,7 @@ import { validateInactiveAgentBlueprint } from './test-agent-studio.js'
 
 type Row = Record<string, string | number>
 const idPattern = /^[a-z0-9][a-z0-9.-]{0,63}$/
+const blueprintIdPattern = /^[a-z0-9][a-z0-9.-]{0,63}(?:\/[a-z0-9][a-z0-9.-]{0,63})?$/
 const digestPattern = /^sha256:[a-f0-9]{64}$/
 
 /** Persistent, tenant-scoped Agent Studio provider. It owns no listener, scheduler, dispatcher, executor, or runtime mount. */
@@ -92,6 +93,14 @@ export class SqliteInactiveAgentStudioV1 implements PersistentAgentStudioPortV1 
     validId(draftId, 'draftId')
     await this.#authorize(context, 'agent-draft.read', `agent-draft:${draftId}`)
     return this.#draft(context, draftId)
+  }
+
+  async getTestRelease(context: TenantContextV1, blueprintId: string, version: string): Promise<AgentTestReleaseV1 | undefined> {
+    validateContext(context, this.tenantMode)
+    if (!blueprintIdPattern.test(blueprintId)) throw new Error('blueprintId is invalid')
+    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) throw new Error('blueprint version is invalid')
+    await this.#authorize(context, 'agent-draft.read', `agent-release:${blueprintId}@${version}`)
+    return this.#release(context, blueprintId, version)
   }
 
   async listDrafts(context: TenantContextV1): Promise<readonly AgentDraftRecordV1[]> {

@@ -18,7 +18,7 @@ function handler(authentication?: { authenticate(input: { tenantId: string; user
     async listDrafts() { calls.push('drafts.list'); return [] },
     async saveDraft(resolved: TenantContextV1, input: { draftId: string; expectedRevision: number }) { calls.push(`drafts.save:${resolved.tenantId}:${input.draftId}:${input.expectedRevision}`); return { tenantId: resolved.tenantId, draftId: input.draftId } as never },
     async publishTest(resolved: TenantContextV1, input: { draftId: string; expectedRevision: number }) { calls.push(`drafts.publish:${resolved.tenantId}:${input.draftId}:${input.expectedRevision}`); return { tenantId: resolved.tenantId, draftId: input.draftId } as never },
-    async getDraft() { return undefined }, async close() {},
+    async getDraft() { return undefined }, async getTestRelease() { return undefined }, async close() {},
   }
   const devices = {
     async listDevices() { calls.push('devices.list'); return [] },
@@ -36,7 +36,8 @@ function handler(authentication?: { authenticate(input: { tenantId: string; user
     async approve(resolved: TenantContextV1, userCode: string) { calls.push(`enrollment.approve:${resolved.tenantId}:${resolved.userId}:${userCode}`); return { state: 'approved' } as never },
     async poll(input: { requestId: string }) { calls.push(`enrollment.poll:${input.requestId}`); return { state: 'pending' } as never },
   }
-  const application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment)
+  const orchestration = { async dispatchTest(resolved: TenantContextV1, input: { draftId: string; expectedRevision: number; deviceId: string }) { calls.push(`drafts.dispatch:${resolved.tenantId}:${input.draftId}:${input.expectedRevision}:${input.deviceId}`); return { schemaVersion: 1, tenantId: resolved.tenantId, userId: resolved.userId, deviceId: input.deviceId, draftId: input.draftId, draftRevision: input.expectedRevision, taskId: 'task.one', planId: 'plan.one', blueprintDigest: `sha256:${'a'.repeat(64)}`, planDigest: `sha256:${'b'.repeat(64)}`, state: 'queued', externalWritesEnabled: false } as const } }
+  const application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment, undefined, orchestration)
   return { handler: new InactiveCloudHttpHandlerV1(application, authentication), calls }
 }
 
@@ -102,6 +103,15 @@ test('saves and publishes a test Agent draft without accepting tenant scope from
   assert.deepEqual(fixture.calls, ['drafts.save:test.alpha:draft.one:0', 'drafts.publish:test.alpha:draft.one:1'])
   assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/agent-drafts', sessionReference: 'session:valid', body: { tenantId: 'test.beta', draftId: 'draft.one', blueprint, expectedRevision: 1 } })).status, 400)
   assert.equal(fixture.calls.length, 2)
+})
+
+test('dispatches an exact test release without accepting tenant or effect scope', async () => {
+  const fixture = handler()
+  const result = await fixture.handler.handle({ method: 'POST', path: '/v1/agent-drafts/dispatch-test', sessionReference: 'session:valid', body: { draftId: 'draft.one', expectedRevision: 1, deviceId: 'device.one' } })
+  assert.equal(result.status, 201)
+  assert.equal((result.body.item as { externalWritesEnabled: boolean }).externalWritesEnabled, false)
+  assert.deepEqual(fixture.calls, ['drafts.dispatch:test.alpha:draft.one:1:device.one'])
+  assert.equal((await fixture.handler.handle({ method: 'POST', path: '/v1/agent-drafts/dispatch-test', sessionReference: 'session:valid', body: { tenantId: 'test.beta', draftId: 'draft.one', expectedRevision: 1, deviceId: 'device.one' } })).status, 400)
 })
 
 test('registers only a scoped inactive capability candidate without accepting tenant body fields', async () => {

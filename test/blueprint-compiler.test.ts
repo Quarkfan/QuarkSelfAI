@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { blueprintPayloadDigest } from '../src/capability-platform/validation.js'
 import { verifySignedExecutionPlan } from '../src/client-runtime/validation.js'
-import { compileTestExecutionPlan } from '../src/orchestration/blueprint-compiler.js'
+import { compileNoEffectExecutionPlan, compileTestExecutionPlan } from '../src/orchestration/blueprint-compiler.js'
 
 const artifactDigest = `sha256:${'a'.repeat(64)}`
 const at = '2026-09-06T00:00:00.000Z'
@@ -55,7 +55,15 @@ test('fails closed on artifact ambiguity, workspace gaps and graph cycles', asyn
 })
 
 test('inactive compiler rejects production tenants and external effects', async () => {
-  await assert.rejects(() => compileTestExecutionPlan(blueprint(), [manifest], { ...compileInput, tenantId: 'tenant.production' }, signer), /test tenants only/)
+  await assert.rejects(() => compileTestExecutionPlan(blueprint(), [manifest], { ...compileInput, tenantId: 'tenant.production' }, signer), /tenant admission/)
   const permission = { id: 'effect.send', kind: 'external-effect', operations: ['write'], scope: 'message:owner', placement: 'cloud', approval: 'action', required: true, dataClasses: [], effect: { kind: 'message.send', externalWrite: true, writeVerificationRequired: true } }
   await assert.rejects(() => compileTestExecutionPlan(blueprint({ permissions: [permission] }), [manifest], compileInput, signer), /rejects external effects/)
+})
+
+test('registered tenant compilation uses the identical effects-off envelope contract', async () => {
+  const input = { ...compileInput, tenantId: 'personal' }
+  const plan = await compileNoEffectExecutionPlan(blueprint(), [manifest], input, signer, 'registered')
+  assert.equal(plan.envelope.tenantId, 'personal')
+  assert.deepEqual(plan.envelope.allowedEffects, [])
+  assert.deepEqual(plan.envelope.approvalGrants, [])
 })

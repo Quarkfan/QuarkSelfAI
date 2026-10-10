@@ -1,7 +1,7 @@
 import type { ArtifactVerificationReportV1, DeviceSessionChallengeV1, DeviceSessionProofV1, DeviceSessionV1, DeviceTaskLeaseAcknowledgementV1, DeviceTaskLeaseV1 } from '../client-runtime/contracts.js'
 import type { ManifestPublicationCandidateV1 } from '../capability-platform/artifact-candidates.js'
 import type { AgentBlueprintV1 } from '../capability-platform/blueprint.js'
-import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestReleaseV1, CloudIdentityPortV1, DeviceEnrollmentRequestV1, DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantAccountAdministrationPortV1, TenantAccountProvisionReceiptV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
+import type { CapabilityCatalogRecordV1, AgentDraftRecordV1, AgentTestDispatchReceiptV1, AgentTestReleaseV1, CloudIdentityPortV1, DeviceEnrollmentRequestV1, DeviceEnrollmentServerPortV1, DeviceEnrollmentStatusV1, DeviceRecordV1, DeviceSessionServerPortV1, PersistentAgentOrchestrationPortV1, PersistentAgentStudioPortV1, PersistentCapabilityRegistryPortV1, RedactedResultV1, TenantAccountAdministrationPortV1, TenantAccountProvisionReceiptV1, TenantContextV1, TenantDevicePortV1 } from './contracts.js'
 
 const sessionPattern = /^session:[a-z0-9][a-z0-9._:-]{0,127}$/
 
@@ -15,6 +15,7 @@ export class InactiveCloudControlPlaneApplicationV1 {
     private readonly deviceSessions?: DeviceSessionServerPortV1,
     private readonly deviceEnrollment?: DeviceEnrollmentServerPortV1,
     private readonly accounts?: TenantAccountAdministrationPortV1,
+    private readonly orchestration?: PersistentAgentOrchestrationPortV1,
   ) {}
 
   async provisionUser(sessionReference: string, input: { readonly userId: string; readonly displayName: string; readonly password: string; readonly roles: readonly ('owner' | 'member' | 'auditor')[] }, now?: Date): Promise<TenantAccountProvisionReceiptV1> {
@@ -40,6 +41,11 @@ export class InactiveCloudControlPlaneApplicationV1 {
 
   async publishAgentTest(sessionReference: string, input: { readonly draftId: string; readonly expectedRevision: number }, now?: Date): Promise<AgentTestReleaseV1> {
     return await this.studio.publishTest(await this.#context(sessionReference), input, now)
+  }
+
+  async dispatchAgentTest(sessionReference: string, input: { readonly draftId: string; readonly expectedRevision: number; readonly deviceId: string }, now?: Date): Promise<AgentTestDispatchReceiptV1> {
+    if (!this.orchestration) throw new Error('Agent orchestration is unavailable')
+    return await this.orchestration.dispatchTest(await this.#context(sessionReference), input, now)
   }
 
   async registerDevice(sessionReference: string, input: { readonly deviceId: string; readonly publicKey: string }, now?: Date): Promise<DeviceRecordV1> {

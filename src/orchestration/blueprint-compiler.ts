@@ -32,9 +32,20 @@ export async function compileTestExecutionPlan(
   input: TestPlanCompilationInputV1,
   signer: ExecutionPlanSignerV1,
 ): Promise<SignedExecutionPlanV1> {
+  return await compileNoEffectExecutionPlan(blueprintInput, manifestInputs, input, signer, 'test-only')
+}
+
+/** Compiles the same effects-off contract for either synthetic or registered tenants. */
+export async function compileNoEffectExecutionPlan(
+  blueprintInput: unknown,
+  manifestInputs: readonly unknown[],
+  input: TestPlanCompilationInputV1,
+  signer: ExecutionPlanSignerV1,
+  admission: 'test-only' | 'registered',
+): Promise<SignedExecutionPlanV1> {
   const blueprint = validateAgentBlueprint(blueprintInput)
   if (blueprintPayloadDigest(blueprint) !== blueprint.digest) throw new Error('blueprint digest does not match its payload')
-  if (!input.tenantId.startsWith('test.')) throw new Error('inactive compiler accepts test tenants only')
+  if (!['test-only', 'registered'].includes(admission) || (admission === 'test-only' && !input.tenantId.startsWith('test.'))) throw new Error('inactive compiler tenant admission is invalid')
   if (blueprint.permissions.some(permission => permission.kind === 'external-effect' || permission.effect?.externalWrite)) throw new Error('inactive compiler rejects external effects')
   const manifests = manifestInputs.map(validateCapabilityManifest)
   const selected = blueprint.capabilities.map(reference => {

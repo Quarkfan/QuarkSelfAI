@@ -9,6 +9,7 @@ export type TenantControlActionV1 =
   | 'agent-draft.read'
   | 'agent-draft.write'
   | 'agent-release.publish-test'
+  | 'agent-test.dispatch'
   | 'capability-release.read'
   | 'capability-release.register-inactive'
 

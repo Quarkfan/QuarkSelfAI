@@ -60,7 +60,7 @@ export class RoleTenantAuthorizationV1 implements TenantAuthorizationPortV1 {
     if (input.context.roles.includes('owner')) return true
     const read = new Set<TenantControlActionV1>(['device.list', 'agent-draft.read', 'capability-release.read'])
     if (input.context.roles.includes('auditor')) return read.has(input.action)
-    const member = new Set<TenantControlActionV1>([...read, 'device.register', 'agent-draft.write', 'agent-release.publish-test', 'capability-release.register-inactive'])
+    const member = new Set<TenantControlActionV1>([...read, 'device.register', 'agent-draft.write', 'agent-release.publish-test', 'agent-test.dispatch', 'capability-release.register-inactive'])
     return input.context.roles.includes('member') && member.has(input.action)
   }
 }

@@ -121,6 +121,7 @@
   审批真源、executor router、workspace allowlist 或第二写入链路；Codex、Claude Code 与 DSH 必须共享同一规范化执行上下文。
   当前平台总目标已获 owner 连续执行授权，但 pack 仍须按精确 revision/digest、单 provider 事务和回读证据逐批推进；不得把该授权解释为允许双消费者、双写、泄露工作数据或跳过回滚门禁。
 - 云端用户服务激活必须复用 ADR 0171 的 durable intent：只注册 sealed definition，启动后同时回读 service-manager 单实例状态与 installed certificate-pinned TLS health 才能提交 active receipt。失败先 stop/unregister 再删除精确定义；停用不得删除 tenant state、配置、TLS material 或 rollback release。当前只实现 launchd user service，systemd 不得伪装成已支持。
+- registered tenant 的 Agent test dispatch 以 ADR 0181 为边界：只能从认证会话、精确 test release 和同一用户 registered device 派生，服务端只对 canonical effects-off plan 摘要签名；请求体不得提供 tenant/user、effect、workspace/context 或执行器命令。plan signing 私钥只存在于权限收紧的 installed server 配置中，必须与客户端 pinned public key 匹配并纳入 drift recovery；该链路不得创建 scheduler、自动触发或第二 device provider。
 - 平台总目标完成度以 `config/capability-platform-completion.json` 与 `scripts/audit-capability-platform-completion.ts` 为失败关闭真源；Phase 0 设计覆盖、单元测试或 inactive scaffold 不能替代真实安装、运行、租户、客户端、replay、恢复和退役证据。审计仍有 blocker 时不得宣称目标完成。
 - 工具、程序包、无头浏览器、私有集成和交互式应用的形态覆盖必须使用 Capability Manifest 的规范 kind（如 `cli`、`browser-runtime`）和逐形态生命周期证据；候选登记、contract-only scaffold 或 `activationAllowed=false` 不能单独证明已发布、安装或激活。无头浏览器必须经过本地 ephemeral profile、网络 allowlist、workspace policy 与 durable approval，云端不得下发任意浏览器脚本或持久 profile。
 - 第一方公开能力形态证据必须绑定精确 Git revision、逐文件摘要、规范 Manifest、SBOM 与可验证签名，并通过临时 SQLite 和内容寻址制品库演练 inactive install、recovery 与 uninstall。该演练只能证明制品边界可恢复，必须保持 unloaded、unauthorized、stopped、effects disabled；不能替代能力适配器或真实运行验证。

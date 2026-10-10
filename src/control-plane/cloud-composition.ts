@@ -11,19 +11,22 @@ import { openSqliteInactiveDeviceSessionProvider, type SqliteInactiveDeviceSessi
 import { openSqliteTenantControlRepository, type SqliteTenantControlRepositoryV1 } from './sqlite-tenant-repository.js'
 import { RoleTenantAuthorizationV1, TenantControlServiceV1 } from './tenant-service.js'
 import type { TenantAuthorizationPortV1 } from './tenant-persistence.js'
+import { RegisteredNoEffectAgentOrchestratorV1, type AgentOrchestrationIdSourceV1 } from './agent-orchestration.js'
+import type { ExecutionPlanSignerV1 } from './contracts.js'
 
 type TokenSource = { next(label: 'challenge' | 'nonce' | 'session' | 'lease'): string }
 export interface CloudControlPlaneMigrationsV1 { readonly tenant: string; readonly studio: string; readonly capability: string; readonly deviceSession: string; readonly deviceEnrollment: string; readonly identity: string; readonly identityAdministration: string }
 export interface CloudControlPlaneCompositionConfigV1 { readonly schemaVersion: 1; readonly databasePath: string; readonly migrations: CloudControlPlaneMigrationsV1; readonly listenerEnabled: false; readonly externalEffectsEnabled: false }
-export interface CloudControlPlaneCompositionDependenciesV1 { readonly tokens: TokenSource; readonly proofVerifier: DeviceProofVerifierV1; readonly planVerifier: PlanSignatureVerifierV1; readonly authorization?: TenantAuthorizationPortV1 }
+export interface CloudControlPlaneCompositionDependenciesV1 { readonly tokens: TokenSource; readonly orchestrationIds: AgentOrchestrationIdSourceV1; readonly proofVerifier: DeviceProofVerifierV1; readonly planVerifier: PlanSignatureVerifierV1; readonly planSigner: ExecutionPlanSignerV1; readonly authorization?: TenantAuthorizationPortV1 }
 
 /** Opens one registered-tenant provider graph without a listener, scheduler, executor or effect port. */
 export class InactiveCloudControlPlaneCompositionV1 {
   readonly application: InactiveCloudControlPlaneApplicationV1
   readonly http: InactiveCloudHttpHandlerV1
-  private constructor(identity: SqliteCloudIdentityProviderV1, readonly capabilities: SqliteInactiveCapabilityRegistryV1, readonly studio: SqliteInactiveAgentStudioV1, readonly sessions: SqliteInactiveDeviceSessionProviderV1, readonly enrollment: SqliteInactiveDeviceEnrollmentV1, readonly tenants: SqliteTenantControlRepositoryV1, authorization: TenantAuthorizationPortV1) {
+  private constructor(identity: SqliteCloudIdentityProviderV1, readonly capabilities: SqliteInactiveCapabilityRegistryV1, readonly studio: SqliteInactiveAgentStudioV1, readonly sessions: SqliteInactiveDeviceSessionProviderV1, readonly enrollment: SqliteInactiveDeviceEnrollmentV1, readonly tenants: SqliteTenantControlRepositoryV1, authorization: TenantAuthorizationPortV1, dependencies: CloudControlPlaneCompositionDependenciesV1) {
     const devices = new TenantControlServiceV1(tenants, authorization)
-    this.application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment, identity)
+    const orchestration = new RegisteredNoEffectAgentOrchestratorV1(studio, capabilities, devices, sessions, dependencies.planSigner, dependencies.orchestrationIds, authorization)
+    this.application = new InactiveCloudControlPlaneApplicationV1(identity, capabilities, studio, devices, sessions, enrollment, identity, orchestration)
     this.http = new InactiveCloudHttpHandlerV1(this.application, identity)
     this.identity = identity
   }
@@ -31,7 +34,7 @@ export class InactiveCloudControlPlaneCompositionV1 {
 
   static async open(configValue: unknown, dependencies: CloudControlPlaneCompositionDependenciesV1): Promise<InactiveCloudControlPlaneCompositionV1> {
     const config = await validateConfig(configValue)
-    if (!dependencies || typeof dependencies.tokens?.next !== 'function' || typeof dependencies.proofVerifier?.verify !== 'function' || typeof dependencies.planVerifier?.verify !== 'function' || (dependencies.authorization !== undefined && typeof dependencies.authorization.authorize !== 'function')) throw new Error('cloud composition dependencies are invalid')
+    if (!dependencies || typeof dependencies.tokens?.next !== 'function' || typeof dependencies.orchestrationIds?.next !== 'function' || typeof dependencies.proofVerifier?.verify !== 'function' || typeof dependencies.planVerifier?.verify !== 'function' || typeof dependencies.planSigner?.sign !== 'function' || (dependencies.authorization !== undefined && typeof dependencies.authorization.authorize !== 'function')) throw new Error('cloud composition dependencies are invalid')
     const authorization = dependencies.authorization ?? new RoleTenantAuthorizationV1(); const opened: Array<{ close(): Promise<void> }> = []
     try {
       const tenants = await openSqliteTenantControlRepository(config.databasePath, config.migrations.tenant); opened.push(tenants)
@@ -41,7 +44,7 @@ export class InactiveCloudControlPlaneCompositionV1 {
       const sessions = await openSqliteInactiveDeviceSessionProvider(config.databasePath, [config.migrations.tenant, config.migrations.deviceSession], dependencies.tokens, dependencies.proofVerifier, dependencies.planVerifier, 'registered'); opened.push(sessions)
       const devices = new TenantControlServiceV1(tenants, authorization)
       const enrollment = await openSqliteInactiveDeviceEnrollment(config.databasePath, config.migrations.deviceEnrollment, devices); opened.push(enrollment)
-      return new InactiveCloudControlPlaneCompositionV1(identity, capabilities, studio, sessions, enrollment, tenants, authorization)
+      return new InactiveCloudControlPlaneCompositionV1(identity, capabilities, studio, sessions, enrollment, tenants, authorization, dependencies)
     } catch (error) { for (const item of opened.reverse()) { try { await item.close() } catch {} }; throw error }
   }
 

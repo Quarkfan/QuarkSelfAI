@@ -2103,3 +2103,11 @@
 - 定向测试只用当前 Node 执行仓库内惰性 fixture，真实验证子进程存活、唯一 session、有界停止与 mode-0700 临时 profile 清理；扩权声明不创建 profile 或进程。未安装/执行第三方浏览器，未挂入 client/product composition，不授予网络或工作区权限。
 - 该批先独立提交 adapter 源与模块分类；公开 form artifact 将在后续 revision 绑定 adapter、重签名并通过 inactive lifecycle 后才移除 `local-adapter-missing`。
 - 后续证据批已将 browser artifact 绑定到 adapter revision `3a423cfa93e893566d80072d90477aeaa03c3887`，重算全部四种公开 form 的内容摘要、SBOM 与一次性 Ed25519 签名，私钥未落盘。Git object 回读、签名验证和四种 inactive lifecycle 演练通过；连同私有 integration pack，工具、程序包、无头浏览器、私有集成和交互应用五种形态门禁现为 verified。所有 artifact 仍 unpublished、unloaded、unauthorized、stopped、effects disabled。
+
+## 2026-10-10 — Server-signed registered Agent test dispatch
+
+- 完成 registered tenant 的首条真实 Agent 编排闭环：认证会话保存 draft、发布不可变 test release、选择同一用户的 registered device、解析租户可见能力、编译 15 分钟 effects-off envelope、服务端 Ed25519 签名并进入现有唯一 device-session queue。请求体不能注入 tenant、user、effect、workspace、context 或执行器命令。
+- 新增 server-local plan signer。安装配置复制权限收紧的私钥并校验其公钥必须与客户端 pin 完全一致；回执只绑定私钥文件摘要，恢复检测漂移，unused rollback 才可移除。cloud server entry 不输出私钥内容。
+- 持久 SQLite + HTTP 集成测试覆盖 owner 的 save/publish/dispatch、member 无法读取或调度 owner draft、队列记录 tenant/user/device 精确归属且 external writes 为 false。测试同时暴露并修复 blueprint ID 可包含一个命名空间分段、release lookup 却错误拒绝 `/` 的契约不一致。
+- module catalog 与迁移矩阵登记 `server-side-plan-signing` 和 `registered-agent-test-orchestration`。本批不激活服务、不安装客户端、不切换现有 QuarkSelfAI 消费者/provider/writer，不执行 capability 或外部写。回滚为停用 effects-off server（若后续已激活）、恢复前一 sealed release/config；不得删除 tenant state。
+- 用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 保持未修改、未暂存。

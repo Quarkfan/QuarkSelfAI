@@ -87,6 +87,7 @@ export interface PersistentAgentStudioPortV1 {
   saveDraft(context: TenantContextV1, input: { readonly draftId: string; readonly blueprint: AgentBlueprintV1; readonly expectedRevision: number }, now?: Date): Promise<AgentDraftRecordV1>
   publishTest(context: TenantContextV1, input: { readonly draftId: string; readonly expectedRevision: number }, now?: Date): Promise<AgentTestReleaseV1>
   getDraft(context: TenantContextV1, draftId: string): Promise<AgentDraftRecordV1 | undefined>
+  getTestRelease(context: TenantContextV1, blueprintId: string, version: string): Promise<AgentTestReleaseV1 | undefined>
   listDrafts(context: TenantContextV1): Promise<readonly AgentDraftRecordV1[]>
   close(): Promise<void>
 }
@@ -138,4 +139,23 @@ export interface DeviceSessionServerPortV1 {
 
 export interface DeviceDispatchQueuePortV1 {
   enqueue(dispatch: DispatchRecordV1, now?: Date): Promise<DispatchRecordV1>
+}
+
+export interface AgentTestDispatchReceiptV1 {
+  readonly schemaVersion: 1
+  readonly tenantId: string
+  readonly userId: string
+  readonly deviceId: string
+  readonly draftId: string
+  readonly draftRevision: number
+  readonly taskId: string
+  readonly planId: string
+  readonly blueprintDigest: string
+  readonly planDigest: string
+  readonly state: 'queued'
+  readonly externalWritesEnabled: false
+}
+
+export interface PersistentAgentOrchestrationPortV1 {
+  dispatchTest(context: TenantContextV1, input: { readonly draftId: string; readonly expectedRevision: number; readonly deviceId: string }, now?: Date): Promise<AgentTestDispatchReceiptV1>
 }

@@ -76,6 +76,11 @@ export class InactiveCloudHttpHandlerV1 {
         if (typeof body.draftId !== 'string' || !Number.isSafeInteger(body.expectedRevision)) return response(400, 'invalid-body')
         return response(201, 'created', { item: await this.application.publishAgentTest(requiredSession(request), { draftId: body.draftId, expectedRevision: Number(body.expectedRevision) }) })
       }
+      if (request.method === 'POST' && request.path === '/v1/agent-drafts/dispatch-test') {
+        const body = exactBody(request.body, ['draftId', 'expectedRevision', 'deviceId'])
+        if (typeof body.draftId !== 'string' || typeof body.deviceId !== 'string' || !Number.isSafeInteger(body.expectedRevision)) return response(400, 'invalid-body')
+        return response(201, 'created', { item: await this.application.dispatchAgentTest(requiredSession(request), { draftId: body.draftId, expectedRevision: Number(body.expectedRevision), deviceId: body.deviceId }) })
+      }
       return response(404, 'not-found')
     } catch (error) {
       const message = String(error)
