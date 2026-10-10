@@ -2041,3 +2041,10 @@
 - 回滚为撤销 handoff、审计入口、ADR、catalog ownership 与测试。未来经明确 cutover 写入的 checkpoint 属于持久迁移状态，不随代码回滚静默删除。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本批。
 - 后续同批补齐 message-intake 的非空导入：pending focus message 进入 durable event；pending reaction 进入只能由迁移工具产生的专用 event key；pending digest 进入 dormant `message-intake.v1` workflow，并保留稳定 notification idempotency key。apply 顺序为 events/workflows 后 freeze checkpoint，相同 replay 为 no-op、不同 checkpoint 拒绝覆盖。
 - 至此 7/7 cutover unit 具备合成、无 effect、幂等 replay 证据，但没有读取或导入真实 handoff、没有暂停 compatibility consumer，也没有启用 native consumer/effect。因此 deployment replay receipt 保持 false，终局 requirement 仍是 incomplete；真实 cutover 必须在既有 maintenance window 与通知时段内单独完成。
+
+## 2026-10-10 — Generic native composition boundary
+
+- 只读复核确认长期 native composition 仍直接实例化包含 BlackLake 工作区/参考路由提示的账本 compiler，并把 BlackLake routing、Xiaowei research 与私有 compiler 列为默认必需模块；这与“主线不依赖私有包/公司工作区即可构建启动”冲突。
+- 新增 ADR 0178。默认 manifest/profile 移除三个私有 work module 和对应 BLACKLAKE/XIAOWEI 配置；推理 provider 改为功能性名称。architecture gate 只对 migration registry 中精确标为 `private-work-integration` 的插件免除默认 profile mount，仍检查 package ownership，且不能替换 platform core。
+- 通用 work journal 改用纯本地 durable ledger evidence 与 deterministic compiler；它不启动 Claude/Codex、读取飞书/Jira/GitLab 或假装外部覆盖完整。私有包未来只能通过现有 evidence/compiler ports 扩展。
+- 当前 compatibility runtime、私有 pack、consumer/provider/writer、凭证与外部写均未改变。主线仍保留过渡期私有源码和历史证据，所以 continuity 的 `work-integration-not-yet-isolated` 继续成立，本批不宣称隔离完成。

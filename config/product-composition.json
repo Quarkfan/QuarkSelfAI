@@ -9,7 +9,7 @@
     {
       "id": "delegated-execution",
       "required": true,
-      "modules": ["claude-code-provider", "codex-provider", "agent-bound-action-worker", "blacklake-reference-routing"]
+      "modules": ["claude-code-provider", "codex-provider", "agent-bound-action-worker"]
     },
     {
       "id": "message-intake",
@@ -22,9 +22,9 @@
       "modules": ["dida-task-effects", "dida-projection-effects", "dida-maintenance-native"]
     },
     {
-      "id": "delegated-followup-and-research",
+      "id": "delegated-followup",
       "required": true,
-      "modules": ["delegated-followup-native", "xiaowei-research-native"]
+      "modules": ["delegated-followup-native"]
     },
     {
       "id": "session-lifecycle",
@@ -39,19 +39,16 @@
     {
       "id": "work-journal",
       "required": true,
-      "modules": ["work-journal-contracts", "work-journal", "work-journal-agent-compiler"]
+      "modules": ["work-journal-contracts", "work-journal"]
     }
   ],
   "requiredConfiguration": [
-    "BLACKLAKE_WORKSPACE_ROOT",
     "CODEX_APP_SERVER_SOCKET",
     "DIDA_FOLLOWUP_PROJECT_ID",
     "DIDA_PROJECT_ID",
     "QUARK_INFERENCE_API_KEY",
     "QUARK_INFERENCE_BASE_URL",
     "QUARK_OWNER_OPEN_ID",
-    "QUARK_OWNER_WORKSPACE",
-    "XIAOWEI_AGENT_CHAT_ID",
-    "XIAOWEI_AGENT_OPEN_ID"
+    "QUARK_OWNER_WORKSPACE"
   ]
 }

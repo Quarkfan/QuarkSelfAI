@@ -36,6 +36,9 @@ assert.equal(packageManifest.dsh?.bundle?.patch, './cordis.patch.yml', 'DSH bund
 const profileSource = await readFile(resolve(root, 'cordis.patch.yml'), 'utf8')
 const compatibilityProfileSource = await readFile(resolve(root, 'compat/cordis.compat.patch.yml'), 'utf8')
 const productManifest = await loadProductCompositionManifest(catalog)
+const capabilityMigration = JSON.parse(await readFile(resolve(root, 'config/capability-platform-migration.json'), 'utf8')) as { groups: Array<{ disposition: string; moduleIds: string[] }> }
+const privateIntegrationModuleIds = new Set(capabilityMigration.groups
+  .filter(group => group.disposition === 'private-work-integration').flatMap(group => group.moduleIds))
 const platformApiSource = await readFile(resolve(root, 'src/platform/index.ts'), 'utf8')
 const operationsContractSource = await readFile(resolve(root, 'src/platform/operations.ts'), 'utf8')
 const storagePortsSource = await readFile(resolve(root, 'src/storage/ports.ts'), 'utf8')
@@ -60,6 +63,7 @@ const pluginBindings = catalog.modules.flatMap(module => module.plugin ? [{ modu
 for (const { module, plugin } of pluginBindings) {
   assert.ok(plugin.packageExport in packageManifest.exports, `module ${module.id} references missing package export ${plugin.packageExport}`)
   assertPackageExportOwned(packageManifest.exports[plugin.packageExport], module.id, module.owns)
+  if (privateIntegrationModuleIds.has(module.id)) continue
   const expectedPackage = plugin.packageExport === '.' ? packageName : `${packageName}/${plugin.packageExport.slice(2)}`
   const mounted = profilePlugins.get(plugin.profileId)
   assert.equal(mounted?.name, expectedPackage, `module ${module.id} plugin binding differs from cordis.patch.yml`)
@@ -105,6 +109,7 @@ assert.equal(profileComposition.classification, 'feature', 'the long-term Cordis
 assert.equal(profileComposition.runtime, 'shadow', 'the native Cordis profile remains shadow-mounted until native ownership cutover')
 assert.ok(profileComposition.runtimeDependsOn.includes('dsh-runtime'), 'the native Cordis profile must depend on the DSH runtime')
 for (const { module } of pluginBindings) {
+  if (privateIntegrationModuleIds.has(module.id)) continue
   assert.ok(profileComposition.mounts.includes(module.id), `native Cordis profile does not mount plugin module ${module.id}`)
 }
 assert.deepEqual(profileComposition.runtimeDependsOn, ['dsh-runtime'], 'native Cordis profile runtime dependencies cannot duplicate mounted plugins')
@@ -183,7 +188,8 @@ const uncoveredInactivePlugins = pluginBindings
   .sort()
 assert.deepEqual(uncoveredInactivePlugins, [], 'every inactive native feature plugin must belong to a migration target unit')
 const uncoveredProductPlugins = pluginBindings
-  .filter(({ module }) => module.classification === 'feature' && module.runtime === 'inactive' && !productModuleIdSet.has(module.id))
+  .filter(({ module }) => module.classification === 'feature' && module.runtime === 'inactive'
+    && !productModuleIdSet.has(module.id) && !privateIntegrationModuleIds.has(module.id))
   .map(({ module }) => module.id)
   .sort()
 assert.deepEqual(uncoveredProductPlugins, [], 'every inactive native feature plugin must belong to the long-term product composition')

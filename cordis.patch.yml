@@ -3,8 +3,8 @@
 - id: llm-pi-ai
   config:
     providers:
-      blacklake-deepseek:
-        displayName: BlackLake DeepSeek
+      configured-inference:
+        displayName: Configured inference
         api: openai-completions
         apiKeyEnv: QUARK_INFERENCE_API_KEY
         baseURL: !!js process.env.QUARK_INFERENCE_BASE_URL
@@ -14,7 +14,7 @@
 
 - id: agent-default-model
   config:
-    provider: blacklake-deepseek
+    provider: configured-inference
     model: deepseek/openai/deepseek-v4-pro
 
 - id: webserver
@@ -34,11 +34,6 @@
           - im.chat.member.user.added_v1
           - im.message.reaction.created_v1
           - im.message.reaction.deleted_v1
-    - id: blacklake-reference-router
-      name: '@quarkfan/quark-self-ai/blacklake'
-      disabled: !!js '!process.env.BLACKLAKE_WORKSPACE_ROOT'
-      config:
-        workspaceRoot: !!js process.env.BLACKLAKE_WORKSPACE_ROOT
     - id: quark-executor-claude-code-read
       name: '@deepseek-ai/dsh-subagent-claude-code'
       config:
@@ -186,7 +181,7 @@
       disabled: !!js process.env.QUARK_NATIVE_REASONING_EFFECTS !== 'true'
       config:
         enabled: true
-        provider: blacklake-deepseek
+        provider: configured-inference
         model: deepseek/openai/deepseek-v4-pro
         maxTokens: 1500
     - id: quark-dida-task-effects
@@ -265,28 +260,6 @@
           revision: 1
           source: owner-directive:archive-completed-and-delete-after-one-week
           minimumArchivedDays: 7
-    - id: quark-xiaowei-research
-      name: '@quarkfan/quark-self-ai/xiaowei-research'
-      # Requests require durable owner approval and one Feishu channel owner.
-      disabled: !!js process.env.QUARK_NATIVE_XIAOWEI_RESEARCH !== 'true'
-      config:
-        enabled: true
-        agentName: 智造湖小维
-        agentOpenId: !!js process.env.XIAOWEI_AGENT_OPEN_ID
-        agentChatId: !!js process.env.XIAOWEI_AGENT_CHAT_ID
-        retryBaseMs: 120000
-        retryMaxMs: 3600000
-        failureNotifyThreshold: 3
-        taskProjection:
-          projectId: !!js process.env.DIDA_PROJECT_ID
-          authorization:
-            id: owner-policy:dida-task-projection:v1
-            grantedBy: owner
-            grantedAt: '2026-08-20T00:00:00+08:00'
-            scope: dida.task-projection
-            revision: 1
-            source: owner-directive:auto-create-and-maintain-tasks
-            projectId: !!js process.env.DIDA_PROJECT_ID
     - id: quark-followup
       name: '@quarkfan/quark-self-ai/followup'
       # Workday timer, card callback, contact resolution and reply consumption activate together.
