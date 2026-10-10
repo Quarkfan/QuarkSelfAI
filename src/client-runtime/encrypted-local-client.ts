@@ -32,6 +32,7 @@ export class InactiveEncryptedLocalClientV1 {
   async refreshExecutors(discovery: InactiveExecutorDiscoveryV1, now = new Date()): Promise<readonly ExecutorCapabilityReportV1[]> { return await this.application.refreshExecutors(discovery, now) }
   async beginDeviceEnrollment(server: DeviceEnrollmentClientPortV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.application.beginDeviceEnrollment(server, this.secrets, now) }
   async pollDeviceEnrollment(server: DeviceEnrollmentClientPortV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.application.pollDeviceEnrollment(server, this.secrets, now) }
+  deviceEnrollment(): ClientDeviceEnrollmentViewV1 | null { return this.application.deviceEnrollment() }
   async syncOnce(server: DeviceSessionServerPortV1, now = new Date()): Promise<InactiveClientCycleReceiptV1> { return await this.application.syncOnce(server, this.secrets, now) }
   async executeNoEffectOnce(server: DeviceSessionServerPortV1, executors: readonly NoEffectClientExecutorPortV1[], now = new Date()): Promise<NoEffectClientExecutionReceiptV1> { return await this.application.executeNoEffectOnce(server, this.secrets, executors, now) }
   async hasSecret(reference: string): Promise<boolean> { const value = await this.secrets.get(reference); if (!value) return false; value.fill(0); return true }

@@ -2023,3 +2023,12 @@
 - 本批没有设置 admin gate，没有读取、生成、迁移、写入或删除真实凭证，没有启动 DSH/客户端服务、连接云端、注册设备、改变现网 composition 或产生外部写。三个 executor 实跑 gate 仍因 DSH 未配置而保持未完成。
 - 回滚为撤销本批 module、installer commands、ADR 与 catalog/migration 映射；不得把回滚解释为授权删除已存在的本地 secret state。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本批。
 - 验证：定向构建与 14 项受影响测试通过；完整主测试 551 项中 538 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。架构为 143 modules、82 个 platform-core Offer、126 assets、23/23 effects implemented、0/23 active；strict work-domain、assistant continuity 与根入口同步通过。终局完成度审计仍只验证 3 项并如实保留原 9 个 blocker。
+
+## 2026-10-10 — Installed device enrollment administration and activation preflight
+
+- 只读复核发现 service activation 只验证 manager PID 与本地 health，未证明设备已获云端批准。新增 ADR 0176 与 `client-enrollment-administration`：sealed installer 提供 exact `begin-enrollment`/`poll-enrollment`，同时要求 admin 和 enrollment 双 gate，复用既有 HTTPS/loopback transport、加密 poll credential、持久 resume 与 cleanup-before-final 契约。
+- 公开 enrollment receipt 只含 installation ID、user code、固定 verification path、过期时间、状态与 cleanup flag，不含 tenant/user/device、endpoint、路径、key、poll token 或响应正文。每次操作持有唯一 client lease 并在结束时关闭；重复 begin 返回同一请求。
+- service activation 在写 intent 或调用 service manager 前新增默认 preflight：数据库缺失时不创建 identity、不读取 Keychain；已有安装必须通过 master key 重开并返回 durable approved 且 cleanup 完成。health 仍是后续独立必要条件。
+- 本批没有设置任何 gate，没有执行真实 Keychain/设备凭证/网络/browser approval/服务注册或启动，没有改变现网 owner、composition 或 external effect。当前 deployment 仍为 client not-installed/device unenrolled，终局 blocker 不变。
+- 回滚为撤销本批 commands、administration module、activation preflight、ADR 与 catalog/migration 映射；任何未来显式操作产生的 local identity、poll credential 或 approved enrollment 都必须保留并向前恢复，不能随代码回滚删除。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本批。
+- 验证：受影响定向测试 12/12；完整主测试 553 项中 540 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。架构为 144 modules、83 个 platform-core Offer、126 assets、23/23 effects implemented、0/23 active；终局完成度仍必须等待真实安装、云审批与服务激活证据，不能由本批默认关闭路径提前放行。

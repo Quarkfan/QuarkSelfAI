@@ -4,6 +4,7 @@ import { basename, isAbsolute, join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { recoverInstalledClientProcessHealthV1, removeInstalledClientProcessHealthV1, type InstalledClientProcessHealthReceiptV1 } from './client-process-health.js'
 import { recoverPreparedClientUserServiceV1 } from './client-installed-service.js'
+import { assertInstalledClientEnrollmentApprovedV1 } from './client-enrollment-administration.js'
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/
 
@@ -26,11 +27,13 @@ export interface InstalledClientServiceActivationReceiptV1 {
 }
 interface ActivationIntentV1 { readonly schemaVersion: 1; readonly transactionId: string; readonly installationId: string; readonly configDigest: string; readonly platform: 'launchd-user'; readonly definitionTargetPath: string; readonly definitionDigest: string; readonly createdAt: string; readonly state: 'activating'; readonly externalWritesEnabled: false }
 type HealthProbe = (installRoot: string) => Promise<InstalledClientProcessHealthReceiptV1>
+type EnrollmentProbe = (installRoot: string) => Promise<unknown>
 
 /** Registers and starts one prepared client, committing only after manager PID and bounded health agree. */
-export async function activateInstalledClientUserServiceV1(input: InstalledClientServiceActivationInputV1, manager: ClientUserServiceManagerV1, now = new Date(), probe: HealthProbe = recoverInstalledClientProcessHealthV1): Promise<InstalledClientServiceActivationReceiptV1> {
+export async function activateInstalledClientUserServiceV1(input: InstalledClientServiceActivationInputV1, manager: ClientUserServiceManagerV1, now = new Date(), probe: HealthProbe = recoverInstalledClientProcessHealthV1, enrollmentProbe: EnrollmentProbe = assertInstalledClientEnrollmentApprovedV1): Promise<InstalledClientServiceActivationReceiptV1> {
   const values = await exactInput(input, manager); if (Number.isNaN(now.getTime())) throw new Error('client service activation timestamp is invalid')
   const prepared = await recoverPreparedClientUserServiceV1(values.installRoot); if (prepared.platform !== manager.platform) throw new Error('client service activation platform drifted')
+  await enrollmentProbe(values.installRoot)
   const serviceRoot = join(values.installRoot, 'service'); const intentPath = join(serviceRoot, 'activation-intent.json'); const receiptPath = join(serviceRoot, 'activation-receipt.json')
   await absent(intentPath, 'client service activation is already in progress'); await absent(receiptPath, 'client service is already active')
   const intent: ActivationIntentV1 = Object.freeze({ schemaVersion: 1, transactionId: `client-service-activation.${randomBytes(16).toString('hex')}`, installationId: prepared.installationId, configDigest: prepared.configDigest, platform: manager.platform, definitionTargetPath: values.definitionTargetPath, definitionDigest: prepared.definitionDigest, createdAt: now.toISOString(), state: 'activating', externalWritesEnabled: false })

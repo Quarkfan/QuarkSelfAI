@@ -167,6 +167,9 @@ DSH fallback 的推理凭证不再要求写入启动 shell 或服务定义。cli
 installed installer 进一步提供默认关闭的本地管理入口：master key 必须单独写入 OS Keychain，DSH secret 只从 stdin 接收并写入 sealed bootstrap 指定的
 唯一 reference；查询与公开回执只暴露 configured/absent，移除不会删除其他 secret、设备身份或安装状态。所有凭证写入/删除仍要求精确 admin gate，且本实现
 没有读取或变更真实凭证，见 [ADR 0175](adr/0175-gated-installed-client-secret-provisioning.md)。
+设备注册也只通过 sealed installer 的双门禁 begin/poll 进入既有 resumable device-code 协议；poll token 仅留在加密本地 store。客户端 service activation
+在写 intent 和调用 service manager 前必须重新打开同一安装并验证 durable `approved`、无 credential cleanup pending；缺失数据库不会触发身份创建或 Keychain 读取。
+该默认未调用边界见 [ADR 0176](adr/0176-gated-installed-device-enrollment.md)。
 
 平台终局不再由 Phase 0 的“模块映射 100% / 控制台设计覆盖 100%”间接推断。`config/capability-platform-completion.json` 与
 `scripts/audit-capability-platform-completion.ts` 逐项对照目标验收口径，并用当前 deployment、module/migration、artifact candidate、product composition

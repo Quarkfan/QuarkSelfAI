@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec、registered-tenant inactive composition、客户端服务准备/激活、secret provisioning 与 launchd adapter、会前简报候选，合计 143 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment 与 installed administration、客户端发行、云身份、device wire codec、registered-tenant inactive composition、客户端服务准备/激活、secret provisioning 与 launchd adapter、会前简报候选，合计 144 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -87,6 +87,7 @@ Pilot 04 在 revision `e66311b` 重新核验当前宿主：Claude Code 与 Codex
 与 worker 收束为同一 close boundary，并提供 `status|run` Node 入口；run 必须显式设置本地 enable gate，status 的真实子进程测试不会创建状态或
 泄露路径。发行包已自带 installer/client 入口、受哈希保护的 launchd/systemd 模板并能脱离 checkout 运行 `status`；installer 可把定义与 lineage receipt 持久化到安装内的 `service-prepared-inactive` namespace，并能恢复校验或安全移除。服务仍未注册/启动，且没有真实云连接，因此不能称客户端 daemon 已激活。
 launchd 激活事务与进程 readiness receipt 已实现但未调用；它要求 manager PID、installation lineage 与 health PID 一致，失败或停用按逆序回滚，且 mutating installer 命令默认关闭。Linux systemd 激活、真实设备 enrollment 与单 owner cutover 仍未验证。
+sealed installer 现可在 admin 与 enrollment 双门禁下显式 begin/poll 既有 device-code 流程；service activation 在产生 intent 前还必须证明该安装已 durable approved 且 poll credential cleanup 完成。当前未设置门禁、未发网络请求、未写真实设备凭证，因此这只闭合可执行路径，不构成真实 enrollment 或激活证据。
 
 设备重连不再要求保留用户浏览器 session：challenge 可由公开 tenant/user/device scope 请求，但只对已登记且 active owner 的设备发放，
 后续仍由私钥 possession 建立 session。签名 Execution Envelope 已包含 protocol、executor allowlist/preference 和 capability requirement；

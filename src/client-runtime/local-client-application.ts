@@ -1,10 +1,10 @@
 import { isAbsolute, resolve } from 'node:path'
 import type { DeviceEnrollmentClientPortV1, DeviceSessionServerPortV1 } from '../control-plane/contracts.js'
 import type { ClientDeviceEnrollmentViewV1, ClientRuntimeSnapshotV1, ExecutorCapabilityReportV1, LocalDeviceSecretStoreV1, NoEffectClientExecutorPortV1, PlanSignatureVerifierV1, RemovableLocalDeviceSecretStoreV1 } from './contracts.js'
+import { InactiveClientDeviceEnrollmentV1, projectClientDeviceEnrollmentViewV1 } from './client-device-enrollment.js'
 import { InactiveArtifactStoreV1, type InactiveArtifactRecoveryReportV1 } from './inactive-artifact-store.js'
 import { runInactiveClientCycle, runNoEffectClientExecutionCycle, type InactiveClientCycleReceiptV1, type NoEffectClientExecutionReceiptV1 } from './inactive-client-cycle.js'
 import { LocalClientInstanceLeaseV1 } from './client-instance-lease.js'
-import { InactiveClientDeviceEnrollmentV1 } from './client-device-enrollment.js'
 import { assertDeviceEnrollmentSecret, createEd25519DeviceEnrollment, type DeviceEnrollmentMaterialV1 } from './device-identity.js'
 import { InactiveExecutorDiscoveryV1 } from './discovery.js'
 import { openSqliteInactiveClientState, type SqliteInactiveClientStateV1 } from './sqlite-client-state.js'
@@ -100,6 +100,7 @@ export class InactiveLocalClientApplicationV1 {
 
   async beginDeviceEnrollment(server: DeviceEnrollmentClientPortV1, secrets: RemovableLocalDeviceSecretStoreV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { this.#requireOpen(); return await new InactiveClientDeviceEnrollmentV1(this.state, secrets, server).begin(now) }
   async pollDeviceEnrollment(server: DeviceEnrollmentClientPortV1, secrets: RemovableLocalDeviceSecretStoreV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { this.#requireOpen(); return await new InactiveClientDeviceEnrollmentV1(this.state, secrets, server).poll(now) }
+  deviceEnrollment(): ClientDeviceEnrollmentViewV1 | null { this.#requireOpen(); const value = this.state.deviceEnrollment(); return value ? projectClientDeviceEnrollmentViewV1(value) : null }
 
   async close(): Promise<void> {
     if (this.#closed) return
