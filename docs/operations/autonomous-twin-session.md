@@ -2096,3 +2096,9 @@
 - 主线 revision `547e77b779f523833f65c9d63d2cc1f4c2ce5d3b` 的正式 validator 与 inactive registry 验证通过；runtime host import 为 0，registry 仍是 1 个 inactive 描述、0 consumer/provider/scheduler/writer、无 activation API。
 - 原 20 个 `pack/**` 文件保留为不可执行迁移档案，12 处宿主导入不进入签名运行闭包。机器 coverage 将全部 21 项分组：2 组 contract 已重建、0 组等价 replay 完成。因此 host compatibility 已证明，但现有工作流等价迁移仍未完成。
 - 本批不安装、加载或激活私有包，不切换 provider/消费者、不产生外部写、不删除主线来源且不重启服务。回滚只需撤销私有的两个 revision 和主线 receipt/文档更新，无运行状态补偿。
+
+## 2026-10-10 — Inactive local headless-browser adapter
+
+- 新增 host-owned 本地 adapter，云端声明无法选择 executable、参数、environment 或 profile path。当前实现只接受 network/workspace 全拒绝、ephemeral profile、downloads/desktop/external writes 关闭的安全子集；allowlist 或 workspace 访问未经本地策略解析就失败关闭。
+- 定向测试只用当前 Node 执行仓库内惰性 fixture，真实验证子进程存活、唯一 session、有界停止与 mode-0700 临时 profile 清理；扩权声明不创建 profile 或进程。未安装/执行第三方浏览器，未挂入 client/product composition，不授予网络或工作区权限。
+- 该批先独立提交 adapter 源与模块分类；公开 form artifact 将在后续 revision 绑定 adapter、重签名并通过 inactive lifecycle 后才移除 `local-adapter-missing`。
