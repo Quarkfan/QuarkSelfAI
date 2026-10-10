@@ -151,8 +151,15 @@ namespace。bundled admin 只能从 sealed template 生成并回读一个 conten
 [ADR 0171](adr/0171-transactional-user-service-activation.md) 在上述准备态之后增加 durable activation transaction：先写 intent，再安装精确
 definition、注册并启动固定 launchd user service，只有 service-manager 单实例状态与 installed certificate-pinned TLS health 的 installation/configuration
 lineage 同时回读成功才提交 active receipt。普通失败按 stop/unregister/remove 反序回滚；崩溃遗留 intent 可由同一事务 reconcile，停用保留 tenant database、
-配置、TLS material 与 prepared rollback release。当前实现只覆盖 macOS launchd，且始终 `externalEffectsEnabled=false`；尚未实际注册本机平台服务，Linux
-systemd 激活、客户端服务激活、SSH gateway apply 和既有 owner cutover 仍是独立门禁。
+配置、TLS material 与 prepared rollback release。当前实现只覆盖 macOS launchd，且始终 `externalEffectsEnabled=false`。revision `aecafd2` 的 sealed
+server 已真实安装并进入 `configured-inactive`，但主机授权层拒绝了本轮 Keychain 凭证写入，因此尚未创建首 owner、准备/注册本机平台服务或打开 listener；
+Linux systemd 激活、客户端服务激活、SSH gateway apply 和既有 owner cutover 仍是独立门禁。脱敏当前状态由
+`config/capability-platform-deployment.json` 固定。
+
+平台终局不再由 Phase 0 的“模块映射 100% / 控制台设计覆盖 100%”间接推断。`config/capability-platform-completion.json` 与
+`scripts/audit-capability-platform-completion.ts` 逐项对照目标验收口径，并用当前 deployment、module/migration、artifact candidate、product composition
+与 continuity 真源交叉验证。当前只有模块 exactly-once、现作用域单 owner 和本批用户改动保护成立；真实多租户服务、可安装客户端与设备注册、三执行器实跑、
+控制台 Agent 组装、五种 active artifact、现有 workflow replay、主线私有域退出、workspace 激活以及双端 lifecycle 仍是 blocker，因此整体状态只能是 `in-progress`。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "objective": "multi-user-cloud-control-local-execution-capability-agent-platform",
+  "status": "in-progress",
+  "requirements": [
+    { "id": "all-modules-classified", "state": "verified", "evidence": ["config/module-catalog.json", "config/capability-platform-migration.json"] },
+    { "id": "real-multi-user-tenant-isolation", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json"] },
+    { "id": "installable-client-and-device-enrollment", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json"] },
+    { "id": "claude-codex-dsh-single-execution-contract", "state": "incomplete", "evidence": ["config/capability-platform-reasoning-executor-pilot-03.json"] },
+    { "id": "console-agent-compose-test-version", "state": "incomplete", "evidence": ["config/capability-platform-console-coverage.json"] },
+    { "id": "five-capability-forms", "state": "incomplete", "evidence": ["config/capability-artifact-candidates.json"] },
+    { "id": "existing-workflows-equivalent-replay", "state": "incomplete", "evidence": ["config/capability-platform-migration.json"] },
+    { "id": "single-consumer-provider-scheduler-writer", "state": "verified-current-scope", "evidence": ["config/module-catalog.json", "config/capability-platform-deployment.json"] },
+    { "id": "mainline-independent-from-private-work", "state": "incomplete", "evidence": ["config/product-composition.json", "config/assistant-continuity.json"] },
+    { "id": "workspace-file-desktop-approval-control", "state": "implemented-not-activated", "evidence": ["config/module-catalog.json"] },
+    { "id": "install-run-recover-upgrade-rollback-verified", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json", "docs/evidence/capability-cloud-installation-2026-10-10.md"] },
+    { "id": "user-uncommitted-changes-preserved", "state": "verified-current-batch", "evidence": ["docs/operations/autonomous-twin-session.md"] }
+  ]
+}

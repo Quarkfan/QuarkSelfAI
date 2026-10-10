@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "environmentId": "owner-local-control-plane",
+  "status": "configured-inactive",
+  "sourceRevision": "aecafd2708e83d2f908797e019e8800df355ef76",
+  "server": {
+    "version": "0.2.0",
+    "distributionDigest": "sha256:fed86beabf5af1d77125433902dd774458c951509f89b8725a50c3ef639c67d6",
+    "installationId": "server-installation.50dccd8eda81e61e4233c8393c1f27f9",
+    "installationState": "configured-inactive",
+    "firstOwnerCreated": false,
+    "servicePrepared": false,
+    "serviceRegistered": false,
+    "listenerActive": false,
+    "sshGatewayApplied": false,
+    "externalEffectsEnabled": false
+  },
+  "client": {
+    "installationState": "not-installed",
+    "deviceEnrolled": false,
+    "serviceRegistered": false,
+    "externalWritesEnabled": false
+  },
+  "blockedBy": [
+    "explicit-owner-approval-for-keychain-owner-credential-write",
+    "explicit-owner-approval-for-keychain-plan-signing-key-write"
+  ],
+  "privacy": {
+    "containsCredentialValues": false,
+    "containsAbsolutePaths": false,
+    "containsTenantBusinessData": false
+  }
+}
