@@ -2149,3 +2149,10 @@
 - revision `a45a1545e066a3fb444e80ac273ca03f9a0d699d` 已构建 30,368 文件、428 包的 sealed client distribution，artifact digest 为 `sha256:4846ca6329927332560b0d80aaa0084b23f7d21095e64347337e2e1c7edd0a1c`。bundled installer 真正创建并回读 installation `installation.55d77b67c79ec65ad1e0b93edc9a3458`，状态为 `installed-inactive`、auto-start false、external writes false。
 - 精确 client master-key provisioning 被宿主安全审查拒绝：此前全面平台授权不足以替代凭证变更的逐项明确确认。没有绕过、替代 Keychain 命令或间接注入；当前没有 master key、设备身份/enrollment、service definition、client process 或 executor 调用。
 - 完成度审计仍为 in-progress：4 项 verified、8 项 blocker。`installable-client-and-device-enrollment` 只从 not-installed 收敛到 installed-inactive，不能提前标记完成。
+
+## 2026-10-10 — Same-origin Agent Studio and reversible server upgrade
+
+- Agent Studio 作为现有 cloud TLS shared host 的固定同源资源提供，不创建第二 provider。浏览器会话只存内存；tenant/user 继续完全来自服务端 session。可组合 capability、选择 Claude Code/Codex/DSH、保存草稿、发布不可变测试版本并派发 effects-off 测试；workspace、权限、自动触发、外部写和执行器中途切换均未开放。
+- 原安装身份把版本混入 `installationId`，无法在保留 tenant/config/service 血缘时升级。ADR 0183 引入向后兼容 receipt v2：稳定原 installationId，记录当前与前一密封制品；升级只允许 service inactive，且候选/当前/回滚制品、适用 service template、权限和 durable intent 全部验证后才交换 program bytes。测试完成跨版本升级与反向切换，并逐字节确认 tenant SQLite 未改变。
+- revision `317f8fe64edecbf2c709bd4c9b5da5bfb8ff73f8` 构建为 server `0.3.1`，artifact digest `sha256:13bc52d63f184cac95dfd54f9dad1ec7b42f6551e382d442d68731358d204a83`。真实维护窗口先回读旧服务与 pinned TLS health，再停用唯一 provider、升级、重新激活；最终仍是同一 installation、`service-active-effects-off` / `ready-effects-off`，且 HTTPS `/` 回读到 Agent Studio。旧 `0.3.0` 制品位于私有 rollback slot。
+- 完整 `npm run check` 通过：架构 151 modules、23/23 effects implemented、0/23 active；主测试 585 项中 572 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。SSH gateway、客户端 enrollment/service、私有包、现有业务消费者/provider/writer 与 external writes 均未启用或切换；用户未提交文件保持未修改、未暂存。

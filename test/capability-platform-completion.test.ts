@@ -7,7 +7,7 @@ test('reports the real platform completion blockers instead of treating inactive
   const report = await auditCapabilityPlatformCompletion(process.cwd())
   assert.equal(report.ok, false)
   assert.equal(report.status, 'in-progress')
-  assert.deepEqual(report.verified, ['all-modules-classified','five-capability-forms','single-consumer-provider-scheduler-writer','user-uncommitted-changes-preserved'])
+  assert.deepEqual(report.verified, ['all-modules-classified','console-agent-compose-test-version','five-capability-forms','single-consumer-provider-scheduler-writer','user-uncommitted-changes-preserved'])
   assert.ok(report.blockers.includes('real-multi-user-tenant-isolation:incomplete'))
   assert.ok(report.blockers.includes('installable-client-and-device-enrollment:incomplete'))
   assert.ok(report.blockers.includes('mainline-independent-from-private-work:incomplete'))

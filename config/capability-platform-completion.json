@@ -35,7 +35,7 @@
     { "id": "real-multi-user-tenant-isolation", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json"] },
     { "id": "installable-client-and-device-enrollment", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json"] },
     { "id": "claude-codex-dsh-single-execution-contract", "state": "incomplete", "evidence": ["config/capability-platform-reasoning-executor-pilot-03.json"] },
-    { "id": "console-agent-compose-test-version", "state": "incomplete", "evidence": ["config/capability-platform-console-coverage.json"] },
+    { "id": "console-agent-compose-test-version", "state": "verified", "evidence": ["config/capability-platform-console-coverage.json", "docs/adr/0182-same-origin-cloud-agent-studio.md", "docs/evidence/capability-cloud-installation-2026-10-10.md"] },
     { "id": "five-capability-forms", "state": "verified", "evidence": ["config/capability-artifact-candidates.json", "config/public-capability-form-artifacts.json", "config/private-capability-receipt.json", "test/headless-browser-runtime.test.ts", "test/public-capability-form-artifacts.test.ts"] },
     { "id": "existing-workflows-equivalent-replay", "state": "incomplete", "evidence": ["config/capability-platform-completion.json", "config/native-migration-plan.json", "docs/evidence/capability-platform-workflow-replay-2026-10-10.md"] },
     { "id": "single-consumer-provider-scheduler-writer", "state": "verified-current-scope", "evidence": ["config/module-catalog.json", "config/capability-platform-deployment.json"] },
