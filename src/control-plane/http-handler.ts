@@ -10,8 +10,11 @@ export interface CloudHttpRequestV1 {
 
 export interface CloudHttpResponseV1 {
   readonly status: 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422
-  readonly body: Readonly<Record<string, unknown>>
+  readonly body: Readonly<Record<string, unknown>> | string
+  readonly contentType?: string
 }
+
+export interface CloudHttpRequestHandlerV1 { handle(request: CloudHttpRequestV1): Promise<CloudHttpResponseV1> }
 
 /** A fetch-independent request handler. It never opens a listener and never parses raw cookies or bearer credentials. */
 export class InactiveCloudHttpHandlerV1 {

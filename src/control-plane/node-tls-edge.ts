@@ -1,13 +1,13 @@
 import { createServer, type Server } from 'node:https'
 import { isIP, type AddressInfo } from 'node:net'
-import type { InactiveCloudHttpHandlerV1 } from './http-handler.js'
+import type { CloudHttpRequestHandlerV1 } from './http-handler.js'
 import { routeCloudHttpRequestV1 } from './node-http-adapter.js'
 
 export interface TlsCloudEdgeConfigV1 { readonly schemaVersion: 1; readonly enabled: true; readonly host: string; readonly port: number; readonly requestTimeoutMs: number; readonly maxConnections: number; readonly providerOwnership: 'shared-host'; readonly externalEffectsEnabled: false }
 export interface TlsCloudEdgeV1 { readonly host: string; readonly port: number; readonly protocol: 'TLSv1.3'; requestCount(): number; close(): Promise<void> }
 
 /** Explicit TLS edge around an existing handler. It never constructs providers or enables effects. */
-export async function openTlsCloudEdgeV1(value: unknown, credentials: { readonly key: Buffer; readonly cert: Buffer }, handler: Pick<InactiveCloudHttpHandlerV1, 'handle'>): Promise<TlsCloudEdgeV1> {
+export async function openTlsCloudEdgeV1(value: unknown, credentials: { readonly key: Buffer; readonly cert: Buffer }, handler: CloudHttpRequestHandlerV1): Promise<TlsCloudEdgeV1> {
   const config = validate(value); validateCredentials(credentials)
   let requests = 0
   const server = createServer({ key: credentials.key, cert: credentials.cert, minVersion: 'TLSv1.3', maxVersion: 'TLSv1.3' }, async (request, response) => { requests += 1; await routeCloudHttpRequestV1(handler, request, response) })

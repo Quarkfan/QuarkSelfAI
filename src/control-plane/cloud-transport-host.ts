@@ -1,6 +1,7 @@
 import type { CloudHttpRequestV1, CloudHttpResponseV1 } from './http-handler.js'
 import { InactiveCloudControlPlaneCompositionV1, type CloudControlPlaneCompositionDependenciesV1 } from './cloud-composition.js'
 import { handleSshSubsystemFrameV1 } from '../client-runtime/ssh-subsystem-server.js'
+import { cloudConsoleAssetV1 } from './cloud-console-surface.js'
 
 export interface PreparedCloudTransportHostConfigV1 {
   readonly schemaVersion: 1
@@ -22,7 +23,7 @@ export class PreparedCloudTransportHostV1 {
     return new PreparedCloudTransportHostV1(await InactiveCloudControlPlaneCompositionV1.open(value.composition, dependencies))
   }
 
-  async handleHttp(request: CloudHttpRequestV1): Promise<CloudHttpResponseV1> { return await this.composition.http.handle(request) }
+  async handleHttp(request: CloudHttpRequestV1): Promise<CloudHttpResponseV1> { return cloudConsoleAssetV1(request) ?? await this.composition.http.handle(request) }
   async handleSshFrame(frame: Buffer, now?: Date): Promise<Buffer> { return await handleSshSubsystemFrameV1(this.composition.sessions, frame, now) }
   async close(): Promise<void> { await this.composition.close() }
 }

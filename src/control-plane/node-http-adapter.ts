@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import type { InactiveCloudHttpHandlerV1 } from './http-handler.js'
+import type { CloudHttpRequestHandlerV1, CloudHttpResponseV1 } from './http-handler.js'
 
 const maxBodyBytes = 64 * 1024
 const sessionHeader = 'x-quark-session'
@@ -13,7 +13,7 @@ export interface EphemeralCloudEdgeV1 {
 }
 
 /** Test-only Node edge. It cannot bind a public interface or a fixed port. */
-export async function openEphemeralLoopbackCloudEdge(handler: InactiveCloudHttpHandlerV1): Promise<EphemeralCloudEdgeV1> {
+export async function openEphemeralLoopbackCloudEdge(handler: CloudHttpRequestHandlerV1): Promise<EphemeralCloudEdgeV1> {
   let requests = 0
   const server = createServer(async (request, response) => {
     requests += 1
@@ -30,25 +30,31 @@ export async function openEphemeralLoopbackCloudEdge(handler: InactiveCloudHttpH
   return Object.freeze({ host: '127.0.0.1', port: address.port, requestCount: () => requests, close: () => close(server) })
 }
 
-export async function routeCloudHttpRequestV1(handler: Pick<InactiveCloudHttpHandlerV1, 'handle'>, request: IncomingMessage, response: ServerResponse): Promise<void> {
+export async function routeCloudHttpRequestV1(handler: CloudHttpRequestHandlerV1, request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
-    if ((request.method !== 'GET' && request.method !== 'POST') || !request.url || request.url.includes('?')) return send(response, 400, { code: 'invalid-request' })
+    if ((request.method !== 'GET' && request.method !== 'POST') || !request.url || request.url.includes('?')) return send(response, { status: 400, body: { code: 'invalid-request' } })
     const sessionValue = request.headers[sessionHeader]
-    if (Array.isArray(sessionValue) || (sessionValue !== undefined && (sessionValue.length > 160 || !/^session:[a-z0-9][a-z0-9._:-]{0,127}$/.test(sessionValue)))) return send(response, 401, { code: 'unauthenticated' })
+    if (Array.isArray(sessionValue) || (sessionValue !== undefined && (sessionValue.length > 160 || !/^session:[a-z0-9][a-z0-9._:-]{0,127}$/.test(sessionValue)))) return send(response, { status: 401, body: { code: 'unauthenticated' } })
     let body: unknown
     if (request.method === 'POST') {
-      if (request.headers['content-type'] !== 'application/json') return send(response, 400, { code: 'invalid-body' })
+      if (request.headers['content-type'] !== 'application/json') return send(response, { status: 400, body: { code: 'invalid-body' } })
       body = JSON.parse(await readBoundedBody(request))
     }
     const result = await handler.handle({ method: request.method, path: request.url, ...(sessionValue ? { sessionReference: sessionValue } : {}), ...(request.method === 'POST' ? { body } : {}) })
-    send(response, result.status, result.body)
+    send(response, result)
   } catch {
-    send(response, 400, { code: 'invalid-request' })
+    send(response, { status: 400, body: { code: 'invalid-request' } })
   }
 }
 
-function send(response: ServerResponse, status: number, body: Readonly<Record<string, unknown>>): void {
-  response.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }).end(JSON.stringify(body))
+function send(response: ServerResponse, result: CloudHttpResponseV1): void {
+  const isAsset = typeof result.body === 'string'
+  response.writeHead(result.status, {
+    'content-type': isAsset ? result.contentType ?? 'text/plain; charset=utf-8' : 'application/json',
+    'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
+    'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY',
+    'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+  }).end(isAsset ? result.body : JSON.stringify(result.body))
 }
 
 function listen(server: Server): Promise<void> {
