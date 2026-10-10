@@ -55,14 +55,15 @@ test('resumes deactivation after a definition removal failure without requiring 
   try { await activateInstalledServerUserServiceV1(input, manager, new Date(), health(fixture)); manager.failRemove = true; await assert.rejects(deactivateInstalledServerUserServiceV1(fixture.install, manager), /synthetic remove failure/); assert.deepEqual(await manager.inspect(), { registered: false, running: false }); manager.failRemove = false; await deactivateInstalledServerUserServiceV1(fixture.install, manager); assert.equal(manager.installed, false) } finally { await rm(fixture.parent, { recursive: true, force: true }) }
 })
 
-test('upgrades and rolls back inactive program bytes without changing installation identity or tenant state', async t => {
-  const fixture = await setup(t); if (!fixture) return; const next = join(fixture.parent, 'next-distribution')
+test('rolls the single rollback slot across successive upgrades without changing identity or tenant state', async t => {
+  const fixture = await setup(t); if (!fixture) return; const next = join(fixture.parent, 'next-distribution'); const latest = join(fixture.parent, 'latest-distribution')
   try {
     await distributionFixture(next, '0.2.0', 'b'.repeat(40), 'next'); const beforeState = await readFile(join(fixture.install, 'state/control.sqlite3'))
     const upgraded = await upgradeInactiveInstalledServerProgramV1(fixture.install, next, new Date('2026-10-10T01:00:00Z')); assert.equal(upgraded.installationId, fixture.installationId); assert.equal(upgraded.toVersion, '0.2.0')
     const current = await recoverInactiveServerInstallation(fixture.install); assert.equal(current.schemaVersion, 2); assert.equal(current.sourceRevision, 'b'.repeat(40)); assert.deepEqual(await readFile(join(fixture.install, 'state/control.sqlite3')), beforeState)
-    const rolledBack = await rollbackInactiveInstalledServerProgramV1(fixture.install, new Date('2026-10-10T02:00:00Z')); assert.equal(rolledBack.toVersion, '0.1.0')
-    const restored = await recoverInactiveServerInstallation(fixture.install); assert.equal(restored.installationId, fixture.installationId); assert.equal(restored.sourceRevision, 'a'.repeat(40)); assert.deepEqual(await readFile(join(fixture.install, 'state/control.sqlite3')), beforeState)
+    await distributionFixture(latest, '0.3.0', 'c'.repeat(40), 'latest'); await upgradeInactiveInstalledServerProgramV1(fixture.install, latest, new Date('2026-10-10T02:00:00Z'))
+    const rolledBack = await rollbackInactiveInstalledServerProgramV1(fixture.install, new Date('2026-10-10T03:00:00Z')); assert.equal(rolledBack.toVersion, '0.2.0')
+    const restored = await recoverInactiveServerInstallation(fixture.install); assert.equal(restored.installationId, fixture.installationId); assert.equal(restored.sourceRevision, 'b'.repeat(40)); assert.deepEqual(await readFile(join(fixture.install, 'state/control.sqlite3')), beforeState)
   } finally { await rm(fixture.parent, { recursive: true, force: true }) }
 })
 
