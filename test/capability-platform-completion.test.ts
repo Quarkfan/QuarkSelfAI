@@ -25,5 +25,8 @@ test('separates canonical form evidence from activation and fails closed on life
   assert.ok(report.blockers.includes('private-integration:host-contract-compatibility-missing'))
   assert.equal(privateReceipt.validationState, 'verified-inactive-lifecycle')
   assert.equal(privateReceipt.inactiveLifecycleRehearsalVerified, true)
+  assert.equal(privateReceipt.adapterContractVerified, true)
+  assert.equal(privateReceipt.migratedHostImportCount, 12)
+  assert.equal(privateReceipt.hostContractCompatibilityVerified, false)
   assert.ok(candidates.every((candidate: { activationAllowed: boolean }) => candidate.activationAllowed === false))
 })

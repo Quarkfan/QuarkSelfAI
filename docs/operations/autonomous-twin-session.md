@@ -2081,3 +2081,10 @@
 - 新增封闭的 `WorkPackManifestV1`、`WorkPackRegistrationV1`、`WorkExecutionContextV1` 与窄 `WorkHostPortsV1`。运行时 validator 拒绝未知字段、未固定 revision/digest、restore effects、路径/秘密形态 context 与 mid-action executor switch；同一规范化 context 覆盖 Claude Code、Codex 与 DSH。
 - 新增通用 Cordis registry 并挂入 base profile。registry 只提供 `registerInactive`，没有 activate/start API；重复 pack 或 exclusive ownership 在注册前失败关闭。空 registry 审计证明 pack binding、consumer、active provider、scheduler、external writer 全部为 0，且不包含业务标识、主机路径或凭证。
 - 主线仍不读取私有仓库，私有 adapter conformance 尚未完成；因此 `host-contract-compatibility-missing` 不移除，也不宣称五形态完成。registry 复用既有 `./platform` 导出，未修改或暂存用户有改动的 `package.json`。回滚为撤销公共 contract、registry、profile mount、catalog/migration 映射和本记录；没有 pack 或外部状态需要补偿。
+
+## 2026-10-10 — Private adapter conformance without compatibility overclaim
+
+- 私有 revision `5541df2a9977ab2e1fbb1013055c61891a648fb9` 固定公共 core revision `f127873537e47cb330b83c99eb92ae9f6eeb0f09` 与 contract source digest。新 adapter 不导入主线源码，只产生封闭 Manifest、inactive registration 和共享 executor context。
+- 私有审计通过主线正式 validator 和空 registry 验证 adapter；Claude Code、Codex、DSH 除 `actual executor` 外使用相同规范化 context。验证后 registry 只有 1 个 inactive 描述，consumer/active provider/scheduler/external writer 为 0，activation API 不存在。
+- 扫描同时证明旧迁移资产仍有 12 处对宿主内部模块的相对导入。因此主线 receipt 只记录 `adapterContractVerified=true`，保留 `hostContractCompatibilityVerified=false` 与 `host-contract-compatibility-missing`，不把 adapter 外壳冒充整个 pack 已完成。
+- 本批未安装或加载 pack，未调用 host ports，未执行 `pack/**`，未改变 runtime composition、服务、消费者/provider/writer 或外部状态。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未修改、未暂存。

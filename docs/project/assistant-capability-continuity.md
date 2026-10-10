@@ -38,7 +38,7 @@ Codex 周期任务的 host/project id 同样属于设备绑定。仓库只保存
 核心启动依赖。
 
 当前已创建并发布独立私有仓库 `QuarkSelfAI-Work`；GitHub 页面已确认 visibility 为 `Private`。远端 `main` 当前 revision
-`79870810da3adf5f843d22fb96a2b4d44b126f91` 保存 99 个来源资产的逐项内容摘要、分类、计划动作和审阅依据，以及首批 20 个
+`5541df2a9977ab2e1fbb1013055c61891a648fb9` 保存 99 个来源资产的逐项内容摘要、分类、计划动作和审阅依据，以及首批 20 个
 非激活内容目标。候选结论仍为私有复制 21、主线泛化 64、脱敏回放 9、历史退休 5；首批精确批准覆盖 21 项处置，其中
 实际落盘 20 项、排除 1 项、允许激活数为 0。审计确认未启用消费者或外部写入，且账本可从固定主线 revision 完整重建。
 它现在是跨终端可取回的工作集成内容真源；签名 artifact 已在隔离临时目录完成不执行内容的 install/recover/uninstall
@@ -48,7 +48,8 @@ Codex 周期任务的 host/project id 同样属于设备绑定。仓库只保存
 
 阶段 2 host contract 设计已固化在 ADR 0091、`docs/project/work-integration-host-contract.md` 和
 `config/work-integration-host-contract-proposal.json`。owner 已全面授权继续实施；公共 v1 contract 与没有 activation API 的空
-registry 已进入 base profile，私有 adapter 仍待 conformance。恢复顺序明确为先在无 pack、无
+registry 已进入 base profile，私有结构化 adapter 已通过正式 validator 的离线 conformance，但迁移资产仍有 12 处宿主内部
+相对导入，所以整个 pack compatibility 仍未通过。恢复顺序明确为先在无 pack、无
 公司工作区和无公司网络条件下完成核心 restore-safe，再按精确私有 revision/digest 重建并安装 inactive pack；安装不会恢复
 消费者、provider ownership、external write 或 takeover confirmation；授权不构成跳过这些运行安全门禁。
 
