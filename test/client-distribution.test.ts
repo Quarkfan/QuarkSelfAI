@@ -23,3 +23,9 @@ test('rejects public distribution files', async () => {
   try { const root = await createClientDistributionFixture(parent); await chmod(join(root, 'program/package.json'), 0o644); await assert.rejects(verifyClientDistribution(root), /file is unsafe/) }
   finally { await rm(parent, { recursive: true, force: true }) }
 })
+
+test('build entry binds a claimed source revision to the current Git HEAD', async () => {
+  const source = await readFile(new URL('../scripts/build-client-distribution.ts', import.meta.url), 'utf8')
+  assert.match(source, /\/usr\/bin\/git'.*\['rev-parse', 'HEAD'\]/)
+  assert.match(source, /revision !== actualRevision/)
+})

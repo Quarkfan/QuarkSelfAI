@@ -15,6 +15,8 @@ try { await lstat(root); throw new Error('output already exists') } catch (error
   await mkdir(join(root, 'program/migrations/client-sqlite'), { recursive: true, mode: 0o700 })
 try {
   const sourceRoot = await projectRoot
+  const actualRevision = (await runGitRevision(sourceRoot)).trim()
+  if (revision !== actualRevision) throw new Error('revision must equal the current source HEAD')
   await runEsbuild(sourceRoot, 'src/client-runtime/client-entry.ts', join(root, 'program/dist/client-runtime/client-entry.js'))
   await runEsbuild(sourceRoot, 'src/client-runtime/client-installer-entry.ts', join(root, 'program/dist/client-runtime/client-installer-entry.js'))
   for (const [source, destination] of [
@@ -41,5 +43,6 @@ try {
 }
 
 async function runEsbuild(sourceRoot: string, source: string, destination: string): Promise<void> { await new Promise<void>((accept, reject) => { const child = spawn(join(sourceRoot, 'node_modules/.bin/esbuild'), [source, '--bundle', '--platform=node', '--format=esm', '--target=node22', `--outfile=${destination}`, '--log-level=warning'], { cwd: sourceRoot, stdio: ['ignore', 'ignore', 'inherit'], shell: false }); child.once('error', reject); child.once('close', code => code === 0 ? accept() : reject(new Error('client entry bundling failed'))) }) }
+async function runGitRevision(sourceRoot: string): Promise<string> { return await new Promise<string>((accept, reject) => { let output = ''; const child = spawn('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, stdio: ['ignore', 'pipe', 'ignore'], shell: false }); child.stdout.setEncoding('utf8'); child.stdout.on('data', chunk => { if (output.length < 64) output += String(chunk) }); child.once('error', reject); child.once('close', code => code === 0 && /^[a-f0-9]{40}\n?$/.test(output) ? accept(output) : reject(new Error('current source revision is unavailable'))) }) }
 async function runtimeClosure(root: string, initial: readonly string[]): Promise<readonly string[]> { const found = new Set<string>(); const pending = [...initial]; while (pending.length) { const name = pending.shift()!; if (found.has(name)) continue; const manifest = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8')) as { dependencies?: Record<string, string>; optionalDependencies?: Record<string, string> }; found.add(name); for (const dependency of Object.keys({ ...manifest.dependencies, ...manifest.optionalDependencies }).sort()) { try { await lstat(join(root, 'node_modules', dependency, 'package.json')); pending.push(dependency) } catch { /* platform-optional dependency absent */ } } } return [...found].sort() }
 async function makePrivate(root: string): Promise<void> { async function visit(path: string): Promise<void> { const state = await lstat(path); if (state.isDirectory()) { await chmod(path, 0o700); const { readdir } = await import('node:fs/promises'); for (const name of await readdir(path)) await visit(join(path, name)) } else if (state.isFile()) await chmod(path, (state.mode & 0o100) !== 0 ? 0o700 : 0o600); else throw new Error('client distribution contains an unsupported file') } await visit(root) }

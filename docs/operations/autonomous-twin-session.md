@@ -2138,3 +2138,8 @@
 - 真实本地控制面使用带 `127.0.0.1` SAN 的私有 CA 证书；客户端 transport 正确强制 HTTPS，但此前 service definition 无法提供该 trust anchor，导致真实 enrollment/worker 必然在 TLS 握手失败。新增显式 `tlsCaCertificatePath` 到 service preparation contract。
 - prepare/recover 均验证 trust anchor 是 canonical、owner-only、单链接、非 symlink 的有界 PEM certificate，且不含 private-key/credential-shaped 内容。launchd/systemd 仅设置 `NODE_EXTRA_CA_CERTS`，不关闭证书或 hostname 校验；公开 CA 的服务器仍可使用系统信任链。
 - 本批尚未注册或启动 client service。若准备后 CA 文件漂移、丢失或权限放宽，恢复与激活前检查失败关闭；回滚先用 digest-verified unregistered-service removal，保留 client state 与证书源。
+
+## 2026-10-10 — Client distribution revision binding
+
+- 首次准备最新 client distribution 时，构建入口接受了格式正确但不对应当前 Git HEAD 的 40 位 revision；该新建目录尚未安装或使用，已被精确删除且不可恢复，未触及其他 release 或用户文件。
+- 构建入口现在通过固定 `/usr/bin/git rev-parse HEAD` 回读 revision，并要求调用方声明完全一致后才开始 bundling/seal；失败会清理本次新建输出目录。回归测试固定这一 supply-chain 门禁，避免内容寻址 manifest 带上伪造源码血缘。
