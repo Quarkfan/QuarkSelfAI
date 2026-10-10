@@ -1972,3 +1972,12 @@
 - 回滚为撤销本轮代码、协作契约和治理记录，并在安全空闲窗口重启同一 LaunchAgent；若已完成补偿，只保留最终结论的既有通知与任务记录，不撤回外部消息，不恢复错误的中间态结果。
 - 执行记录：`requestedExecutor=Codex`、`actualExecutor=Codex`；未调用小维、未创建第二消费者、未改变 DSH/Cordis composition、凭证、权限或业务数据边界。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本轮提交。
 - 实现提交 `8956b43` 已推送 `origin/main`。完整 `npm run check` 通过：主项目 535 项中 522 通过、13 项仅因 sandbox listener 限制跳过，compat 188/188；架构为 138 modules、123 assets、23/23 effects implemented、0/23 active，strict work-domain、assistant continuity、capability evolution installed 与根同步门禁通过。等待既有 Claude 投影子任务自然结束后，备份兼容状态并只恢复今天这一条精确关联，随后重启同一 LaunchAgent；最终结论已重新关联并成功发送一次 owner 通知，单实例健康 `ok=true`、compat worker/DSH kernel/5 条事件能力 ready。滴答写回首次补偿仍失败并按原退避保留，最终结论没有再次丢失，后续由既有同请求重试继续处理。
+
+## 2026-10-10 — Capability platform cloud service activation transaction
+
+- 继续执行 owner 已全面授权的能力平台目标。当前证据仍显示整体为 `runtime-inactive`：虽然发行、安装、首 owner、prepared service 与 pinned TLS health 都已具备，但缺少把 service-manager 外部状态和平台 lineage 原子闭合的激活事务，因此不能把既有脚手架宣称为真实服务。
+- 新增 ADR 0171、`server-service-activation` 与独立 `launchctl-server-service-adapter`。事务在复制或注册前写入 durable intent，仅当固定 launchd user service 同时回读 `registered+running` 且 installed certificate-pinned TLS health 的 installation/configuration lineage 一致时提交 `service-active-effects-off` receipt；第二 owner 被拒绝。
+- 普通失败按 stop/unregister → digest-verified definition removal 反序回滚。若注销失败，保留 definition 与 intent，禁止继续删除；若停用已完成注销但删除 definition 失败，则保留 deactivation intent，并允许下一次在服务已停止的情况下继续完成。任何停用或失败恢复都不删除 tenant database、安装配置、TLS material 或 prepared rollback release。
+- `launchctl` 调用被架构门禁要求拆入 adapter 层；operations 只依赖窄 service-manager port。admin entry 新增 exact `activate-service`、`reconcile-service` 与 `deactivate-service`，公开 receipt 不输出路径、tenant metadata 或凭证，SSH gateway 与 external effects 仍关闭。systemd 目前只有 prepared definition，不宣称激活支持。
+- 验证：激活/回滚/崩溃恢复与 admin 定向回归 10/10；完整 `npm run check` 通过，架构为 139 modules、123 assets、23/23 effects implemented、0/23 active，Capability migration exactly-once 为 139/139、78 个 platform-core Offer，控制台设计矩阵 50/50。strict work-domain、assistant continuity 与根同步门禁通过。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未修改、未暂存。
+- 本批只形成可执行且可恢复的 macOS 服务激活边界，尚未实际注册平台服务；下一步以本批提交 revision 构建 sealed server distribution，在独立本地 state 与 effects-off 配置上执行安装、首 owner、注册、TLS health、停用/恢复演练，再决定持久运行。回滚为撤销本批代码、ADR、catalog/migration 映射和治理记录；现网 QuarkSelfAI consumer/provider/writer 未改变且无需重启。

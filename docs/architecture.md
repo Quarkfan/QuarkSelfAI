@@ -27,7 +27,7 @@ Phase 5A 增加端到端 no-effect shadow-run harness；Phase 5B 增加签名计
 探测描述、隐私有界分类和永不 armed 的选择 preflight。经精确授权的 Pilot 01 进一步增加固定 host process adapter 与 test-only
 loopback adapter：真实读取仅运行三个固定 `--version`，签名 no-effect lease 只在 `127.0.0.1:0` 往返并形成内存 checkpoint，随后
 立即关停。Claude Code 与 Codex 已检测到版本但因认证状态未知而保持不可运行；DSH 是仓库锁定的内建 runtime，并非当前主机上的
-`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 138 个模块，
+`dsh` CLI，后续 fallback adapter 必须按 bundled-runtime contract 接入，不能把 host binary 当成前置。当前共 139 个模块，
 均已纳入 exactly-once 映射。
 
 Phase 4A 按 [ADR 0097](adr/0097-module-to-capability-offer-transition.md) 将每个模块编译为唯一 Offer。核心、通用 artifact、
@@ -148,6 +148,11 @@ owner record 且 PID 已消失时才 quarantine 回收，未知或扩展 state �
 [ADR 0167](adr/0167-installed-unregistered-server-service-preparation.md) 把 sealed templates 带入发行包，并在 installation 内建立独立 `service`
 namespace。bundled admin 只能从 sealed template 生成并回读一个 content-addressed `service-prepared-inactive` 定义；registered/started/auto-start/effects
 继续固定关闭。rollback 只删除 runtime 为空、lineage/layout/digest 全部复核通过的未注册 preparation，不写系统 service 目录或调用 service manager。
+[ADR 0171](adr/0171-transactional-user-service-activation.md) 在上述准备态之后增加 durable activation transaction：先写 intent，再安装精确
+definition、注册并启动固定 launchd user service，只有 service-manager 单实例状态与 installed certificate-pinned TLS health 的 installation/configuration
+lineage 同时回读成功才提交 active receipt。普通失败按 stop/unregister/remove 反序回滚；崩溃遗留 intent 可由同一事务 reconcile，停用保留 tenant database、
+配置、TLS material 与 prepared rollback release。当前实现只覆盖 macOS launchd，且始终 `externalEffectsEnabled=false`；尚未实际注册本机平台服务，Linux
+systemd 激活、客户端服务激活、SSH gateway apply 和既有 owner cutover 仍是独立门禁。
 
 Phase 2A 的客户端边界由 [ADR 0093](adr/0093-local-client-identity-discovery-and-plan-boundary.md) 定义。云端可见设备身份不含
 私钥；执行器报告不含可执行路径、命令输出或认证材料；协商只返回满足 signed plan requirement 的选择，不启动进程。

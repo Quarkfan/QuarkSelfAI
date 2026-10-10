@@ -119,7 +119,8 @@
 - 通用 work integration host contract 以 ADR 0091 为设计真源。核心只依赖通用 contract 与唯一 registry；私有 pack 只能反向
   依赖该 contract，并通过设备本地、精确 revision/digest、默认关闭的 overlay 注册。pack 不得自建消费者、durable scheduler、
   审批真源、executor router、workspace allowlist 或第二写入链路；Codex、Claude Code 与 DSH 必须共享同一规范化执行上下文。
-  当前提案未批准，不能据此修改 live composition、安装/激活 pack、执行 shadow/cutover、删除主线来源或重启服务。
+  当前平台总目标已获 owner 连续执行授权，但 pack 仍须按精确 revision/digest、单 provider 事务和回读证据逐批推进；不得把该授权解释为允许双消费者、双写、泄露工作数据或跳过回滚门禁。
+- 云端用户服务激活必须复用 ADR 0171 的 durable intent：只注册 sealed definition，启动后同时回读 service-manager 单实例状态与 installed certificate-pinned TLS health 才能提交 active receipt。失败先 stop/unregister 再删除精确定义；停用不得删除 tenant state、配置、TLS material 或 rollback release。当前只实现 launchd user service，systemd 不得伪装成已支持。
 - compatibility handoff 审计是切换前安全门禁。凡目标原生 workflow 需要资源 scope 或 durable owner authorization，审计入口
   必须从当前 compatibility 配置恢复同一目标，并携带仓库已登记的精确授权证据；缺少任一字段即失败关闭。公开回执只保留
   计数、内容摘要和资源标识哈希，不能输出 projectId、任务正文、联系人或授权外的新写入能力。
