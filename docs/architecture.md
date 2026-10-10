@@ -164,6 +164,9 @@ server 已真实安装并进入 `configured-inactive`，但主机授权层拒绝
 DSH fallback 的推理凭证不再要求写入启动 shell 或服务定义。client bootstrap 可选携带 HTTPS endpoint、model 与 opaque `secret:*` reference；
 发现只读取 reference 是否可用，执行器仅在 DSH 子进程生命周期内通过加密本地 secret store 注入 key，随后清零解密副本。云端与公开 receipt
 只看到可用性，不看到 reference、endpoint 或 secret。该默认未配置边界见 [ADR 0174](adr/0174-opaque-local-dsh-inference-secret-binding.md)。
+installed installer 进一步提供默认关闭的本地管理入口：master key 必须单独写入 OS Keychain，DSH secret 只从 stdin 接收并写入 sealed bootstrap 指定的
+唯一 reference；查询与公开回执只暴露 configured/absent，移除不会删除其他 secret、设备身份或安装状态。所有凭证写入/删除仍要求精确 admin gate，且本实现
+没有读取或变更真实凭证，见 [ADR 0175](adr/0175-gated-installed-client-secret-provisioning.md)。
 
 平台终局不再由 Phase 0 的“模块映射 100% / 控制台设计覆盖 100%”间接推断。`config/capability-platform-completion.json` 与
 `scripts/audit-capability-platform-completion.ts` 逐项对照目标验收口径，并用当前 deployment、module/migration、artifact candidate、product composition

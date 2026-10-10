@@ -2014,3 +2014,12 @@
 - 配置客户端只能把 key 明确写入既有加密本地 secret store。发现阶段只检查 exact reference 是否存在并传递合成 presence，不读取/上传 key；执行阶段只在 DSH child 的有界生命周期内解密与注入，callback 结束立即清零 byte copy。Claude Code/Codex 环境不接收该 binding。
 - 本批没有读取、迁移或写入任何真实凭证，没有运行 DSH、改变 service definition、deployment 或 runtime composition。真实 provisioning 仍是独立本地 credential mutation；完成三执行器 gate 仍需配置后重跑同一 pilot。
 - 验证：新增/受影响定向测试 23/23；完整主测试 550 项中 537 通过、13 项因沙箱监听限制跳过，兼容层 190/190；架构仍为 142 modules、126 assets、0/23 effects active；严格工作域隔离、助手连续性和根入口同步均通过。
+
+## 2026-10-10 — Installed client secret provisioning boundary
+
+- ADR 0174 已让运行期只依赖 opaque DSH secret reference，但 sealed installer 尚无安全配置入口。新增独立 `client-secret-provisioning` module：每次先恢复并校验 installation/bootstrap，只允许读写其中唯一 `apiKeyRef`；Keychain master key 与加密 store 均在操作后关闭并清零副本。
+- bundled installer 新增 `provision-master-key`、`provision-dsh-secret`、`dsh-secret-status` 和 `remove-dsh-secret`。三个 mutation 要求精确 `QUARK_CLIENT_ADMIN_ENABLE=1`；DSH 值只从 stdin 读取，拒绝空值、超界、NUL/换行并清零临时 buffer。公开回执不含 reference、endpoint、model、路径或秘密值；store 尚不存在时，status/幂等 remove 不读取 Keychain、不创建目录。
+- 创建 secret store 属于 durable client state，因此即使删除 DSH reference，`uninstall-unused` 也失败关闭，避免把已初始化设备误称为未使用。删除命令只移除 exact DSH reference，不删除 master key、设备身份或其他 client state。
+- 本批没有设置 admin gate，没有读取、生成、迁移、写入或删除真实凭证，没有启动 DSH/客户端服务、连接云端、注册设备、改变现网 composition 或产生外部写。三个 executor 实跑 gate 仍因 DSH 未配置而保持未完成。
+- 回滚为撤销本批 module、installer commands、ADR 与 catalog/migration 映射；不得把回滚解释为授权删除已存在的本地 secret state。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本批。
+- 验证：定向构建与 14 项受影响测试通过；完整主测试 551 项中 538 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。架构为 143 modules、82 个 platform-core Offer、126 assets、23/23 effects implemented、0/23 active；strict work-domain、assistant continuity 与根入口同步通过。终局完成度审计仍只验证 3 项并如实保留原 9 个 blocker。

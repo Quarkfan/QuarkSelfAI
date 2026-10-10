@@ -4,7 +4,7 @@
 
 2026-09-06 新增的多用户云控制面、本地客户端、广义 Capability Artifact 与 Agent Blueprint 目标，统一由
 [`docs/product/capability-platform-prd.md`](product/capability-platform-prd.md) 管理。原有 99 个模块与新增静态 contract module
-（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec、registered-tenant inactive composition、客户端服务准备/激活与 launchd adapter、会前简报候选，合计 142 个）的拟迁移处置见
+（当前另含 Phase 1–5E、Pilot 01、inactive registry/provider、本地制品存储、客户端 composition、加密 secret store、Keychain bootstrap、双端 device-code enrollment、客户端发行、云身份、device wire codec、registered-tenant inactive composition、客户端服务准备/激活、secret provisioning 与 launchd adapter、会前简报候选，合计 143 个）的拟迁移处置见
 `config/capability-platform-migration.json`；控制台的 control/monitor/manage 覆盖见
 `config/capability-platform-console-coverage.json` 和独立 HTML POC。机器审计必须确认模块 exactly-once 与控制台设计覆盖率
 100%，但该数值只代表 Phase 0 设计完整性，不代表运行实现、切换或上线完成。下表继续记录现有产品事实与接管门禁。
@@ -80,6 +80,7 @@ DSH 使用锁定产品 headless CLI、stdin host、allowlisted environment 和�
 pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallback 已完成。
 Pilot 04 在 revision `e66311b` 重新核验当前宿主：Claude Code 与 Codex 均完成同一签名 `envelope.v1`，外层工具沙箱内的超时/初始化拒绝不再被误判为 executor contract failure；DSH 因当前执行上下文缺少推理凭证配置而在 readiness 阶段停止。三个执行器统一契约仍未完成，deployment 的 `executorContractVerified` 保持 false。
 客户端现支持可选、闭合的 DSH inference binding：bootstrap 仅保存 HTTPS endpoint、model 与 opaque `secret:*` reference；key 由既有加密本地 store 持有，发现阶段只取存在性，执行时才在有界回调内注入 DSH 子进程并清零解密副本。该能力默认未配置，本批未迁移或读取真实 key，因此只消除服务环境依赖，不构成 DSH pilot 成功证据。
+安装后凭证生命周期已有默认关闭的可执行入口：master key 与 DSH secret 分开 provision，secret 只能由 stdin 进入并绑定 sealed plan 的 exact opaque reference；status 与回执不暴露 reference、endpoint 或值，删除只影响该 reference。当前没有执行任何真实凭证变更，DSH pilot 仍保持未完成。
 
 客户端现有独立 no-effect worker，可在显式 start 后由单 owner 串行驱动 executor discovery 与 signed reasoning cycle；失败只记录稳定码并按
 有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。installed-client process 已把安装恢复、pinned verifier、Keychain-backed client
