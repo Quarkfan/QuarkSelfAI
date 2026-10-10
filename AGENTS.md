@@ -122,6 +122,7 @@
   当前平台总目标已获 owner 连续执行授权，但 pack 仍须按精确 revision/digest、单 provider 事务和回读证据逐批推进；不得把该授权解释为允许双消费者、双写、泄露工作数据或跳过回滚门禁。
 - 云端用户服务激活必须复用 ADR 0171 的 durable intent：只注册 sealed definition，启动后同时回读 service-manager 单实例状态与 installed certificate-pinned TLS health 才能提交 active receipt。失败先 stop/unregister 再删除精确定义；停用不得删除 tenant state、配置、TLS material 或 rollback release。当前只实现 launchd user service，systemd 不得伪装成已支持。
 - 平台总目标完成度以 `config/capability-platform-completion.json` 与 `scripts/audit-capability-platform-completion.ts` 为失败关闭真源；Phase 0 设计覆盖、单元测试或 inactive scaffold 不能替代真实安装、运行、租户、客户端、replay、恢复和退役证据。审计仍有 blocker 时不得宣称目标完成。
+- 工具、程序包、无头浏览器、私有集成和交互式应用的形态覆盖必须使用 Capability Manifest 的规范 kind（如 `cli`、`browser-runtime`）和逐形态生命周期证据；候选登记、contract-only scaffold 或 `activationAllowed=false` 不能单独证明已发布、安装或激活。无头浏览器必须经过本地 ephemeral profile、网络 allowlist、workspace policy 与 durable approval，云端不得下发任意浏览器脚本或持久 profile。
 - compatibility handoff 审计是切换前安全门禁。凡目标原生 workflow 需要资源 scope 或 durable owner authorization，审计入口
   必须从当前 compatibility 配置恢复同一目标，并携带仓库已登记的精确授权证据；缺少任一字段即失败关闭。公开回执只保留
   计数、内容摘要和资源标识哈希，不能输出 projectId、任务正文、联系人或授权外的新写入能力。

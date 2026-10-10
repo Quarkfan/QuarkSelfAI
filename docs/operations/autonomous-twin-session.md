@@ -2048,3 +2048,11 @@
 - 新增 ADR 0178。默认 manifest/profile 移除三个私有 work module 和对应 BLACKLAKE/XIAOWEI 配置；推理 provider 改为功能性名称。architecture gate 只对 migration registry 中精确标为 `private-work-integration` 的插件免除默认 profile mount，仍检查 package ownership，且不能替换 platform core。
 - 通用 work journal 改用纯本地 durable ledger evidence 与 deterministic compiler；它不启动 Claude/Codex、读取飞书/Jira/GitLab 或假装外部覆盖完整。私有包未来只能通过现有 evidence/compiler ports 扩展。
 - 当前 compatibility runtime、私有 pack、consumer/provider/writer、凭证与外部写均未改变。主线仍保留过渡期私有源码和历史证据，所以 continuity 的 `work-integration-not-yet-isolated` 继续成立，本批不宣称隔离完成。
+
+## 2026-10-10 — Governed headless browser capability form
+
+- 完成度复核发现五类能力形态仍缺少产品侧无头浏览器 host contract，且原完成审计使用了非 Manifest 规范的 `tool/browser` kind，并错误地把“所有候选已激活”混入形态覆盖判断。该审计缺陷尚未用于提前放行，`five-capability-forms` 继续保持 incomplete。
+- 新增 ADR 0179 与 closed `HeadlessBrowserLaunchV1`/`HeadlessBrowserHostPortV1`。contract 只允许 ephemeral profile、禁止下载和外部写，网络只能是 denied/Blueprint allowlist，workspace 只能是 denied/经批准读/写；本批没有浏览器 adapter、没有启动浏览器或创建 profile，也没有授予网络、文件或桌面权限。
+- module catalog 和迁移矩阵新增 `headless-browser-runtime`，candidate catalog 使用正式 kind 表达五种代表形态：`cli`、`package`、`browser-runtime`、`integration-pack`、`application`。所有 candidate 仍为 evidence-pending、unpublished、inactive，不能据此宣称五类制品已完成。
+- 验证：完整 `npm run check` 通过，主项目 559 项中 546 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190；架构为 145 modules、126 assets、23/23 effects implemented、0/23 active。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未修改、未暂存。
+- 回滚为移除 browser contract、module/candidate/migration 映射、ADR 与本记录；没有持久状态、第三方代码或运行 owner 需要迁移。下一批必须建立逐形态的 content-addressed Manifest 与生命周期证据，并修正完成审计为“形态证据”和“激活状态”相互独立的门禁。

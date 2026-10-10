@@ -1,6 +1,7 @@
 {
   "version": 3,
   "modules": [
+    { "id": "headless-browser-runtime", "classification": "feature", "layer": "contract", "implementation": "ready", "runtime": "static", "source": "src/capability-platform/headless-browser-runtime.ts", "owns": ["src/capability-platform/headless-browser-runtime.ts"], "dependsOn": [] },
     { "id": "dsh-runtime", "classification": "skeleton", "layer": "kernel", "implementation": "ready", "runtime": "active", "source": "node_modules/@deepseek-ai/dsh-agent/package.json", "owns": [], "dependsOn": [], "providesServices": ["agents", "subagents", "llm", "tools", "dynamicCordisRunner"] },
     { "id": "lifecycle-host", "classification": "skeleton", "layer": "kernel", "implementation": "ready", "runtime": "active", "source": "src/platform/lifecycle.ts", "owns": ["src/platform/lifecycle.ts"], "dependsOn": [] },
     { "id": "application-host", "classification": "skeleton", "layer": "kernel", "implementation": "ready", "runtime": "active", "source": "src/bootstrap/host.ts", "owns": ["src/bootstrap/host.ts", "src/bootstrap/run.ts"], "dependsOn": ["lifecycle-host"] },
