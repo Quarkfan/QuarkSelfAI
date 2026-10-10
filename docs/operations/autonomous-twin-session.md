@@ -2143,3 +2143,9 @@
 
 - 首次准备最新 client distribution 时，构建入口接受了格式正确但不对应当前 Git HEAD 的 40 位 revision；该新建目录尚未安装或使用，已被精确删除且不可恢复，未触及其他 release 或用户文件。
 - 构建入口现在通过固定 `/usr/bin/git rev-parse HEAD` 回读 revision，并要求调用方声明完全一致后才开始 bundling/seal；失败会清理本次新建输出目录。回归测试固定这一 supply-chain 门禁，避免内容寻址 manifest 带上伪造源码血缘。
+
+## 2026-10-10 — Real client installed inactive
+
+- revision `a45a1545e066a3fb444e80ac273ca03f9a0d699d` 已构建 30,368 文件、428 包的 sealed client distribution，artifact digest 为 `sha256:4846ca6329927332560b0d80aaa0084b23f7d21095e64347337e2e1c7edd0a1c`。bundled installer 真正创建并回读 installation `installation.55d77b67c79ec65ad1e0b93edc9a3458`，状态为 `installed-inactive`、auto-start false、external writes false。
+- 精确 client master-key provisioning 被宿主安全审查拒绝：此前全面平台授权不足以替代凭证变更的逐项明确确认。没有绕过、替代 Keychain 命令或间接注入；当前没有 master key、设备身份/enrollment、service definition、client process 或 executor 调用。
+- 完成度审计仍为 in-progress：4 项 verified、8 项 blocker。`installable-client-and-device-enrollment` 只从 not-installed 收敛到 installed-inactive，不能提前标记完成。

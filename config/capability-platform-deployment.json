@@ -16,12 +16,18 @@
     "externalEffectsEnabled": false
   },
   "client": {
-    "installationState": "not-installed",
+    "installationState": "installed-inactive",
+    "version": "0.2.0",
+    "sourceRevision": "a45a1545e066a3fb444e80ac273ca03f9a0d699d",
+    "distributionDigest": "sha256:4846ca6329927332560b0d80aaa0084b23f7d21095e64347337e2e1c7edd0a1c",
+    "installationId": "installation.55d77b67c79ec65ad1e0b93edc9a3458",
     "deviceEnrolled": false,
     "serviceRegistered": false,
     "externalWritesEnabled": false
   },
-  "blockedBy": [],
+  "blockedBy": [
+    "explicit-owner-confirmation-for-client-keychain-master-key-write"
+  ],
   "privacy": {
     "containsCredentialValues": false,
     "containsAbsolutePaths": false,
