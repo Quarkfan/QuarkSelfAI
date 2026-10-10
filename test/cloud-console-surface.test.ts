@@ -11,12 +11,14 @@ test('serves a dependency-free same-origin Agent Studio without tenant data', ()
   assert.doesNotMatch(String(page?.body), /test\.alpha|session:|\/Users\//)
 
   const script = String(cloudConsoleAssetV1({ method: 'GET', path: '/agent-studio.js' })?.body)
-  for (const endpoint of ['/v1/auth/login', '/v1/auth/me', '/v1/agent-drafts', '/v1/capabilities', '/v1/devices', '/v1/agent-drafts/publish-test', '/v1/agent-drafts/dispatch-test']) assert.match(script, new RegExp(endpoint.replaceAll('/', '\\/')))
+  for (const endpoint of ['/v1/auth/login', '/v1/auth/me', '/v1/users', '/v1/device-enrollments/approve', '/v1/agent-drafts', '/v1/capabilities', '/v1/devices', '/v1/agent-drafts/publish-test', '/v1/agent-drafts/dispatch-test']) assert.match(script, new RegExp(endpoint.replaceAll('/', '\\/')))
   assert.match(script, /crypto\.subtle\.digest\('SHA-256'/)
   assert.match(script, /allowMidActionSwitch:false/)
   assert.match(script, /workspaceHandles:\[\],permissions:\[\]/)
   assert.match(script, /externalWritesEnabled/)
   assert.doesNotMatch(script, /localStorage|document\.cookie|eval\(|new Function/)
+  assert.match(script, /form\.elements\.password\.value=''/)
+  assert.match(String(page?.body), /添加成员|批准客户端/)
 })
 
 test('exposes only fixed GET assets and leaves API routing to the shared host', () => {
