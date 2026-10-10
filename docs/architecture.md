@@ -161,6 +161,10 @@ server 已真实安装并进入 `configured-inactive`，但主机授权层拒绝
 [ADR 0173](adr/0173-fail-closed-client-service-activation.md)。Linux systemd 激活、真实客户端服务激活、SSH gateway apply 和既有 owner cutover 仍是独立门禁。脱敏当前状态由
 `config/capability-platform-deployment.json` 固定。
 
+DSH fallback 的推理凭证不再要求写入启动 shell 或服务定义。client bootstrap 可选携带 HTTPS endpoint、model 与 opaque `secret:*` reference；
+发现只读取 reference 是否可用，执行器仅在 DSH 子进程生命周期内通过加密本地 secret store 注入 key，随后清零解密副本。云端与公开 receipt
+只看到可用性，不看到 reference、endpoint 或 secret。该默认未配置边界见 [ADR 0174](adr/0174-opaque-local-dsh-inference-secret-binding.md)。
+
 平台终局不再由 Phase 0 的“模块映射 100% / 控制台设计覆盖 100%”间接推断。`config/capability-platform-completion.json` 与
 `scripts/audit-capability-platform-completion.ts` 逐项对照目标验收口径，并用当前 deployment、module/migration、artifact candidate、product composition
 与 continuity 真源交叉验证。当前只有模块 exactly-once、现作用域单 owner 和本批用户改动保护成立；真实多租户服务、可安装客户端与设备注册、三执行器实跑、

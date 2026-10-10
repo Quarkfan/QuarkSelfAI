@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import type { LocalMasterKeyProviderV1 } from '../src/client-runtime/contracts.js'
 import { InactiveEncryptedLocalClientV1 } from '../src/client-runtime/encrypted-local-client.js'
+import { EncryptedFileDeviceSecretStoreV1 } from '../src/client-runtime/encrypted-file-secret-store.js'
 
 const migration = new URL('../migrations/client-sqlite/001_client_state.sql', import.meta.url).pathname
 const verifier = { verify: async () => true }; const at = new Date('2026-09-06T00:00:00.000Z')
@@ -28,6 +29,18 @@ test('rejects and clears a malformed provider key before opening client state', 
   try {
     await assert.rejects(() => InactiveEncryptedLocalClientV1.initialize({ paths: { databasePath: join(directory, 'client.sqlite3'), migrationPath: migration, artifactRoot: join(directory, 'artifacts'), instanceLeasePath: join(directory, 'runtime', 'owner.lock') }, secretRoot: join(directory, 'secrets'), enrollment: { tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner' } }, verifier, { async load() { return key } }, at), /invalid key/)
     assert.ok(key.every(value => value === 0))
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('uses an encrypted executor secret only inside a bounded callback and clears the returned copy', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-encrypted-client-')); const key = new Uint8Array(32).fill(5); const config = { paths: { databasePath: join(directory, 'client.sqlite3'), migrationPath: migration, artifactRoot: join(directory, 'artifacts'), instanceLeasePath: join(directory, 'runtime', 'owner.lock') }, secretRoot: join(directory, 'secrets'), enrollment: { tenantId: 'tenant.alpha', userId: 'user.owner', deviceId: 'device.owner', privateKeyRef: 'secret:device.owner' } }; let observed: Uint8Array | undefined
+  try {
+    const seeded = await EncryptedFileDeviceSecretStoreV1.open(config.secretRoot, key); await seeded.put('secret:dsh-inference', Buffer.from('private-fixture')); seeded.close()
+    const client = await InactiveEncryptedLocalClientV1.initialize(config, verifier, { async load() { return Uint8Array.from(key) } }, at)
+    assert.equal(await client.hasSecret('secret:dsh-inference'), true)
+    assert.equal(await client.withSecret('secret:dsh-inference', async value => { observed = value; assert.equal(Buffer.from(value).toString('utf8'), 'private-fixture'); return 'used' }), 'used')
+    assert.ok(observed?.every(value => value === 0))
+    await client.close()
   } finally { await rm(directory, { recursive: true, force: true }) }
 })
 

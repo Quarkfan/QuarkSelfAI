@@ -47,7 +47,7 @@ export async function installInactiveClient(input: InactiveClientInstallationInp
     await copyFile(migrationSourcePath, migrationPath); await chmod(migrationPath, 0o600)
     migrationBytes = await readFile(migrationPath)
     const migrationDigest = digest(migrationBytes)
-    const bootstrap: InactiveClientBootstrapDocumentV1 = { schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, stateRoot, tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, privateKeyRef: input.privateKeyRef, keychainAccount: input.keychainAccount, planVerification: input.planVerification }
+    const bootstrap: InactiveClientBootstrapDocumentV1 = { schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, stateRoot, tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, privateKeyRef: input.privateKeyRef, keychainAccount: input.keychainAccount, planVerification: input.planVerification, ...(input.dshInference ? { dshInference: input.dshInference } : {}) }
     configBytes = Buffer.from(`${JSON.stringify(bootstrap)}\n`, 'utf8')
     await writeDurable(join(root, 'client.json'), configBytes)
     if (await realpath(programRoot) !== programRoot) throw new Error('client program root is not canonical')

@@ -34,5 +34,8 @@ export class InactiveEncryptedLocalClientV1 {
   async pollDeviceEnrollment(server: DeviceEnrollmentClientPortV1, now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.application.pollDeviceEnrollment(server, this.secrets, now) }
   async syncOnce(server: DeviceSessionServerPortV1, now = new Date()): Promise<InactiveClientCycleReceiptV1> { return await this.application.syncOnce(server, this.secrets, now) }
   async executeNoEffectOnce(server: DeviceSessionServerPortV1, executors: readonly NoEffectClientExecutorPortV1[], now = new Date()): Promise<NoEffectClientExecutionReceiptV1> { return await this.application.executeNoEffectOnce(server, this.secrets, executors, now) }
+  async hasSecret(reference: string): Promise<boolean> { const value = await this.secrets.get(reference); if (!value) return false; value.fill(0); return true }
+  async putSecret(reference: string, value: Uint8Array): Promise<void> { const copy = Uint8Array.from(value); try { await this.secrets.put(reference, copy) } finally { copy.fill(0) } }
+  async withSecret<T>(reference: string, operation: (value: Uint8Array) => Promise<T>): Promise<T> { const value = await this.secrets.get(reference); if (!value) throw new Error('local executor secret is unavailable'); try { return await operation(value) } finally { value.fill(0) } }
   async close(): Promise<void> { try { await this.application.close() } finally { this.secrets.close() } }
 }

@@ -53,3 +53,13 @@ test('cleans only its newly-created root when bootstrap validation fails', async
     await assert.rejects(access(root))
   } finally { await rm(parent, { recursive: true, force: true }) }
 })
+
+test('preserves only an opaque DSH inference reference in installed metadata', async () => {
+  const parent = await realpath(await mkdtemp(join(tmpdir(), 'quark-client-installer-'))); const root = join(parent, 'client')
+  try {
+    const distribution = await createClientDistributionFixture(parent); const binding = { baseUrl: 'https://inference.example/', model: 'provider/model-v1', apiKeyRef: 'secret:dsh-inference' }; const installed = await installInactiveClient({ ...input(root, distribution), dshInference: binding })
+    assert.deepEqual(installed.plan.dshInference, binding); assert.deepEqual((await recoverInactiveClientInstallation(root)).plan.dshInference, binding)
+    const metadata = await readFile(join(root, 'client.json'), 'utf8'); assert.match(metadata, /secret:dsh-inference/); assert.doesNotMatch(metadata, /apiKey\W*:/i)
+    await uninstallUnusedInactiveClient(root)
+  } finally { await rm(parent, { recursive: true, force: true }) }
+})

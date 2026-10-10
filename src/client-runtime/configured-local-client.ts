@@ -10,6 +10,8 @@ import { MacOsKeychainMasterKeyLifecycleV1, MacOsKeychainMasterKeyProviderV1 } f
 import { NodePinnedEd25519PlanVerifierV1 } from './plan-signature.js'
 import { NodeInstalledExecutorDiscoveryV1, type InstalledExecutorDiscoveryDependenciesV1 } from './installed-executor-discovery.js'
 import { createProductReasoningExecutors, type ProductReasoningExecutorDependenciesV1 } from './reasoning-executor-composition.js'
+import { discoverBundledDsh } from './bundled-dsh-discovery.js'
+import { NodeFixedReasoningProcessRunnerV1 } from './reasoning-executor-adapter.js'
 
 const idPattern = /^[a-z0-9][a-z0-9._:-]{0,127}$/
 const referencePattern = /^(?:secret|keychain):[a-z0-9][a-z0-9._:-]{0,127}$/
@@ -25,13 +27,17 @@ export interface InactiveClientBootstrapDocumentV1 {
   readonly privateKeyRef: string
   readonly keychainAccount: string
   readonly planVerification: { readonly keyId: string; readonly publicKey: string }
+  readonly dshInference?: DshInferenceSecretReferenceV1
 }
+
+export interface DshInferenceSecretReferenceV1 { readonly baseUrl: string; readonly model: string; readonly apiKeyRef: string }
 
 export interface InactiveClientBootstrapPlanV1 {
   readonly schemaVersion: 1
   readonly controlPlaneEndpoint: string
   readonly keychainAccount: string
   readonly planVerification: { readonly keyId: string; readonly publicKey: string }
+  readonly dshInference?: DshInferenceSecretReferenceV1
   readonly client: EncryptedLocalClientConfigV1
   readonly autoConnect: false
   readonly autoPollEnrollment: false
@@ -57,7 +63,7 @@ export async function compileInactiveClientBootstrap(document: unknown, clientMi
   // Construction performs the same endpoint policy check without opening a connection.
   new NodeInactiveHttpDeviceEnrollmentTransportV1(input.controlPlaneEndpoint)
   new NodePinnedEd25519PlanVerifierV1(input.planVerification.keyId, input.planVerification.publicKey)
-  return deepFreeze({ schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, keychainAccount: input.keychainAccount, planVerification: { ...input.planVerification },
+  return deepFreeze({ schemaVersion: 1, controlPlaneEndpoint: input.controlPlaneEndpoint, keychainAccount: input.keychainAccount, planVerification: { ...input.planVerification }, ...(input.dshInference ? { dshInference: { ...input.dshInference } } : {}),
     client: { paths: { databasePath: join(root, 'client.sqlite3'), migrationPath: clientMigrationPath, artifactRoot: join(root, 'artifacts'), instanceLeasePath: join(root, 'instance') },
       secretRoot: join(root, 'secrets'), enrollment: { tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, privateKeyRef: input.privateKeyRef } },
     autoConnect: false, autoPollEnrollment: false, externalWritesEnabled: false })
@@ -65,7 +71,7 @@ export async function compileInactiveClientBootstrap(document: unknown, clientMi
 
 /** One explicit inactive client facade. Construction has no network, discovery, polling, executor or effect side effect. */
 export class InactiveConfiguredLocalClientV1 {
-  private constructor(private readonly client: InactiveEncryptedLocalClientV1, private readonly enrollment: DeviceEnrollmentClientPortV1, private readonly sessions: DeviceSessionServerPortV1, private readonly reasoningRuntimeRoot: string, private readonly reasoningResultRoot: string) {}
+  private constructor(private readonly client: InactiveEncryptedLocalClientV1, private readonly enrollment: DeviceEnrollmentClientPortV1, private readonly sessions: DeviceSessionServerPortV1, private readonly reasoningRuntimeRoot: string, private readonly reasoningResultRoot: string, private readonly dshInference?: DshInferenceSecretReferenceV1) {}
 
   static async initializePinned(plan: InactiveClientBootstrapPlanV1, dependencies: InactiveConfiguredClientDependenciesV1 = {}, now = new Date()): Promise<InactiveConfiguredLocalClientV1> {
     return await InactiveConfiguredLocalClientV1.initialize(plan, new NodePinnedEd25519PlanVerifierV1(plan.planVerification.keyId, plan.planVerification.publicKey), dependencies, now)
@@ -82,17 +88,19 @@ export class InactiveConfiguredLocalClientV1 {
     const enrollment = dependencies.enrollment ?? new NodeInactiveHttpDeviceEnrollmentTransportV1(plan.controlPlaneEndpoint)
     const sessions = dependencies.sessions ?? new NodeInactiveHttpDeviceTransportV1(plan.controlPlaneEndpoint)
     const client = await InactiveEncryptedLocalClientV1.initialize(plan.client, verifier, masterKeys, now)
-    return new InactiveConfiguredLocalClientV1(client, enrollment, sessions, join(dirname(plan.client.paths.databasePath), 'runtime/reasoning'), join(plan.client.paths.artifactRoot, 'reasoning-results'))
+    return new InactiveConfiguredLocalClientV1(client, enrollment, sessions, join(dirname(plan.client.paths.databasePath), 'runtime/reasoning'), join(plan.client.paths.artifactRoot, 'reasoning-results'), plan.dshInference)
   }
 
   snapshot(now = new Date()): ClientRuntimeSnapshotV1 { return this.client.snapshot(now) }
-  async refreshInstalledExecutors(cwd: string, now = new Date(), dependencies: InstalledExecutorDiscoveryDependenciesV1 = {}): Promise<readonly ExecutorCapabilityReportV1[]> { return await this.client.refreshExecutors(new NodeInstalledExecutorDiscoveryV1(cwd, dependencies), now) }
+  async refreshInstalledExecutors(cwd: string, now = new Date(), dependencies: InstalledExecutorDiscoveryDependenciesV1 = {}): Promise<readonly ExecutorCapabilityReportV1[]> { const resolved = this.dshInference && !dependencies.bundledDshDiscovery ? { ...dependencies, bundledDshDiscovery: async (runtimeRoot: string) => await discoverBundledDsh(runtimeRoot, await this.client.hasSecret(this.dshInference!.apiKeyRef) ? { QUARK_INFERENCE_BASE_URL: this.dshInference!.baseUrl, QUARK_INFERENCE_API_KEY: 'configured' } : {}) } : dependencies; return await this.client.refreshExecutors(new NodeInstalledExecutorDiscoveryV1(cwd, resolved), now) }
   async beginEnrollment(now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.client.beginDeviceEnrollment(this.enrollment, now) }
   async pollEnrollment(now = new Date()): Promise<ClientDeviceEnrollmentViewV1> { return await this.client.pollDeviceEnrollment(this.enrollment, now) }
   async syncOnce(now = new Date()): Promise<InactiveClientCycleReceiptV1> { return await this.client.syncOnce(this.sessions, now) }
+  async provisionDshInferenceApiKey(value: Uint8Array): Promise<void> { if (!this.dshInference) throw new Error('DSH inference secret reference is not configured'); await this.client.putSecret(this.dshInference.apiKeyRef, value) }
   async executeNoEffectOnce(executors: readonly NoEffectClientExecutorPortV1[], now = new Date()): Promise<NoEffectClientExecutionReceiptV1> { return await this.client.executeNoEffectOnce(this.sessions, executors, now) }
   async executeSignedReasoningNoEffectOnce(now = new Date(), dependencies: ProductReasoningExecutorDependenciesV1 = {}): Promise<NoEffectClientExecutionReceiptV1> {
-    const executors = await createProductReasoningExecutors(this.reasoningRuntimeRoot, this.reasoningResultRoot, dependencies)
+    const resolved = dependencies.runner || !this.dshInference ? dependencies : { ...dependencies, runner: new NodeFixedReasoningProcessRunnerV1({ baseUrl: this.dshInference.baseUrl, model: this.dshInference.model, useApiKey: async operation => await this.client.withSecret(this.dshInference!.apiKeyRef, operation) }) }
+    const executors = await createProductReasoningExecutors(this.reasoningRuntimeRoot, this.reasoningResultRoot, resolved)
     return await this.client.executeNoEffectOnce(this.sessions, executors, now)
   }
   async close(): Promise<void> { await this.client.close() }
@@ -101,15 +109,16 @@ export class InactiveConfiguredLocalClientV1 {
 function exactDocument(value: unknown): InactiveClientBootstrapDocumentV1 {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client bootstrap document must be an object')
   const item = value as Record<string, unknown>
-  const keys = ['schemaVersion', 'controlPlaneEndpoint', 'stateRoot', 'tenantId', 'userId', 'deviceId', 'privateKeyRef', 'keychainAccount', 'planVerification']
-  if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.schemaVersion !== 1 || typeof item.controlPlaneEndpoint !== 'string' || typeof item.stateRoot !== 'string' || ![item.tenantId, item.userId, item.deviceId].every(value => typeof value === 'string' && idPattern.test(value)) || typeof item.privateKeyRef !== 'string' || !referencePattern.test(item.privateKeyRef) || typeof item.keychainAccount !== 'string' || !accountPattern.test(item.keychainAccount) || !item.planVerification || typeof item.planVerification !== 'object' || Array.isArray(item.planVerification) || !exactKeys(item.planVerification as Record<string, unknown>, ['keyId', 'publicKey']) || typeof (item.planVerification as Record<string, unknown>).keyId !== 'string' || typeof (item.planVerification as Record<string, unknown>).publicKey !== 'string') throw new Error('client bootstrap document is invalid')
+  const keys = ['schemaVersion', 'controlPlaneEndpoint', 'stateRoot', 'tenantId', 'userId', 'deviceId', 'privateKeyRef', 'keychainAccount', 'planVerification', ...(item.dshInference === undefined ? [] : ['dshInference'])]
+  if (Object.keys(item).sort().join(',') !== keys.sort().join(',') || item.schemaVersion !== 1 || typeof item.controlPlaneEndpoint !== 'string' || typeof item.stateRoot !== 'string' || ![item.tenantId, item.userId, item.deviceId].every(value => typeof value === 'string' && idPattern.test(value)) || typeof item.privateKeyRef !== 'string' || !referencePattern.test(item.privateKeyRef) || typeof item.keychainAccount !== 'string' || !accountPattern.test(item.keychainAccount) || !item.planVerification || typeof item.planVerification !== 'object' || Array.isArray(item.planVerification) || !exactKeys(item.planVerification as Record<string, unknown>, ['keyId', 'publicKey']) || typeof (item.planVerification as Record<string, unknown>).keyId !== 'string' || typeof (item.planVerification as Record<string, unknown>).publicKey !== 'string' || (item.dshInference !== undefined && !validDshReference(item.dshInference))) throw new Error('client bootstrap document is invalid')
   return item as unknown as InactiveClientBootstrapDocumentV1
 }
 
 async function assertInactivePlan(value: unknown): Promise<void> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('client bootstrap plan is invalid')
   const plan = value as Record<string, unknown>
-  if (!exactKeys(plan, ['schemaVersion', 'controlPlaneEndpoint', 'keychainAccount', 'planVerification', 'client', 'autoConnect', 'autoPollEnrollment', 'externalWritesEnabled']) || plan.schemaVersion !== 1 || plan.autoConnect !== false || plan.autoPollEnrollment !== false || plan.externalWritesEnabled !== false || typeof plan.controlPlaneEndpoint !== 'string' || typeof plan.keychainAccount !== 'string' || !accountPattern.test(plan.keychainAccount) || !plan.planVerification || typeof plan.planVerification !== 'object' || Array.isArray(plan.planVerification) || !exactKeys(plan.planVerification as Record<string, unknown>, ['keyId', 'publicKey'])) throw new Error('client bootstrap plan is not inactive')
+  const planKeys = ['schemaVersion', 'controlPlaneEndpoint', 'keychainAccount', 'planVerification', 'client', 'autoConnect', 'autoPollEnrollment', 'externalWritesEnabled', ...(plan.dshInference === undefined ? [] : ['dshInference'])]
+  if (!exactKeys(plan, planKeys) || plan.schemaVersion !== 1 || plan.autoConnect !== false || plan.autoPollEnrollment !== false || plan.externalWritesEnabled !== false || typeof plan.controlPlaneEndpoint !== 'string' || typeof plan.keychainAccount !== 'string' || !accountPattern.test(plan.keychainAccount) || !plan.planVerification || typeof plan.planVerification !== 'object' || Array.isArray(plan.planVerification) || !exactKeys(plan.planVerification as Record<string, unknown>, ['keyId', 'publicKey']) || (plan.dshInference !== undefined && !validDshReference(plan.dshInference))) throw new Error('client bootstrap plan is not inactive')
   if (!plan.client || typeof plan.client !== 'object' || Array.isArray(plan.client)) throw new Error('client bootstrap plan is invalid')
   const client = plan.client as Record<string, unknown>
   if (!exactKeys(client, ['paths', 'secretRoot', 'enrollment']) || typeof client.secretRoot !== 'string' || !client.paths || typeof client.paths !== 'object' || Array.isArray(client.paths) || !client.enrollment || typeof client.enrollment !== 'object' || Array.isArray(client.enrollment)) throw new Error('client bootstrap plan is invalid')
@@ -126,5 +135,6 @@ async function assertInactivePlan(value: unknown): Promise<void> {
 }
 
 function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean { return Object.keys(value).sort().join(',') === [...keys].sort().join(',') }
+function validDshReference(value: unknown): value is DshInferenceSecretReferenceV1 { if (!value || typeof value !== 'object' || Array.isArray(value)) return false; const item = value as Record<string, unknown>; if (!exactKeys(item, ['baseUrl','model','apiKeyRef']) || typeof item.baseUrl !== 'string' || typeof item.model !== 'string' || typeof item.apiKeyRef !== 'string' || !referencePattern.test(item.apiKeyRef) || !/^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,255}$/.test(item.model)) return false; try { const url = new URL(item.baseUrl); return url.protocol === 'https:' && !url.username && !url.password && !url.hash } catch { return false } }
 
 function deepFreeze<T>(value: T): T { if (value && typeof value === 'object' && !Object.isFrozen(value)) { for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child); Object.freeze(value) }; return value }

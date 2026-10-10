@@ -2007,3 +2007,10 @@
 
 - 对 revision `e66311be21c8048a947c9ace5c9738e29e55142d` 分别运行同一签名、公开、无工具/workspace/context/effect、禁止 fallback 的 reasoning pilot。Claude Code 在外层工具沙箱超时，但宿主层成功，artifact digest `sha256:e1839a0d99c236134cd93da633c699f95456eac19119531e44ec6e54a4ca300a`；Codex 的外层失败被定位为 in-process app-server 初始化受沙箱拒绝，宿主层成功，digest `sha256:d4335db81a9e0d59750ab76bcca673f7f4ce508f760f516c500754aa5d1952c2`。
 - DSH 当前 repository-locked runtime 可发现，但本执行上下文没有推理凭证配置，因此 readiness 返回 `authentication-required`，未读取或输出凭证、未启动模型调用。三执行器 gate 仍未完成，不能设置 `executorContractVerified=true`。完整脱敏证据见 `config/capability-platform-reasoning-executor-pilot-04.json` 与 `docs/evidence/capability-platform-reasoning-executor-pilot-04-2026-10-10.md`。
+
+## 2026-10-10 — Opaque local DSH inference binding
+
+- Pilot 04 暴露出 installed client 的真实契约缺口：DSH readiness/execution 仍依赖父进程 `QUARK_INFERENCE_API_KEY`，无法安全依赖后台服务的启动环境。新增 ADR 0174，把可选 HTTPS endpoint、model 和 `secret:*` reference 纳入向后兼容 bootstrap；未配置的现有 client 文档继续有效。
+- 配置客户端只能把 key 明确写入既有加密本地 secret store。发现阶段只检查 exact reference 是否存在并传递合成 presence，不读取/上传 key；执行阶段只在 DSH child 的有界生命周期内解密与注入，callback 结束立即清零 byte copy。Claude Code/Codex 环境不接收该 binding。
+- 本批没有读取、迁移或写入任何真实凭证，没有运行 DSH、改变 service definition、deployment 或 runtime composition。真实 provisioning 仍是独立本地 credential mutation；完成三执行器 gate 仍需配置后重跑同一 pilot。
+- 验证：新增/受影响定向测试 23/23；完整主测试 550 项中 537 通过、13 项因沙箱监听限制跳过，兼容层 190/190；架构仍为 142 modules、126 assets、0/23 effects active；严格工作域隔离、助手连续性和根入口同步均通过。

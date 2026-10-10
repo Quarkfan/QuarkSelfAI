@@ -32,6 +32,12 @@ export interface FixedReasoningProcessRunnerV1 {
   run(invocation: FixedReasoningInvocationV1): Promise<FixedReasoningObservationV1>
 }
 
+export interface DshInferenceSecretBindingV1 {
+  readonly baseUrl: string
+  readonly model: string
+  useApiKey<T>(operation: (apiKey: Uint8Array) => Promise<T>): Promise<T>
+}
+
 export interface LocalExecutionResultSinkV1 {
   persist(input: { readonly runId: string; readonly actionId: string; readonly mediaType: 'text/plain'; readonly content: Uint8Array }): Promise<{ readonly artifactDigest: string }>
 }
@@ -80,16 +86,23 @@ export class FixedNoEffectReasoningExecutorV1 implements NoEffectClientExecutorP
   }
 }
 
-class NodeFixedReasoningProcessRunnerV1 implements FixedReasoningProcessRunnerV1 {
+export class NodeFixedReasoningProcessRunnerV1 implements FixedReasoningProcessRunnerV1 {
+  constructor(private readonly dshInference?: DshInferenceSecretBindingV1) { if (dshInference) validateDshBinding(dshInference) }
   async run(invocation: FixedReasoningInvocationV1): Promise<FixedReasoningObservationV1> {
     assertFixedInvocation(invocation)
     const [canonical, status] = await Promise.all([realpath(invocation.cwd), lstat(invocation.cwd)])
     if (canonical !== invocation.cwd || !status.isDirectory() || status.isSymbolicLink() || (status.mode & 0o077) !== 0) throw new Error('reasoning process runtime directory must be private and canonical')
+    if (invocation.executorId === 'dsh' && this.dshInference) return await this.dshInference.useApiKey(async apiKey => await runChild(invocation, fixedEnvironment(invocation.executorId, { ...this.dshInference!, apiKey })))
+    return await runChild(invocation, fixedEnvironment(invocation.executorId))
+  }
+}
+
+async function runChild(invocation: FixedReasoningInvocationV1, environment: NodeJS.ProcessEnv): Promise<FixedReasoningObservationV1> {
     return await new Promise(resolveRun => {
       let stdout = Buffer.alloc(0)
       let settled = false
       let state: FixedReasoningObservationV1['state'] = 'completed'
-      const child = spawn(invocation.command, [...invocation.args], { cwd: invocation.cwd, env: fixedEnvironment(invocation.executorId), shell: false, stdio: ['pipe', 'pipe', 'ignore'] })
+      const child = spawn(invocation.command, [...invocation.args], { cwd: invocation.cwd, env: environment, shell: false, stdio: ['pipe', 'pipe', 'ignore'] })
       const finish = (exitCode: number | null): void => {
         if (settled) return
         settled = true
@@ -113,7 +126,6 @@ class NodeFixedReasoningProcessRunnerV1 implements FixedReasoningProcessRunnerV1
       const timer = setTimeout(() => { state = 'timed-out'; child.kill('SIGTERM'); finish(null) }, invocation.timeoutMs)
       timer.unref()
     })
-  }
 }
 
 export class ContentAddressedLocalExecutionResultStoreV1 implements LocalExecutionResultSinkV1 {
@@ -173,7 +185,7 @@ function dshStdinHostPath(): string {
   return fileURLToPath(new URL('../../dist/client-runtime/dsh-stdin-host.js', import.meta.url))
 }
 
-function fixedEnvironment(executorId: ReasoningExecutorIdV1): NodeJS.ProcessEnv {
+function fixedEnvironment(executorId: ReasoningExecutorIdV1, dsh?: { readonly baseUrl: string; readonly model: string; readonly apiKey: Uint8Array }): NodeJS.ProcessEnv {
   const names = ['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'ALL_PROXY'] as const
   const environment: NodeJS.ProcessEnv = Object.fromEntries(names.flatMap(name => process.env[name] ? [[name, process.env[name]]] : []))
   if (executorId === 'claude-code' && process.env.CLAUDE_CONFIG_DIR) environment.CLAUDE_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR
@@ -182,12 +194,13 @@ function fixedEnvironment(executorId: ReasoningExecutorIdV1): NodeJS.ProcessEnv 
     environment.DSH_PERMISSION_MODE = 'read-only'
     environment.DSH_TOOLS_MODE = 'native'
     environment.DSH_TELEMETRY_MODE = 'DISABLED'
-    if (process.env.QUARK_INFERENCE_API_KEY) environment.QUARK_INFERENCE_API_KEY = process.env.QUARK_INFERENCE_API_KEY
-    if (process.env.QUARK_INFERENCE_BASE_URL) environment.QUARK_INFERENCE_BASE_URL = process.env.QUARK_INFERENCE_BASE_URL
-    if (process.env.QUARK_INFERENCE_MODEL) environment.QUARK_INFERENCE_MODEL = process.env.QUARK_INFERENCE_MODEL
+    if (dsh) { const key = Buffer.from(dsh.apiKey).toString('utf8'); if (!key || Buffer.byteLength(key) > 8_192 || /[\0\r\n]/.test(key)) throw new Error('DSH inference secret is invalid'); environment.QUARK_INFERENCE_API_KEY = key; environment.QUARK_INFERENCE_BASE_URL = dsh.baseUrl; environment.QUARK_INFERENCE_MODEL = dsh.model }
+    else { if (process.env.QUARK_INFERENCE_API_KEY) environment.QUARK_INFERENCE_API_KEY = process.env.QUARK_INFERENCE_API_KEY; if (process.env.QUARK_INFERENCE_BASE_URL) environment.QUARK_INFERENCE_BASE_URL = process.env.QUARK_INFERENCE_BASE_URL; if (process.env.QUARK_INFERENCE_MODEL) environment.QUARK_INFERENCE_MODEL = process.env.QUARK_INFERENCE_MODEL }
   }
   return environment
 }
+
+function validateDshBinding(value: DshInferenceSecretBindingV1): void { let url: URL; try { url = new URL(value.baseUrl) } catch { throw new Error('DSH inference binding is invalid') }; if (url.protocol !== 'https:' || url.username || url.password || url.hash || !/^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,255}$/.test(value.model) || typeof value.useApiKey !== 'function') throw new Error('DSH inference binding is invalid') }
 
 function assertFixedInvocation(invocation: FixedReasoningInvocationV1): void {
   const expected = fixedInvocation(invocation.executorId, invocation.cwd, invocation.stdin, invocation.timeoutMs)

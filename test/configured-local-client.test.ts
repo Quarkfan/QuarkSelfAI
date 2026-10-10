@@ -67,10 +67,26 @@ test('rejects mutable, aliased, unsafe and open-ended bootstrap input', async ()
   const temporary = await mkdtemp(join(tmpdir(), 'quark-configured-client-')); const root = await realpath(temporary); const alias = `${root}-link`
   try {
     await assert.rejects(compileInactiveClientBootstrap({ ...document(root), extra: true }, migration), /document is invalid/)
+    await assert.rejects(compileInactiveClientBootstrap({ ...document(root), dshInference: { baseUrl: 'http://insecure.example', model: 'model', apiKeyRef: 'secret:dsh' } }, migration), /document is invalid/)
     await assert.rejects(compileInactiveClientBootstrap({ ...document(root), controlPlaneEndpoint: 'http://example.com/' }, migration), /HTTPS or explicit ephemeral/)
     await chmod(root, 0o755); await assert.rejects(compileInactiveClientBootstrap(document(root), migration), /private canonical/); await chmod(root, 0o700)
     await symlink(root, alias); await assert.rejects(compileInactiveClientBootstrap(document(alias), migration), /private canonical/)
   } finally { await rm(alias, { force: true }); await rm(root, { recursive: true, force: true }) }
+})
+
+test('derives DSH readiness from an opaque encrypted secret reference without projecting its value', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'quark-configured-dsh-')); const root = await realpath(temporary); const apiKeyRef = 'secret:dsh-inference'; const configured = { ...document(root), dshInference: { baseUrl: 'https://inference.example/', model: 'provider/model-v1', apiKeyRef } } as const
+  try {
+    const bootstrap = await compileInactiveClientBootstrap(configured, migration); assert.deepEqual(bootstrap.dshInference, configured.dshInference)
+    const client = await InactiveConfiguredLocalClientV1.initialize(bootstrap, verifier, { masterKeys: { async load() { return Uint8Array.from(masterKey) } } }, now)
+    const projectRoot = await realpath(new URL('..', import.meta.url))
+    const discovery = { runtimeRoot: projectRoot, versionRunner: { async run() { return { state: 'not-found' as const, exitCode: null, output: '', authentication: 'unknown' as const } }, }, authRunner: { async run() { throw new Error('auth probe must not run') } } }
+    assert.equal((await client.refreshInstalledExecutors(root, now, discovery)).find(item => item.executorId === 'dsh')?.availability, 'auth-required')
+    await client.provisionDshInferenceApiKey(Buffer.from('private-fixture'))
+    const reports = await client.refreshInstalledExecutors(root, now, discovery)
+    assert.equal(reports.find(item => item.executorId === 'dsh')?.availability, 'ready'); assert.equal(JSON.stringify(reports).includes('private-fixture'), false)
+    await client.close()
+  } finally { await rm(root, { recursive: true, force: true }) }
 })
 
 test('rejects an activated or drifted bootstrap plan before reading a master key', async () => {

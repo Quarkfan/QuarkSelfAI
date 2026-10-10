@@ -79,6 +79,7 @@ DSH 使用锁定产品 headless CLI、stdin host、allowlisted environment 和�
 这证明 DSH 边界可执行；三 adapter 已可由 configured client 的显式方法进入 durable cycle，但仍未挂入自动 client daemon。Claude/Codex 的真实
 pilot 尚未成功，不能称三个 executor 成功率 parity 或生产 fallback 已完成。
 Pilot 04 在 revision `e66311b` 重新核验当前宿主：Claude Code 与 Codex 均完成同一签名 `envelope.v1`，外层工具沙箱内的超时/初始化拒绝不再被误判为 executor contract failure；DSH 因当前执行上下文缺少推理凭证配置而在 readiness 阶段停止。三个执行器统一契约仍未完成，deployment 的 `executorContractVerified` 保持 false。
+客户端现支持可选、闭合的 DSH inference binding：bootstrap 仅保存 HTTPS endpoint、model 与 opaque `secret:*` reference；key 由既有加密本地 store 持有，发现阶段只取存在性，执行时才在有界回调内注入 DSH 子进程并清零解密副本。该能力默认未配置，本批未迁移或读取真实 key，因此只消除服务环境依赖，不构成 DSH pilot 成功证据。
 
 客户端现有独立 no-effect worker，可在显式 start 后由单 owner 串行驱动 executor discovery 与 signed reasoning cycle；失败只记录稳定码并按
 有界周期恢复，stop 会等待唯一在途 pass 且不生成替代 owner。installed-client process 已把安装恢复、pinned verifier、Keychain-backed client
