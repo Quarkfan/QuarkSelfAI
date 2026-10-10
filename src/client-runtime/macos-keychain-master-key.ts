@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { LocalMasterKeyProviderV1, LocalMasterKeyProvisionerV1 } from './contracts.js'
 
 const service = 'com.quarkselfai.client.master-key.v1'
@@ -15,13 +17,13 @@ export interface KeychainReadObservationV1 {
 export interface MacOsKeychainReadRunnerV1 { read(account: string): Promise<KeychainReadObservationV1> }
 export interface MacOsKeychainProvisionRunnerV1 { add(account: string, encodedKey: Uint8Array): Promise<'completed' | 'failed' | 'timed-out'> }
 
-/** Reads one fixed generic-password item. It never accepts or writes a secret through process arguments. */
+/** Reads one fixed generic-password item through Security.framework. */
 export class NodeMacOsKeychainReadRunnerV1 implements MacOsKeychainReadRunnerV1 {
   read(account: string): Promise<KeychainReadObservationV1> {
     if (!accountPattern.test(account)) throw new Error('keychain account is invalid')
     return new Promise(resolve => {
       let output = Buffer.alloc(0); let overflow = false; let settled = false
-      const child = spawn('/usr/bin/security', ['find-generic-password', '-w', '-s', service, '-a', account], { shell: false, stdio: ['ignore', 'pipe', 'ignore'] })
+      const child = spawn('/usr/bin/swift', ['-module-cache-path', join(tmpdir(), 'quarkselfai-swift-module-cache'), '-e', swiftKeychainReader, service, account], { shell: false, stdio: ['ignore', 'pipe', 'ignore'] })
       child.stdout.on('data', (chunk: Buffer | string) => {
         const bytes = Buffer.from(chunk)
         try {
@@ -37,25 +39,25 @@ export class NodeMacOsKeychainReadRunnerV1 implements MacOsKeychainReadRunnerV1 
       }
       child.once('error', error => finish((error as NodeJS.ErrnoException).code === 'ENOENT' ? 'not-found' : 'failed'))
       child.once('close', code => finish(code === 0 ? 'completed' : code === 44 ? 'not-found' : 'failed'))
-      const timer = setTimeout(() => { child.kill('SIGTERM'); finish('timed-out') }, 5_000); timer.unref()
+      const timer = setTimeout(() => { child.kill('SIGTERM'); finish('timed-out') }, 60_000); timer.unref()
     })
   }
 }
 
-/** Adds one generated key through stdin. The credential is never present in argv, stdout or an error. */
+/** Adds one generated key through Security.framework stdin. The credential is never present in argv, stdout or an error. */
 export class NodeMacOsKeychainProvisionRunnerV1 implements MacOsKeychainProvisionRunnerV1 {
   add(account: string, encodedKey: Uint8Array): Promise<'completed' | 'failed' | 'timed-out'> {
     if (!accountPattern.test(account) || !base64UrlBytes(encodedKey)) throw new Error('keychain provisioning input is invalid')
     return new Promise(resolve => {
       let settled = false
       const input = Buffer.alloc(encodedKey.byteLength + 1); input.set(encodedKey); input[input.byteLength - 1] = 0x0a
-      const child = spawn('/usr/bin/security', ['add-generic-password', '-a', account, '-s', service, '-w'], { shell: false, stdio: ['pipe', 'ignore', 'ignore'] })
+      const child = spawn('/usr/bin/swift', ['-module-cache-path', join(tmpdir(), 'quarkselfai-swift-module-cache'), '-e', swiftKeychainWriter, service, account], { shell: false, stdio: ['pipe', 'ignore', 'ignore'] })
       const finish = (state: 'completed' | 'failed' | 'timed-out') => { if (settled) return; settled = true; clearTimeout(timer); input.fill(0); resolve(state) }
       child.once('error', () => finish('failed'))
       child.stdin.once('error', () => finish('failed'))
       child.once('close', code => finish(code === 0 ? 'completed' : 'failed'))
       child.stdin.end(input, () => input.fill(0))
-      const timer = setTimeout(() => { child.kill('SIGTERM'); finish('timed-out') }, 5_000); timer.unref()
+      const timer = setTimeout(() => { child.kill('SIGTERM'); finish('timed-out') }, 60_000); timer.unref()
     })
   }
 }
@@ -120,3 +122,22 @@ function decodeKey(output: Uint8Array): Buffer {
 function base64UrlBytes(value: Uint8Array): boolean {
   return value.byteLength === 43 && value.every(byte => (byte >= 0x41 && byte <= 0x5a) || (byte >= 0x61 && byte <= 0x7a) || (byte >= 0x30 && byte <= 0x39) || byte === 0x5f || byte === 0x2d)
 }
+
+const swiftKeychainWriter = `import Foundation
+import Security
+var value = FileHandle.standardInput.readDataToEndOfFile()
+if value.last == 10 { value.removeLast() }
+let query: [CFString: Any] = [kSecClass: kSecClassGenericPassword, kSecAttrService: CommandLine.arguments[1], kSecAttrAccount: CommandLine.arguments[2], kSecValueData: value, kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlock]
+let status = SecItemAdd(query as CFDictionary, nil)
+exit(status == errSecSuccess ? 0 : 1)
+`
+
+const swiftKeychainReader = `import Foundation
+import Security
+let query: [CFString: Any] = [kSecClass: kSecClassGenericPassword, kSecAttrService: CommandLine.arguments[1], kSecAttrAccount: CommandLine.arguments[2], kSecReturnData: true, kSecMatchLimit: kSecMatchLimitOne]
+var item: CFTypeRef?
+let status = SecItemCopyMatching(query as CFDictionary, &item)
+if status == errSecItemNotFound { exit(44) }
+guard status == errSecSuccess, let value = item as? Data else { exit(1) }
+FileHandle.standardOutput.write(value)
+`

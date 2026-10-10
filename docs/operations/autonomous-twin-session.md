@@ -2126,3 +2126,9 @@
 - 最终 activation receipt、launchctl readback 与固定证书健康探针一致：单一 `com.quarkfan.quark-server` user service 正在运行，状态为 `service-active-effects-off` / `ready-effects-off`。SSH gateway、客户端、设备 enrollment、能力执行和 external writes 均未启用；现有 QuarkSelfAI 飞书/滴答消费者、provider、scheduler 与 writer 未改变或重启。
 - 完整 `npm run check` 通过：架构 151 modules、23/23 effects implemented、0/23 active；主测试 579 项中 566 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。用户未提交的 `package.json`、品牌客户端文件与 `.DS_Store` 未修改、未暂存。
 - 回滚使用 service deactivation transaction，只注销 launchd 并删除 digest 匹配的 service definition，保留 tenant/owner/configuration；不得再使用 unused uninstall 路径删除已有 tenant state。
+
+## 2026-10-10 — Native client Keychain correction
+
+- server bootstrap 的真实失败证据证明 `/usr/bin/security add-generic-password ... -w` 不会按原假设从 stdin 接收值；客户端 master-key writer 使用同一错误路径，因此在真实安装前修正，不能用注入单测的成功冒充宿主行为。
+- client master-key read/write 现统一使用固定 Security.framework Swift bridge。service/account 之外没有调用方可控参数；生成的 43-byte base64url key 只经 stdin 写入，读取有 128-byte 上限，临时 buffer 用后清零，错误不返回 Keychain 内容。回归测试明确禁止重新引入 `/usr/bin/security` 或 `add-generic-password`。
+- 本批只修复本地 secret adapter，尚未创建真实 client master key、安装客户端、注册设备、启动 client service 或执行 DSH。回滚不得删除未来已存在的 Keychain item；它属于本地持久状态，只能由显式状态退役流程处理。

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { MacOsKeychainMasterKeyLifecycleV1, MacOsKeychainMasterKeyProviderV1, type KeychainReadObservationV1, type MacOsKeychainProvisionRunnerV1, type MacOsKeychainReadRunnerV1 } from '../src/client-runtime/macos-keychain-master-key.js'
 
@@ -46,4 +47,12 @@ test('accepts a concurrent creator only after a valid Keychain readback', async 
   const writer: MacOsKeychainProvisionRunnerV1 = { async add() { return 'failed' } }
   assert.equal(await new MacOsKeychainMasterKeyLifecycleV1('device.owner', reader, writer, 'darwin').ensure(), 'existing')
   await assert.rejects(new MacOsKeychainMasterKeyLifecycleV1('device.owner', { async read() { return { state: 'failed', output: Uint8Array.from(Buffer.from('private')) } } }, writer, 'darwin').ensure(), error => { assert.doesNotMatch(String(error), /private/); return true })
+})
+
+test('uses native Security framework and never the security CLI password argument', async () => {
+  const source = await readFile(new URL('../src/client-runtime/macos-keychain-master-key.ts', import.meta.url), 'utf8')
+  assert.match(source, /import Security/)
+  assert.match(source, /FileHandle\.standardInput\.readDataToEndOfFile/)
+  assert.doesNotMatch(source, /\/usr\/bin\/security/)
+  assert.doesNotMatch(source, /add-generic-password/)
 })
