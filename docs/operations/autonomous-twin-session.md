@@ -2056,3 +2056,4 @@
 - module catalog 和迁移矩阵新增 `headless-browser-runtime`，candidate catalog 使用正式 kind 表达五种代表形态：`cli`、`package`、`browser-runtime`、`integration-pack`、`application`。所有 candidate 仍为 evidence-pending、unpublished、inactive，不能据此宣称五类制品已完成。
 - 验证：完整 `npm run check` 通过，主项目 559 项中 546 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190；架构为 145 modules、126 assets、23/23 effects implemented、0/23 active。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 未修改、未暂存。
 - 回滚为移除 browser contract、module/candidate/migration 映射、ADR 与本记录；没有持久状态、第三方代码或运行 owner 需要迁移。下一批必须建立逐形态的 content-addressed Manifest 与生命周期证据，并修正完成审计为“形态证据”和“激活状态”相互独立的门禁。
+- 随后修正完成度机器门禁：新增五形态逐项 readiness 账本，使用 Manifest 的 `cli/package/browser-runtime/integration-pack/application` 规范 kind，明确 `activationRequiredForCoverage=false`，但只有 validated Manifest 与 inactive lifecycle rehearsal 都完成时才可将形态标记为 verified。当前工具、程序包、浏览器与应用缺 Manifest/rehearsal，私有集成另缺私有 manifest receipt，因此该 requirement 仍保持 blocker；候选是否激活不再被错误地当作形态覆盖条件。

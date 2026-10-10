@@ -19,6 +19,17 @@
     ],
     "remainingGate": "Run the same content-addressed handoffs against one frozen compatibility checkpoint during an approved maintenance cutover; synthetic equivalence is complete."
   },
+  "capabilityForms": {
+    "status": "incomplete",
+    "activationRequiredForCoverage": false,
+    "forms": [
+      { "id": "tool", "candidateId": "network-recovery", "manifestKind": "cli", "state": "contract-ready-inactive", "evidence": ["src/network-recovery/plugin.ts"], "blockers": ["validated-manifest-missing", "inactive-lifecycle-rehearsal-missing"] },
+      { "id": "package", "candidateId": "postgres-storage", "manifestKind": "package", "state": "contract-ready-inactive", "evidence": ["src/storage/postgres.ts"], "blockers": ["validated-manifest-missing", "inactive-lifecycle-rehearsal-missing"] },
+      { "id": "headless-browser", "candidateId": "headless-browser-runtime", "manifestKind": "browser-runtime", "state": "contract-ready-inactive", "evidence": ["src/capability-platform/headless-browser-runtime.ts", "docs/adr/0179-no-effect-headless-browser-capability-contract.md"], "blockers": ["validated-manifest-missing", "local-adapter-missing", "inactive-lifecycle-rehearsal-missing"] },
+      { "id": "private-integration", "candidateId": "private-work-integration", "manifestKind": "integration-pack", "state": "candidate-inactive", "evidence": ["config/capability-artifact-candidates.json"], "blockers": ["private-manifest-receipt-missing", "inactive-lifecycle-rehearsal-missing"] },
+      { "id": "interactive-application", "candidateId": "control-console", "manifestKind": "application", "state": "contract-ready-inactive", "evidence": ["src/web/server.ts"], "blockers": ["validated-manifest-missing", "inactive-lifecycle-rehearsal-missing"] }
+    ]
+  },
   "requirements": [
     { "id": "all-modules-classified", "state": "verified", "evidence": ["config/module-catalog.json", "config/capability-platform-migration.json"] },
     { "id": "real-multi-user-tenant-isolation", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json"] },

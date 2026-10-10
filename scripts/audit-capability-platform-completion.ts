@@ -18,7 +18,7 @@ export async function auditCapabilityPlatformCompletion(root: string): Promise<{
     ['installable-client-and-device-enrollment', deployment.client?.installationState === 'active' && deployment.client?.deviceEnrolled === true && deployment.client?.serviceRegistered === true],
     ['claude-codex-dsh-single-execution-contract', deployment.client?.executorContractVerified === true],
     ['console-agent-compose-test-version', deployment.server?.agentStudioActive === true && deployment.server?.consoleActive === true],
-    ['five-capability-forms', hasForms(candidates.candidates)],
+    ['five-capability-forms', auditCapabilityFormReadiness(ledger.capabilityForms, candidates.candidates).verified],
     ['existing-workflows-equivalent-replay', deployment.client?.existingWorkflowReplayVerified === true && auditWorkflowReplayReadiness(ledger.workflowReplay, nativeMigration).verified],
     ['single-consumer-provider-scheduler-writer', deployment.server?.externalEffectsEnabled === false && deployment.client?.externalWritesEnabled === false],
     ['mainline-independent-from-private-work', !containsWorkDependency(composition) && !((continuity.outstanding as unknown[]) ?? []).includes('work-integration-not-yet-isolated')],
@@ -32,9 +32,35 @@ export async function auditCapabilityPlatformCompletion(root: string): Promise<{
   return { ok, status: String(ledger.status), verified, blockers }
 }
 
-function hasForms(value: unknown): boolean { if (!Array.isArray(value)) return false; const kinds = new Set(value.map(item => item && typeof item === 'object' ? (item as Record<string, unknown>).kind : undefined)); return ['tool','package','browser','integration-pack','application'].every(kind => kinds.has(kind)) && value.filter(item => item && typeof item === 'object').every(item => (item as Record<string, unknown>).activationAllowed === true) }
 function containsWorkDependency(value: unknown): boolean { const text = JSON.stringify(value); return /BLACKLAKE|XIAOWEI|blacklake-reference|xiaowei-research|work-journal-agent-compiler/.test(text) }
 async function json(path: string): Promise<any> { return JSON.parse(await readFile(path, 'utf8')) }
+
+export function auditCapabilityFormReadiness(readiness: any, candidates: unknown) {
+  assert.equal(readiness?.activationRequiredForCoverage, false)
+  const expected = new Map([
+    ['tool', 'cli'], ['package', 'package'], ['headless-browser', 'browser-runtime'],
+    ['private-integration', 'integration-pack'], ['interactive-application', 'application'],
+  ])
+  const forms = Array.isArray(readiness?.forms) ? readiness.forms : []
+  assert.deepEqual(forms.map((form: any) => form.id).sort(), [...expected.keys()].sort())
+  assert.equal(new Set(forms.map((form: any) => form.id)).size, expected.size)
+  const candidateList = Array.isArray(candidates) ? candidates as Array<Record<string, unknown>> : []
+  const blockers: string[] = []
+  for (const form of forms) {
+    assert.equal(form.manifestKind, expected.get(form.id))
+    const candidate = candidateList.find(item => item.id === form.candidateId)
+    assert.ok(candidate, `capability form ${form.id} has no candidate`)
+    assert.equal(candidate.kind, form.manifestKind)
+    assert.equal(candidate.activationAllowed, false)
+    assert.ok(Array.isArray(form.evidence) && form.evidence.length > 0)
+    assert.ok(Array.isArray(form.blockers))
+    const complete = form.state === 'verified-inactive-lifecycle' && form.blockers.length === 0
+    if (!complete) blockers.push(...(form.blockers.length ? form.blockers.map((blocker: string) => `${form.id}:${blocker}`) : [`${form.id}:incomplete`]))
+  }
+  const verified = blockers.length === 0
+  assert.equal(readiness?.status === 'verified', verified)
+  return { verified, blockers }
+}
 
 export function auditWorkflowReplayReadiness(readiness: any, migrationPlan: { readonly units: readonly { readonly id: string }[] }) {
   assert.equal(readiness?.mode, 'synthetic-no-effect'); assert.equal(readiness?.activationAllowed, false); assert.equal(readiness?.externalReadsAllowed, false); assert.equal(readiness?.externalWritesAllowed, false)
