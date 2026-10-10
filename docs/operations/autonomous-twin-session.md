@@ -2032,3 +2032,10 @@
 - 本批没有设置任何 gate，没有执行真实 Keychain/设备凭证/网络/browser approval/服务注册或启动，没有改变现网 owner、composition 或 external effect。当前 deployment 仍为 client not-installed/device unenrolled，终局 blocker 不变。
 - 回滚为撤销本批 commands、administration module、activation preflight、ADR 与 catalog/migration 映射；任何未来显式操作产生的 local identity、poll credential 或 approved enrollment 都必须保留并向前恢复，不能随代码回滚删除。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本批。
 - 验证：受影响定向测试 12/12；完整主测试 553 项中 540 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。架构为 144 modules、83 个 platform-core Offer、126 assets、23/23 effects implemented、0/23 active；终局完成度仍必须等待真实安装、云审批与服务激活证据，不能由本批默认关闭路径提前放行。
+
+## 2026-10-10 — Xiaowei insight delivery handoff
+
+- 对 7 个 compatibility cutover unit 做逐项复核后，确认小维洞察缺少迁移实现；同时确认 message intake 现有 handoff 只输出计数与 checkpoint，尚不能导入非空待处理队列。因此没有把 `existing-workflows-equivalent-replay` 提前标为完成。
+- 新增 ADR 0177 与 privacy-bounded、content-addressed 的小维洞察 handoff。它只迁移完整的 `lastSentDay + lastWindowEndAt`，派生稳定 delivery fingerprint；reports、候选消息、prompt、模型输出、故障文本、chat 标识与凭证均不进入原生 checkpoint。缺半边界失败关闭，相同内容重放幂等，已有不同 checkpoint 拒绝覆盖。
+- 新增只读审计入口，只输出资源路径 hash、计数、checkpoint presence 与 digest；未读取真实业务消息、未调用执行器、未发周报、未启用原生 scheduler、未改变 consumer/provider/writer 或 runtime composition。
+- 回滚为撤销 handoff、审计入口、ADR、catalog ownership 与测试。未来经明确 cutover 写入的 checkpoint 属于持久迁移状态，不随代码回滚静默删除。用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store` 不纳入本批。

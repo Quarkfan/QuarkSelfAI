@@ -10,6 +10,7 @@ const auditScripts = [
   'audit-dida-maintenance-handoff.ts',
   'audit-session-lifecycle-handoff.ts',
   'audit-xiaowei-research-handoff.ts',
+  'audit-xiaowei-insight-handoff.ts',
   'audit-followup-handoff.ts',
   'audit-message-intake-handoff.ts',
 ]

@@ -2,6 +2,23 @@
   "schemaVersion": 1,
   "objective": "multi-user-cloud-control-local-execution-capability-agent-platform",
   "status": "in-progress",
+  "workflowReplay": {
+    "status": "incomplete",
+    "mode": "synthetic-no-effect",
+    "activationAllowed": false,
+    "externalReadsAllowed": false,
+    "externalWritesAllowed": false,
+    "units": [
+      { "id": "message-intake-and-projection", "state": "incomplete", "prepareEntrypoint": "src/migration/message-intake-handoff.ts#prepareMessageIntakeHandoff", "applyEntrypoint": null, "idempotentReplayVerified": false, "privacyBounded": true, "blockers": ["non-empty pending queues are counted but not imported into native durable events and workflows"] },
+      { "id": "dida-maintenance", "state": "synthetic-replay-verified", "prepareEntrypoint": "src/migration/dida-maintenance-handoff.ts#prepareDidaMaintenanceHandoff", "applyEntrypoint": "src/migration/dida-maintenance-handoff.ts#applyDidaMaintenanceHandoff", "idempotentReplayVerified": true, "privacyBounded": true, "blockers": [] },
+      { "id": "delegated-followup", "state": "synthetic-replay-verified", "prepareEntrypoint": "src/migration/followup-handoff.ts#prepareFollowupHandoff", "applyEntrypoint": "src/migration/followup-handoff.ts#applyFollowupHandoff", "idempotentReplayVerified": true, "privacyBounded": true, "blockers": [] },
+      { "id": "xiaowei-research", "state": "synthetic-replay-verified", "prepareEntrypoint": "src/migration/xiaowei-research-handoff.ts#prepareXiaoweiResearchHandoff", "applyEntrypoint": "src/migration/xiaowei-research-handoff.ts#applyXiaoweiResearchHandoff", "idempotentReplayVerified": true, "privacyBounded": true, "blockers": [] },
+      { "id": "session-lifecycle", "state": "synthetic-replay-verified", "prepareEntrypoint": "src/migration/session-lifecycle-handoff.ts#prepareSessionLifecycleHandoff", "applyEntrypoint": "src/migration/session-lifecycle-handoff.ts#applySessionLifecycleHandoff", "idempotentReplayVerified": true, "privacyBounded": true, "blockers": [] },
+      { "id": "collaboration-learning", "state": "synthetic-replay-verified", "prepareEntrypoint": "src/migration/collaboration-learning-handoff.ts#prepareCollaborationLearningHandoff", "applyEntrypoint": "src/migration/collaboration-learning-handoff.ts#applyCollaborationLearningHandoff", "idempotentReplayVerified": true, "privacyBounded": true, "blockers": [] },
+      { "id": "xiaowei-insight-digest", "state": "synthetic-replay-verified", "prepareEntrypoint": "src/migration/xiaowei-insight-handoff.ts#prepareXiaoweiInsightHandoff", "applyEntrypoint": "src/migration/xiaowei-insight-handoff.ts#applyXiaoweiInsightHandoff", "idempotentReplayVerified": true, "privacyBounded": true, "blockers": [] }
+    ],
+    "remainingGate": "Implement and replay a privacy-bounded non-empty message-intake import without activating any consumer or effect."
+  },
   "requirements": [
     { "id": "all-modules-classified", "state": "verified", "evidence": ["config/module-catalog.json", "config/capability-platform-migration.json"] },
     { "id": "real-multi-user-tenant-isolation", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json"] },
@@ -9,7 +26,7 @@
     { "id": "claude-codex-dsh-single-execution-contract", "state": "incomplete", "evidence": ["config/capability-platform-reasoning-executor-pilot-03.json"] },
     { "id": "console-agent-compose-test-version", "state": "incomplete", "evidence": ["config/capability-platform-console-coverage.json"] },
     { "id": "five-capability-forms", "state": "incomplete", "evidence": ["config/capability-artifact-candidates.json"] },
-    { "id": "existing-workflows-equivalent-replay", "state": "incomplete", "evidence": ["config/capability-platform-migration.json"] },
+    { "id": "existing-workflows-equivalent-replay", "state": "incomplete", "evidence": ["config/capability-platform-completion.json", "config/native-migration-plan.json"] },
     { "id": "single-consumer-provider-scheduler-writer", "state": "verified-current-scope", "evidence": ["config/module-catalog.json", "config/capability-platform-deployment.json"] },
     { "id": "mainline-independent-from-private-work", "state": "incomplete", "evidence": ["config/product-composition.json", "config/assistant-continuity.json"] },
     { "id": "workspace-file-desktop-approval-control", "state": "implemented-not-activated", "evidence": ["config/module-catalog.json"] },
