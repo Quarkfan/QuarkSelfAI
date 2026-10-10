@@ -9,7 +9,9 @@ test("loads bounded knowledge details that match the current conversation contex
   const root = await mkdtemp(path.join(os.tmpdir(), "blacklake-context-"));
   const files = {
     "docs/guides/reference-projects/blacklake-reference-router.md": "# Router\n- route",
-    "ai/devops-virtual-employee/skills/virtual-employee-router/SKILL.md": "# Virtual employee\n- route",
+    "ai/xiaowei-integration-blacklake-rd/README.md": "# BlackLake R&D integration\n- profile",
+    "ai/xiaowei-integration-blacklake-rd/employee-profile.json": "{\"id\":\"fixture\"}",
+    "ai/xiaowei-integration-blacklake-rd/skills/virtual-employee-router/SKILL.md": "# Virtual employee\n- route",
     "harness/bl-common-harness/.claude/rules/skill-routing.md": "# Harness\n- route",
     "ai/ai-devops-knowledge-base/indexes/rules.md": "# Rules\n- none",
     "ai/ai-devops-knowledge-base/indexes/knowledge-docs.md": "# Index\n- unchanged reference repository",

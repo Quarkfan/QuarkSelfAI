@@ -153,6 +153,11 @@ export class Bridge {
         type: "research_decision", decision: action.decision, channel: action.channel || null,
         sourceMessageId: action.sourceMessageId || null,
       });
+    } else if (action.type === "blacklake_execution_decision") {
+      if (!this.mentionMonitor) throw new Error("黑湖方案审批处理器当前不可用，请稍后重试。");
+      const decision = await this.mentionMonitor.applyExecutionDecision(action);
+      result = decision.result;
+      tone = decision.tone;
     } else if (action.type === "policy_decision") {
       if (!this.policyManager) throw new Error("策略控制层当前不可用，请稍后重试。");
       if (action.decision === "approve") {
@@ -176,6 +181,18 @@ export class Bridge {
         title: "会话已选择", tone: "green", status: "已处理",
       }));
       await this.select(sessionId, event.message_id);
+      return;
+    } else if (event.action_tag === "button" && event.action_name === "blacklake_analysis_approve" && event.form_value) {
+      if (!this.mentionMonitor) throw new Error("黑湖方案分析审批处理器当前不可用，请稍后重试。");
+      let values;
+      try { values = JSON.parse(event.form_value); } catch { values = {}; }
+      const decision = await this.mentionMonitor.approveAnalysisFromCard(event.message_id, values.prompt || "");
+      this.state.state.processedCardEventIds.push(event.event_id);
+      await this.state.save();
+      await this.lark.updateCard(event.token, buildNotificationCard(decision.result, {
+        title: decision.approved ? "方案分析已批准" : "审批未生效", tone: decision.tone, status: "已处理",
+      }));
+      if (decision.approved) void this.mentionMonitor.processLocalQueues();
       return;
     } else if (event.action_tag === "button" && event.action_name === "proactive_learning_submit" && event.form_value) {
       let values;
@@ -218,6 +235,9 @@ export class Bridge {
       tone,
       status: tone === "red" ? "需重试" : "已处理",
     }));
+    if (action.type === "blacklake_execution_decision" && action.decision === "approve") {
+      void this.mentionMonitor.processLocalQueues();
+    }
   }
 
   async handleResearchConfirmation(event) {

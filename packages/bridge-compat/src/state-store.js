@@ -18,6 +18,7 @@ const EMPTY_STATE = {
   mentionClarificationConfirmations: [],
   mentionResearchSessions: [],
   mentionResearchConfirmations: [],
+  mentionExecutionConfirmations: [],
   researchDecisionHistory: [],
   xiaoweiResearchRequests: [],
   xiaoweiProcessedMessageIds: [],
@@ -151,6 +152,13 @@ export class StateStore {
     for (const session of this.state.mentionResearchSessions || []) {
       if (/cannot confirm session deletion without an interactive terminal/i.test(session.deleteLastError || "")) {
         session.deleteNextRetryAt = null;
+        needsMigrationSave = true;
+      }
+    }
+    for (const confirmation of this.state.mentionExecutionConfirmations || []) {
+      if (confirmation.status === "executing") {
+        confirmation.status = "approved";
+        confirmation.nextAttemptAt = null;
         needsMigrationSave = true;
       }
     }

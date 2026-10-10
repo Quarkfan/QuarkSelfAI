@@ -14,14 +14,16 @@ const REQUIRED_SOURCES = [
   'ai/ai-devops-knowledge-base/indexes/rules.md',
   'ai/devops-virtual-employee/README.md',
   'ai/devops-virtual-employee/AGENTS.md',
-  'ai/devops-virtual-employee/skills/virtual-employee-router/SKILL.md',
+  'ai/xiaowei-integration-blacklake-rd/README.md',
+  'ai/xiaowei-integration-blacklake-rd/employee-profile.json',
+  'ai/xiaowei-integration-blacklake-rd/skills/virtual-employee-router/SKILL.md',
   'harness/bl-common-harness/README.md',
   'harness/bl-common-harness/CLAUDE.md',
   'harness/bl-common-harness/.claude/rules/skill-routing.md',
 ] as const
 
 const SKILL_DIRECTORIES = [
-  'ai/devops-virtual-employee/skills',
+  'ai/xiaowei-integration-blacklake-rd/skills',
   'harness/bl-common-harness/.claude/skills',
 ] as const
 

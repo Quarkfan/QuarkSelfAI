@@ -25,3 +25,16 @@ test("serializes concurrent state saves", async () => {
   const saved = JSON.parse(await readFile(path.join(dir, "state.json"), "utf8"));
   assert.equal(saved.queue[0].id, "one");
 });
+
+test("recovers an interrupted approved BlackLake execution for the same durable retry", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "bridge-state-execution-recovery-"));
+  await writeFile(path.join(dir, "state.json"), JSON.stringify({
+    mentionExecutionConfirmations: [{ approvalId: "approval-1", planDigest: "digest-1", status: "executing", nextAttemptAt: "2099-01-01T00:00:00.000Z" }],
+  }));
+  const store = new StateStore(dir);
+  await store.load();
+  assert.equal(store.state.mentionExecutionConfirmations[0].status, "approved");
+  assert.equal(store.state.mentionExecutionConfirmations[0].nextAttemptAt, null);
+  const saved = JSON.parse(await readFile(path.join(dir, "state.json"), "utf8"));
+  assert.equal(saved.mentionExecutionConfirmations[0].status, "approved");
+});

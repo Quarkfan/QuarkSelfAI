@@ -1,6 +1,25 @@
+import { createHash } from "node:crypto";
 import { formatUserTime, isWithinLocalHourWindow, sourceFailureAudit } from "./util.js";
 
 const CONVERSATION_ATTENTION_STRATEGY_VERSION = 2;
+
+function isBlacklakeEngineeringAnalysis(task) {
+  return task?.blacklakeRelated === true
+    && task?.researchDecision === "start"
+    && (task?.researchChannel || "codex") === "codex"
+    && Boolean(String(task?.researchPrompt || "").trim());
+}
+
+function boundedContextEvidence(context, targetMessageId) {
+  const useful = (Array.isArray(context) ? context : [])
+    .filter((item) => item?.message_id && item.message_id !== targetMessageId && String(item.content || "").trim())
+    .slice(-8)
+    .map((item) => {
+      const sender = item.sender?.name || (item.sender?.id ? "会话成员" : "未知发送人");
+      return `- ${item.create_time || "时间未知"} · ${sender}：${String(item.content).replace(/\s+/g, " ").slice(0, 300)}`;
+    });
+  return useful.join("\n") || "- 未获取到可补充的同会话上下文。";
+}
 
 function isoWithOffset(date) {
   const shifted = new Date(date.getTime() + 8 * 60 * 60 * 1000);
@@ -197,6 +216,7 @@ export class MentionMonitor {
     this.state.state.mentionClarificationConfirmations ??= [];
     this.state.state.mentionResearchSessions ??= [];
     this.state.state.mentionResearchConfirmations ??= [];
+    this.state.state.mentionExecutionConfirmations ??= [];
     this.state.state.researchDecisionHistory ??= [];
     this.state.state.flaggedConversationChatIds ??= [];
     this.state.state.conversationAttentionProfiles ??= [];
@@ -386,6 +406,7 @@ export class MentionMonitor {
       await this.discardLowSignalPending();
       await this.processPending();
       await this.processApprovedResearch();
+      await this.processApprovedExecution();
       await this.processClarificationReplies();
     } finally {
       this.localProcessing = false;
@@ -642,10 +663,10 @@ export class MentionMonitor {
           item.sourceMessageId === batchMessage.message_id || item.task?.taskId === task.taskId
         ));
         if (task.researchDecision === "start" && task.researchPrompt && !existingResearch && !existingConfirmation && this.runner) {
-          await this.requestResearchApproval(task, batchMessage, clarification);
+          await this.requestResearchApproval(task, batchMessage, clarification, context);
           userNotified = true;
         } else if (task.researchDecision === "confirm" && task.researchPrompt && !existingConfirmation && !existingResearch) {
-          await this.requestResearchApproval(task, batchMessage, clarification);
+          await this.requestResearchApproval(task, batchMessage, clarification, context);
           userNotified = true;
         } else if (task.researchDecision === "skip") {
           this.recordResearchDecision(task, "skip");
@@ -1004,8 +1025,11 @@ export class MentionMonitor {
     const routedSkills = Array.isArray(task.recommendedSkills) && task.recommendedSkills.length
       ? task.recommendedSkills.join("、")
       : "blacklake-reference-router";
-    const prompt = `先从 /Users/edy/BlackLakeWork 执行 bash scripts/check-blacklake-agent-sync.sh，并读取 docs/guides/reference-projects/blacklake-reference-router.md；本事项能力路由建议：${routedSkills}。按路由读取对应实时 SKILL.md 和任务所需真源，不得凭缓存判断。\n\n${task.researchPrompt}\n\n飞书来源：${message.chat_name || message.chat_id}\n发送人：${message.sender?.name || "未知发送人"}\n原消息：${message.content}\n任务 ID：${task.taskId}\n\n这是首轮快速调研，请在 20 分钟内收口；优先给出最强证据、根因分层、待验证假设和下一步，不要为穷举整个工作区而无限扩张范围。`;
-    const progress = (text) => this.safeSend(`黑湖问题调研中：${task.title}\n\n${text}`, `mention-research:${message.message_id}:progress`);
+    const twoStage = isBlacklakeEngineeringAnalysis(task);
+    const prompt = `先从 /Users/edy/BlackLakeWork 执行 bash scripts/check-blacklake-agent-sync.sh，并读取 docs/guides/reference-projects/blacklake-reference-router.md；本事项能力路由建议：${routedSkills}。按路由读取对应实时 SKILL.md 和任务所需真源，不得凭缓存判断。\n\n${task.researchPrompt}\n\n飞书来源：${message.chat_name || message.chat_id}\n发送人：${message.sender?.name || "未知发送人"}\n原消息：${message.content}\n任务 ID：${task.taskId}\n\n已读取的同会话上下文：\n${task.analysisContext || "- 无额外上下文"}\n\n常东旭在首次审批卡中的补充：\n${task.ownerSupplement || "- 无补充"}\n\n${twoStage ? `这是第一阶段的只读方案分析。只能读取证据、定位原因、设计方案与测试/回滚步骤；不得修改文件、数据或配置，不得 push、发布、部署、执行 DDL/业务数据写入或联系他人。最终输出必须明确列出：证据与根因、精确文件/数据范围、拟执行动作、明确排除项、验证和回滚。方案输出后立即停止，等待第二次批准。` : `这是首轮快速调研，请在 20 分钟内收口；优先给出最强证据、根因分层、待验证假设和下一步，不要为穷举整个工作区而无限扩张范围。`}`;
+    const progress = twoStage
+      ? async () => {}
+      : (text) => this.safeSend(`黑湖问题调研中：${task.title}\n\n${text}`, `mention-research:${message.message_id}:progress`);
     const result = existingSessionId
       ? { sessionId: existingSessionId, final: await this.runner.execute({ sessionId: existingSessionId, prompt }, progress) }
       : await this.runner.create(
@@ -1021,12 +1045,77 @@ export class MentionMonitor {
       createdAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       archivedAt: null,
+      phase: twoStage ? "awaiting-execution-approval" : "completed",
     };
     this.state.state.mentionResearchSessions.push(research);
     if (clarification) clarification.researchSessionId = result.sessionId;
     await this.state.save();
-    await this.safeSend(`**黑湖问题已建立可见的 Codex 调研会话**\n\n${task.title}\n会话：${result.sessionId}\n\n${result.final}`, `mention-research:${message.message_id}:final`);
+    if (twoStage) await this.requestExecutionApproval(task, message, research, result.final);
+    else await this.safeSend(`**黑湖问题已建立可见的 Codex 调研会话**\n\n${task.title}\n会话：${result.sessionId}\n\n${result.final}`, `mention-research:${message.message_id}:final`);
     return research;
+  }
+
+  async requestExecutionApproval(task, message, research, plan) {
+    const boundedPlan = String(plan || "").trim().slice(0, 10000);
+    const planDigest = createHash("sha256").update(boundedPlan).digest("hex");
+    const approvalId = `blacklake-execution:${message.message_id}:${planDigest.slice(0, 16)}`;
+    const sent = await this.safeSendInteractive(
+      `**黑湖工程问题的方案已完成，尚未执行。**\n\n事项：${task.title}\n会话：${research.sessionId}\n待批准方案：\n\n${boundedPlan}\n\n批准将只适用于上述方案（${planDigest.slice(0, 12)}）。如方案包含生产/发布/DDL/业务数据写入、对外沟通或凭证/权限变更，仍必须在执行前依照原有精确门禁另行确认。`,
+      [{ text: "批准按此方案执行", value: { type: "blacklake_execution_decision", sourceMessageId: message.message_id, approvalId, planDigest, decision: "approve" } },
+        { text: "暂不执行", value: { type: "blacklake_execution_decision", sourceMessageId: message.message_id, approvalId, planDigest, decision: "decline" } }],
+      { title: "确认是否执行方案", tone: "yellow" },
+      `blacklake-execution-confirm:${message.message_id}:${planDigest.slice(0, 12)}`,
+    );
+    this.state.state.mentionExecutionConfirmations.push({
+      sourceMessageId: message.message_id, task, message, sessionId: research.sessionId,
+      approvalId, planDigest, plan: boundedPlan, questionMessageId: sent?.message_id || sent?.messageId || null,
+      status: "pending", askedAt: new Date().toISOString(), attempts: 0, nextAttemptAt: null,
+    });
+    await this.state.save();
+  }
+
+  async applyExecutionDecision(action) {
+    this.initializeState();
+    const item = this.state.state.mentionExecutionConfirmations.find((entry) => (
+      entry.sourceMessageId === action.sourceMessageId
+      && entry.approvalId === action.approvalId
+      && entry.planDigest === action.planDigest
+      && entry.status === "pending"
+    ));
+    if (!item) return { result: "这份方案已处理、已失效或批准信息不匹配。", tone: "grey" };
+    item.status = action.decision === "approve" ? "approved" : "declined";
+    item.decidedAt = new Date().toISOString();
+    item.nextAttemptAt = null;
+    await this.state.save();
+    return action.decision === "approve"
+      ? { result: `已批准执行：**${item.task.title}**\n\n将在原 Codex 会话中严格按已批准方案继续。`, tone: "green" }
+      : { result: `已记录暂不执行：**${item.task.title}**\n\n方案和会话保留。`, tone: "grey" };
+  }
+
+  async processApprovedExecution() {
+    for (const item of this.state.state.mentionExecutionConfirmations) {
+      if (item.status !== "approved" || (item.nextAttemptAt && new Date(item.nextAttemptAt) > new Date())) continue;
+      item.status = "executing";
+      await this.state.save();
+      try {
+        const final = await this.runner.execute({
+          sessionId: item.sessionId,
+          prompt: `常东旭已批准下列精确方案（SHA-256: ${item.planDigest}）：\n\n${item.plan}\n\n现在只执行上述方案中明确列出且在当前授权边界内的动作，并完成验证。不得扩大范围；生产/发布/DDL/业务数据写入、对外沟通、凭证/权限变更仍需要原有精确批准，如方案未包含足够的精确授权就停止并说明。完成后给出变更、验证、未完成项与回滚方式。`,
+        }, async () => {});
+        item.status = "completed";
+        item.completedAt = new Date().toISOString();
+        const research = this.state.state.mentionResearchSessions.find((entry) => entry.sessionId === item.sessionId);
+        if (research) research.phase = "completed";
+        await this.state.save();
+        await this.safeSend(`**已按批准方案完成处理**\n\n${item.task.title}\n会话：${item.sessionId}\n\n${final}`, `blacklake-execution:${item.sourceMessageId}:final`);
+      } catch (error) {
+        item.status = "approved";
+        item.attempts += 1;
+        item.lastError = userFacingError(error);
+        item.nextAttemptAt = new Date(Date.now() + Math.min(60, 2 ** Math.min(item.attempts, 6)) * 60_000).toISOString();
+        await this.state.save();
+      }
+    }
   }
 
   async processApprovedResearch() {
@@ -1061,7 +1150,29 @@ export class MentionMonitor {
     }
   }
 
-  async requestResearchApproval(task, message, clarification = null) {
+  async requestResearchApproval(task, message, clarification = null, context = []) {
+    if (isBlacklakeEngineeringAnalysis(task)) {
+      const derived = [
+        task.summary && `- 助手摘要：${String(task.summary).slice(0, 500)}`,
+        task.relationshipSummary && `- 事项关系：${String(task.relationshipSummary).slice(0, 500)}`,
+        Array.isArray(task.blacklakeDomains) && task.blacklakeDomains.length && `- 业务域：${task.blacklakeDomains.join("、")}`,
+        Array.isArray(task.recommendedSkills) && task.recommendedSkills.length && `- 能力路由：${task.recommendedSkills.join("、")}`,
+      ].filter(Boolean).join("\n");
+      const analysisContext = `${derived ? `${derived}\n` : ""}${boundedContextEvidence(context, message.message_id)}`;
+      task.analysisContext = analysisContext;
+      const sent = await this.safeSendInteractive(
+        `**识别到一项明确的黑湖工程问题，我还没有开始分析。**\n\n事项：${task.title}\n判断：${task.researchDecisionReason}\n确认编号：${task.taskId}\n\n**已收集的有用上下文**\n${analysisContext}\n\n下方可选填写我未获取到的目标、范围、版本、字段、租户或其他约束，然后批准。批准后，我只会在 /Users/edy/BlackLakeWork 下创建独立 Codex 会话做只读方案分析；方案完成后会再发一次精确审批，第二次批准前不执行。`,
+        [{ text: "暂不分析", value: { type: "research_decision", sourceMessageId: message.message_id, decision: "decline" } }],
+        { title: "是否开始方案分析", tone: "yellow", includeInput: true, inputRequired: false,
+          label: "可选：补充我未获取到的信息", placeholder: "例如目标版本、客户/租户范围、字段、已尝试方案或明确排除项", submitName: "blacklake_analysis_approve", submitText: "批准并开始方案分析" },
+        `mention-research-confirm:${message.message_id}`,
+      );
+      this.state.state.mentionResearchConfirmations.push({ sourceMessageId: message.message_id, task, message,
+        clarificationTaskId: clarification?.taskId || null, questionMessageId: sent?.message_id || sent?.messageId || null,
+        status: "pending", askedAt: new Date().toISOString(), attempts: 0, nextAttemptAt: null });
+      await this.state.save();
+      return;
+    }
     const recommended = task.researchChannel === "xiaowei" ? "智造湖小维（慢速生产取证）" : "Codex（本地代码与方案）";
     const tip = task.researchChannel === "xiaowei"
       ? "（当前为智造湖小维，需要你确认后才会发送）"
@@ -1093,6 +1204,23 @@ export class MentionMonitor {
       nextAttemptAt: null,
     });
     await this.state.save();
+  }
+
+  async approveAnalysisFromCard(messageId, supplement = "") {
+    this.initializeState();
+    const item = this.state.state.mentionResearchConfirmations.find((entry) => (
+      entry.questionMessageId === messageId && entry.status === "pending" && isBlacklakeEngineeringAnalysis(entry.task)
+    ));
+    if (!item) return { result: "这项方案分析审批已处理或已失效。", tone: "grey", approved: false };
+    item.task.ownerSupplement = String(supplement || "").trim().slice(0, 2000);
+    item.status = "approved";
+    item.decidedAt = new Date().toISOString();
+    item.nextAttemptAt = null;
+    item.task.researchChannel = "codex";
+    item.task.approvalId = `research:${item.sourceMessageId}:${item.task.taskId}`;
+    item.task.approvedAt = item.decidedAt;
+    await this.state.save();
+    return { result: `已批准开始只读方案分析：**${item.task.title}**${item.task.ownerSupplement ? "\n\n你补充的信息会一并交给独立会话。" : ""}`, tone: "green", approved: true };
   }
 
   async requestClarificationApproval(task, message) {

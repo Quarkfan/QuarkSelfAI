@@ -224,6 +224,27 @@ test("handles a research decision from an interactive card once", async () => {
   assert.deepEqual(harness.state.state.processedCardEventIds, ["event-1"]);
 });
 
+test("binds optional BlackLake context input to the first approval card", async () => {
+  const harness = createHarness([]);
+  harness.state.state.processedCardEventIds = [];
+  let received = null;
+  let processed = 0;
+  harness.bridge.mentionMonitor = {
+    async approveAnalysisFromCard(messageId, supplement) {
+      received = { messageId, supplement };
+      return { result: "已批准", tone: "green", approved: true };
+    },
+    async processLocalQueues() { processed += 1; },
+  };
+  await harness.bridge.handleCardAction({
+    event_id: "event-analysis-input", operator_id: "ou_me", token: "token-analysis", message_id: "approval-analysis",
+    action_tag: "button", action_name: "blacklake_analysis_approve", form_value: JSON.stringify({ prompt: "补充版本和字段范围" }),
+  });
+  assert.deepEqual(received, { messageId: "approval-analysis", supplement: "补充版本和字段范围" });
+  assert.equal(processed, 1);
+  assert.deepEqual(harness.state.state.processedCardEventIds, ["event-analysis-input"]);
+});
+
 test("records a proactive conversation answer from the card without treating it as a command", async () => {
   const harness = createHarness([]);
   harness.state.state.processedCardEventIds = [];

@@ -3,7 +3,9 @@ import path from "node:path";
 
 const SOURCE_FILES = [
   "docs/guides/reference-projects/blacklake-reference-router.md",
-  "ai/devops-virtual-employee/skills/virtual-employee-router/SKILL.md",
+  "ai/xiaowei-integration-blacklake-rd/README.md",
+  "ai/xiaowei-integration-blacklake-rd/employee-profile.json",
+  "ai/xiaowei-integration-blacklake-rd/skills/virtual-employee-router/SKILL.md",
   "harness/bl-common-harness/.claude/rules/skill-routing.md",
   "ai/ai-devops-knowledge-base/indexes/knowledge-docs.md",
   "ai/ai-devops-knowledge-base/indexes/rules.md",

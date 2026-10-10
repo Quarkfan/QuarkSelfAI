@@ -2157,3 +2157,11 @@
 - revision `317f8fe64edecbf2c709bd4c9b5da5bfb8ff73f8` 构建为 server `0.3.1`，artifact digest `sha256:13bc52d63f184cac95dfd54f9dad1ec7b42f6551e382d442d68731358d204a83`。真实维护窗口先回读旧服务与 pinned TLS health，再停用唯一 provider、升级、重新激活；最终仍是同一 installation、`service-active-effects-off` / `ready-effects-off`，且 HTTPS `/` 回读到 Agent Studio。旧 `0.3.0` 制品位于私有 rollback slot。
 - 完整 `npm run check` 通过：架构 151 modules、23/23 effects implemented、0/23 active；主测试 585 项中 572 通过、13 项仅因 sandbox listener 限制跳过，compat 190/190。SSH gateway、客户端 enrollment/service、私有包、现有业务消费者/provider/writer 与 external writes 均未启用或切换；用户未提交文件保持未修改、未暂存。
 - Agent Studio 随后增加当前租户内的 owner-only 成员创建与设备 enrollment 短码批准入口；两者都不接受 tenant body 字段，密码请求后清空，批准不会启动客户端。第二次部署前门禁发现已有 rollback slot 会阻止连续升级，原 `0.3.1` 未改程序即恢复运行；滚动单槽修复通过连续两次升级与回滚测试后，以 revision `a5e053d4b6b1cc453c0fde7391c83b3ed2265958` / server `0.3.2` 重新部署。最终 pinned health 仍为 effects-off，`0.3.1` 成为已验证回滚目标；同源 live readback 与静态视觉复核均通过。
+
+## 2026-10-10 — 黑湖工程请求两阶段审批
+
+- 用户反馈希望对他人 @ 或私聊提出的明确黑湖代码/数据工程问题采用“先批准分析、再批准执行”，且首次审批前尽量读取飞书上下文，卡片保留补充框。
+- compatibility 单消费者现在继续复用原 focus-intake 与持久状态：`researchDecision=start + researchChannel=codex` 的明确工程事项先展示回复对象/同会话有界上下文，可选补充与首次批准同一卡提交。补充文本只进入方案分析上下文。
+- 首次批准后才在 `/Users/edy/BlackLakeWork` 创建独立 read-only Codex 会话；分析过程不发进度消息。方案作为有界文本并以 SHA-256 绑定第二张审批卡；只有精确 source/approval/digest 匹配才在原会话执行。进程中断时 `executing` 恢复为 approved 待重试，不丢失授权链。
+- 第二次批准仍不自动授权生产/发布/DDL/业务数据写入、对外沟通、凭证或权限变更。回滚可禁用新的两阶段分支并恢复原一次性只读调研；新状态字段向后兼容，不需要破坏性迁移。
+- 附加兼容校验发现 BlackLake 场景 Skill 已从通用 `devops-virtual-employee` 运行时拆到 `xiaowei-integration-blacklake-rd` 真源；已按 2026-10-10 根路由修正原生与 compatibility 读链。新路径实时校验为 12 个 source、55 个 skill，不再将场景 Skill 误归给通用运行时。

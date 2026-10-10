@@ -18,7 +18,7 @@ async function fixture(): Promise<string> {
     await writeFile(filename, `# ${path}\n- current source\n`)
   }
   for (const [directory, name] of [
-    ['ai/devops-virtual-employee/skills/virtual-employee-operation-chain', 'virtual-employee-operation-chain'],
+    ['ai/xiaowei-integration-blacklake-rd/skills/virtual-employee-operation-chain', 'virtual-employee-operation-chain'],
     ['harness/bl-common-harness/.claude/skills/query-loki', 'query-loki'],
   ]) {
     const filename = join(root, directory, 'SKILL.md')
@@ -28,7 +28,7 @@ async function fixture(): Promise<string> {
   return root
 }
 
-test('loads current three-source references and validates routed skills without copying their rules', async () => {
+test('loads current registered references and validates routed skills without copying their rules', async () => {
   const root = await fixture()
   const ctx = new Context()
   ctx.reflect.provide('quarkActionLedger', { async enqueue() { throw new Error('inspection must not enqueue') } })

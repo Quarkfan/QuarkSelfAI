@@ -629,6 +629,74 @@ test("requires owner confirmation even for a high-value start recommendation", a
   assert.equal(state.state.mentionResearchConfirmations[0].status, "pending");
 });
 
+test("uses context, optional owner input, and two exact approvals for BlackLake engineering work", async () => {
+  const message = {
+    message_id: "om_engineering", chat_id: "oc_dm", chat_name: "工程师", chat_type: "p2p",
+    create_time: "2026-10-10 10:00", content: "请看下字段映射错误", sender: { id: "ou_other", name: "工程师" },
+  };
+  const context = [
+    { message_id: "om_context", create_time: "2026-10-10 09:58", content: "只在 3.4 版本的订单字段复现", sender: { id: "ou_other", name: "工程师" } },
+    message,
+  ];
+  const state = stateHarness();
+  const cards = [];
+  const notices = [];
+  let createPrompt = "";
+  let executePrompt = "";
+  const monitor = new MentionMonitor({
+    config: { mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, mentionContextMinutes: 30, allowedOpenId: "ou_me" },
+    state,
+    lark: {
+      async searchMentions() { return [message]; },
+      async getMentionContext() { return context; },
+      async sendInteractive(markdown, actions, options) { cards.push({ markdown, actions, options }); return { message_id: cards.length === 1 ? "approval-analysis" : "approval-execution" }; },
+      async send(markdown) { notices.push(markdown); },
+    },
+    taskCreator: { async createFromMention() { return {
+      taskId: "task_engineering", title: "修复订单字段映射", blacklakeRelated: true,
+      researchDecision: "start", researchChannel: "codex", researchDecisionReason: "明确的代码与数据模型问题",
+      researchPrompt: "定位订单字段映射错误", recommendedSkills: ["blacklake-reference-router"],
+    }; } },
+    runner: {
+      async create(prompt, requestId, onProgress, options) {
+        createPrompt = prompt;
+        assert.equal(options.readOnly, true);
+        await onProgress("中间进度不应通知");
+        return { sessionId: "session-engineering", final: "方案：修改 mapping.ts；运行单测；不发布。" };
+      },
+      async execute(job) { executePrompt = job.prompt; return "已修改并通过单测"; },
+    },
+  });
+
+  await monitor.poll();
+  assert.equal(cards.length, 1);
+  assert.match(cards[0].markdown, /3\.4 版本/);
+  assert.equal(cards[0].options.includeInput, true);
+  assert.equal(cards[0].options.inputRequired, false);
+  assert.equal(cards[0].options.submitName, "blacklake_analysis_approve");
+  assert.equal(state.state.mentionResearchSessions.length, 0);
+
+  const approved = await monitor.approveAnalysisFromCard("approval-analysis", "只分析订单模块，兼容旧字段。");
+  assert.equal(approved.approved, true);
+  await monitor.processLocalQueues();
+  assert.match(createPrompt, /3\.4 版本/);
+  assert.match(createPrompt, /只分析订单模块/);
+  assert.equal(notices.length, 0);
+  assert.equal(cards.length, 2);
+  assert.match(cards[1].markdown, /尚未执行/);
+  assert.equal(executePrompt, "");
+
+  const pending = state.state.mentionExecutionConfirmations[0];
+  const executionApproval = await monitor.applyExecutionDecision({
+    sourceMessageId: message.message_id, approvalId: pending.approvalId, planDigest: pending.planDigest, decision: "approve",
+  });
+  assert.equal(executionApproval.tone, "green");
+  await monitor.processLocalQueues();
+  assert.match(executePrompt, /修改 mapping\.ts/);
+  assert.equal(state.state.mentionExecutionConfirmations[0].status, "completed");
+  assert.match(notices[0], /已修改并通过单测/);
+});
+
 test("clarification is proposed to the owner before an approved AI twin card is sent", async () => {
   const message = {
     message_id: "om_clarify", chat_id: "oc_dm", chat_name: "姜臣轩", chat_type: "p2p",

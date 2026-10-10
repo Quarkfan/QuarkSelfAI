@@ -169,7 +169,7 @@ function inputForm(options = {}) {
     elements: [{
       tag: "input",
       name: "prompt",
-      required: true,
+      required: options.inputRequired ?? true,
       input_type: "multiline_text",
       rows: 3,
       max_length: 1000,
