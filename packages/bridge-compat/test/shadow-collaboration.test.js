@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   ShadowCollaborationMonitor,
+  buildMatterContext,
   buildShadowDecision,
   classifyAttention,
   compactShadowHistory,
@@ -69,6 +70,52 @@ test("merges repeated messages into one matter without storing raw content", asy
   assert.equal(h.state.state.shadowMatters[0].sources.length, 2);
   assert.equal(h.state.state.shadowDecisions.length, 2);
   assert.equal("content" in h.state.state.shadowMatters[0].sources[0], false);
+});
+
+test("offers a bounded cross-conversation matter candidate before task projection", async () => {
+  const h = harness({ matterContextEnabled: true });
+  const monitor = new ShadowCollaborationMonitor(h);
+  await monitor.observe({
+    message_id: "om_group", chat_id: "oc_group", chat_name: "项目群", content: "HHZZ3-108369 等待方案确认",
+    sender: { id: "ou_1", name: "同事" }, create_time: "2026-08-20 10:00",
+  }, [], {
+    taskId: "task_existing", taskAction: "created", title: "【重要】确认方案",
+    priority: 3, notificationDecision: "silent", actionRequired: true,
+    actionOwner: "changdongxu", nextAction: "确认实施方案",
+  });
+
+  const context = monitor.contextFor({
+    message_id: "om_private", chat_id: "oc_private", chat_name: "私聊", content: "HHZZ3-108369 的时间改到周五",
+  }, [], new Date("2026-08-21T02:00:00Z"));
+
+  assert.equal(context.candidates[0].matterKey, h.state.state.shadowMatters[0].key);
+  assert.equal(context.candidates[0].match, "exact-reference");
+  assert.deepEqual(context.exactTaskIds, ["task_existing"]);
+  assert.equal(context.candidates[0].sameConversation, false);
+  assert.equal("chatIds" in context.candidates[0], false);
+  assert.equal("senderIds" in context.candidates[0], false);
+  assert.doesNotMatch(JSON.stringify(context), /等待方案确认/);
+});
+
+test("keeps the bounded matter index current after the reporting window ends", async () => {
+  const h = harness({ matterContextEnabled: true });
+  const monitor = new ShadowCollaborationMonitor(h);
+  monitor.ensureState(new Date("2026-08-01T00:00:00Z"));
+  h.state.state.shadowMode.endsAt = "2026-08-02T00:00:00Z";
+  await monitor.observe({
+    message_id: "om_after", chat_id: "oc_1", chat_name: "内部群", content: "新的明确事项",
+    sender: { id: "ou_1" },
+  }, [], {
+    taskAction: "ignored", notificationDecision: "silent", intakeDecision: "information", actionRequired: false,
+  });
+  assert.equal(h.state.state.shadowMatters.length, 1);
+  assert.equal(h.state.state.shadowDecisions.length, 1);
+});
+
+test("builds an empty available context without exposing source records", () => {
+  assert.deepEqual(buildMatterContext({ shadowMatters: [] }, { message_id: "om_1", chat_id: "oc_1", content: "hello" }), {
+    version: 1, availability: "available", candidateCount: 0, candidates: [], exactTaskIds: [],
+  });
 });
 
 test("compacts shadow decisions and sources as one lineage boundary", () => {

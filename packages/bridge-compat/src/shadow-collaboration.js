@@ -5,6 +5,9 @@ import { formatUserTime, run } from "./util.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SHADOW_HISTORY_LIMIT = 2000;
+const MATTER_CONTEXT_LIMIT = 8;
+const ACTIVE_MATTER_WINDOW_MS = 90 * DAY_MS;
+const COMPLETED_MATTER_WINDOW_MS = 14 * DAY_MS;
 const TIER_SCORE = { silent: 0, today: 1, realtime: 2 };
 const STOP_WORDS = new Set([
   "常东旭", "飞书", "消息", "事项", "项目", "问题", "跟进", "关注", "确认", "处理", "需要",
@@ -58,6 +61,24 @@ function anchors(...values) {
     ...(text.match(/[a-z0-9-]+-domain/gi) ?? []).map((value) => value.toLowerCase()),
     ...(text.match(/V\d+\.\d+(?:\.\d+)?/gi) ?? []).map((value) => value.toUpperCase()),
   ]).slice(0, 12);
+}
+
+function referenceHashes(...values) {
+  const text = values.filter(Boolean).join(" ");
+  const references = unique([
+    ...(text.match(/\b[A-Z][A-Z0-9]{1,9}-\d+\b/g) ?? []).map((value) => value.toUpperCase()),
+    ...(text.match(/https?:\/\/[^\s<>]+/gi) ?? []).map((value) => {
+      try {
+        const url = new URL(value.replace(/[),.;，。；]+$/u, ""));
+        url.hash = "";
+        return url.toString();
+      } catch {
+        return value;
+      }
+    }),
+  ]);
+  return references.slice(0, 16).map((value) =>
+    createHash("sha256").update(value).digest("hex").slice(0, 20));
 }
 
 function overlap(left = [], right = []) {
@@ -120,27 +141,42 @@ export function buildShadowDecision(message, task = {}, now = new Date()) {
     actionRequired: task.actionRequired === true,
     deadline: task.dueDate || null,
     materialChange: truncate(task.materialChangeSummary || "", 200),
+    matterResolution: task.matterResolution || "none",
+    matchedMatterKey: task.matchedMatterKey || "",
+    matterMatchReason: truncate(task.matterMatchReason || "", 240),
   };
 }
 
-function matterIdentity(message, decision) {
-  const values = [decision.title, decision.nextAction, message.chat_name, message.content];
+function matterIdentity(message, decision = {}, contextMessages = []) {
+  const contextValues = (Array.isArray(contextMessages) ? contextMessages : [])
+    .slice(-20).flatMap((item) => [item?.content, item?.reply_to_message_id, item?.root_id]);
+  const values = [decision.title, decision.nextAction, message.chat_name, message.content, ...contextValues];
   const identityAnchors = anchors(...values);
   const identityTokens = tokens(...values);
+  const identityReferences = referenceHashes(...values);
   const seed = identityAnchors.length ? identityAnchors.join("|") : identityTokens.slice(0, 8).join("|") || message.chat_id;
   return {
     anchors: identityAnchors,
     tokens: identityTokens,
+    referenceHashes: identityReferences,
     fallbackKey: `matter:${createHash("sha256").update(seed || message.message_id).digest("hex").slice(0, 16)}`,
   };
 }
 
-function findMatter(matters, message, decision) {
-  const identity = matterIdentity(message, decision);
+function findMatter(matters, message, decision, contextMessages = []) {
+  const identity = matterIdentity(message, decision, contextMessages);
+  if (decision.matchedMatterKey) {
+    const declaredMatch = matters.find((matter) => matter.key === decision.matchedMatterKey);
+    if (declaredMatch) return { matter: declaredMatch, identity };
+  }
   if (decision.taskId) {
     const taskMatch = matters.find((matter) => matter.taskIds?.includes(decision.taskId));
     if (taskMatch) return { matter: taskMatch, identity };
   }
+  const referenceMatch = identity.referenceHashes.length
+    ? matters.find((matter) => matter.referenceHashes?.some((value) => identity.referenceHashes.includes(value)))
+    : null;
+  if (referenceMatch) return { matter: referenceMatch, identity };
   const anchorMatch = identity.anchors.length
     ? matters.find((matter) => matter.anchors?.some((value) => identity.anchors.includes(value)))
     : null;
@@ -150,6 +186,67 @@ function findMatter(matters, message, decision) {
     .sort((left, right) => right.score - left.score)[0];
   if (tokenMatch?.score >= 0.6) return { matter: tokenMatch.matter, identity };
   return { matter: null, identity };
+}
+
+function recentEnough(matter, now) {
+  const updatedAt = new Date(matter.updatedAt || matter.createdAt || 0).getTime();
+  if (!Number.isFinite(updatedAt)) return false;
+  const windowMs = matter.status === "completed" ? COMPLETED_MATTER_WINDOW_MS : ACTIVE_MATTER_WINDOW_MS;
+  return now.getTime() - updatedAt <= windowMs;
+}
+
+export function buildMatterContext(root, message, contextMessages = [], now = new Date()) {
+  const matters = (Array.isArray(root?.shadowMatters) ? root.shadowMatters : [])
+    .filter((matter) => matter?.key && recentEnough(matter, now));
+  const identity = matterIdentity(message, {}, contextMessages);
+  const ranked = matters.map((matter) => {
+    const exactReference = identity.referenceHashes.some((value) => matter.referenceHashes?.includes(value));
+    const anchorScore = overlap(matter.anchors, identity.anchors);
+    const tokenScore = overlap(matter.tokens, identity.tokens);
+    const sameConversation = Array.isArray(matter.chatIds) && matter.chatIds.includes(message.chat_id);
+    const score = exactReference ? 1 : Math.max(anchorScore * 0.86, tokenScore * 0.72, sameConversation ? 0.12 : 0);
+    return { matter, exactReference, sameConversation, score };
+  }).sort((left, right) => (
+    Number(right.exactReference) - Number(left.exactReference)
+    || right.score - left.score
+    || Date.parse(right.matter.updatedAt || 0) - Date.parse(left.matter.updatedAt || 0)
+  ));
+  const matched = ranked.filter((item) => item.score >= 0.45 || item.exactReference);
+  const recentActive = ranked.filter((item) => !matched.includes(item)
+      && (["open", "followup"].includes(item.matter.status) || item.matter.taskIds?.length))
+    .sort((left, right) => Date.parse(right.matter.updatedAt || 0) - Date.parse(left.matter.updatedAt || 0));
+  const selected = [...matched, ...recentActive].slice(0, MATTER_CONTEXT_LIMIT);
+  const candidates = selected.map(({ matter, exactReference, sameConversation, score }) => ({
+    matterKey: matter.key,
+    title: truncate(matter.title || "未命名事项", 100),
+    status: matter.status || "observing",
+    actionOwner: matter.actionOwner || "unknown",
+    actionRequired: matter.actionRequired === true,
+    nextAction: truncate(matter.nextAction || "", 160),
+    deadline: matter.deadline || null,
+    taskIds: unique(matter.taskIds || []).slice(-3),
+    updatedAt: matter.updatedAt || matter.createdAt || null,
+    sourceCount: Array.isArray(matter.sources) ? matter.sources.length : 0,
+    match: exactReference ? "exact-reference" : score >= 0.45 ? "semantic-candidate" : "recent-active",
+    confidence: exactReference ? "exact" : score >= 0.65 ? "high" : score >= 0.45 ? "medium" : "low",
+    sameConversation,
+  }));
+  const exactTaskIds = unique(selected
+    .filter((item) => item.exactReference && ["open", "followup"].includes(item.matter.status))
+    .flatMap((item) => item.matter.taskIds || []));
+  return {
+    version: 1,
+    availability: "available",
+    candidateCount: candidates.length,
+    candidates,
+    exactTaskIds,
+  };
+}
+
+export function formatMatterContext(context) {
+  if (!context || context.availability !== "available") return "事项上下文不可用；不得因此推断不存在已有事项。";
+  if (!context.candidates?.length) return "未发现有界候选事项；仍须通过滴答搜索确认是否已有任务。";
+  return JSON.stringify({ version: context.version, candidates: context.candidates }, null, 2);
 }
 
 function calendarMatches(matter, event) {
@@ -199,12 +296,20 @@ export class ShadowCollaborationMonitor {
     return root.shadowMode;
   }
 
+  contextFor(message, contextMessages = [], now = new Date()) {
+    this.ensureState(now);
+    if (this.config.matterContextEnabled === false) {
+      return { version: 1, availability: "disabled", candidateCount: 0, candidates: [], exactTaskIds: [] };
+    }
+    return buildMatterContext(this.state.state, message, contextMessages, now);
+  }
+
   async observe(message, contextMessages, task) {
     const mode = this.ensureState();
-    if (!mode.enabled || new Date() >= new Date(mode.endsAt)) return null;
+    if (this.config.matterContextEnabled === false && (!mode.enabled || new Date() >= new Date(mode.endsAt))) return null;
     const decision = buildShadowDecision(message, task);
     const matters = this.state.state.shadowMatters;
-    const { matter: existing, identity } = findMatter(matters, message, decision);
+    const { matter: existing, identity } = findMatter(matters, message, decision, contextMessages);
     const matter = existing || {
       key: identity.fallbackKey,
       createdAt: decision.at,
@@ -223,6 +328,7 @@ export class ShadowCollaborationMonitor {
     matter.lastMaterialChange = decision.materialChange || matter.lastMaterialChange || "";
     matter.anchors = unique([...(matter.anchors || []), ...identity.anchors]).slice(0, 20);
     matter.tokens = unique([...(matter.tokens || []), ...identity.tokens]).slice(0, 40);
+    matter.referenceHashes = unique([...(matter.referenceHashes || []), ...identity.referenceHashes]).slice(0, 24);
     matter.taskIds = unique([...matter.taskIds, decision.taskId]);
     matter.chatIds = unique([...matter.chatIds, message.chat_id]);
     matter.senderIds = unique([...matter.senderIds, message.sender?.id]);

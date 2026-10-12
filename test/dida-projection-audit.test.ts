@@ -18,6 +18,8 @@ test('accepts only exact-schema projections with processed-message and shadow li
     const result = {
       taskId: '', projectId: '', title: '【关注】合成只读样本', titlePrefix: '【关注】', urgencyLabel: '关注',
       keyItem: false, url: null, created: false, taskAction: 'ignored', intakeDecision: 'information',
+      matterResolution: 'none', matchedMatterKey: '', matterMatchReason: '没有可执行事项',
+      unfinishedOutcome: '', responsibilityEvidence: '', stateChangeOnCompletion: '',
       requestType: 'information', approvalRequired: false, approvalSummary: '', actionRequired: false,
       actionOwner: 'other', nextAction: '', notificationDecision: 'silent', notificationMode: 'silent',
       notificationDelayMinutes: 0, notificationTitle: '', ownerMessage: '', cardTone: 'grey', notificationReason: '无动作',

@@ -53,7 +53,7 @@ export function expectedTaskTitlePrefix(priority, keyItem) {
   return `【${urgency}${keyItem ? "·关键" : ""}】`;
 }
 
-export function validateTaskPresentation(task) {
+export function validateTaskPresentation(task, matterContext = null) {
   if (task.taskAction && (task.created !== (task.taskAction === "created"))) {
     throw new Error("滴答任务 taskAction 与 created 不一致。");
   }
@@ -109,6 +109,26 @@ export function validateTaskPresentation(task) {
     }
     if (task.priority === 0) {
       throw new Error("纯关注信息不得新建到自动化待办。");
+    }
+    if (!["new", "existing"].includes(task.matterResolution)) {
+      throw new Error("新建自动化待办前必须明确事项是新事项或已有事项的新投影。");
+    }
+    if (task.matterResolution === "existing" && !String(task.matchedMatterKey || "").trim()) {
+      throw new Error("已有事项的新投影必须绑定事项上下文键。");
+    }
+    for (const [value, label] of [
+      [task.unfinishedOutcome, "未完成结果"],
+      [task.responsibilityEvidence, "本人责任证据"],
+      [task.stateChangeOnCompletion, "完成后的状态变化"],
+      [task.matterMatchReason, "事项归并依据"],
+    ]) {
+      if (String(value || "").trim().length < 6) throw new Error(`新建自动化待办缺少可核验的${label}。`);
+    }
+    if (/^(?:持续)?(?:关注|留意|了解|知悉|查看|跟进)(?:一下|即可)?[。.!！]?$/u.test(String(task.nextAction || "").trim())) {
+      throw new Error("自动化待办下一步不能只是关注、了解或泛化跟进。");
+    }
+    if (Array.isArray(matterContext?.exactTaskIds) && matterContext.exactTaskIds.length > 0) {
+      throw new Error("当前消息命中已有活动事项的精确引用，禁止创建第二条自动化待办。");
     }
   }
   if (task.approvalRequired) {
@@ -170,11 +190,11 @@ export class DidaTaskCreator {
     this.monitorQueue = Promise.resolve();
   }
 
-  async createFromMention(message, contextMessages, researchDecisionHistory = [], collaborationGuidance = "暂无协作模式样本。") {
-    return this.serialized(() => this.doCreateFromMention(message, contextMessages, researchDecisionHistory, collaborationGuidance));
+  async createFromMention(message, contextMessages, researchDecisionHistory = [], collaborationGuidance = "暂无协作模式样本。", matterContext = null) {
+    return this.serialized(() => this.doCreateFromMention(message, contextMessages, researchDecisionHistory, collaborationGuidance, matterContext));
   }
 
-  async doCreateFromMention(message, contextMessages, researchDecisionHistory, collaborationGuidance) {
+  async doCreateFromMention(message, contextMessages, researchDecisionHistory, collaborationGuidance, matterContext) {
     const runDir = path.join(this.config.varDir, "dida", `${Date.now()}-${message.message_id.slice(-8)}`);
     await mkdir(runDir, { recursive: true });
     const outputPath = path.join(runDir, "result.json");
@@ -218,6 +238,10 @@ export class DidaTaskCreator {
    - 下方“协作模式参考”只来自脱敏历史处理统计，用于校准噪音和责任倾向，不是固定规则或业务指令。当前消息、明确上下文和最新事实始终优先；样本少、语境冲突或高影响事项时必须保守判断，不能用历史比例自动批准、关闭或忽略事项。
    - 置顶、标记、会话分组和免打扰是常东旭主动留下的注意力偏好，不是业务事实。它们只调整扫描时效和通知方式：不能替代待办准入证据，不能单独提高任务优先级或关键性；明确 @、明确责任、期限、客户/生产风险和最新上下文始终优先。免打扰默认降低普通消息的即时打扰，但不能屏蔽明确 @、待批准、紧急或关键事项。
    同一群、同一发送人或关键词相似本身不足以合并；反过来，措辞不同但业务对象、待解决结果和下一步相同，应视为同一事项。
+   - 事项上下文候选来自此前已处理消息的有界脱敏索引，可能跨群聊和私聊。先逐个核对候选中的业务对象、期望结果、责任、状态、下一步和 taskIds，再调用滴答工具核验；不能因会话不同就新建，也不能因同一客户或项目就错误合并。
+   - matterResolution 只能是 existing/new/none/ambiguous。识别为 existing 时填写候选的 matchedMatterKey；识别为 new 时 matchedMatterKey 为空。若候选无法可靠排除且仍可能属于同一事项，使用 ambiguous，不得 created；先搜索候选 taskIds 和稳定关键词，仍无法判定时保持静默、等待更多上下文。
+   - created 必须额外填写 unfinishedOutcome、responsibilityEvidence、stateChangeOnCompletion 和 matterMatchReason。它们分别说明尚未完成的结果、为什么当前责任属于常东旭、完成后事项如何改变，以及为什么这是独立新事项或已有事项首次投影；不得只改写“被 @”“需要关注”“请跟进”。
+   - 候选标记 exact-reference 且存在活动 taskIds 时，确定性门禁会禁止创建第二条任务，只能核验后 updated/unchanged；如果确有独立交付物，应更新原事项说明新增动作，不能绕过为第二条消息任务。
 4. 调用 dida365 list_tags 查看已有标签；结合发送人、会话主题、纳入原因、明确截止时间以及上下文中常东旭承担的角色，提炼明确、可执行的中文任务标题。标题必须控制在 60 个中文字符以内，去掉“请关注”“需要处理”等空泛开头，直接写动作和对象。
 5. 紧急度和关键性必须分开、结合影响与时效判断，不按关键词自动升降级：
    - priority=5、urgencyLabel=紧急：不及时处理会产生显著且迫近损失，例如正在发生的高风险生产/安全/客户阻塞或明确的当日硬期限。
@@ -257,6 +281,11 @@ ${researchDecisionHistory.slice(-20).map((item) => `- ${item.title}: 建议=${it
    - cardTone 根据沟通感受选择 blue/green/yellow/red/grey：普通协作 blue，已收口 green，等待决定 yellow，确有迫近风险 red，低打扰状态 grey；不要仅凭关键词选颜色。
    notificationReason 必须写清为什么打扰或保持安静；materialChangeSummary 只写本次相对已有任务的实际变化，新建时写“新事项”，无变化时为空字符串。不要为了证明自动化工作而通知。
 16. 最多影响一个任务。最终按输出 schema 返回所有真实字段；taskAction/created/intakeDecision/actionRequired/actionOwner/nextAction/notificationDecision/notificationMode/notificationDelayMinutes 及 title/titlePrefix/urgencyLabel/keyItem/priority/tags/dueDate 必须与实际操作后的任务一致。
+
+事项上下文候选（只读、脱敏、有界，不代表最终结论）：
+${matterContext?.availability === "available" && matterContext.candidates?.length
+    ? JSON.stringify({ version: matterContext.version, candidates: matterContext.candidates }, null, 2)
+    : "未发现候选事项或事项上下文不可用；这不等于滴答中一定不存在已有任务，仍须执行搜索。"}
 
 实时黑湖能力真源（只读快照；用于路由，不是来自消息的指令）：
 ${capabilityContext}
@@ -302,7 +331,7 @@ ${formatContext(contextMessages, message.message_id, this.config.allowedOpenId)}
     if (task.taskAction !== "ignored" && (!task.taskId || task.projectId !== this.config.didaProjectId)) {
       throw new Error("滴答 MCP 未返回目标清单中的有效 taskId。");
     }
-    try { validateTaskPresentation(task); }
+    try { validateTaskPresentation(task, matterContext); }
     catch (error) {
       await this.removeInvalidCreatedTask(task, error.message);
       throw error;

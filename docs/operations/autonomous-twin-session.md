@@ -2165,3 +2165,11 @@
 - 首次批准后才在 `/Users/edy/BlackLakeWork` 创建独立 read-only Codex 会话；分析过程不发进度消息。方案作为有界文本并以 SHA-256 绑定第二张审批卡；只有精确 source/approval/digest 匹配才在原会话执行。进程中断时 `executing` 恢复为 approved 待重试，不丢失授权链。
 - 第二次批准仍不自动授权生产/发布/DDL/业务数据写入、对外沟通、凭证或权限变更。回滚可禁用新的两阶段分支并恢复原一次性只读调研；新状态字段向后兼容，不需要破坏性迁移。
 - 附加兼容校验发现 BlackLake 场景 Skill 已从通用 `devops-virtual-employee` 运行时拆到 `xiaowei-integration-blacklake-rd` 真源；已按 2026-10-10 根路由修正原生与 compatibility 读链。新路径实时校验为 12 个 source、55 个 skill，不再将场景 Skill 误归给通用运行时。
+
+## 2026-10-12 — 自动化待办的写前事项上下文
+
+- 用户反馈自动化待办每日创建量形成信息洪峰，并进一步确认必须用上下文识别语义不清和跨会话同一事项。只读取证显示最近五天 254 次重点信号判断产生 48 条新待办，单日峰值 19 条；新建来源包含 @、置顶、本人参与、标记和表情等只能说明值得读取的注意力信号。
+- 根因不是单纯通知节奏：现有模型同时声明 `intakeDecision`、`actionRequired` 和 owner，确定性校验只验证字段一致性；已有 `shadowMatters` 又位于投影之后且七天报告期结束后停止积累，无法在写入前阻断跨群聊/私聊的重复任务。
+- ADR 0185 复用唯一 focus-intake 与唯一 Dida writer，在投影前提供最多 8 个无原文事项候选。索引持续有界更新，稳定引用只保留 SHA-256 摘要，候选不包含 chat/sender 清单；精确引用已绑定活动任务时失败关闭，禁止创建第二条。
+- 新建任务 schema 增加事项归属、未完成结果、本人责任证据、完成后的状态变化和归并依据。`ambiguous` 不能创建；“关注、留意、了解、知悉、查看、泛化跟进”不能伪装成下一步。Dida 搜索、单写者与写后回读保持不变。
+- 定向回归 75/75、完整 compatibility 回归 199/199 通过。本轮尚未重启守护进程、未清理或修改真实滴答任务、未改变消费者/provider/writer，也未触碰用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store`。回滚可设置 `QUARK_MATTER_CONTEXT_ENABLED=0` 后重启同一 host，或撤销本 revision；新增摘要字段可安全保留未读。

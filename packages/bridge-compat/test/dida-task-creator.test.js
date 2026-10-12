@@ -5,6 +5,15 @@ import os from "node:os";
 import path from "node:path";
 import { DidaTaskCreator, expectedTaskTitlePrefix, formatContext, normalizeTaskResult, validateTaskPresentation } from "../src/dida-task-creator.js";
 
+const NEW_MATTER_EVIDENCE = {
+  matterResolution: "new",
+  matchedMatterKey: "",
+  matterMatchReason: "现有候选均不是同一交付结果",
+  unfinishedOutcome: "客户方案尚未得到明确确认",
+  responsibilityEvidence: "上下文明示由常东旭作出最终确认",
+  stateChangeOnCompletion: "确认后方案可进入下一执行阶段",
+};
+
 test("invokes Codex MCP worker and validates the target project", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-"));
   const fake = path.join(dir, "codex");
@@ -15,7 +24,7 @@ while (( $# )); do
   shift
 done
 cat >/dev/null
-print -r -- '{"taskId":"task_1","projectId":"project_1","title":"【重要·关键】确认客户方案","titlePrefix":"【重要·关键】","urgencyLabel":"重要","keyItem":true,"url":null,"created":true,"taskAction":"created","intakeDecision":"task","actionRequired":true,"actionOwner":"changdongxu","nextAction":"确认客户方案","notificationDecision":"notify","notificationMode":"realtime","notificationDelayMinutes":0,"notificationTitle":"客户方案等你确认","ownerMessage":"我把客户方案整理成待办了，现在只差你确认一下。","cardTone":"yellow","notificationReason":"需要确认客户方案","materialChangeSummary":"新事项","summary":"ok","priority":3,"tags":["飞书","重要","关键事项"],"needsClarification":false,"blacklakeRelated":false,"researchDecision":"skip","researchChannel":"none"}' > "$out"
+print -r -- '{"taskId":"task_1","projectId":"project_1","title":"【重要·关键】确认客户方案","titlePrefix":"【重要·关键】","urgencyLabel":"重要","keyItem":true,"url":null,"created":true,"taskAction":"created","intakeDecision":"task","matterResolution":"new","matchedMatterKey":"","matterMatchReason":"现有候选均不是同一交付结果","unfinishedOutcome":"客户方案尚未得到明确确认","responsibilityEvidence":"上下文明示由常东旭作出最终确认","stateChangeOnCompletion":"确认后方案可进入下一执行阶段","actionRequired":true,"actionOwner":"changdongxu","nextAction":"确认客户方案","notificationDecision":"notify","notificationMode":"realtime","notificationDelayMinutes":0,"notificationTitle":"客户方案等你确认","ownerMessage":"我把客户方案整理成待办了，现在只差你确认一下。","cardTone":"yellow","notificationReason":"需要确认客户方案","materialChangeSummary":"新事项","summary":"ok","priority":3,"tags":["飞书","重要","关键事项"],"needsClarification":false,"blacklakeRelated":false,"researchDecision":"skip","researchChannel":"none"}' > "$out"
 `, { mode: 0o755 });
   const creator = new DidaTaskCreator({
     codexCli: fake, workspaceRoot: dir, varDir: path.join(dir, "var"), didaProjectId: "project_1",
@@ -38,6 +47,7 @@ test("maps priority and key status to a glanceable title prefix", () => {
 
 test("rejects task presentation that cannot be scanned reliably", () => {
   assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
     created: true, priority: 3, urgencyLabel: "重要", keyItem: true,
     taskAction: "created", intakeDecision: "task", actionRequired: true,
     actionOwner: "changdongxu", nextAction: "确认方案",
@@ -47,6 +57,7 @@ test("rejects task presentation that cannot be scanned reliably", () => {
 
 test("rejects creating an automation todo without a concrete owner and next action", () => {
   assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
     created: true, taskAction: "created", intakeDecision: "information",
     actionRequired: false, actionOwner: "unknown", nextAction: "知悉并持续关注",
     priority: 1, urgencyLabel: "跟进", keyItem: false,
@@ -56,6 +67,7 @@ test("rejects creating an automation todo without a concrete owner and next acti
 
 test("rejects creating priority-zero information in the automation todo list", () => {
   assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
     created: true, taskAction: "created", intakeDecision: "task",
     actionRequired: true, actionOwner: "changdongxu", nextAction: "持续关注",
     priority: 0, urgencyLabel: "关注", keyItem: false,
@@ -83,12 +95,33 @@ test("accepts a silent unchanged legacy task without forcing a presentation rewr
 
 test("requires approval tasks to notify with a concrete approval summary", () => {
   assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
     created: true, taskAction: "created", intakeDecision: "task", requestType: "approval",
     approvalRequired: true, approvalSummary: "", notificationDecision: "notify",
     actionRequired: true, actionOwner: "changdongxu", nextAction: "审批扩容申请",
     priority: 1, urgencyLabel: "跟进", keyItem: false,
     titlePrefix: "【跟进】", title: "【跟进】审批扩容申请", tags: ["飞书", "跟进", "待批准"],
   }), /批准对象/);
+});
+
+test("rejects a second task when context has an exact active matter reference", () => {
+  assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
+    created: true, taskAction: "created", intakeDecision: "task",
+    actionRequired: true, actionOwner: "changdongxu", nextAction: "确认客户方案",
+    priority: 1, urgencyLabel: "跟进", keyItem: false,
+    titlePrefix: "【跟进】", title: "【跟进】确认客户方案", tags: ["飞书", "跟进"],
+  }, { exactTaskIds: ["task_existing"] }), /禁止创建第二条/);
+});
+
+test("rejects a vague attention action even when the model calls it a task", () => {
+  assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
+    created: true, taskAction: "created", intakeDecision: "task",
+    actionRequired: true, actionOwner: "changdongxu", nextAction: "持续关注",
+    priority: 1, urgencyLabel: "跟进", keyItem: false,
+    titlePrefix: "【跟进】", title: "【跟进】持续关注项目", tags: ["飞书", "跟进"],
+  }), /不能只是关注/);
 });
 
 test("accepts model-selected communication parameters but keeps approval realtime", () => {

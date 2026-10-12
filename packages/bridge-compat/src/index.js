@@ -124,6 +124,7 @@ async function loadConfig() {
     followupFailureNotifyThreshold: 3,
     shadowCollaborationEnabled: true,
     shadowCollaborationDays: 7,
+    matterContextEnabled: process.env.QUARK_MATTER_CONTEXT_ENABLED !== "0",
     shadowPollIntervalMs: 1800000,
     shadowCalendarPollIntervalMs: 1800000,
     shadowCalendarLookaheadDays: 8,

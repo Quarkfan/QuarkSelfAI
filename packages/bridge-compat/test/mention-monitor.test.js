@@ -938,6 +938,37 @@ test("does not let shadow observation failures block the official task pipeline"
   assert.equal(state.state.mentionPending.length, 0);
 });
 
+test("loads bounded cross-conversation matter context before task projection", async () => {
+  const message = {
+    message_id: "om_context", chat_id: "oc_2", chat_name: "另一个会话", chat_type: "group",
+    create_time: "2026-08-20 10:00", content: "请补充原事项", sender: { id: "ou_other" },
+  };
+  const state = stateHarness();
+  let receivedMatterContext;
+  const monitor = new MentionMonitor({
+    config: { mentionInitialLookbackMinutes: 30, mentionOverlapMinutes: 2, mentionContextMinutes: 30, allowedOpenId: "ou_me" },
+    state,
+    lark: {
+      async searchMentions() { return [message]; },
+      async getMentionContext() { return [message]; },
+      async send() {},
+    },
+    taskCreator: { async createFromMention(_message, _context, _history, _guidance, matterContext) {
+      receivedMatterContext = matterContext;
+      return { taskAction: "ignored", notificationDecision: "silent", researchDecision: "skip" };
+    } },
+    shadowCollaboration: {
+      contextFor() {
+        return { version: 1, availability: "available", candidateCount: 1, candidates: [{ matterKey: "matter:1" }], exactTaskIds: [] };
+      },
+      async observe() {},
+    },
+  });
+  await monitor.poll();
+  assert.equal(receivedMatterContext.candidates[0].matterKey, "matter:1");
+  assert.deepEqual(state.state.mentionProcessedMessageIds, ["om_context"]);
+});
+
 test("accepts only an exact Ren Yongqiang membership event and registers the group as delegated", async () => {
   const state = stateHarness();
   const created = [];

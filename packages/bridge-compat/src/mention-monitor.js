@@ -617,11 +617,17 @@ export class MentionMonitor {
       };
       try {
         const context = await this.lark.getMentionContext(batchMessage, this.config.mentionContextMinutes);
+        let matterContext = { version: 1, availability: "unavailable", candidateCount: 0, candidates: [], exactTaskIds: [] };
+        if (this.shadowCollaboration?.contextFor) {
+          try { matterContext = this.shadowCollaboration.contextFor(batchMessage, context); }
+          catch (error) { this.logger.error("matter context lookup failed", error); }
+        }
         const task = await this.taskCreator.createFromMention(
           batchMessage,
           context,
           this.state.state.researchDecisionHistory,
           this.collaborationLearning?.guidanceFor?.(batchMessage) || "暂无协作模式样本。",
+          matterContext,
         );
         if (this.collaborationLearning) {
           try { await this.collaborationLearning.observe(batchMessage, task); }

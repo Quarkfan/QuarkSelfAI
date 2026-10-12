@@ -247,7 +247,7 @@ inactive 和 migration-only；该证据证明迁移目标无漏项，但 `manife
 | 必要追问标注 AI 分身；正式回复必须先由本人确认 | context-and-external-guard, approval-cards | 策略/审批测试；现网 10 个卡片回调无重复、3 个待确认动作跨重启保留；追问回复读取网络故障局部降级、保留待处理项并恢复清标，不再终止 compatibility host；故障日志仅保留受限 category/subtype，回归拒绝 URL、会话标识、源地址和证书域名 | complete |
 | 可在 DSH 会话中自然语言创建临时插件，启动需明确批准且可回滚 | dsh-tool-cordis, dynamic-plugin-policy | Cordis 配置兼容校验；Host/Client 单次审批分流与删除门禁单测 | complete |
 | 交互消息使用卡片、按钮和输入框；普通通知格式化 | approval-cards | Card 2.0 hierarchy、button/input/select/navigation 测试及现网卡片回调 | complete |
-| 自动化待办只建真正任务；禁止 NOTE；标题一眼可见紧急/关键；标签、优先级、截止日合理 | dida-projection | task admission/presentation、NOTE/TEXT 删除补偿、实际 kind 核验测试 | gated：当前 schema 真实结果仍为 0/20 |
+| 自动化待办只建真正任务；禁止 NOTE；标题一眼可见紧急/关键；标签、优先级、截止日合理 | dida-projection, focus-intake | task admission/presentation、NOTE/TEXT 删除补偿、写前事项上下文、未完成结果/责任/状态变化证据、精确引用防重复、实际 kind 核验测试 | implemented：ADR 0185 的兼容实现与定向测试已完成，待完整检查、守护进程重启和新 current-schema 真实样本；严格血缘门禁仍要求 20 个有效样本 |
 | 同一事项优先更新而非重复创建；仅物质变化通知；每次重写快速摘要 | dida-projection | marker/matter 搜索、created/updated/unchanged、material change、通知去重；工具失败语境化识别；BlackLake 固定总路由确定性补齐；新建 taskId 的 404 有界回读与非 404 立即失败关闭 | observing：真实创建/更新结构持续积累；2026-09-04 已修复业务 OAuth 误判和固定路由漏回；2026-09-07 已修复创建成功后短暂不可见导致的错误重试，其他模型语义违约继续失败关闭 |
 | 识别“需要本人批准”的事项并立即用交互卡片通知 | dida-projection, approval-cards | approval 类型、摘要、标签、通知一致性校验 | gated：受控真实样本 |
 | 超期监控、完成任务定期清理、自动化跟进清单每工作日评估 | dida-monitors | 契约测试；三类 monitor 均有现网运行时间且当前健康；超期扫描、completed-cleanup 与工作日跟进超时均保留 Claude/Codex 主执行与兜底阶段的脱敏结果；跟进检查前两次失败静默、连续三次通知、仅已通知故障发送恢复 | complete：历史总超时已可在下一次失败时直接定位 provider 阶段，不读取或写入任务正文 |
