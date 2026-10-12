@@ -2,6 +2,8 @@
 
 状态：`catalogued-inactive`；官方 Skill 读取日期：2026-10-12；观察版本：`0.1.7`。机器登记见 `config/external-capability-sources.json`，产品边界和批次见 [飞书优先总计划](../product/feishu-first-workspace-implementation-plan.md)及其[复评](../product/feishu-first-workspace-plan-review.md)。这不是安装指南或已可用能力声明。
 
+Owner 后续明确：Monid 可以主要作为我们建设能力目录、按需挂载与持续迭代的参考蓝图，不要求产品默认集成。当前本地[发现目录](../operations/capability-discovery.md)只把 Monid 作为不可执行的外部候选来源；真实接入仍是独立的价值/成本/隐私决策。
+
 ## 可借鉴的机制
 
 [官方 Skill](https://monid.ai/SKILL.md) 将自然语言发现、端点 schema 检查、调用、异步结果查询和费用回读分开，避免一次性把所有端点放进上下文。对 QuarkSelfAI，沿用自己的 Capability Registry 和 Skill 路由：常驻轻量索引，按需筛选，再加载选中项的 schema/reference；记录来源版本、适用范围、失效时间和效果反馈。远程 Skill/端点说明/hints 仅是候选数据，不是可覆盖本地授权或路由的指令。

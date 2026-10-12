@@ -26,7 +26,7 @@ QuarkSelfAI 是基于 DeepSeek Harness（DSH）的本地优先个人工作助手
 - 每日协作自我回顾、低风险 guidance 自动校准、同日幂等简报和高影响策略审批闭环。
 - 多源每日工作账本，以及日报、周报、月报和任意日期范围的按需总结。
 
-飞书优先的通用工作空间与能力平台仍在建设中，入口见[产品 PRD](docs/product/capability-platform-prd.md)、[实施总计划](docs/product/feishu-first-workspace-implementation-plan.md)和[首用手册](docs/operations/feishu-first-onboarding.md)。外部能力来源 [Monid](docs/integrations/monid-candidate.md) 目前只是不激活的研究候选，未安装或接入运行时。
+飞书优先的通用工作空间与能力平台仍在建设中，入口见[产品 PRD](docs/product/capability-platform-prd.md)、[实施总计划](docs/product/feishu-first-workspace-implementation-plan.md)、[首用手册](docs/operations/feishu-first-onboarding.md)和[按需能力发现手册](docs/operations/capability-discovery.md)。外部能力来源 [Monid](docs/integrations/monid-candidate.md) 目前只是不激活的研究候选，未安装或接入运行时。
 
 DSH 的版本基线固定在 `config/dsh-baseline.json`，不把整个 Harness 安装闭包塞进插件的
 开发依赖；profile 验证使用工作区 `github/deepseek-harness` 下的正式 checkout。

@@ -56,7 +56,9 @@ Feishu work surface (required)      Web Agent Studio (additional surface)
 
 Skill/Capability 增长时，不把所有全文放进常驻上下文。统一使用“稳定入口与轻量索引 → 按任务意图/权限/环境筛选 → 读取所选契约 → 按需加载 reference/schema → 执行前复核”的发现链。目录只保存 ID、用途、触发边界、owner、来源 revision/digest、适用环境、权限/effect/费用、过期复核时间和详细入口；远端描述、服务端 hints 与工具结果均作为不可信数据，不能覆盖本地策略。每次新会话只做有界路由；结构变化或来源过期再增量刷新，避免全量扫描的 token 成本。记录命中、误触发、未命中、花费和结果，供 ADR 0085/0087 的影子评测与人工晋级使用。
 
-Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的按需目录模式，可借鉴发现与 schema 检查；其本身是付费外部端点网关，不是我们的通用 Skill 真源，也不是默认工具路由。用户明确指定的工具、现有专用 MCP/API/CLI（尤其 `lark-cli` 与私有 Work Pack）优先；仅在任务确有能力缺口、用户/租户选择启用且本地批准覆盖该精确调用时，才考虑 Monid。候选状态为 `catalogued / inactive`：本批只保存受控元数据、离线验证和入口说明，不下载/安装其 CLI、复制远程 Skill 到全局发现目录、不配置密钥、不调用 live discover/run、不改变网络权限或执行器组合。
+Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的按需目录模式，可借鉴发现与 schema 检查；其本身是付费外部端点网关，不是我们的通用 Skill 真源，也不是默认工具路由。用户明确指定的工具、现有专用 MCP/API/CLI（尤其 `lark-cli` 与私有 Work Pack）优先。Monid 的首要定位是目录设计参考和可选对标来源；**不以接入 Monid 为产品完成前提**。仅在自身目录或专用工具确有能力缺口、用户/租户选择启用且本地批准覆盖该精确调用时，才考虑真实 Monid 接入。候选状态为 `catalogued / inactive`：本批只保存受控元数据、离线验证和入口说明，不下载/安装其 CLI、复制远程 Skill 到全局发现目录、不配置密钥、不调用 live discover/run、不改变网络权限或执行器组合。
+
+本地目录首批从已有 `capability-artifact-candidates` 和 `external-capability-sources` 编译轻量描述符，而不是维护第二份手填索引。发现只返回 ID、来源、状态、概要、匹配依据和详情引用；inspect 只读取被选中的本地详情并校验本地路径/状态，绝不触发安装、网络或执行。候选与外部来源都必须标识不可运行；排序优先本地专用/第一方，再到外部候选。后续接入真实 Skill 元数据时使用同一描述符契约，但不得把尚未分类/审查的 Skill 自动标记为可执行。离线验收覆盖大目录分页/限额、命中解释、重名/版本冲突、无命中、过期来源和外部候选不得抢先或执行。
 
 未来若批准集成，优先比较用户自带账号的 OAuth 与受控代理两种模式，不使用跨租户共享 master key 作为默认。每个 endpoint 在 inspect 后仍需本地 allowlist、输入字段/数据分类和接收方审查、价格/单位及最大结果数预估、单次与周期预算、精确 effect 批准、幂等与超时、输出脱敏和写后回读。对电话、上传、第三方存储、联系人/人员信息及任何外部写入另设高风险门禁。不得把 Monid 的 `COMPLETED` 当作业务成功，须同时检查 provider HTTP 状态与账单；异步 run 有显式轮询上限。实际 CLI/SDK/Skill 的来源版本、digest、许可证、依赖与安全审核完成后才可申请安装；不得执行 `@latest` 自动升级。
 
@@ -75,6 +77,8 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 ### C. 通用工作区 starter 与双角色包
 
 把当前独立原型收敛为 QuarkSelfAI Client 可识别、可版本化、可卸载的 workspace/capability bundle；开发者与产品角色各有真实任务样例、来源路由、交接、知识载体和手册。不得从 starter 中启动第二消息消费者、scheduler 或 executor。验收：两个全新隔离工作区仅凭入口完成任务发现；模板升级不覆盖用户私有内容；无公司路径、真实数据或 Dida 强依赖。
+
+先落地不激活的本地 Capability/Skill 发现目录，再让 starter 和 Client 共同消费受控描述符；不得从 starter 私自维护第二索引或在检索时全量加载 Skill 正文。
 
 ### D. Capability、Blueprint 与执行闭环
 
