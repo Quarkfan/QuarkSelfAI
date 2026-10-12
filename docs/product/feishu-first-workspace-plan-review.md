@@ -54,3 +54,9 @@
 - 新增 `config/external-capability-sources.json` 的唯一不激活候选及 `docs/integrations/monid-candidate.md`；PRD/README 已提供发现入口。未添加 runtime module、真实 endpoint、密钥或付费调用。
 - 离线目录门禁测试与完成度测试合计 4/4 通过；`npm run architecture:check` 再次通过，151 模块、0/23 active effect。完整 `npm run check` 没有在这次文档/静态目录扩展后重跑，不能把之前的结果作为新增文件全量验证。
 - 待办仍是许可证/条款、依赖供应链、具体 endpoint、预算、隐私接收方、真实租户隔离与 live 验证。上述门禁未闭合前仍保持 `catalogued-inactive`。
+
+## 已跟踪资产归属缺口复评（2026-10-12；修正前）
+
+上轮提交 `7faf148` 后再次运行 `npm run architecture:check`，明确失败于 `unowned runtime asset: config/external-capability-sources.json`。先前检查在该新文件尚未进入 Git 跟踪集合时运行，因此报告的“通过”不能证明提交状态完整。这是验证时序缺口，不是运行时变化。
+
+修正方案：把该静态候选来源文件归属已有 `capability-platform-governance` 模块，不另建模块或第二目录真源；随后重跑已跟踪状态的架构检查、相关测试和 Git diff 校验。评估：范围仅是机器资产所有权，低风险、可逆；不改变 Monid inactive 状态、现有产品组合、消费者或对外调用。本修订先落盘、复评通过后实施。

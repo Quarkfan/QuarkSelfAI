@@ -47,6 +47,7 @@ Feishu work surface (required)      Web Agent Studio (additional surface)
 | `config/product-composition.json` | 产品模块选用 | 飞书必选与任务适配可选要由产品组合和检查器证明 |
 | `config/lark-cli-contract.json` | 飞书 CLI 能力基线 | 区分 user/bot、scope、CLI 版本与缺失降级 |
 | `config/capability-platform-completion.json` | 总目标失败关闭验收 | 新增飞书首用与无 Dida 冷启动证据，不降低既有 blocker |
+| `config/external-capability-sources.json` | 外部候选来源的静态状态与门禁 | 归属唯一治理模块；被 Git 跟踪后仍须通过资产所有权检查 |
 | 本计划及复评记录 | 批次、风险、验收、变更原因 | 每次实质修改先落盘、复评，再实施 |
 
 知识积累继续复用 ADR 0085/0087 的 Experience→Pattern→候选 Skill/Capability→跨执行器评测→人工晋级，不另起第二套自动进化调度器。外部参考只能作为带 revision 的候选证据，不能成为运行时依赖。
@@ -107,3 +108,5 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 ## 7. 计划变更闭环
 
 任何阶段若发现需要修改架构目标、批次、数据真源或权限：先更新本计划和关联 PRD/ADR（若涉及产品或架构决策），记录差异与证据，再更新复评文档；评估通过后才改实现。每批完成后对照机器验收清单和真实运行证据复核，未完成项保持 blocker，不用计划文字宣称完成。
+
+2026-10-12 校验修订：新增的静态来源配置也属于 `module-catalog` 的资产所有权范围。上轮 `architecture:check` 在新文件未被 Git 跟踪时通过，提交后重跑才暴露 unowned asset；本批先将该文件归属现有 `capability-platform-governance`，并在提交后再次执行架构检查，不修改运行时、外部来源状态或授权。
