@@ -13,7 +13,7 @@
 5. `lark-shared` 当前规范要求 user/bot 显式区分，CLI JSON 成功依据 `ok=true` 或退出码 0；授权/高风险确认不能由安装器自动代替。计划中将这些设为安全门禁是必要的。
 6. `github/agent-workspace-kit` 在目标修订前已有独立 Python 离线初始化原型，但没有 QuarkSelfAI 集成或飞书接入。把它标为 inactive starter 候选而非第二产品，能保护已做工作并避免双真源。
 
-2026-10-12 starter 批次复评补充：独立内容源通过本地 Git 与合成冷启动可追溯，加入 Feishu 静态契约和本地私有记录不会改变上述运行时归属。QuarkSelfAI 仍是身份、权限、消费者、能力评估与晋级的唯一 owner；starter 的结构健康不能证明真实飞书就绪或可运行的无 Dida 新用户。下一步应先设计受控 bundle 的来源 revision、digest、安装/升级/卸载与用户内容保护，再考虑 Client 接入。
+2026-10-12 starter 批次复评补充：独立内容源通过本地 Git 与合成冷启动可追溯，加入 Feishu 静态契约和本地私有记录不会改变上述运行时归属。生成物已改为通用 `host-runtime` 契约，避免把模板绑死到 QuarkSelfAI；在当前集成目标中，QuarkSelfAI 仍是身份、权限、消费者、能力评估与晋级的唯一 owner。starter 的结构健康不能证明真实飞书就绪或可运行的无 Dida 新用户。下一步应先设计受控 bundle 的来源 revision、digest、安装/升级/卸载与用户内容保护，再考虑 Client 接入。
 7. QuarkSelfAI 当前未提交 `package.json`、品牌客户端文件和 `.DS_Store` 属于保护集。总计划不吸收、不清理这些改动；后续所有代码提交按任务白名单审查。
 
 ## 风险、门禁和修正
