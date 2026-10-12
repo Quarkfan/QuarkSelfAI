@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { validatePublicCapabilityFormArtifacts } from '../src/capability-platform/form-artifact-evidence.js'
 
 type Requirement = { id: string; state: string; evidence: string[] }
-const required = ['all-modules-classified','real-multi-user-tenant-isolation','installable-client-and-device-enrollment','claude-codex-dsh-single-execution-contract','console-agent-compose-test-version','five-capability-forms','existing-workflows-equivalent-replay','single-consumer-provider-scheduler-writer','mainline-independent-from-private-work','workspace-file-desktop-approval-control','install-run-recover-upgrade-rollback-verified','user-uncommitted-changes-preserved']
+const required = ['all-modules-classified','real-multi-user-tenant-isolation','installable-client-and-device-enrollment','claude-codex-dsh-single-execution-contract','console-agent-compose-test-version','five-capability-forms','existing-workflows-equivalent-replay','single-consumer-provider-scheduler-writer','mainline-independent-from-private-work','workspace-file-desktop-approval-control','install-run-recover-upgrade-rollback-verified','user-uncommitted-changes-preserved','feishu-first-new-user','dida-optional-new-user']
 
 export async function auditCapabilityPlatformCompletion(root: string): Promise<{ ok: boolean; status: string; verified: string[]; blockers: string[] }> {
   const [ledger, catalog, migration, deployment, candidates, composition, continuity, nativeMigration, privateReceipt, publicForms] = await Promise.all(['config/capability-platform-completion.json','config/module-catalog.json','config/capability-platform-migration.json','config/capability-platform-deployment.json','config/capability-artifact-candidates.json','config/product-composition.json','config/assistant-continuity.json','config/native-migration-plan.json','config/private-capability-receipt.json','config/public-capability-form-artifacts.json'].map(path => json(resolve(root, path))))
@@ -26,6 +26,8 @@ export async function auditCapabilityPlatformCompletion(root: string): Promise<{
     ['workspace-file-desktop-approval-control', moduleIds.has('workspace-boundary') && moduleIds.has('authorization-contract') && deployment.client?.workspaceApprovalVerified === true],
     ['install-run-recover-upgrade-rollback-verified', deployment.server?.lifecycleVerified === true && deployment.client?.lifecycleVerified === true],
     ['user-uncommitted-changes-preserved', true],
+    ['feishu-first-new-user', hasRequiredFeishu(composition) && deployment.client?.feishuFirstOnboardingVerified === true],
+    ['dida-optional-new-user', hasOptionalDida(composition) && deployment.client?.noDidaColdStartVerified === true],
   ])
   const verified: string[] = []; const blockers: string[] = []
   for (const item of requirements) { const proven = predicates.get(item.id) === true; if (item.state === 'verified' && !proven) throw new Error(`completion ledger overclaims ${item.id}`); if (proven && item.state.startsWith('verified')) verified.push(item.id); else blockers.push(`${item.id}:${item.state}`) }
@@ -34,6 +36,16 @@ export async function auditCapabilityPlatformCompletion(root: string): Promise<{
 }
 
 function containsWorkDependency(value: unknown): boolean { const text = JSON.stringify(value); return /BLACKLAKE|XIAOWEI|blacklake-reference|xiaowei-research|work-journal-agent-compiler/.test(text) }
+export function hasRequiredFeishu(composition: any): boolean {
+  const capabilities = Array.isArray(composition?.capabilities) ? composition.capabilities : []
+  return capabilities.some((item: any) => item.id === 'message-intake' && item.required === true && item.modules?.includes('feishu-native-ingress'))
+    && capabilities.some((item: any) => item.required === true && item.modules?.includes('feishu-channel'))
+}
+export function hasOptionalDida(composition: any): boolean {
+  const capabilities = Array.isArray(composition?.capabilities) ? composition.capabilities : []
+  return capabilities.filter((item: any) => item.modules?.some((id: string) => id.startsWith('dida-'))).every((item: any) => item.required === false)
+    && !(composition?.requiredConfiguration ?? []).some((name: string) => name.startsWith('DIDA_'))
+}
 async function json(path: string): Promise<any> { return JSON.parse(await readFile(path, 'utf8')) }
 
 export function auditCapabilityFormReadiness(readiness: any, candidates: unknown, privateReceipt?: any, publicArtifactInput?: unknown) {

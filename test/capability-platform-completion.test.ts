@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { auditCapabilityFormReadiness, auditCapabilityPlatformCompletion } from '../scripts/audit-capability-platform-completion.js'
+import { auditCapabilityFormReadiness, auditCapabilityPlatformCompletion, hasOptionalDida, hasRequiredFeishu } from '../scripts/audit-capability-platform-completion.js'
 
 test('reports the real platform completion blockers instead of treating inactive scaffolds as completion', async () => {
   const report = await auditCapabilityPlatformCompletion(process.cwd())
@@ -12,6 +12,8 @@ test('reports the real platform completion blockers instead of treating inactive
   assert.ok(report.blockers.includes('installable-client-and-device-enrollment:incomplete'))
   assert.ok(report.blockers.includes('mainline-independent-from-private-work:incomplete'))
   assert.ok(report.blockers.includes('install-run-recover-upgrade-rollback-verified:incomplete'))
+  assert.ok(report.blockers.includes('feishu-first-new-user:incomplete'))
+  assert.ok(report.blockers.includes('dida-optional-new-user:incomplete'))
 })
 
 test('separates canonical form evidence from activation and fails closed on lifecycle gaps', async () => {
@@ -31,4 +33,18 @@ test('separates canonical form evidence from activation and fails closed on life
   assert.equal(privateReceipt.hostContractCompatibilityVerified, true)
   assert.equal(privateReceipt.equivalentReplayVerifiedGroupCount, 0)
   assert.ok(candidates.every((candidate: { activationAllowed: boolean }) => candidate.activationAllowed === false))
+})
+
+test('Feishu is required and Dida is not yet optional in the current composition', async () => {
+  const composition = JSON.parse(await readFile(new URL('../config/product-composition.json', import.meta.url), 'utf8'))
+  assert.equal(hasRequiredFeishu(composition), true)
+  assert.equal(hasOptionalDida(composition), false)
+  const candidate = {
+    ...composition,
+    capabilities: composition.capabilities.map((capability: { id: string; required: boolean }) =>
+      capability.id === 'task-projection-and-maintenance' ? { ...capability, required: false } : capability),
+    requiredConfiguration: composition.requiredConfiguration.filter((name: string) => !name.startsWith('DIDA_')),
+  }
+  assert.equal(hasOptionalDida(candidate), true)
+  assert.equal(hasRequiredFeishu({ ...candidate, capabilities: candidate.capabilities.filter((item: { id: string }) => item.id !== 'message-intake') }), false)
 })

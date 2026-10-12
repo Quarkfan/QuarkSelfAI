@@ -42,6 +42,8 @@
     { "id": "mainline-independent-from-private-work", "state": "incomplete", "evidence": ["config/product-composition.json", "config/assistant-continuity.json"] },
     { "id": "workspace-file-desktop-approval-control", "state": "implemented-not-activated", "evidence": ["config/module-catalog.json"] },
     { "id": "install-run-recover-upgrade-rollback-verified", "state": "incomplete", "evidence": ["config/capability-platform-deployment.json", "docs/evidence/capability-cloud-installation-2026-10-10.md"] },
-    { "id": "user-uncommitted-changes-preserved", "state": "verified-current-batch", "evidence": ["docs/operations/autonomous-twin-session.md"] }
+    { "id": "user-uncommitted-changes-preserved", "state": "verified-current-batch", "evidence": ["docs/operations/autonomous-twin-session.md"] },
+    { "id": "feishu-first-new-user", "state": "incomplete", "evidence": ["config/product-composition.json", "config/lark-cli-contract.json", "docs/product/feishu-first-workspace-implementation-plan.md"] },
+    { "id": "dida-optional-new-user", "state": "incomplete", "evidence": ["config/product-composition.json", "docs/product/feishu-first-workspace-implementation-plan.md"] }
   ]
 }

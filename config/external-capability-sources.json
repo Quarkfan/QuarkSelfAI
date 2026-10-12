@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "monid",
+      "kind": "external-endpoint-marketplace",
+      "state": "catalogued-inactive",
+      "sourceUrl": "https://monid.ai/SKILL.md",
+      "observedSkillVersion": "0.1.7",
+      "observedAt": "2026-10-12",
+      "reviewBy": "2026-11-12",
+      "reference": "docs/integrations/monid-candidate.md",
+      "routing": "gap-only-after-dedicated-tool",
+      "dataClassification": "public-only-in-offline-evaluation",
+      "requiresEndpointAllowlist": true,
+      "requiresExplicitCostApproval": true,
+      "requiresExplicitExternalEffectApproval": true,
+      "activationAllowed": false,
+      "installationAllowed": false,
+      "credentialConfigured": false,
+      "liveCallsAllowed": false,
+      "blockers": [
+        "owner-approval-missing",
+        "license-and-terms-review-missing",
+        "dependency-and-supply-chain-review-missing",
+        "endpoint-allowlist-and-budget-missing",
+        "privacy-and-data-recipient-review-missing",
+        "tenant-isolation-and-live-test-missing"
+      ]
+    }
+  ]
+}

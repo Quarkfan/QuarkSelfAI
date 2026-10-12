@@ -9,7 +9,15 @@
 
 QuarkSelfAI 从单机个人助手演进为“云端积累与编排、本地安全执行”的多用户能力平台。用户在云端控制台发现、组合、测试、发布和治理 Agent；每个用户安装本地客户端，由客户端发现 Claude Code、Codex 等可用执行器，并以 DSH 作为产品自带的保底执行器。Agent 的实际本机操作由客户端完成，云端不直接取得用户电脑控制权。
 
+### 飞书优先工作空间基线（2026-10-12）
+
+目标使用者以飞书为工作中心：飞书身份、消息上下文、卡片和通知是首用验收的必选能力；默认通过现有 `lark-cli` adapter 接入，并显式区分 user 与 bot 身份。未授权时只允许安全诊断与授权引导，不得宣称工作空间已完整开箱可用。Web Agent Studio 是附加控制面，不取代飞书主入口。
+
+滴答清单只是当前个人实例的可选任务投影，不是新用户安装、产品核心数据真源或默认依赖。新用户未配置 Dida 时仍必须能够初始化、完成飞书核心只读链路并使用内部 matter/action；现有实例的 Dida writer 在等价迁移及单 owner 切换完成前保持不变。开发/产品 Workspace Starter 是本地工作内容包，不自建消费者、审批、执行器路由或能力注册表。实施与验收见 [飞书优先总计划](feishu-first-workspace-implementation-plan.md)。
+
 这里的“能力”不是工具调用的同义词，而是可安装、可组合、可验证、可回滚的 `Capability Artifact`。它可以表现为 Skill、知识、提示、工作流、MCP/API/数据库适配器、程序包、CLI、二进制、GitHub 项目、无头浏览器、容器、Notebook、沙箱、Web/桌面/数据应用、游戏、模拟器、交互体验、私有工作集成包，或由上述能力组成的 Agent 产品。
+
+能力发现采用轻量索引和按需 schema/reference 加载；外部目录仅提供候选，不提升授权。Monid 当前只登记为 `catalogued-inactive` 的可选外部来源，不能替代现有专用工具，也不属于飞书首用或产品完成的必选项；其[研究与门禁](../integrations/monid-candidate.md)和[机器记录](../../config/external-capability-sources.json)须在任何安装或真实调用前复核。
 
 ## 2. 成功结果
 
