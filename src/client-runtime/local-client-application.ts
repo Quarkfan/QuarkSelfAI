@@ -7,10 +7,14 @@ import { runInactiveClientCycle, runNoEffectClientExecutionCycle, type InactiveC
 import { LocalClientInstanceLeaseV1 } from './client-instance-lease.js'
 import { assertDeviceEnrollmentSecret, createEd25519DeviceEnrollment, type DeviceEnrollmentMaterialV1 } from './device-identity.js'
 import { InactiveExecutorDiscoveryV1 } from './discovery.js'
-import { openSqliteInactiveClientState, type SqliteInactiveClientStateV1 } from './sqlite-client-state.js'
+import { openSqliteInactiveClientState, type LocalIntakeMatterInputV1, type LocalIntakeMatterV1, type SqliteInactiveClientStateV1 } from './sqlite-client-state.js'
 
 export interface LocalClientPathsV1 { readonly databasePath: string; readonly migrationPath: string; readonly artifactRoot: string; readonly instanceLeasePath: string }
 export interface LocalClientEnrollmentInputV1 { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly privateKeyRef: string; readonly attestationReference?: string }
+export interface LocalMatterProjectionPortV1 {
+  upsertIntake(input: LocalIntakeMatterInputV1, now?: Date): { readonly matter: LocalIntakeMatterV1; readonly inserted: boolean; readonly changed: boolean }
+  get(tenantId: string, userId: string, matterId: string): LocalIntakeMatterV1 | null
+}
 
 /** A single-owner client composition root. Opening it never connects, probes, loads or runs anything. */
 export class InactiveLocalClientApplicationV1 {
@@ -77,6 +81,21 @@ export class InactiveLocalClientApplicationV1 {
     this.#requireOpen(); const projection = this.state.cloudProjection(now)
     return Object.freeze({ deviceId: projection.identity.deviceId, connection: this.#connection, registeredCapabilities: projection.installedCapabilityCount,
       activeCapabilities: 0, ownedConsumers: 0, ownedProviders: 0, ownedSchedulers: 0, externalWritesEnabled: false })
+  }
+
+  /** Local-only port owned by this client instance lease; never an IPC or DSH effect registration. */
+  matterPort(): LocalMatterProjectionPortV1 {
+    this.#requireOpen()
+    return Object.freeze({
+      upsertIntake: (input: LocalIntakeMatterInputV1, now?: Date) => {
+        this.#requireOpen()
+        return this.state.upsertIntakeMatter(input, now)
+      },
+      get: (tenantId: string, userId: string, matterId: string) => {
+        this.#requireOpen()
+        return this.state.intakeMatter(tenantId, userId, matterId)
+      },
+    })
   }
 
   async refreshExecutors(discovery: InactiveExecutorDiscoveryV1, now = new Date()): Promise<readonly ExecutorCapabilityReportV1[]> {

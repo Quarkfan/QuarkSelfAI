@@ -100,6 +100,8 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 
 完成度审计也必须核验非 Dida 的必选投影提供者和必选启动门禁，不能只检查 `required=false` 与删除 `DIDA_*` 字符串；否则机器检查会对一个不可用的假配置报绿。
 
+第一批 Client 本地 Matter 存储之后，必须先通过[第二批 Client 端口计划](internal-matter-projection-batch-2.md)收敛写入点。DSH/Cordis 的消息摄取和 Client 本地 Matter 目前没有安全桥接，禁止让 DSH handler 绕过 Client lease 直接打开数据库；长期事件 owner 与 Client/DSH 执行关系须通过独立 ADR 和精确切换批次确定。
+
 ### G. 交付、运维与退出
 
 提供飞书首用、开发者/产品人员上手、Agent Studio、能力发布与回滚、客户端安装/升级、隐私与权限、备份与恢复、故障处理和迁移手册。完成真实新设备/新用户演练、tenant 隔离、无 Dida 演练、私有 pack 卸载演练、云端与本地断线/恢复演练。只有完成度审计所有目标无 blocker、现网无遗留 owner 且用户改动完整保留时才标记总目标完成。

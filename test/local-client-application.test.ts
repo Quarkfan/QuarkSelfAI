@@ -36,6 +36,32 @@ test('composes one recoverable inactive client owner with discovery and artifact
   } finally { await rm(directory, { recursive: true, force: true }) }
 })
 
+test('keeps local Matter writes behind the one client instance lease and closes the port with its owner', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-client-matter-port-'))
+  const paths = { databasePath: join(directory, 'client.sqlite3'), migrationPath: migration, artifactRoot: join(directory, 'artifacts'), instanceLeasePath: join(directory, 'runtime', 'owner.lock') }
+  try {
+    const state = await openSqliteInactiveClientState(paths.databasePath, migration, verifier)
+    state.enroll(identity, 'secret:device.owner')
+    await state.close()
+    let app = await InactiveLocalClientApplicationV1.open(paths, verifier, at)
+    const port = app.matterPort()
+    const input = { tenantId: identity.tenantId, userId: identity.userId, sourceId: 'om-client-matter', idempotencyKey: 'intake:om-client-matter', title: 'Local-only task', summary: 'Do not upload', priority: 3 as const, tags: ['developer'] }
+    const created = port.upsertIntake(input, at)
+    assert.equal(created.matter.status, 'open')
+    assert.equal(port.get(identity.tenantId, identity.userId, created.matter.matterId)?.title, input.title)
+    assert.throws(() => port.get('tenant.other', identity.userId, created.matter.matterId), /scope/)
+    await assert.rejects(() => InactiveLocalClientApplicationV1.open(paths, verifier, at), /another local client instance/)
+    assert.equal(JSON.stringify(app.snapshot(at)).includes(input.title), false)
+    await app.close()
+    assert.throws(() => port.get(identity.tenantId, identity.userId, created.matter.matterId), /closed/)
+    assert.throws(() => port.upsertIntake(input, at), /closed/)
+
+    app = await InactiveLocalClientApplicationV1.open(paths, verifier, at)
+    assert.equal(app.matterPort().get(identity.tenantId, identity.userId, created.matter.matterId)?.summary, input.summary)
+    await app.close()
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
 test('reclaims only a well-formed lease whose process is no longer alive', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'quark-client-lease-')); const path = join(directory, 'owner.lock')
   try {
