@@ -12,7 +12,7 @@
 
 新用户 profile 采用 **Client 作为实例与 effect gateway 的唯一 owner，在同一 Client 进程中监督一套 DSH/Cordis durable event + workflow runtime**。不是增加第二内核：DSH/Cordis 继续提供事件和工作流语义，Client 负责持有实例租约、设备身份、启停、provider 授权及本地 Matter 写入端口。既有 `feishu-native-ingress`/`message-intake-native` 只在这个被监督的实例中组合；每个 Feishu user/bot subscription 只能登记一个 consumer owner。客户端崩溃与恢复默认 consumer/effects off，完成身份、checkpoint、授权和 provider 检查后才可显式接管。
 
-**新增的适用前提与待决问题：**`lark-cli` 当前配置只说明 `--as user/bot`，没有在模块契约中证明应用/订阅身份唯一。若多个用户共享同一飞书应用，不能让每个 Client 各自启动相同事件 stream；共享应用需要单一服务端 ingress、按 tenant/user 安全路由与明确的原始消息隐私模型，属于另一个架构决策。若每个用户拥有独立应用/订阅，可考虑本地 Client consumer，但须从已验证身份取得不可伪造的 subscription scope，并在所有设备间取得该 scope 的租约。不得以 userId、bot 字样或进程内 `streams.size` 推断订阅唯一性。
+**新增的适用前提与待决问题：**两种产品形态都以 `lark-cli` 为默认飞书通道，不把浏览器或另写的 OpenAPI 客户端当成默认替代。首个候选是每用户专属应用/订阅，由本地 Client 托管唯一 `lark-cli` 事件消费者；第二形态是共享应用，由统一入口托管唯一 `lark-cli` 消费者，再按已验证身份路由。这里的“本地/服务端”只表示 CLI 所在位置与订阅 owner，不是两套飞书协议。`lark-cli` 的 `--as user/bot` 与本地 bus 只说明执行身份及本机进程协调，尚不能证明全局应用/订阅唯一或共享应用的多用户安全路由。共享形态的订阅 scope、tenant/user 映射和原始消息隐私边界须另行验证与决策；验证前不能让每个 Client 各自启动同一事件 stream。专属形态同样须从已验证身份取得不可伪造的 subscription scope，并在所有设备间取得该 scope 的租约。不得以 userId、bot 字样或进程内 `streams.size` 推断订阅唯一性。
 
 本地 `local_matter` 只能证明单设备租约与幂等，不能证明同一用户多设备的全局 Matter 真源。首版若采用单主设备，须为 `(tenant,user,matter namespace)` 建立跨设备有期限、带 fencing epoch 的唯一 owner；旧设备失联、租约过期或恢复后都必须在写前复核 epoch，不能只凭本机 lock。主设备更换还需要可验证的加密状态恢复/交接和旧 writer 停止证明；未具备时只允许原设备恢复，不允许第二设备从空库接管并生成平行 Matter。多活/跨设备合并不在本候选范围内。
 
@@ -34,7 +34,7 @@
 
 ## 分批验证与回滚
 
-0. 先固定本 ADR、产品计划和独立复评；选择并证明飞书应用/订阅的产品默认形态，核对 DSH profile 生命周期、端口/服务注册与用户身份作用域，列出不可共存的 owner 清单。若选择共享应用，停止本地 consumer 分支并另行评估服务端 ingress 与隐私边界。
+0. 先固定本 ADR、产品计划和独立复评；两种形态均保留，以专属应用的本地 `lark-cli` consumer 为首个候选，核对真实应用/订阅身份、DSH profile 生命周期、端口/服务注册与用户身份作用域，列出不可共存的 owner 清单。共享应用分支须另评估统一入口的 `lark-cli` consumer、安全路由与隐私边界；不能把它当成已验证实现。
 1. 仅构建未挂载的 composition/契约与 recording sink；合成/脱敏 replay 证明无滴答启动、单 provider、授权隔离、重复/乱序/重启幂等、拒绝跨 tenant、无正文云投影。不能用 mock“成功”代替 live 首用。
 2. 在隔离新用户 profile 中演练 Client 持本机与跨设备 fenced 租约→启动被监督 DSH→飞书事件→durable workflow→内部 Matter→回读；失联与崩溃后默认 effects off。验证用户与 bot 身份、实际订阅 scope、旧 epoch 拒绝、双设备竞争、主设备恢复/交接和失败回退。
 3. 再提交精确运行切换批准单：目标身份/profile、来源 checkpoint、旧/新 owner、effect provider、时间窗口、外部写范围、回滚点。先停旧 owner 并确认释放，再启新 owner；监测不得双消费/双写。个人实例另批批准，不被新用户验证覆盖。
