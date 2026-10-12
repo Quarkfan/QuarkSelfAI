@@ -126,3 +126,5 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 2026-10-12 进度：本地 Skill 元数据采集第一批按[批次计划](local-skill-discovery-batch-1.md)与[独立复评](local-skill-discovery-batch-1-review.md)落地，复用现有离线目录而非新建索引；显式根刷新、轻量描述符、不可执行状态和合成测试已完成。它不代表真实用户/租户 scope、Skill 安装/执行或海量语义调度已完成；B/E 的相关验收继续保持未完成。
 
 2026-10-12 starter 进度：`../agent-workspace-kit` 已在本地 Git `d1beb70` 固定为可替换的模板内容源与离线工具；developer/product 隔离冷启动、静态 Feishu 必选与默认 `lark-cli` 声明、私有 Task/Experience 输入及手册通过离线测试。生成物的 readiness owner 为通用 `host-runtime`，QuarkSelfAI 绑定只存在于未来集成层。它仍未成为 Client 可安装的版本化 bundle，也未取得真实飞书授权、无 Dida 运行或成长晋级证据；C/E/G 的产品验收继续保持未完成。不得让 QuarkSelfAI 运行时依赖该相邻源码绝对路径。
+
+2026-10-12 bundle 进度：starter 来源提交 `cbec01c` 已离线导出 developer/product 两个内容寻址 bundle，空目录安装演练通过；QuarkSelfAI 按[接收计划](workspace-starter-bundle-intake-batch-1.md)与[复评](workspace-starter-bundle-intake-batch-1-review.md)增加纯字节、精确 pin 的跨语言只读验证。该工作使模板脱离邻接源码路径，但尚未成为受信签名制品或 Client 持久安装状态；C/G 的最终验收不变。
