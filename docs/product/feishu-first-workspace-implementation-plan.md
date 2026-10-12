@@ -122,3 +122,5 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 任何阶段若发现需要修改架构目标、批次、数据真源或权限：先更新本计划和关联 PRD/ADR（若涉及产品或架构决策），记录差异与证据，再更新复评文档；评估通过后才改实现。每批完成后对照机器验收清单和真实运行证据复核，未完成项保持 blocker，不用计划文字宣称完成。
 
 2026-10-12 校验修订：新增的静态来源配置也属于 `module-catalog` 的资产所有权范围。上轮 `architecture:check` 在新文件未被 Git 跟踪时通过，提交后重跑才暴露 unowned asset；本批先将该文件归属现有 `capability-platform-governance`，并在提交后再次执行架构检查，不修改运行时、外部来源状态或授权。
+
+2026-10-12 进度：本地 Skill 元数据采集第一批按[批次计划](local-skill-discovery-batch-1.md)与[独立复评](local-skill-discovery-batch-1-review.md)落地，复用现有离线目录而非新建索引；显式根刷新、轻量描述符、不可执行状态和合成测试已完成。它不代表真实用户/租户 scope、Skill 安装/执行或海量语义调度已完成；B/E 的相关验收继续保持未完成。

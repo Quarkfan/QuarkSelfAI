@@ -1,12 +1,21 @@
 /** Read-only, runtime-inactive projection over existing capability source records. */
+export interface LocalSkillDescriptorV1 {
+  readonly id: string
+  readonly name: string
+  readonly description: string
+  readonly digest: string
+  readonly detailRef: string
+}
+
 export interface CapabilityDiscoveryRefV1 {
   readonly id: string
   readonly name: string
-  readonly source: 'first-party-candidate' | 'external-source'
+  readonly source: 'first-party-candidate' | 'external-source' | 'local-skill'
   readonly kind: string
   readonly state: 'candidate-inactive' | 'catalogued-inactive' | 'stale-inactive'
   readonly detailRef: string
   readonly executable: false
+  readonly summary?: string
   readonly matchReason?: readonly string[]
 }
 
@@ -46,7 +55,7 @@ function date(value: unknown, label: string): string {
 }
 
 /** Indexes metadata, never loads Skill bodies, downloads artifacts, or calls a provider. */
-export function compileCapabilityDiscoveryIndex(candidatesInput: unknown, externalInput: unknown, now: string): CapabilityDiscoveryIndexV1 {
+export function compileCapabilityDiscoveryIndex(candidatesInput: unknown, externalInput: unknown, now: string, localSkills: readonly LocalSkillDescriptorV1[] = []): CapabilityDiscoveryIndexV1 {
   const candidates = record(candidatesInput, 'candidates catalog')
   const external = record(externalInput, 'external source catalog')
   if (candidates.schemaVersion !== 1 || !Array.isArray(candidates.candidates)) throw new Error('candidates catalog schema is invalid')
@@ -88,6 +97,25 @@ export function compileCapabilityDiscoveryIndex(candidatesInput: unknown, extern
     details.set(id, Object.freeze(detail))
   }
 
+  if (!Array.isArray(localSkills) || localSkills.length > 256) throw new Error('local skill descriptors exceed limit')
+  for (const item of localSkills) {
+    const source = record(item, 'local skill')
+    const localId = nonempty(source.id, 'local skill id')
+    if (!/^[a-z0-9][a-z0-9-]{0,63}\/[a-z0-9][a-z0-9-]{0,63}$/.test(localId)) throw new Error('local skill id is invalid')
+    const id = `skill:${localId}`
+    const digest = nonempty(source.digest, `${id} digest`)
+    if (!/^[a-f0-9]{64}$/.test(digest) || source.detailRef !== `local-skill:${localId}`) throw new Error(`${id} provenance is invalid`)
+    const summary = nonempty(source.description, `${id} description`)
+    if (summary.length > 240) throw new Error(`${id} description exceeds limit`)
+    const detail: CapabilityDiscoveryDetailV1 = {
+      id, name: nonempty(source.name, `${id} name`), source: 'local-skill', kind: 'skill',
+      state: 'catalogued-inactive', detailRef: `local-skill:${localId}`, summary,
+      executable: false, blockers: ['scope-review-missing', 'installation-and-execution-not-authorized'], sourceVersion: digest,
+    }
+    if (details.has(id)) throw new Error(`duplicate discovery id ${id}`)
+    details.set(id, Object.freeze(detail))
+  }
+
   const entries = [...details.values()].map(({ blockers: _blockers, sourceVersion: _sourceVersion, sourceUrl: _sourceUrl, reviewBy: _reviewBy, ...ref }) => Object.freeze(ref))
   return Object.freeze({
     entries: Object.freeze(entries),
@@ -102,7 +130,7 @@ export function discoverCapabilities(index: CapabilityDiscoveryIndexV1, query: s
   const terms = [...new Set(query.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])]
   if (terms.length < 1 || terms.length > 12) throw new Error('discovery query has too many terms')
   return index.entries.flatMap(item => {
-    const tokens = new Set(`${item.id} ${item.name} ${item.kind}`.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])
+    const tokens = new Set(`${item.id} ${item.name} ${item.kind} ${item.summary ?? ''}`.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])
     if (!terms.every(term => tokens.has(term))) return []
     return [{ item, matched: terms, score: Number(item.id.toLocaleLowerCase() === query.toLocaleLowerCase()) }]
   }).sort((a, b) => Number(b.item.source === 'first-party-candidate') - Number(a.item.source === 'first-party-candidate')
