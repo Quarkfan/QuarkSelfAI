@@ -10,12 +10,16 @@
 | Client 已能接收 DSH 写入 | `local-client-application.ts` 的 `matterPort()` 仅限同进程；`installed-client-process.ts` 仅管理 no-effect worker | 否，缺监督运行时与 effect gateway |
 | 可让 DSH 直连 SQLite | Client lease 及身份检查归 Client；第二批计划明确禁止直连 | 否 |
 | 可在现网影子监听 | `feishu-native-ingress` 的 `startConsumer` 启动真实单 consumer；现有个人实例仍运行兼容 owner | 否，只允许离线 replay/recording fixture |
+| `user/bot` 可标识唯一飞书订阅 | `src/lark/service.ts` 的 identity 仅为 user/bot，`streams` 只防止本 Service 重复启动；无应用/订阅指纹与跨进程租约 | 否，专属应用与共享应用须先分岔 |
+| 设备 session 可防同用户双 Matter writer | `src/control-plane/sqlite-device-session-provider.ts` 按 deviceId supersede session；Client `local_matter` 仅持本机 lease | 否，缺 tenant/user/namespace fenced owner 及可恢复交接 |
 
 ## 对候选 B 的挑战
 
 同进程托管避免 IPC，但不自动保证单 owner：现有 installed process 的 `start()` 只启动 no-effect worker；DSH profile、event journal、workflow DB 与 Feishu consumer 的生命周期尚未并入它。`message-intake-native` 的投影契约也将 Dida project/grant 绑定到 task 分支；若直接复用会让“内部 Matter”继承错误授权语义。必须先证明：启动和关闭顺序、两个数据库故障边界、effect 注册唯一性、source checkpoint、租户隔离及重试幂等。不能把“同一进程”当作这些证明。
 
 候选 A（Client 重写 workflow）会显著扩大语义复制及回滚成本，因此 B 可作为首选实验方向，但只在离线 evidence 后做最终决策。如果 DSH profile 无法被 Client 安全监督，回到 ADR 评估 A 或窄 IPC；不得为了进度改用 DSH 直连 Client DB。
+
+2026-10-12 再评估：原候选默认每个 Client 可启动飞书 stream，这只在已证明订阅专属时可能成立。多用户共享应用的事件所有权跨越 Client，不能靠单机 lease 修复；若用户选择共享应用，应先改 ingress 架构，并重新评估“云端仅见脱敏投影”与原始事件经过服务端之间的张力。单设备 Matter 测试仍有效，但不能外推到跨设备。为避免静态清单被误判为完成，放行只读/离线审计门禁加固；不放行新增 live consumer、授权发放或跨设备接管。
 
 ## 放行与阻断
 
@@ -25,4 +29,4 @@
 
 ## 下一批最小可执行验收
 
-在全新隔离目录和假 Feishu 事件源中，只有一个 Client lease、一个事件 consumer、一个 workflow owner、一个内部投影 provider；不设置 `DIDA_*`。同一事件重复、乱序与重启后只出现一条 Matter，跨 tenant 和缺失授权拒绝，云端无正文，关闭 Client 后 effect 不可写。以上只是离线门槛；真实飞书首用与运行批准仍另计。
+在全新隔离目录和假 Feishu 事件源中，只有一个 Client lease、一个事件 consumer、一个 workflow owner、一个内部投影 provider；不设置 `DIDA_*`。同一事件重复、乱序与重启后只出现一条 Matter，跨 tenant 和缺失授权拒绝，云端无正文，关闭 Client 后 effect 不可写。再用双设备竞争与旧 fencing epoch 回放证明只有新 owner 能写；订阅 scope 必须用已核验的应用/账号证据表示。以上只是离线门槛；真实飞书首用与运行批准仍另计。

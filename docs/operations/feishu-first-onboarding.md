@@ -38,6 +38,8 @@ lark-cli whoami
 
 Client 已有[本地 Matter 存储原语](internal-matter-projection.md)，但尚未接入消息摄取的 effect handler，也没有跨设备单写证明；因此本节的真实无 Dida 验收仍未通过。
 
+补充的产品级门槛：首用前必须明确飞书订阅是每用户专属应用还是统一应用，并以已核验的应用/订阅身份取得唯一 consumer owner；不能仅凭 `--as user/bot` 推断。若同一用户注册多台设备，Client 本机 lock 也不能代替跨设备 fenced Matter owner；主设备切换必须先证明旧 writer 失效和加密状态恢复。`config/capability-platform-completion.json` 的 `noDidaAcceptance` 逐项记录这些门槛，全部为 false 时不应启动 live 消费者或称内部 Matter 已成为全局真源。当前的未挂载投影器只完成离线映射与幂等验证。
+
 ## 开发/产品工作区的使用边界
 
 开发人员从 Issue/规格、代码仓、测试和当前运行证据建立链路；产品人员从用户问题、研究样本、决策与结果指标建立链路。两种角色共享同一个授权、来源、新鲜度、交接和经验晋级体系，不复制两套运行时。现有 `agent-workspace-kit` 仅为 inactive starter 候选；在整合进 QuarkSelfAI Client/Capability 生命周期前，不把它当作正式安装器。

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { auditCapabilityFormReadiness, auditCapabilityPlatformCompletion, hasOptionalDida, hasRequiredFeishu } from '../scripts/audit-capability-platform-completion.js'
+import { auditCapabilityFormReadiness, auditCapabilityPlatformCompletion, hasFeishuSubscriptionOwnership, hasNoDidaAcceptance, hasOptionalDida, hasRequiredFeishu } from '../scripts/audit-capability-platform-completion.js'
 
 test('reports the real platform completion blockers instead of treating inactive scaffolds as completion', async () => {
   const report = await auditCapabilityPlatformCompletion(process.cwd())
@@ -54,4 +54,19 @@ test('Feishu is required and Dida is not yet optional in the current composition
   const withInternalProvider = { ...catalog, modules: [...catalog.modules, { id: 'internal-task-projection', providesEffects: ['assistant.task-projection.upsert-intake.v1'] }] }
   assert.equal(hasOptionalDida(internal, withInternalProvider), true)
   assert.equal(hasRequiredFeishu({ ...candidate, capabilities: candidate.capabilities.filter((item: { id: string }) => item.id !== 'message-intake') }), false)
+})
+
+test('does not mistake a projection module or one-device session for subscription and cross-device ownership', () => {
+  const ready = {
+    subscriptionMode: 'dedicated-client', subscriptionIdentityVerified: true, consumerOwnerVerified: true,
+    crossDeviceMatterFenceVerified: true, matterRecoveryVerified: true,
+    currentAuthorizationVerified: true, liveColdStartVerified: true,
+  }
+  assert.equal(hasFeishuSubscriptionOwnership({ ...ready, subscriptionMode: 'undecided' }), false)
+  assert.equal(hasFeishuSubscriptionOwnership({ ...ready, consumerOwnerVerified: false }), false)
+  assert.equal(hasNoDidaAcceptance(ready), true)
+  for (const key of ['crossDeviceMatterFenceVerified', 'matterRecoveryVerified', 'currentAuthorizationVerified', 'liveColdStartVerified'] as const) {
+    assert.equal(hasNoDidaAcceptance({ ...ready, [key]: false }), false, `${key} must remain an independent gate`)
+  }
+  assert.equal(hasNoDidaAcceptance({ ...ready, subscriptionMode: 'shared-server' }), true)
 })

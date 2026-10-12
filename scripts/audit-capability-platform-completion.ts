@@ -26,8 +26,8 @@ export async function auditCapabilityPlatformCompletion(root: string): Promise<{
     ['workspace-file-desktop-approval-control', moduleIds.has('workspace-boundary') && moduleIds.has('authorization-contract') && deployment.client?.workspaceApprovalVerified === true],
     ['install-run-recover-upgrade-rollback-verified', deployment.server?.lifecycleVerified === true && deployment.client?.lifecycleVerified === true],
     ['user-uncommitted-changes-preserved', true],
-    ['feishu-first-new-user', hasRequiredFeishu(composition) && deployment.client?.feishuFirstOnboardingVerified === true],
-    ['dida-optional-new-user', hasOptionalDida(composition, catalog) && deployment.client?.noDidaColdStartVerified === true],
+    ['feishu-first-new-user', hasRequiredFeishu(composition) && deployment.client?.feishuFirstOnboardingVerified === true && hasFeishuSubscriptionOwnership(ledger.noDidaAcceptance)],
+    ['dida-optional-new-user', hasOptionalDida(composition, catalog) && deployment.client?.noDidaColdStartVerified === true && hasNoDidaAcceptance(ledger.noDidaAcceptance)],
   ])
   const verified: string[] = []; const blockers: string[] = []
   for (const item of requirements) { const proven = predicates.get(item.id) === true; if (item.state === 'verified' && !proven) throw new Error(`completion ledger overclaims ${item.id}`); if (proven && item.state.startsWith('verified')) verified.push(item.id); else blockers.push(`${item.id}:${item.state}`) }
@@ -51,6 +51,17 @@ export function hasOptionalDida(composition: any, catalog: any): boolean {
   return didaCapabilities.length > 0 && didaCapabilities.every((item: any) => item.required === false)
     && !(composition?.requiredConfiguration ?? []).some((name: string) => name.startsWith('DIDA_'))
     && internalProjection
+}
+export function hasFeishuSubscriptionOwnership(value: any): boolean {
+  return (value?.subscriptionMode === 'dedicated-client' || value?.subscriptionMode === 'shared-server')
+    && value.subscriptionIdentityVerified === true && value.consumerOwnerVerified === true
+}
+export function hasNoDidaAcceptance(value: any): boolean {
+  return hasFeishuSubscriptionOwnership(value)
+    && value.crossDeviceMatterFenceVerified === true
+    && value.matterRecoveryVerified === true
+    && value.currentAuthorizationVerified === true
+    && value.liveColdStartVerified === true
 }
 async function json(path: string): Promise<any> { return JSON.parse(await readFile(path, 'utf8')) }
 

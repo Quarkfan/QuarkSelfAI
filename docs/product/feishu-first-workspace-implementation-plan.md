@@ -134,3 +134,5 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 2026-10-12 无滴答主链复评：已形成[单 owner 架构候选](../adr/0186-client-owned-feishu-matter-runtime-candidate.md)及[独立复评](feishu-matter-single-owner-review.md)。候选以 Client 单实例监督 DSH/Cordis durable runtime、内部 Matter 为真源；只放行离线契约/回放，不授权现行 consumer/provider 变更。`dida-optional-new-user` 与真实飞书首用继续保持未完成。
 
 2026-10-12 离线投影批次：先按[第三批计划](internal-matter-projection-batch-3.md)与[独立复评](internal-matter-projection-batch-3-review.md)构建未挂载适配器，要求 Client 执行时授权端口、单一 Matter 写入口与失败关闭；本批不建立默认授权真源、不注册 live provider。
+
+2026-10-12 跨设备与订阅所有权修订：ADR 0186 的 Client-local ingress 仅在每用户有可验证的专属飞书订阅时成立；共享应用必须另评估单一服务端 ingress 与隐私模型。本地 Matter 的进程 lease 也不能替代 tenant/user 级跨设备 fenced owner，设备会话的 deviceId 租约不覆盖此范围。完成度审计须新增订阅 scope、跨设备 Matter 接管/恢复及当前授权真源的证据门禁，在此之前禁止把无滴答冷启动标记为完成。修订复评见[单 owner 独立复评](feishu-matter-single-owner-review.md)。

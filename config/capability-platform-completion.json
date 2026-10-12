@@ -2,6 +2,15 @@
   "schemaVersion": 1,
   "objective": "multi-user-cloud-control-local-execution-capability-agent-platform",
   "status": "in-progress",
+  "noDidaAcceptance": {
+    "subscriptionMode": "undecided",
+    "subscriptionIdentityVerified": false,
+    "consumerOwnerVerified": false,
+    "crossDeviceMatterFenceVerified": false,
+    "matterRecoveryVerified": false,
+    "currentAuthorizationVerified": false,
+    "liveColdStartVerified": false
+  },
   "workflowReplay": {
     "status": "verified",
     "mode": "synthetic-no-effect",
