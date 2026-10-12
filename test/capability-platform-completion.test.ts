@@ -37,14 +37,21 @@ test('separates canonical form evidence from activation and fails closed on life
 
 test('Feishu is required and Dida is not yet optional in the current composition', async () => {
   const composition = JSON.parse(await readFile(new URL('../config/product-composition.json', import.meta.url), 'utf8'))
+  const catalog = JSON.parse(await readFile(new URL('../config/module-catalog.json', import.meta.url), 'utf8'))
   assert.equal(hasRequiredFeishu(composition), true)
-  assert.equal(hasOptionalDida(composition), false)
+  assert.equal(hasOptionalDida(composition, catalog), false)
   const candidate = {
     ...composition,
     capabilities: composition.capabilities.map((capability: { id: string; required: boolean }) =>
       capability.id === 'task-projection-and-maintenance' ? { ...capability, required: false } : capability),
     requiredConfiguration: composition.requiredConfiguration.filter((name: string) => !name.startsWith('DIDA_')),
   }
-  assert.equal(hasOptionalDida(candidate), true)
+  assert.equal(hasOptionalDida(candidate, catalog), false, 'removing Dida configuration does not create an internal projection')
+  const internal = {
+    ...candidate,
+    capabilities: [...candidate.capabilities, { id: 'internal-task-projection', required: true, modules: ['internal-task-projection'] }],
+  }
+  const withInternalProvider = { ...catalog, modules: [...catalog.modules, { id: 'internal-task-projection', providesEffects: ['assistant.task-projection.upsert-intake.v1'] }] }
+  assert.equal(hasOptionalDida(internal, withInternalProvider), true)
   assert.equal(hasRequiredFeishu({ ...candidate, capabilities: candidate.capabilities.filter((item: { id: string }) => item.id !== 'message-intake') }), false)
 })

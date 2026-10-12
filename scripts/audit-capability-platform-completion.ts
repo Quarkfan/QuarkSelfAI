@@ -27,7 +27,7 @@ export async function auditCapabilityPlatformCompletion(root: string): Promise<{
     ['install-run-recover-upgrade-rollback-verified', deployment.server?.lifecycleVerified === true && deployment.client?.lifecycleVerified === true],
     ['user-uncommitted-changes-preserved', true],
     ['feishu-first-new-user', hasRequiredFeishu(composition) && deployment.client?.feishuFirstOnboardingVerified === true],
-    ['dida-optional-new-user', hasOptionalDida(composition) && deployment.client?.noDidaColdStartVerified === true],
+    ['dida-optional-new-user', hasOptionalDida(composition, catalog) && deployment.client?.noDidaColdStartVerified === true],
   ])
   const verified: string[] = []; const blockers: string[] = []
   for (const item of requirements) { const proven = predicates.get(item.id) === true; if (item.state === 'verified' && !proven) throw new Error(`completion ledger overclaims ${item.id}`); if (proven && item.state.startsWith('verified')) verified.push(item.id); else blockers.push(`${item.id}:${item.state}`) }
@@ -41,10 +41,16 @@ export function hasRequiredFeishu(composition: any): boolean {
   return capabilities.some((item: any) => item.id === 'message-intake' && item.required === true && item.modules?.includes('feishu-native-ingress'))
     && capabilities.some((item: any) => item.required === true && item.modules?.includes('feishu-channel'))
 }
-export function hasOptionalDida(composition: any): boolean {
+export function hasOptionalDida(composition: any, catalog: any): boolean {
   const capabilities = Array.isArray(composition?.capabilities) ? composition.capabilities : []
-  return capabilities.filter((item: any) => item.modules?.some((id: string) => id.startsWith('dida-'))).every((item: any) => item.required === false)
+  const didaCapabilities = capabilities.filter((item: any) => item.modules?.some((id: string) => id.startsWith('dida-')))
+  const requiredModuleIds = new Set(capabilities.filter((item: any) => item.required === true).flatMap((item: any) => Array.isArray(item.modules) ? item.modules : []))
+  const internalProjection = (catalog?.modules ?? []).some((item: any) => requiredModuleIds.has(item.id)
+    && !String(item.id).startsWith('dida-')
+    && item.providesEffects?.includes('assistant.task-projection.upsert-intake.v1'))
+  return didaCapabilities.length > 0 && didaCapabilities.every((item: any) => item.required === false)
     && !(composition?.requiredConfiguration ?? []).some((name: string) => name.startsWith('DIDA_'))
+    && internalProjection
 }
 async function json(path: string): Promise<any> { return JSON.parse(await readFile(path, 'utf8')) }
 

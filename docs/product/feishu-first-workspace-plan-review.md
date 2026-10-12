@@ -74,3 +74,17 @@ Owner 最新目标允许把 Monid 主要视为能力目录与迭代挂载蓝图�
 - 新增纯函数目录编译、发现与按 ID inspect；读取 26 项第一方候选和 1 项外部来源，仅返回不可执行的引用。Monid 过期后显示 `stale-inactive`；外部来源不会排在匹配的第一方候选前。
 - 一次初测揭示任意子串/部分词命中会造成明显误报，已改为所有查询 token 必须命中元数据 token；3 个定向测试通过，`npm run build` 与 `npm run architecture:check` 通过。此规则仅是确定性预筛选，不宣称语义召回质量。
 - 使用手册明确当前只覆盖已有候选元数据；尚未收集实际 Skill 文件、做租户授权过滤、接入 Agent Studio/Client 或运行 Monid。运行目标与完成度门禁均保持未完成。
+
+## 无 Dida 首用链调查与小批次复评（2026-10-12；实施前）
+
+当前 `config/product-composition.json` 把 Dida 投影列为 required 且必填 `DIDA_*`；`loadNativeProductConfig` 按该清单失败关闭。更深的阻断是 `message-intake-native` task 分支需要投影授权与 `assistant.task-projection.upsert-intake.v1`，当前唯一提供者是 Dida。现有 `matter` 写入与 `enqueueAction` 绑定，后者会进入执行 worker，不能将它当成无副作用的内部任务仓。原生 `cordis.patch.yml` 两处默认回退到个人 BlackLake 工作区，违反通用产品首用边界。
+
+评估：立即把 Dida 标成 optional 或移除环境变量会制造“配置可过、真实任务失败”的假象，也可能破坏当前个人链路；本轮不做。先清除原生 profile 两处个人绝对路径回退，保持 `QUARK_OWNER_WORKSPACE` 仍在必填清单；compat owner 和现有显式配置不改。增加自动测试阻止路径回归，更新首用手册明确尚需内部投影。此变更不激活 plugin、不改消费者/provider/effect、无外部写，评估通过可实施。后续内部投影及新用户 composition 是独立批次，必须先有数据模型、幂等/租户边界、回放和复评。
+
+追加审计评估：当前 `hasOptionalDida` 在仅把 required 改 false、移除 `DIDA_*` 的合成配置上返回 true，未核验消息摄取的非 Dida 投影提供者。这会允许后续把 `noDidaColdStartVerified` 手工写成 true 时形成虚假完成。放行一个小范围失败关闭修正：谓词必须同时要求必选能力中存在非 Dida 的 `assistant.task-projection.upsert-intake.v1` 提供者；当前真实和仅改字符串的合成配置均应为 false。并将 native 启动的必需 activation gates 从 required 能力推导，optional Dida gates 仍在 profile 受控但不再被新用户误当必填。当前 Dida 仍是 required，故个人实例的现行校验不变；本批不改变运行 composition。
+
+### 本批实施回读
+
+- 原生 profile 两处个人 BlackLake 工作区回退已移除，缺显式 `QUARK_OWNER_WORKSPACE` 仍由产品必填配置失败关闭；架构检查防止个人绝对路径回归。compat overlay 和 Dida writer 未改。
+- `requiredEnvironment` 现在只从 required 能力推导；所有 profile activation gates 仍由机器目录覆盖，optional gates 不会自动开启或成为首用必填。当前产品组合中的 Dida 仍 required，现有启动前置不变。
+- 完成度谓词还要求必选的非 Dida 投影提供者；仅删除 `DIDA_*` 的合成配置保持 false。定向 12/12 测试、TypeScript build 和架构检查通过。内部投影尚未实现，`dida-optional-new-user` 仍必须保持 incomplete。

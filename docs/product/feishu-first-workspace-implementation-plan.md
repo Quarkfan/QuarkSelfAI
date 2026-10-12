@@ -74,6 +74,8 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 
 复用现有 `lark-cli` provider，不在 domain/policy 拼 CLI 参数。定义首次安装、配置、`--as user`/`--as bot`、scope 最小化、只读 health、卡片交互、授权撤销和断线恢复；CLI 成功依据退出码或 `ok=true`，而非 `code=0`。安装可准备 inactive 客户端；飞书授权、消费者启用和外部写入分别取得精确确认。验收：全新测试用户在无 Dida 条件下完成飞书身份检查、权限缺失指引、只读消息/日历能力检查和一条 effects-off 测试链；未授权不产生外部效果。
 
+配置与 profile 不得提供个人工作区的隐式回退路径；缺 `QUARK_OWNER_WORKSPACE` 应失败关闭，由首用流程引导用户显式授予自己的工作区。当前原生 profile 的两处 BlackLake 绝对路径回退必须先清除，现有个人实例的显式配置和 compatibility owner 不变。
+
 ### C. 通用工作区 starter 与双角色包
 
 把当前独立原型收敛为 QuarkSelfAI Client 可识别、可版本化、可卸载的 workspace/capability bundle；开发者与产品角色各有真实任务样例、来源路由、交接、知识载体和手册。不得从 starter 中启动第二消息消费者、scheduler 或 executor。验收：两个全新隔离工作区仅凭入口完成任务发现；模板升级不覆盖用户私有内容；无公司路径、真实数据或 Dida 强依赖。
@@ -93,6 +95,10 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 ### F. 现有能力迁移、Shadow、单 owner 切换
 
 以当前迁移矩阵逐模块迁移，维持兼容期唯一飞书消费者和 Dida writer。BlackLake 进入独立私有 pack；Dida 转为可选 task adapter，缺失时主线 build/start/recover 与飞书核心仍成立。先脱敏 replay 与 recording sink；再在批准窗口逐 consumer/provider/effect 精确切换，先停旧 owner、确认 checkpoint、再启新 owner，失败反向回滚。不得出现双消费者、双 provider、双调度或双写。
+
+无 Dida 并非把 `task-projection-and-maintenance.required` 改成 `false` 即可：`message-intake-native` 的 task 分支需要 `assistant.task-projection.upsert-intake.v1`，`IntakeService` 在 enabled 时要求投影授权；目前该 effect 由 Dida 投影适配器提供。必须先设计并实现 tenant/user 隔离、幂等、可回读的内部 matter/action 投影真源（不能复用会被 worker 执行的 `enqueueAction` 冒充任务），再在目标 composition 中选择唯一投影提供者；followup/maintenance 的 Dida-only 行为可保持可选但不能让它们成为飞书核心的隐式前置。完成离线回放、故障/恢复及单 owner 验证后，才移除新用户的 `DIDA_*` 必填项；当前个人实例维持原投影直到另批切换。
+
+完成度审计也必须核验非 Dida 的必选投影提供者和必选启动门禁，不能只检查 `required=false` 与删除 `DIDA_*` 字符串；否则机器检查会对一个不可用的假配置报绿。
 
 ### G. 交付、运维与退出
 

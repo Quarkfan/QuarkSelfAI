@@ -130,6 +130,20 @@ test('optional product capabilities remain visible without blocking native start
   assert.ok(readiness.items.some(item => item.id === 'postgres-storage' && item.status === 'ready/inactive'))
 })
 
+test('optional Dida modules do not become native activation prerequisites', async () => {
+  const catalog = await loadModuleCatalog()
+  const current = await loadProductCompositionManifest(catalog)
+  const candidate = validateProductCompositionManifest({
+    version: 2,
+    capabilities: current.capabilities.map(capability => capability.id === 'task-projection-and-maintenance'
+      ? { ...capability, required: false } : capability),
+    requiredConfiguration: current.requiredConfiguration.filter(name => !name.startsWith('DIDA_')),
+  }, catalog)
+  assert.ok(candidate.requiredEnvironment.includes('QUARK_NATIVE_MESSAGE_INTAKE'))
+  assert.equal(candidate.requiredEnvironment.some(name => name.startsWith('QUARK_NATIVE_DIDA_')), false)
+  assert.ok(current.requiredEnvironment.some(name => name.startsWith('QUARK_NATIVE_DIDA_')))
+})
+
 test('native readiness follows service providers without concrete runtime dependencies', async () => {
   const activeCatalog = validateModuleCatalog({
     version: 3,

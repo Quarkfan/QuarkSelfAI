@@ -34,6 +34,8 @@ lark-cli whoami
 
 当前 `config/product-composition.json` 仍将 Dida 投影列为 required，且要求 Dida 配置。`dida-optional-new-user` 完成度门禁故意保持 incomplete；本节是待完成验收，不是已通过的安装指南。
 
+原生 profile 现在不再为 `QUARK_OWNER_WORKSPACE` 回退到维护者的个人目录；新用户必须明确配置和授权自己的工作区。但消息摄取的 task 分支仍需要投影授权与 Dida 提供的 effect。即使某些只读路径能运行，也不能据此声称无 Dida 的任务闭环已完成；下一批先建设内部 matter/action 投影及隔离回放，再修改产品组合。
+
 ## 开发/产品工作区的使用边界
 
 开发人员从 Issue/规格、代码仓、测试和当前运行证据建立链路；产品人员从用户问题、研究样本、决策与结果指标建立链路。两种角色共享同一个授权、来源、新鲜度、交接和经验晋级体系，不复制两套运行时。现有 `agent-workspace-kit` 仅为 inactive starter 候选；在整合进 QuarkSelfAI Client/Capability 生命周期前，不把它当作正式安装器。

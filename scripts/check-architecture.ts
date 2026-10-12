@@ -34,6 +34,8 @@ assert.ok(packageName, 'package.json must define a package name')
 assert.ok(isRecord(packageManifest.exports), 'package.json must define exports')
 assert.equal(packageManifest.dsh?.bundle?.patch, './cordis.patch.yml', 'DSH bundle must load the long-term native product profile')
 const profileSource = await readFile(resolve(root, 'cordis.patch.yml'), 'utf8')
+assert.doesNotMatch(profileSource, /\/Users\/[^\s'"\n]+/, 'native profile must not embed a personal workspace path')
+assert.equal((profileSource.match(/workspace:\s*!!js process\.env\.QUARK_OWNER_WORKSPACE \|\| ''/g) ?? []).length, 2, 'workspace-bearing native plugins must fail closed without explicit workspace configuration')
 const compatibilityProfileSource = await readFile(resolve(root, 'compat/cordis.compat.patch.yml'), 'utf8')
 const productManifest = await loadProductCompositionManifest(catalog)
 const capabilityMigration = JSON.parse(await readFile(resolve(root, 'config/capability-platform-migration.json'), 'utf8')) as { groups: Array<{ disposition: string; moduleIds: string[] }> }
@@ -202,7 +204,14 @@ assert.deepEqual(
   'native product composition must not duplicate product selection or profile mounts as runtime dependencies',
 )
 const profileActivationEnvironment = [...new Set(profileSource.match(/QUARK_NATIVE_[A-Z][A-Z0-9_]*/g) ?? [])].sort()
-assert.deepEqual([...productManifest.requiredEnvironment].sort(), profileActivationEnvironment, 'product activation environment must exactly match native Cordis gates')
+const declaredProductGates = [...new Set(productManifest.capabilities.flatMap(capability => capability.modules)
+  .map(moduleId => catalog.modules.find(module => module.id === moduleId)?.plugin?.activationGate)
+  .filter((gate): gate is string => Boolean(gate)))].sort()
+assert.deepEqual(declaredProductGates, profileActivationEnvironment, 'native Cordis gates must be represented in product capabilities')
+const requiredProductGates = [...new Set(productManifest.capabilities.filter(capability => capability.required).flatMap(capability => capability.modules)
+  .map(moduleId => catalog.modules.find(module => module.id === moduleId)?.plugin?.activationGate)
+  .filter((gate): gate is string => Boolean(gate)))].sort()
+assert.deepEqual([...productManifest.requiredEnvironment].sort(), requiredProductGates, 'product activation requirements must follow required capabilities only')
 for (const name of productManifest.requiredConfiguration) {
   assert.ok(profileSource.includes(name), `required product configuration ${name} is not consumed by the Cordis profile`)
 }

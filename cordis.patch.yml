@@ -146,7 +146,7 @@
       config:
         enabled: true
         ownerOpenId: !!js process.env.QUARK_OWNER_OPEN_ID || 'not-configured'
-        workspace: !!js process.env.QUARK_OWNER_WORKSPACE || '/Users/edy/BlackLakeWork'
+        workspace: !!js process.env.QUARK_OWNER_WORKSPACE || ''
         focusSenderIds: []
         focusConversationIds: []
         discoveryIntervalMs: 600000
@@ -239,7 +239,7 @@
         activityTimeoutMs: 5000
         stateDatabase: !!js >-
           process.env.CODEX_STATE_DB || ((process.env.CODEX_HOME || (process.env.HOME + '/.codex')) + '/state_5.sqlite')
-        workspace: !!js process.env.QUARK_OWNER_WORKSPACE || '/Users/edy/BlackLakeWork'
+        workspace: !!js process.env.QUARK_OWNER_WORKSPACE || ''
     - id: quark-session-lifecycle
       name: '@quarkfan/quark-self-ai/session-lifecycle'
       # Archive/delete effects are irreversible and remain behind explicit activation.

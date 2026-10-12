@@ -64,7 +64,8 @@ export function validateProductCompositionManifest(
     return { id, required: candidate.required, modules }
   })
   if (capabilities.length === 0) throw new Error('product composition manifest requires capabilities')
-  const requiredEnvironment = [...ownedModules]
+  const requiredModuleIds = new Set(capabilities.filter(capability => capability.required).flatMap(capability => capability.modules))
+  const requiredEnvironment = [...requiredModuleIds]
     .map(moduleId => byModule.get(moduleId)!)
     .filter(module => module.runtime === 'inactive' && module.plugin)
     .map(module => module.plugin!.activationGate!)
