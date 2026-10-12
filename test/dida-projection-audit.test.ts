@@ -33,6 +33,10 @@ test('accepts only exact-schema projections with processed-message and shadow li
     await writeFile(statePath, JSON.stringify({
       mentionProcessedMessageIds: [messageId],
       shadowDecisions: [{ messageId, taskId: null, taskAction: 'ignored' }],
+      shadowMatters: [
+        { key: 'matter-active', status: 'observing', taskIds: ['task-1'], referenceHashes: ['digest-a', 'digest-b'] },
+        { key: 'matter-resolved', status: 'resolved', taskIds: [], referenceHashes: ['digest-c'] },
+      ],
     }))
     const script = resolve('scripts/audit-dida-projections.mjs')
     const { stdout } = await execute(process.execPath, [script, dida, statePath, '--min-task-projections', '1', '--strict'], {
@@ -40,6 +44,8 @@ test('accepts only exact-schema projections with processed-message and shadow li
     })
     const report = JSON.parse(stdout)
     assert.equal(report.exactSchemaAccepted, 1)
+    assert.deepEqual(report.matterResolutionDistribution, { none: 1 })
+    assert.deepEqual(report.matterIndex, { total: 2, active: 1, withTask: 1, stableReferenceDigests: 3 })
     assert.equal(report.legacySchemaSkipped, 0)
     assert.equal(report.externalWrites, 0)
     assert.equal(report.rawBusinessContentEmitted, false)

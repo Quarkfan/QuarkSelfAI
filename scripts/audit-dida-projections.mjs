@@ -71,6 +71,7 @@ if (!didaRoot || !statePath || !Number.isSafeInteger(minimum) || minimum < 0) {
     resultFiles(path.resolve(didaRoot)),
   ])
   const decisions = Array.isArray(state.shadowDecisions) ? state.shadowDecisions : []
+  const matters = Array.isArray(state.shadowMatters) ? state.shadowMatters : []
   const processed = new Set(Array.isArray(state.mentionProcessedMessageIds) ? state.mentionProcessedMessageIds : [])
   const correlated = []
   let taskProjectionFiles = 0
@@ -91,7 +92,12 @@ if (!didaRoot || !statePath || !Number.isSafeInteger(minimum) || minimum < 0) {
     try {
       const normalized = normalizeTaskResult(value)
       validateTaskPresentation(normalized)
-      correlated.push({ messageId: decision.messageId, action: normalized.taskAction, modifiedAt: (await stat(file)).mtime })
+      correlated.push({
+        messageId: decision.messageId,
+        action: normalized.taskAction,
+        matterResolution: normalized.matterResolution,
+        modifiedAt: (await stat(file)).mtime,
+      })
     } catch (error) {
       const reason = String(error?.message || error).replace(/\b[0-9a-f]{8,}\b/gi, '<id>')
       semanticFailures.set(reason, (semanticFailures.get(reason) ?? 0) + 1)
@@ -99,7 +105,11 @@ if (!didaRoot || !statePath || !Number.isSafeInteger(minimum) || minimum < 0) {
   }
   const unique = new Map(correlated.map((item) => [item.messageId, item]))
   const actionDistribution = {}
-  for (const item of unique.values()) actionDistribution[item.action] = (actionDistribution[item.action] ?? 0) + 1
+  const matterResolutionDistribution = {}
+  for (const item of unique.values()) {
+    actionDistribution[item.action] = (actionDistribution[item.action] ?? 0) + 1
+    matterResolutionDistribution[item.matterResolution] = (matterResolutionDistribution[item.matterResolution] ?? 0) + 1
+  }
   const dates = [...unique.values()].map((item) => item.modifiedAt).sort((left, right) => left - right)
   const duplicates = [...correlated.reduce((map, item) => map.set(item.messageId, (map.get(item.messageId) ?? 0) + 1), new Map())]
     .filter(([, count]) => count > 1).map(([messageId, count]) => ({ message: fingerprint(messageId), count }))
@@ -111,6 +121,13 @@ if (!didaRoot || !statePath || !Number.isSafeInteger(minimum) || minimum < 0) {
     exactSchemaAccepted: unique.size,
     minimumTaskProjections: minimum,
     actionDistribution,
+    matterResolutionDistribution,
+    matterIndex: {
+      total: matters.length,
+      active: matters.filter((item) => item?.status !== 'resolved').length,
+      withTask: matters.filter((item) => Array.isArray(item?.taskIds) && item.taskIds.length > 0).length,
+      stableReferenceDigests: matters.reduce((count, item) => count + (Array.isArray(item?.referenceHashes) ? item.referenceHashes.length : 0), 0),
+    },
     ...(dates.length ? { acceptedWindow: { earliest: dates[0].toISOString(), latest: dates.at(-1).toISOString() } } : {}),
     legacySchemaSkipped,
     semanticFailures: [...semanticFailures].map(([reason, count]) => ({ reason, count })),

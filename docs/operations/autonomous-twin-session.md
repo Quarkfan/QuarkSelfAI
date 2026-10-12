@@ -2175,3 +2175,11 @@
 - 定向回归 75/75、完整 compatibility 回归 199/199 通过。本轮尚未重启守护进程、未清理或修改真实滴答任务、未改变消费者/provider/writer，也未触碰用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store`。回滚可设置 `QUARK_MATTER_CONTEXT_ENABLED=0` 后重启同一 host，或撤销本 revision；新增摘要字段可安全保留未读。
 - 用户随后明确允许重启。`com.quarkfan.quark-self-ai` 先以 SIGTERM 优雅停止旧 PID 76070，确认退出码 0 后按原 launchd label 启动；首次启动握手退出码为 1，launchd 有界重试一次后稳定为单一主进程 PID 78724、单一 compatibility provider PID 78777。`/api/health` 回读 `ok=true`，DSH 与 5 个必需飞书事件消费者均为 ready；native cutover blockers 仍按既有 accepted-risk-cutover 状态保留，不代表本批启用 native effects。
 - 重启后持久状态回读仍有 2 条湖小维请求处于 `progress_received`，0 条被误判为终态；`queue=0`、research session 与 execution confirmation 均为 0。重启扫描产生 31 条 `mentionPending` 候选，它们尚未投影为滴答任务，将继续经过本批写前事项上下文、单写者和写后回读门禁。没有切换消费者/provider/writer，没有清理或修改既有滴答任务。
+
+## 2026-10-12 — 写前事项上下文的脱敏效果审计
+
+- 本轮选择 `measurable-enhancement`。最近三轮能力巡检均为 reliability，当前宿主单实例健康，且唯一会前简报候选仍未获批准，因此不形成第二候选；优先验证刚激活的 ADR 0185 是否留下可测证据。
+- 既有 `audit:dida-projections` 已能按 current schema、processed message 与 shadow decision 建立严格血缘，但只显示 created/updated/unchanged/ignored，无法判断模型把消息归为 new/existing/none/ambiguous，也无法证明无正文事项索引是否持续积累。
+- 审计现在额外输出 `matterResolutionDistribution`，以及事项索引的 total、active、withTask、stableReferenceDigests 四个纯计数；不输出消息正文、会话/发送人清单、原始引用、任务内容或绝对状态路径，不产生外部写。
+- 激活后的真实只读样本为 18 个：ignored 8、updated 5、unchanged 3、created 2；严格门禁仍保持 20 个有效样本要求，因此本轮只更新为 observing，不提前宣称完成。回滚为撤销审计字段、测试和本条记录，不需要重启、数据迁移、任务补偿或外部消息撤回。
+- 完整检查发现 work-domain 基线仍停在近期能力平台治理变更之前；复核结果为 115 个已分类路径、0 个未分类、0 个歧义，只更新计数与摘要基线，不新增 marker、分类规则或运行依赖。
