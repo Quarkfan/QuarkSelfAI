@@ -130,3 +130,5 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 2026-10-12 bundle 进度：starter 来源提交 `cbec01c` 已离线导出 developer/product 两个内容寻址 bundle，空目录安装演练通过；QuarkSelfAI 按[接收计划](workspace-starter-bundle-intake-batch-1.md)与[复评](workspace-starter-bundle-intake-batch-1-review.md)增加纯字节、精确 pin 的跨语言只读验证。该工作使模板脱离邻接源码路径，但尚未成为受信签名制品或 Client 持久安装状态；C/G 的最终验收不变。
 
 2026-10-12 升级安全进度：starter 仓 `docs/BUNDLE-UPGRADE-PREVIEW-PLAN.md` 与独立复评先行，随后实现只读旧包/新包/磁盘比较，并在两种校验器中阻断大小写路径碰撞。该预览只证明能识别模板变更与用户改动，不写现有工作区；原位升级仍需事务恢复与单独授权。
+
+2026-10-12 无滴答主链复评：已形成[单 owner 架构候选](../adr/0186-client-owned-feishu-matter-runtime-candidate.md)及[独立复评](feishu-matter-single-owner-review.md)。候选以 Client 单实例监督 DSH/Cordis durable runtime、内部 Matter 为真源；只放行离线契约/回放，不授权现行 consumer/provider 变更。`dida-optional-new-user` 与真实飞书首用继续保持未完成。
