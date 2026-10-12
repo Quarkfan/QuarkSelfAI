@@ -140,3 +140,5 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 2026-10-12 通用多设备底座：按[持久 fenced lease 计划](matter-owner-lease-batch-1.md)及[独立复评](matter-owner-lease-batch-1-review.md)先构建未挂载控制面原语，不因飞书订阅形态未决而延误共同必需的单写约束；它本身不放行 live 接管、授权或恢复。
 
 2026-10-12 飞书接入澄清：两种产品形态均默认通过 `lark-cli`，首批候选为每用户专属应用、Client 本地唯一 CLI 消费者；共享应用的统一入口也应托管唯一 CLI 消费者，而非改用浏览器或另一套默认 OpenAPI 实现。“本地/服务端”区分部署与订阅 owner，不改变接入技术。共享形态的 CLI 多用户身份路由与原始内容隐私边界尚未验证；首批选择不构成排他性产品决策，也不授权启动任何 live consumer。对应架构约束见[ADR 0186](../adr/0186-client-owned-feishu-matter-runtime-candidate.md)。
+
+2026-10-12 CLI 事件流可靠性门槛：按[生命周期加固批次](lark-cli-stream-integrity-batch-1.md)与[独立复评](lark-cli-stream-integrity-batch-1-review.md)先修既有 adapter 的异步回调、ready 后失败观察、背压与非强杀停机。它不建立全局订阅 owner，也不证明上游可重放；真实消费者切换和无滴答验收仍单独阻断。

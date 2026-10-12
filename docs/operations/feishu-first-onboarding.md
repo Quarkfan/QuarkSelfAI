@@ -42,6 +42,8 @@ Client 已有[本地 Matter 存储原语](internal-matter-projection.md)，但�
 
 补充的产品级门槛：首用前必须明确飞书订阅是每用户专属应用还是统一应用，并以已核验的应用/订阅身份取得唯一 consumer owner；不能仅凭 `--as user/bot` 推断。若同一用户注册多台设备，Client 本机 lock 也不能代替跨设备 fenced Matter owner；主设备切换必须先证明旧 writer 失效和加密状态恢复。`config/capability-platform-completion.json` 的 `noDidaAcceptance` 逐项记录这些门槛，全部为 false 时不应启动 live 消费者或称内部 Matter 已成为全局真源。当前的未挂载投影器只完成离线映射与幂等验证。
 
+事件流故障处理：CLI ready marker 只证明本机子进程已就绪，不证明全局订阅唯一或事件已持久化。若 adapter 报回调/载荷失败、CLI 丢弃告警、异常退出或停机超时，应把该 EventKey 视为 degraded，先核对旧子进程确已停止及缺口补偿来源，再考虑恢复；不能直接启动第二个消费者。不得以 `SIGKILL` 清理可能登记服务端订阅的 CLI 子进程。详见[事件流完整性批次](../product/lark-cli-stream-integrity-batch-1.md)。
+
 ## 开发/产品工作区的使用边界
 
 开发人员从 Issue/规格、代码仓、测试和当前运行证据建立链路；产品人员从用户问题、研究样本、决策与结果指标建立链路。两种角色共享同一个授权、来源、新鲜度、交接和经验晋级体系，不复制两套运行时。现有 `agent-workspace-kit` 仅为 inactive starter 候选；在整合进 QuarkSelfAI Client/Capability 生命周期前，不把它当作正式安装器。

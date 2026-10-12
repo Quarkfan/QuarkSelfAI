@@ -26,6 +26,7 @@ export class LarkCliService extends Service {
   private readonly requiredEventKeys: readonly string[]
   private readonly discovery: LarkCapabilityDiscovery
   private readonly streams = new Map<string, LarkEventStream>()
+  private readonly failures = new Map<string, string>()
 
   constructor(ctx: Context, config: LarkCliConfig = {}, runner: CommandRunner = new ProcessCommandRunner()) {
     super(ctx, 'larkCli')
@@ -38,6 +39,13 @@ export class LarkCliService extends Service {
 
   inspect(signal?: AbortSignal): Promise<CompatibilityReport> {
     return this.discovery.inspect(this.requiredEventKeys, signal)
+  }
+
+  streamHealth(): Readonly<Record<string, { state: ReturnType<LarkEventStream['status']>; failure?: string }>> {
+    return Object.fromEntries([...this.streams].map(([key, stream]) => [key, {
+      state: stream.status(),
+      ...(this.failures.has(key) ? { failure: this.failures.get(key)! } : {}),
+    }]))
   }
 
   async start(signal?: AbortSignal): Promise<CompatibilityReport> {
@@ -53,24 +61,33 @@ export class LarkCliService extends Service {
           throw new Error(`event ${eventKey} does not support --as ${this.identity}`)
         }
         const stream = new LarkEventStream()
+        this.streams.set(eventKey, stream)
         await stream.start(
-          { executable: this.executable, identity: this.identity, eventKey },
+          { executable: this.executable, identity: this.identity, eventKey, onFailure: failure => {
+            this.failures.set(eventKey, failure.message)
+            this.ctx.logger('quark-lark-cli').error(failure.message)
+          } },
           async event => { await this.ctx.parallel('feishu/event', event) },
           signal,
         )
-        this.streams.set(eventKey, stream)
       }
     } catch (error) {
-      await Promise.all([...this.streams.values()].map((stream) => stream.stop()))
-      this.streams.clear()
+      try { await this.stop() }
+      catch { throw new Error('lark-cli startup failed and a consumer may still be alive', { cause: error }) }
       throw error
     }
     return report
   }
 
   async stop(): Promise<void> {
-    const streams = [...this.streams.values()]
-    this.streams.clear()
-    await Promise.all(streams.map(stream => stream.stop()))
+    const entries = [...this.streams]
+    const results = await Promise.allSettled(entries.map(([, stream]) => stream.stop()))
+    for (let index = 0; index < entries.length; index += 1) {
+      if (results[index]?.status === 'fulfilled') {
+        this.streams.delete(entries[index]![0])
+        this.failures.delete(entries[index]![0])
+      }
+    }
+    if (results.some(result => result.status === 'rejected')) throw new Error('lark-cli consumer stop is incomplete; ownership is uncertain')
   }
 }
