@@ -2173,3 +2173,5 @@
 - ADR 0185 复用唯一 focus-intake 与唯一 Dida writer，在投影前提供最多 8 个无原文事项候选。索引持续有界更新，稳定引用只保留 SHA-256 摘要，候选不包含 chat/sender 清单；精确引用已绑定活动任务时失败关闭，禁止创建第二条。
 - 新建任务 schema 增加事项归属、未完成结果、本人责任证据、完成后的状态变化和归并依据。`ambiguous` 不能创建；“关注、留意、了解、知悉、查看、泛化跟进”不能伪装成下一步。Dida 搜索、单写者与写后回读保持不变。
 - 定向回归 75/75、完整 compatibility 回归 199/199 通过。本轮尚未重启守护进程、未清理或修改真实滴答任务、未改变消费者/provider/writer，也未触碰用户未提交的 `package.json`、品牌客户端文件和 `.DS_Store`。回滚可设置 `QUARK_MATTER_CONTEXT_ENABLED=0` 后重启同一 host，或撤销本 revision；新增摘要字段可安全保留未读。
+- 用户随后明确允许重启。`com.quarkfan.quark-self-ai` 先以 SIGTERM 优雅停止旧 PID 76070，确认退出码 0 后按原 launchd label 启动；首次启动握手退出码为 1，launchd 有界重试一次后稳定为单一主进程 PID 78724、单一 compatibility provider PID 78777。`/api/health` 回读 `ok=true`，DSH 与 5 个必需飞书事件消费者均为 ready；native cutover blockers 仍按既有 accepted-risk-cutover 状态保留，不代表本批启用 native effects。
+- 重启后持久状态回读仍有 2 条湖小维请求处于 `progress_received`，0 条被误判为终态；`queue=0`、research session 与 execution confirmation 均为 0。重启扫描产生 31 条 `mentionPending` 候选，它们尚未投影为滴答任务，将继续经过本批写前事项上下文、单写者和写后回读门禁。没有切换消费者/provider/writer，没有清理或修改既有滴答任务。
