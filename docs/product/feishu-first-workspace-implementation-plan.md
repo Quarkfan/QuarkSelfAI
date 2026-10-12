@@ -124,3 +124,5 @@ Monid 官方 Skill `0.1.7` 展示了 `discover → inspect → run → poll` 的
 2026-10-12 校验修订：新增的静态来源配置也属于 `module-catalog` 的资产所有权范围。上轮 `architecture:check` 在新文件未被 Git 跟踪时通过，提交后重跑才暴露 unowned asset；本批先将该文件归属现有 `capability-platform-governance`，并在提交后再次执行架构检查，不修改运行时、外部来源状态或授权。
 
 2026-10-12 进度：本地 Skill 元数据采集第一批按[批次计划](local-skill-discovery-batch-1.md)与[独立复评](local-skill-discovery-batch-1-review.md)落地，复用现有离线目录而非新建索引；显式根刷新、轻量描述符、不可执行状态和合成测试已完成。它不代表真实用户/租户 scope、Skill 安装/执行或海量语义调度已完成；B/E 的相关验收继续保持未完成。
+
+2026-10-12 starter 进度：`../agent-workspace-kit` 已在本地 Git `c899521` 固定为可替换的模板内容源与离线工具；developer/product 隔离冷启动、静态 Feishu 必选与默认 `lark-cli` 声明、私有 Task/Experience 输入及手册通过离线测试。它仍未成为 Client 可安装的版本化 bundle，也未取得真实飞书授权、无 Dida 运行或成长晋级证据；C/E/G 的产品验收继续保持未完成。不得让 QuarkSelfAI 运行时依赖该相邻源码绝对路径。
