@@ -63,3 +63,30 @@ CREATE TABLE IF NOT EXISTS local_device_enrollment (
   poll_after_seconds INTEGER NOT NULL CHECK (poll_after_seconds = 5),
   updated_at TEXT NOT NULL
 );
+
+-- Client-local Matter truth for a future no-Dida intake provider. Never an action-worker queue.
+CREATE TABLE IF NOT EXISTS local_matter (
+  matter_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  source_fingerprint TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('open', 'waiting', 'completed', 'ignored', 'superseded')),
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  priority INTEGER NOT NULL CHECK (priority IN (1, 3, 5)),
+  tags_json TEXT NOT NULL CHECK (json_valid(tags_json)),
+  due_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (tenant_id, user_id, source_fingerprint)
+);
+
+CREATE TABLE IF NOT EXISTS local_matter_intake (
+  tenant_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  idempotency_fingerprint TEXT NOT NULL,
+  request_digest TEXT NOT NULL,
+  matter_id TEXT NOT NULL REFERENCES local_matter(matter_id),
+  recorded_at TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, user_id, idempotency_fingerprint)
+);

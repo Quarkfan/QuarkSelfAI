@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, realpath, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 import { executionEnvelopePayloadDigest } from '../src/capability-platform/validation.js'
 import type { DeviceTaskLeaseV1, SignedExecutionPlanV1 } from '../src/client-runtime/contracts.js'
@@ -56,6 +57,44 @@ test('rejects enrollment drift, foreign reports, active capabilities and checkpo
     assert.throws(() => state.saveInactiveCapability({ capabilityId: 'tool.demo', version: '1.0.0', artifactDigest: sha, deviceId: identity.deviceId, installation: 'installed', loading: 'loaded', authorization: 'unauthorized', execution: 'stopped', effects: 'disabled', updatedAt: at.toISOString() }), /installed-inactive/)
     const journal = new InactiveLocalRunJournalV1(verifier); const checkpoint = await journal.acceptLease(lease(), 'claude-code', at); await state.saveRunCheckpoint(checkpoint, at)
     await assert.rejects(() => state.saveRunCheckpoint({ ...checkpoint, checkpointDigest: `sha256:${'b'.repeat(64)}` }, at), /integrity/)
+    await state.close()
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('persists scoped no-Dida Matters idempotently without an executable action or cloud content', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'quark-client-matter-')); const database = join(directory, 'client.sqlite3')
+  const input = { tenantId: identity.tenantId, userId: identity.userId, sourceId: 'om-sensitive-source', idempotencyKey: 'intake:om-sensitive-source:1', title: 'Private task title', summary: 'Private task summary', priority: 3 as const, tags: ['product'] }
+  try {
+    let state = await openSqliteInactiveClientState(database, migration, verifier)
+    state.enroll(identity, 'secret:device.owner')
+    const first = state.upsertIntakeMatter(input, at)
+    assert.equal(first.inserted, true)
+    assert.equal(first.matter.status, 'open')
+    assert.equal(first.matter.title, input.title)
+    assert.equal(state.upsertIntakeMatter(input, at).inserted, false)
+    assert.throws(() => state.upsertIntakeMatter({ ...input, title: 'Changed with same key' }, at), /different durable content/)
+    assert.throws(() => state.upsertIntakeMatter({ ...input, userId: 'user.other' }, at), /scope/)
+    assert.throws(() => state.intakeMatter(identity.tenantId, 'user.other', first.matter.matterId), /scope/)
+    assert.throws(() => state.upsertIntakeMatter({ ...input, existingMatterId: first.matter.matterId }, at), /separate reconciliation/)
+    const updated = state.upsertIntakeMatter({ ...input, idempotencyKey: 'intake:om-sensitive-source:2', summary: 'Revised locally' }, new Date(later))
+    assert.equal(updated.inserted, false)
+    assert.equal(updated.changed, true)
+    assert.equal(updated.matter.matterId, first.matter.matterId)
+    const projection = JSON.stringify(state.cloudProjection(at))
+    assert.equal(projection.includes(input.title) || projection.includes(input.summary) || projection.includes(input.sourceId), false)
+    await state.close()
+
+    const db = new DatabaseSync(database)
+    const lineage = db.prepare('SELECT source_fingerprint, idempotency_fingerprint FROM local_matter JOIN local_matter_intake USING (tenant_id,user_id,matter_id) LIMIT 1').get() as { source_fingerprint: string; idempotency_fingerprint: string }
+    assert.match(lineage.source_fingerprint, /^[a-f0-9]{64}$/)
+    assert.match(lineage.idempotency_fingerprint, /^[a-f0-9]{64}$/)
+    assert.equal(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='action_execution'").get(), undefined)
+    db.prepare("UPDATE local_matter SET status='completed' WHERE matter_id=?").run(first.matter.matterId)
+    db.close()
+
+    state = await openSqliteInactiveClientState(database, migration, verifier)
+    assert.equal(state.intakeMatter(identity.tenantId, identity.userId, first.matter.matterId)?.status, 'completed')
+    assert.throws(() => state.upsertIntakeMatter({ ...input, idempotencyKey: 'intake:om-sensitive-source:3' }, at), /terminal Matter/)
     await state.close()
   } finally { await rm(directory, { recursive: true, force: true }) }
 })

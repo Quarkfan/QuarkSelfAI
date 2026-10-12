@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite'
+import { createHash } from 'node:crypto'
 import { mkdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { CapabilityLifecycleSnapshotV1 } from '../capability-platform/manifest.js'
@@ -31,6 +32,31 @@ export interface LocalClientCloudProjectionV1 {
 }
 
 export interface LocalClientEnrollmentV1 { readonly identity: DeviceIdentityV1; readonly privateKeyRef: string }
+export interface LocalIntakeMatterInputV1 {
+  readonly tenantId: string
+  readonly userId: string
+  readonly sourceId: string
+  readonly idempotencyKey: string
+  readonly title: string
+  readonly summary: string
+  readonly priority: 1 | 3 | 5
+  readonly tags: readonly string[]
+  readonly dueAt?: string
+  readonly existingMatterId?: string
+}
+export interface LocalIntakeMatterV1 {
+  readonly matterId: string
+  readonly tenantId: string
+  readonly userId: string
+  readonly status: 'open' | 'waiting' | 'completed' | 'ignored' | 'superseded'
+  readonly title: string
+  readonly summary: string
+  readonly priority: 1 | 3 | 5
+  readonly tags: readonly string[]
+  readonly dueAt?: string
+  readonly createdAt: string
+  readonly updatedAt: string
+}
 /** Local-only durable state. Secret references and canonical paths never enter its cloud projection. */
 export class SqliteInactiveClientStateV1 {
   constructor(private readonly db: DatabaseSync, private readonly planVerifier: PlanSignatureVerifierV1) {}
@@ -50,6 +76,77 @@ export class SqliteInactiveClientStateV1 {
   }
 
   isEnrolled(): boolean { return Boolean(this.#identityRow()) }
+
+  /** Local-only and inactive: a Matter write never creates an executable action or an external task. */
+  upsertIntakeMatter(input: LocalIntakeMatterInputV1, now = new Date()): { readonly matter: LocalIntakeMatterV1; readonly inserted: boolean; readonly changed: boolean } {
+    const identity = this.#requireIdentity()
+    if (input.tenantId !== identity.tenantId || input.userId !== identity.userId) throw new Error('intake matter scope does not match enrolled client')
+    if (input.existingMatterId !== undefined) throw new Error('explicit Matter merge requires separate reconciliation')
+    if (!input.sourceId?.trim() || input.sourceId.length > 500 || !input.idempotencyKey?.trim() || input.idempotencyKey.length > 1000
+      || !input.title?.trim() || input.title.length > 300 || !input.summary?.trim() || input.summary.length > 5000
+      || ![1, 3, 5].includes(input.priority) || !Array.isArray(input.tags) || input.tags.length > 20
+      || input.tags.some(tag => typeof tag !== 'string' || !tag.trim() || tag.length > 64)
+      || (input.dueAt !== undefined && Number.isNaN(Date.parse(input.dueAt))) || Number.isNaN(now.getTime())) {
+      throw new Error('intake matter input is invalid')
+    }
+    const fingerprint = sha256(`feishu:${input.sourceId}`)
+    const idempotencyFingerprint = sha256(input.idempotencyKey)
+    const digest = sha256(JSON.stringify([fingerprint, input.title, input.summary, input.priority, input.tags, input.dueAt ?? null]))
+    const matterId = `matter.${sha256(`${identity.tenantId}:${identity.userId}:${fingerprint}`).slice(0, 32)}`
+    const at = now.toISOString()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const prior = this.db.prepare('SELECT request_digest, matter_id FROM local_matter_intake WHERE tenant_id=? AND user_id=? AND idempotency_fingerprint=?')
+        .get(identity.tenantId, identity.userId, idempotencyFingerprint) as Row | undefined
+      if (prior) {
+        if (prior.request_digest !== digest) throw new Error('intake idempotency key has different durable content')
+        const matter = this.intakeMatter(input.tenantId, input.userId, String(prior.matter_id))
+        if (!matter) throw new Error('intake receipt lost its Matter')
+        this.db.exec('COMMIT')
+        return { matter, inserted: false, changed: false }
+      }
+      const existing = this.db.prepare('SELECT * FROM local_matter WHERE tenant_id=? AND user_id=? AND source_fingerprint=?')
+        .get(identity.tenantId, identity.userId, fingerprint) as Row | undefined
+      if (existing && existing.status !== 'open' && existing.status !== 'waiting') throw new Error('terminal Matter cannot be reopened implicitly')
+      const tagsJson = JSON.stringify(input.tags)
+      const changed = !existing || existing.title !== input.title || existing.summary !== input.summary
+        || Number(existing.priority) !== input.priority || existing.tags_json !== tagsJson || existing.due_at !== (input.dueAt ?? null)
+      if (!existing) {
+        this.db.prepare(`INSERT INTO local_matter (matter_id,tenant_id,user_id,source_fingerprint,status,title,summary,priority,tags_json,due_at,created_at,updated_at)
+          VALUES (?,?,?,?,'open',?,?,?,?,?,?,?)`).run(matterId, identity.tenantId, identity.userId, fingerprint,
+          input.title, input.summary, input.priority, tagsJson, input.dueAt ?? null, at, at)
+      } else if (changed) {
+        this.db.prepare(`UPDATE local_matter SET title=?,summary=?,priority=?,tags_json=?,due_at=?,updated_at=? WHERE matter_id=? AND tenant_id=? AND user_id=?`)
+          .run(input.title, input.summary, input.priority, tagsJson, input.dueAt ?? null, at, String(existing.matter_id), identity.tenantId, identity.userId)
+      }
+      const selectedId = existing ? String(existing.matter_id) : matterId
+      this.db.prepare('INSERT INTO local_matter_intake (tenant_id,user_id,idempotency_fingerprint,request_digest,matter_id,recorded_at) VALUES (?,?,?,?,?,?)')
+        .run(identity.tenantId, identity.userId, idempotencyFingerprint, digest, selectedId, at)
+      const matter = this.intakeMatter(input.tenantId, input.userId, selectedId)
+      if (!matter) throw new Error('intake Matter write was not readable')
+      this.db.exec('COMMIT')
+      return { matter, inserted: !existing, changed }
+    } catch (error) { this.db.exec('ROLLBACK'); throw error }
+  }
+
+  intakeMatter(tenantId: string, userId: string, matterId: string): LocalIntakeMatterV1 | null {
+    const identity = this.#requireIdentity()
+    if (tenantId !== identity.tenantId || userId !== identity.userId) throw new Error('intake Matter read is outside enrolled scope')
+    const row = this.db.prepare('SELECT * FROM local_matter WHERE matter_id=? AND tenant_id=? AND user_id=?')
+      .get(matterId, tenantId, userId) as Row | undefined
+    if (!row) return null
+    const value: LocalIntakeMatterV1 = {
+      matterId: String(row.matter_id), tenantId: String(row.tenant_id), userId: String(row.user_id),
+      status: String(row.status) as LocalIntakeMatterV1['status'], title: String(row.title), summary: String(row.summary),
+      priority: Number(row.priority) as LocalIntakeMatterV1['priority'], tags: JSON.parse(String(row.tags_json)) as string[],
+      ...(row.due_at ? { dueAt: String(row.due_at) } : {}), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+    }
+    if (value.tenantId !== identity.tenantId || value.userId !== identity.userId || ![1, 3, 5].includes(value.priority)
+      || !Array.isArray(value.tags) || Number.isNaN(Date.parse(value.createdAt)) || Number.isNaN(Date.parse(value.updatedAt))) {
+      throw new Error('persisted intake Matter is invalid')
+    }
+    return deepFreeze(value)
+  }
 
   /** Local-runtime access only. Callers must never include the returned reference in cloud payloads. */
   localEnrollment(): LocalClientEnrollmentV1 {
@@ -252,6 +349,7 @@ export async function openSqliteInactiveClientState(databasePath: string, migrat
 }
 
 function deepFreeze<T>(value: T): T { if (value && typeof value === 'object' && !Object.isFrozen(value)) { for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child); Object.freeze(value) }; return value }
+function sha256(value: string): string { return createHash('sha256').update(value).digest('hex') }
 function isInactiveSnapshot(state: CapabilityLifecycleSnapshotV1, identity: DeviceIdentityV1): boolean {
   return idPattern.test(state.capabilityId) && versionPattern.test(state.version) && digestPattern.test(state.artifactDigest) && !Number.isNaN(Date.parse(state.updatedAt)) && state.deviceId === identity.deviceId && state.installation === 'installed' && state.loading === 'unloaded' && state.authorization === 'unauthorized' && state.execution === 'stopped' && state.effects === 'disabled'
 }
