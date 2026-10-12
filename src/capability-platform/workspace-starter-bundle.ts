@@ -68,12 +68,16 @@ export function inspectWorkspaceStarterBundleBytes(raw: Uint8Array, pin: Workspa
   if (!Array.isArray(bundle.files) || bundle.files.length < 1 || bundle.files.length > MAX_FILES) throw new Error('workspace starter bundle inventory is invalid')
 
   const files = new Map<string, Buffer>()
+  const foldedPaths = new Set<string>()
   const inventory: Array<{ path: string; size: number; digest: string }> = []
   let prior = ''
   for (const item of bundle.files) {
     const file = object(item, 'workspace starter file')
     exactKeys(file, ['path', 'size', 'digest', 'content_base64'], 'workspace starter file')
     if (!allowedPath(file.path, bundle.profile) || (prior && file.path <= prior)) throw new Error('workspace starter file path is invalid')
+    const folded = file.path.toLowerCase()
+    if (foldedPaths.has(folded)) throw new Error('workspace starter case-insensitive path collision')
+    foldedPaths.add(folded)
     if (!Number.isSafeInteger(file.size) || Number(file.size) < 0 || Number(file.size) > MAX_FILE_BYTES || typeof file.digest !== 'string' || !DIGEST.test(file.digest) || typeof file.content_base64 !== 'string') throw new Error('workspace starter file metadata is invalid')
     if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.content_base64)) throw new Error('workspace starter file encoding is invalid')
     const content = Buffer.from(file.content_base64, 'base64')

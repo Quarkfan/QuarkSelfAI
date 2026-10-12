@@ -41,6 +41,7 @@ test('rejects mismatched pins, mutable state, unsafe paths and tampered file byt
   const altered = (edit: (value: any) => void): Buffer => { const value = structuredClone(sample.bundle); edit(value); return Buffer.from(`${canonical(value)}\n`) }
   assert.throws(() => inspectWorkspaceStarterBundleBytes(altered(value => { value.state = 'active' }), { sourceRevision: revision, artifactDigest: sample.digest }), /activation/)
   assert.throws(() => inspectWorkspaceStarterBundleBytes(altered(value => { value.files[0].path = '.git/config' }), { sourceRevision: revision, artifactDigest: sample.digest }), /path/)
+  assert.throws(() => inspectWorkspaceStarterBundleBytes(altered(value => { const entry = value.files[2]; value.files.splice(3, 0, { ...entry, path: 'docs/X.md' }, { ...entry, path: 'docs/x.md' }) }), { sourceRevision: revision, artifactDigest: sample.digest }), /collision/)
   assert.throws(() => inspectWorkspaceStarterBundleBytes(altered(value => { value.files[0].content_base64 = 'AAAA' }), { sourceRevision: revision, artifactDigest: sample.digest }), /integrity/)
   assert.throws(() => inspectWorkspaceStarterBundleBytes(Buffer.from(JSON.stringify(sample.bundle, null, 2)), { sourceRevision: revision, artifactDigest: sample.digest }), /canonical/)
 })
