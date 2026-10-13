@@ -14,6 +14,49 @@ const URGENCY_BY_PRIORITY = { 5: "紧急", 3: "重要", 1: "跟进", 0: "关注"
 const EXECUTION_FAILURE = /(oauth[^。\n]{0,80}(?:authorization required|login required|token expired|failed|denied)|授权未完成|未授权|无法执行(?:搜索|创建|更新|写入)|未调用[^。]*(?:create_task|update_task|search_task)|mcp[^。]*(?:失败|不可用|未连接|没有连接|连接不上|拒绝|denied|permission)|(?:bash|read|工具)[^。]*(?:权限[^。]*拒绝|permission denied)|额度(?:耗尽|不足)|quota|rate.?limit)/i;
 const CLOSED_NO_ACTION = /(无需(?:进一步)?行动|无需(?:继续)?(?:处理|跟进)|事项已收敛|已经收敛|最终确认维持现状|已有明确结论[^。]*(?:无需|不需要)|下一步\s*[:：]?\s*(?:无|知悉即可|仅需知悉|持续关注即可)|只是(?:信息|通知|资料|参考|状态)同步|仅供参考)/;
 const DIDA_READBACK_NOT_FOUND = /(?:resource_not_found|task not found)/i;
+const GENERIC_TOPIC_ANCHORS = new Set([
+  "事项", "事情", "消息", "任务", "处理", "跟进", "确认", "回复", "需要", "可以", "现在", "明天", "今天", "一下",
+]);
+const EXPLICIT_TIME_EVIDENCE = /(?:今天|明天|后天|本周|下周|周[一二三四五六日天]|星期[一二三四五六日天]|\d{1,4}[年/-]\d{1,2}(?:[月/-]\d{1,2}日?)?|\d{1,2}[月/]\d{1,2}日?|\d{1,2}(?::|：)\d{2}|上午|下午|中午|今晚|早上|晚上|月底|月末|日前|之前|截止)/u;
+
+function normalizeGroundingText(value) {
+  return String(value ?? "").normalize("NFKC").replace(/\s+/gu, " ").trim();
+}
+
+function sourceGroundingText(messages) {
+  return (messages || []).map((message) => normalizeGroundingText(message?.content ?? message)).filter(Boolean).join("\n");
+}
+
+function validateCreatedTaskGrounding(task, sourceMessages) {
+  const source = sourceGroundingText(sourceMessages);
+  if (!source) throw new Error("新建自动化待办缺少可核验的源消息上下文。");
+  const anchor = normalizeGroundingText(task.topicAnchor);
+  if (anchor.length < 3 || anchor.length > 80 || GENERIC_TOPIC_ANCHORS.has(anchor)) {
+    throw new Error("新建自动化待办缺少具体的源文本主题锚点。");
+  }
+  if (!source.includes(anchor)) throw new Error("新建自动化待办的主题锚点不在源消息上下文中。");
+  if (!normalizeGroundingText(task.title).includes(anchor)) {
+    throw new Error("新建自动化待办标题未绑定源文本主题锚点。");
+  }
+  const evidence = Array.isArray(task.groundingEvidence) ? task.groundingEvidence.map(normalizeGroundingText) : [];
+  if (evidence.length < 1 || evidence.length > 3 || evidence.some((quote) => quote.length < 3 || quote.length > 240)) {
+    throw new Error("新建自动化待办必须提供 1–3 条有界原文证据。");
+  }
+  if (evidence.some((quote) => !source.includes(quote))) {
+    throw new Error("新建自动化待办包含无法在源消息上下文中回读的证据。");
+  }
+  if (!evidence.some((quote) => quote.includes(anchor))) {
+    throw new Error("新建自动化待办的原文证据未覆盖主题锚点。");
+  }
+  const deadlineEvidence = normalizeGroundingText(task.deadlineEvidence);
+  if (task.dueDate) {
+    if (!deadlineEvidence || !source.includes(deadlineEvidence) || !EXPLICIT_TIME_EVIDENCE.test(deadlineEvidence)) {
+      throw new Error("新建自动化待办的截止时间缺少可回读的明确时间证据。");
+    }
+  } else if (deadlineEvidence) {
+    throw new Error("没有截止时间的自动化待办不得返回截止时间证据。");
+  }
+}
 
 export function normalizeTaskResult(task) {
   const narrative = [
@@ -53,7 +96,7 @@ export function expectedTaskTitlePrefix(priority, keyItem) {
   return `【${urgency}${keyItem ? "·关键" : ""}】`;
 }
 
-export function validateTaskPresentation(task, matterContext = null) {
+export function validateTaskPresentation(task, matterContext = null, sourceMessages = undefined) {
   if (task.taskAction && (task.created !== (task.taskAction === "created"))) {
     throw new Error("滴答任务 taskAction 与 created 不一致。");
   }
@@ -130,6 +173,7 @@ export function validateTaskPresentation(task, matterContext = null) {
     if (Array.isArray(matterContext?.exactTaskIds) && matterContext.exactTaskIds.length > 0) {
       throw new Error("当前消息命中已有活动事项的精确引用，禁止创建第二条自动化待办。");
     }
+    if (sourceMessages !== undefined) validateCreatedTaskGrounding(task, sourceMessages);
   }
   if (task.approvalRequired) {
     if (task.requestType !== "approval" || task.notificationDecision !== "notify") {
@@ -241,6 +285,7 @@ export class DidaTaskCreator {
    - 事项上下文候选来自此前已处理消息的有界脱敏索引，可能跨群聊和私聊。先逐个核对候选中的业务对象、期望结果、责任、状态、下一步和 taskIds，再调用滴答工具核验；不能因会话不同就新建，也不能因同一客户或项目就错误合并。
    - matterResolution 只能是 existing/new/none/ambiguous。识别为 existing 时填写候选的 matchedMatterKey；识别为 new 时 matchedMatterKey 为空。若候选无法可靠排除且仍可能属于同一事项，使用 ambiguous，不得 created；先搜索候选 taskIds 和稳定关键词，仍无法判定时保持静默、等待更多上下文。
    - created 必须额外填写 unfinishedOutcome、responsibilityEvidence、stateChangeOnCompletion 和 matterMatchReason。它们分别说明尚未完成的结果、为什么当前责任属于常东旭、完成后事项如何改变，以及为什么这是独立新事项或已有事项首次投影；不得只改写“被 @”“需要关注”“请跟进”。
+   - created 还必须填写 topicAnchor、groundingEvidence 和 deadlineEvidence。topicAnchor 必须是标题中出现、且能在目标消息或附近上下文逐字回读的具体业务对象/项目/客户/交付物，不能使用“事项、处理、跟进、确认、今天、明天”等泛词；groundingEvidence 提供 1–3 条包含该锚点的原文短句。dueDate 非空时 deadlineEvidence 必须逐字引用包含明确日期、相对日期、星期或时刻的原文；上下文没有时间证据时 dueDate 必须为 null。不得从其他会话、记忆或搜索结果补入源消息没有出现的客户、地点、日期或行动。
    - 候选标记 exact-reference 且存在活动 taskIds 时，确定性门禁会禁止创建第二条任务，只能核验后 updated/unchanged；如果确有独立交付物，应更新原事项说明新增动作，不能绕过为第二条消息任务。
 4. 调用 dida365 list_tags 查看已有标签；结合发送人、会话主题、纳入原因、明确截止时间以及上下文中常东旭承担的角色，提炼明确、可执行的中文任务标题。标题必须控制在 60 个中文字符以内，去掉“请关注”“需要处理”等空泛开头，直接写动作和对象。
 5. 紧急度和关键性必须分开、结合影响与时效判断，不按关键词自动升降级：
@@ -331,7 +376,7 @@ ${formatContext(contextMessages, message.message_id, this.config.allowedOpenId)}
     if (task.taskAction !== "ignored" && (!task.taskId || task.projectId !== this.config.didaProjectId)) {
       throw new Error("滴答 MCP 未返回目标清单中的有效 taskId。");
     }
-    try { validateTaskPresentation(task, matterContext); }
+    try { validateTaskPresentation(task, matterContext, [message, ...contextMessages]); }
     catch (error) {
       await this.removeInvalidCreatedTask(task, error.message);
       throw error;

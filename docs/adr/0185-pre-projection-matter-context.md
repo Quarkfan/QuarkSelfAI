@@ -30,7 +30,12 @@ The existing single focus-intake workflow resolves matter context before invokin
    responsibility evidence, expected state change and merge/new rationale before creating a task.
 4. A deterministic gate rejects a second task when a stable reference already belongs to an active task. It also rejects vague actions
    such as merely watching or learning about an item. Ambiguous matter identity cannot create a task.
-5. Projection remains the only Dida writer. Context lookup is read-only and failure is represented as unavailable, never as proof that
+5. A newly created projection must bind one concrete `topicAnchor` to both its title and an exact quote in the bounded source
+   conversation. One to three exact quotes are required, and any due date additionally requires an exact, time-bearing source quote.
+   Generic anchors and facts imported from another conversation or model memory fail closed. Because the compatibility reasoning worker
+   still performs the MCP write before returning its structured result, a failed grounding check deletes only that exact newly-created
+   task through the existing compensation path and leaves the source message retryable.
+6. Projection remains the only Dida writer. Context lookup is read-only and failure is represented as unavailable, never as proof that
    no existing matter exists. Existing Dida searches and write-after-read verification remain mandatory.
 
 This compatibility implementation is an incremental safety repair. The native destination remains the durable event → matter → action
@@ -45,8 +50,8 @@ not uploaded to a new service or written to product-mainline datasets.
 ## Verification and rollback
 
 Contract tests must prove cross-conversation matching, post-report index continuity, raw-content exclusion, pre-projection context
-delivery, exact-reference duplicate rejection and vague-action rejection. Full compatibility, architecture and repository checks remain
-required before activation.
+delivery, exact-reference duplicate rejection, vague-action rejection, invented-topic rejection and due-date evidence rejection. Full
+compatibility, architecture and repository checks remain required before activation.
 
 Rollback sets `QUARK_MATTER_CONTEXT_ENABLED=0` and restarts the same compatibility host, or reverts this revision. The additive hashed
 fields may remain unread. Rollback does not switch consumers, providers or task writers and does not mutate existing Dida tasks.

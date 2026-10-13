@@ -24,7 +24,7 @@ while (( $# )); do
   shift
 done
 cat >/dev/null
-print -r -- '{"taskId":"task_1","projectId":"project_1","title":"【重要·关键】确认客户方案","titlePrefix":"【重要·关键】","urgencyLabel":"重要","keyItem":true,"url":null,"created":true,"taskAction":"created","intakeDecision":"task","matterResolution":"new","matchedMatterKey":"","matterMatchReason":"现有候选均不是同一交付结果","unfinishedOutcome":"客户方案尚未得到明确确认","responsibilityEvidence":"上下文明示由常东旭作出最终确认","stateChangeOnCompletion":"确认后方案可进入下一执行阶段","actionRequired":true,"actionOwner":"changdongxu","nextAction":"确认客户方案","notificationDecision":"notify","notificationMode":"realtime","notificationDelayMinutes":0,"notificationTitle":"客户方案等你确认","ownerMessage":"我把客户方案整理成待办了，现在只差你确认一下。","cardTone":"yellow","notificationReason":"需要确认客户方案","materialChangeSummary":"新事项","summary":"ok","priority":3,"tags":["飞书","重要","关键事项"],"needsClarification":false,"blacklakeRelated":false,"researchDecision":"skip","researchChannel":"none"}' > "$out"
+print -r -- '{"taskId":"task_1","projectId":"project_1","title":"【重要·关键】确认客户方案","titlePrefix":"【重要·关键】","urgencyLabel":"重要","keyItem":true,"url":null,"created":true,"taskAction":"created","intakeDecision":"task","matterResolution":"new","matchedMatterKey":"","matterMatchReason":"现有候选均不是同一交付结果","unfinishedOutcome":"客户方案尚未得到明确确认","responsibilityEvidence":"上下文明示由常东旭作出最终确认","stateChangeOnCompletion":"确认后方案可进入下一执行阶段","topicAnchor":"客户方案","groundingEvidence":["请确认客户方案"],"deadlineEvidence":"","actionRequired":true,"actionOwner":"changdongxu","nextAction":"确认客户方案","notificationDecision":"notify","notificationMode":"realtime","notificationDelayMinutes":0,"notificationTitle":"客户方案等你确认","ownerMessage":"我把客户方案整理成待办了，现在只差你确认一下。","cardTone":"yellow","notificationReason":"需要确认客户方案","materialChangeSummary":"新事项","summary":"ok","priority":3,"tags":["飞书","重要","关键事项"],"needsClarification":false,"blacklakeRelated":false,"researchDecision":"skip","researchChannel":"none"}' > "$out"
 `, { mode: 0o755 });
   const creator = new DidaTaskCreator({
     codexCli: fake, workspaceRoot: dir, varDir: path.join(dir, "var"), didaProjectId: "project_1",
@@ -32,7 +32,7 @@ print -r -- '{"taskId":"task_1","projectId":"project_1","title":"【重要·关�
   });
   const task = await creator.createFromMention({
     message_id: "om_1", chat_id: "oc_1", chat_name: "项目群", chat_type: "group",
-    create_time: "2026-08-14 10:00", content: "@常东旭 请跟进", sender: { name: "同事" },
+    create_time: "2026-08-14 10:00", content: "@常东旭 请确认客户方案", sender: { name: "同事" },
   }, []);
   assert.equal(task.taskId, "task_1");
   assert.equal(task.projectId, "project_1");
@@ -122,6 +122,84 @@ test("rejects a vague attention action even when the model calls it a task", () 
     priority: 1, urgencyLabel: "跟进", keyItem: false,
     titlePrefix: "【跟进】", title: "【跟进】持续关注项目", tags: ["飞书", "跟进"],
   }), /不能只是关注/);
+});
+
+test("rejects a created task whose customer and location are absent from source context", () => {
+  assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
+    created: true, taskAction: "created", intakeDecision: "task",
+    actionRequired: true, actionOwner: "changdongxu", nextAction: "了解航力机械业务",
+    topicAnchor: "无锡航力机械", groundingEvidence: ["无锡航力机械"], deadlineEvidence: "",
+    priority: 3, urgencyLabel: "重要", keyItem: false, dueDate: null,
+    titlePrefix: "【重要】", title: "【重要】准备无锡航力机械拜访", tags: ["飞书", "重要"],
+  }, null, [
+    { content: "华为云的人来了，想认识一下" },
+    { content: "他们来了，你要么打个招呼撤就行了" },
+    { content: "好 我来了" },
+  ]), /主题锚点不在源消息上下文/);
+});
+
+test("accepts a created task grounded by an exact source topic and quote", () => {
+  assert.doesNotThrow(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
+    created: true, taskAction: "created", intakeDecision: "task",
+    actionRequired: true, actionOwner: "changdongxu", nextAction: "确认客户方案",
+    topicAnchor: "客户方案", groundingEvidence: ["请确认客户方案"], deadlineEvidence: "",
+    priority: 3, urgencyLabel: "重要", keyItem: false, dueDate: null,
+    titlePrefix: "【重要】", title: "【重要】确认客户方案", tags: ["飞书", "重要"],
+  }, null, [{ content: "请确认客户方案" }]));
+});
+
+test("rejects a due date without an exact time-bearing source quote", () => {
+  assert.throws(() => validateTaskPresentation({
+    ...NEW_MATTER_EVIDENCE,
+    created: true, taskAction: "created", intakeDecision: "task",
+    actionRequired: true, actionOwner: "changdongxu", nextAction: "确认客户方案",
+    topicAnchor: "客户方案", groundingEvidence: ["请确认客户方案"], deadlineEvidence: "明天完成",
+    priority: 3, urgencyLabel: "重要", keyItem: false, dueDate: "2026-10-13T10:00:00+08:00",
+    titlePrefix: "【重要】", title: "【重要】确认客户方案", tags: ["飞书", "重要"],
+  }, null, [{ content: "请确认客户方案" }]), /截止时间缺少可回读/);
+});
+
+test("deletes the exact newly-created task when model output invents a source topic", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "fake-dida-grounding-"));
+  const fakeCodex = path.join(dir, "codex");
+  const fakeDida = path.join(dir, "dida");
+  const deleteLog = path.join(dir, "delete.log");
+  await writeFile(fakeCodex, `#!/bin/zsh
+out=""
+while (( $# )); do
+  if [[ "$1" == "-o" ]]; then shift; out="$1"; fi
+  shift
+done
+cat >/dev/null
+print -r -- '{"taskId":"invented_1","projectId":"project_1","title":"【重要】准备无锡航力机械拜访","titlePrefix":"【重要】","urgencyLabel":"重要","keyItem":false,"url":null,"created":true,"taskAction":"created","intakeDecision":"task","matterResolution":"new","matchedMatterKey":"","matterMatchReason":"独立客户拜访事项","unfinishedOutcome":"客户背景尚未完成准备","responsibilityEvidence":"常东旭需要现场沟通","stateChangeOnCompletion":"形成客户拜访准备材料","topicAnchor":"无锡航力机械","groundingEvidence":["无锡航力机械"],"deadlineEvidence":"明天完成","actionRequired":true,"actionOwner":"changdongxu","nextAction":"了解航力机械业务","notificationDecision":"silent","notificationMode":"silent","notificationDelayMinutes":0,"notificationTitle":"","ownerMessage":"","cardTone":"grey","notificationReason":"写入待办即可","materialChangeSummary":"新事项","summary":"准备客户拜访","priority":3,"tags":["飞书","重要"],"dueDate":"2026-10-13T10:00:00+08:00","needsClarification":false,"blacklakeRelated":false,"researchDecision":"skip","researchChannel":"none"}' > "$out"
+`, { mode: 0o755 });
+  await writeFile(fakeDida, `#!/bin/zsh
+if [[ "$1" == "task" && "$2" == "get" ]]; then
+  print -r -- '{"id":"invented_1","projectId":"project_1","kind":"TEXT","status":0,"content":"准备客户拜访"}'
+  exit 0
+fi
+if [[ "$1" == "task" && "$2" == "delete" ]]; then
+  print -r -- "$3:$4" >> "${deleteLog}"
+  exit 0
+fi
+exit 2
+`, { mode: 0o755 });
+  const creator = new DidaTaskCreator({
+    codexCli: fakeCodex, didaCli: fakeDida, workspaceRoot: dir, varDir: path.join(dir, "var"),
+    didaProjectId: "project_1", didaResultSchemaPath: path.join(dir, "schema.json"),
+    blacklakeCapabilityContext: "test capability catalog", verifyCreatedTaskKind: true,
+  });
+
+  await assert.rejects(() => creator.createFromMention({
+    message_id: "om_social", chat_id: "oc_1", chat_name: "私聊", chat_type: "p2p",
+    create_time: "2026-10-12 18:28", content: "好 我来了", sender: { name: "常东旭" },
+  }, [
+    { message_id: "om_1", content: "华为云的人来了，想认识一下", sender: { name: "同事" } },
+    { message_id: "om_2", content: "他们来了，你要么打个招呼撤就行了", sender: { name: "同事" } },
+  ]), /主题锚点不在源消息上下文/);
+  assert.match(await readFile(deleteLog, "utf8"), /project_1:invented_1/);
 });
 
 test("accepts model-selected communication parameters but keeps approval realtime", () => {

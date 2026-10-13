@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["taskId", "projectId", "title", "titlePrefix", "urgencyLabel", "keyItem", "url", "created", "taskAction", "intakeDecision", "matterResolution", "matchedMatterKey", "matterMatchReason", "unfinishedOutcome", "responsibilityEvidence", "stateChangeOnCompletion", "requestType", "approvalRequired", "approvalSummary", "actionRequired", "actionOwner", "nextAction", "notificationDecision", "notificationMode", "notificationDelayMinutes", "notificationTitle", "ownerMessage", "cardTone", "notificationReason", "materialChangeSummary", "summary", "priority", "tags", "dueDate", "relationshipSummary", "needsClarification", "clarificationQuestion", "clarificationReason", "blacklakeRelated", "blacklakeDomains", "recommendedSkills", "skillDecisionReason", "researchDecision", "researchChannel", "researchDecisionReason", "researchPrompt"],
+  "required": ["taskId", "projectId", "title", "titlePrefix", "urgencyLabel", "keyItem", "url", "created", "taskAction", "intakeDecision", "matterResolution", "matchedMatterKey", "matterMatchReason", "unfinishedOutcome", "responsibilityEvidence", "stateChangeOnCompletion", "topicAnchor", "groundingEvidence", "deadlineEvidence", "requestType", "approvalRequired", "approvalSummary", "actionRequired", "actionOwner", "nextAction", "notificationDecision", "notificationMode", "notificationDelayMinutes", "notificationTitle", "ownerMessage", "cardTone", "notificationReason", "materialChangeSummary", "summary", "priority", "tags", "dueDate", "relationshipSummary", "needsClarification", "clarificationQuestion", "clarificationReason", "blacklakeRelated", "blacklakeDomains", "recommendedSkills", "skillDecisionReason", "researchDecision", "researchChannel", "researchDecisionReason", "researchPrompt"],
   "properties": {
     "taskId": { "type": "string" },
     "projectId": { "type": "string" },
@@ -20,6 +20,9 @@
     "unfinishedOutcome": { "type": "string" },
     "responsibilityEvidence": { "type": "string" },
     "stateChangeOnCompletion": { "type": "string" },
+    "topicAnchor": { "type": "string", "maxLength": 80 },
+    "groundingEvidence": { "type": "array", "maxItems": 3, "items": { "type": "string", "maxLength": 240 } },
+    "deadlineEvidence": { "type": "string", "maxLength": 240 },
     "requestType": { "type": "string", "enum": ["execution", "approval", "information"] },
     "approvalRequired": { "type": "boolean" },
     "approvalSummary": { "type": "string" },

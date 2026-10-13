@@ -2183,3 +2183,13 @@
 - 审计现在额外输出 `matterResolutionDistribution`，以及事项索引的 total、active、withTask、stableReferenceDigests 四个纯计数；不输出消息正文、会话/发送人清单、原始引用、任务内容或绝对状态路径，不产生外部写。
 - 激活后的真实只读样本为 18 个：ignored 8、updated 5、unchanged 3、created 2；严格门禁仍保持 20 个有效样本要求，因此本轮只更新为 observing，不提前宣称完成。回滚为撤销审计字段、测试和本条记录，不需要重启、数据迁移、任务补偿或外部消息撤回。
 - 完整检查发现 work-domain 基线仍停在近期能力平台治理变更之前；复核结果为 115 个已分类路径、0 个未分类、0 个歧义，只更新计数与摘要基线，不新增 marker、分类规则或运行依赖。
+
+## 2026-10-13 — 自动化待办跨会话臆补修复
+
+- 用户对一条标记来源的“无锡航力机械拜访准备”待办提出事实质疑。按消息 ID 只读回读原消息及同一私聊 90 分钟上下文后确认：原消息只是对公司内一次临时见面的简短回应，上下文主题为另一家来访方和公司内见面地点，不包含该客户、无锡、次日拜访、业务流程或准备动作。跨会话关键词检索也未发现可以支持原待办的同一事项证据。
+- 严格血缘回读确认错误任务由助手自动化写入，且唯一来源标记正是上述消息；当前 shadow decision 已把同一来源正确判为社交信息并静默忽略。First Bad Hop 是投影模型可在调用 Dida 后返回语法完整结果，而写后门禁只校验事项/责任/动作字段，没有证明标题中的客户、地点、主题和日期来自当前来源语料。
+- 在分身会话对助手自有错误数据的授权范围内，按精确 task/project 血缘删除该错误任务，并以只读搜索确认不存在；没有修改用户手工任务或其他自动化事项。飞书原消息和会话均只读，未发送任何外部消息。
+- 新门禁要求每个新建任务提供一个具体 `topicAnchor`、1–3 条当前来源的逐字 `groundingEvidence`；anchor 必须同时出现在来源与任务标题中。设置 due date 时还必须提供包含明确时间表达的逐字 `deadlineEvidence`，否则失败关闭。通用“客户/项目/事项”等词不能作为 anchor，其他会话、历史记忆和事项索引不能补齐当前来源中不存在的实体或日期。
+- 若模型已创建任务后门禁发现上述证据不成立，继续复用既有写后补偿，只删除本轮精确 task/project 并把来源归一为 ignored，防止错误任务进入用户信息流。回归覆盖本次反例、真实来源正例、无日期证据和创建后补偿删除。
+- 完整 `npm run check` 通过：主项目 609 项中 596 通过、13 项仅因 sandbox listener 限制跳过，compat 203/203；架构为 154 modules、23/23 effects implemented、0/23 active。用户未提交的 `package.json`、品牌客户端文件与 `.DS_Store` 未修改、未暂存。回滚为撤销本批 schema、prompt、门禁和测试；已删除的错误自动化任务不应恢复。
+- 确认持久执行队列为空后，旧 PID 78724 以 SIGTERM 正常退出（exit 0），再由原 launchd label 启动同一实例。宿主回读为唯一主进程 PID 35649、唯一 compatibility worker PID 35652 和 DSH PID 35650；`/api/health` 为 `ok=true`，compat worker、DSH kernel 与 5 条必需飞书事件能力均为 ready。native cutover blockers 和 0/23 active effects 保持不变，没有创建第二消费者/provider/writer。
